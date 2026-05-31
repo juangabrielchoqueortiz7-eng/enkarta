@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { InvitationContent } from './types';
-import { useCountdown, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartDuo } from './shared';
+import { useCountdown, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartLoader } from './shared';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const C = {
@@ -267,9 +267,9 @@ export default function Azure({ data }: { data: InvitationContent }) {
           </p>
         </Reveal>
 
-        {/* Two interlocking hearts ornament (heartbeat) */}
-        <Reveal delay={140} className="mt-8 flex justify-center">
-          <HeartDuo color={C.navy} className="w-20 opacity-90" />
+        {/* Heart loader ornament (hearts burst & fuse) */}
+        <Reveal delay={140} className="mt-6 flex justify-center">
+          <HeartLoader color={C.navy} size={90} className="opacity-90" />
         </Reveal>
 
         {/* Date — oval badge with SÁBADO ── JULIO */}

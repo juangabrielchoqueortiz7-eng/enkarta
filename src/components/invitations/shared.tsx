@@ -267,30 +267,73 @@ export function EventIcon({ name, className = '', stroke = 'currentColor' }: { n
   }
 }
 
-// ── Two interlocking hearts ornament (with heartbeat) ─────────────────────────
-const HEART_PATH = 'M0 3 C0 0 -4 0 -4 3 C-4 6.5 0 9.3 0 10.4 C0 9.3 4 6.5 4 3 C4 0 0 0 0 3 Z';
-export function HeartDuo({ color = '#1e3a5f', shine = '#8aa0c4', className = '' }: { color?: string; shine?: string; className?: string }) {
-  return (
-    <svg viewBox="0 0 50 30" className={className} fill="none" aria-hidden>
-      <style>{`
-        @keyframes hbBeat {
-          0%, 30%, 62%, 100% { transform: scale(1); }
-          14% { transform: scale(1.16); }
-          42% { transform: scale(1.06); }
-        }
-        .hb-beat { transform-box: fill-box; transform-origin: center; animation: hbBeat 1.5s ease-in-out infinite; }
-      `}</style>
-      <g className="hb-beat">
-        {/* outline heart — behind, upper-right */}
-        <path d={HEART_PATH} transform="translate(31.5 7) scale(1.25) rotate(8 0 5)" stroke={color} strokeWidth="0.9" />
-        {/* filled heart — front, lower-left */}
-        <path d={HEART_PATH} transform="translate(22.5 8) scale(1.5)" fill={color} />
-        {/* glossy shine on the filled heart */}
-        <path d="M18.6 11.4 C 20 9.7 22 9.6 23.4 10.8" stroke={shine} strokeWidth="1" strokeLinecap="round" />
-      </g>
-      {/* tiny accent heart — top-left */}
-      <path d={HEART_PATH} transform="translate(12.5 7) scale(0.62)" fill={color} />
+// ── Heart loader: solid heart breaks into 3 orbiting hearts, then fuses back ───
+const HEART_VB = 'M12 20.6 C2.8 13.6 3.4 5.4 8 5.4 C10.4 5.4 12 7.9 12 7.9 C12 7.9 13.6 5.4 16 5.4 C20.6 5.4 21.2 13.6 12 20.6 Z';
+export function HeartLoader({ color = '#1e3a5f', size = 96, className = '' }: { color?: string; size?: number; className?: string }) {
+  const Heart = (cls: string, solid: boolean) => (
+    <svg viewBox="0 0 24 24" className={cls} aria-hidden>
+      <path d={HEART_VB} fill={solid ? color : 'none'} stroke={solid ? 'none' : color} strokeWidth={solid ? 0 : 2} strokeLinejoin="round" />
     </svg>
+  );
+  return (
+    <div className={`hl ${className}`} style={{ width: size, height: size }} aria-hidden>
+      <style>{`
+        .hl { position: relative; }
+        .hl svg { position: absolute; left: 50%; top: 50%; transform-origin: center; }
+        .hl .hl-big   { width: 46%; margin-left: -23%; margin-top: -21%; }
+        .hl .hl-small { width: 17%; margin-left: -8.5%;  margin-top: -8%;  }
+        .hl .hl-sol { animation: hlSolid 2.6s infinite; }
+        .hl .hl-s1 { animation: hlFly1 2.6s ease-in-out infinite; }
+        .hl .hl-s2 { animation: hlFly2 2.6s ease-in-out infinite; }
+        .hl .hl-s3 { animation: hlFly3 2.6s ease-in-out infinite; }
+
+        @keyframes hlSolid {
+          0%, 6%  { transform: scale(1); animation-timing-function: cubic-bezier(.6,.04,.98,.34); }
+          13%     { transform: scale(0); }
+          82%     { transform: scale(0); animation-timing-function: cubic-bezier(.34,1.56,.64,1); }
+          100%    { transform: scale(1); }
+        }
+        /* heart 1 — bursts up, arcs over to the right, flips, returns */
+        @keyframes hlFly1 {
+          0%,10% { transform: translate(0,0) scale(0) rotate(0deg);       opacity: 0; }
+          16%    { transform: translate(0,0) scale(.9) rotate(0deg);      opacity: 1; }
+          37%    { transform: translate(-55%,-250%) scale(.9) rotate(-180deg); opacity: 1; }
+          57%    { transform: translate(225%,-205%) scale(.9) rotate(-300deg); opacity: 1; }
+          75%    { transform: translate(110%,-45%) scale(.8) rotate(-360deg); opacity: 1; }
+          80%    { transform: translate(0,0) scale(.45) rotate(-360deg);  opacity: 0; }
+          100%   { transform: translate(0,0) scale(0) rotate(-360deg);    opacity: 0; }
+        }
+        /* heart 2 — bursts left, arcs down, flips, returns */
+        @keyframes hlFly2 {
+          0%,12% { transform: translate(0,0) scale(0) rotate(0deg);       opacity: 0; }
+          18%    { transform: translate(0,0) scale(.9) rotate(0deg);      opacity: 1; }
+          39%    { transform: translate(-260%,-60%) scale(.9) rotate(170deg); opacity: 1; }
+          59%    { transform: translate(-200%,190%) scale(.9) rotate(320deg); opacity: 1; }
+          77%    { transform: translate(-70%,70%) scale(.8) rotate(360deg); opacity: 1; }
+          82%    { transform: translate(0,0) scale(.45) rotate(360deg);   opacity: 0; }
+          100%   { transform: translate(0,0) scale(0) rotate(360deg);     opacity: 0; }
+        }
+        /* heart 3 — bursts right, arcs down, flips, returns */
+        @keyframes hlFly3 {
+          0%,14% { transform: translate(0,0) scale(0) rotate(0deg);       opacity: 0; }
+          20%    { transform: translate(0,0) scale(.9) rotate(0deg);      opacity: 1; }
+          41%    { transform: translate(250%,-35%) scale(.9) rotate(-170deg); opacity: 1; }
+          61%    { transform: translate(185%,205%) scale(.9) rotate(-320deg); opacity: 1; }
+          79%    { transform: translate(60%,75%) scale(.8) rotate(-360deg); opacity: 1; }
+          84%    { transform: translate(0,0) scale(.45) rotate(-360deg);  opacity: 0; }
+          100%   { transform: translate(0,0) scale(0) rotate(-360deg);    opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .hl .hl-sol, .hl .hl-s1, .hl .hl-s2, .hl .hl-s3 { animation: none; }
+          .hl .hl-s1, .hl .hl-s2, .hl .hl-s3 { opacity: 0; }
+        }
+      `}</style>
+      {Heart('hl-big hl-out', false)}
+      {Heart('hl-big hl-sol', true)}
+      {Heart('hl-small hl-s1', true)}
+      {Heart('hl-small hl-s2', true)}
+      {Heart('hl-small hl-s3', true)}
+    </div>
   );
 }
 
