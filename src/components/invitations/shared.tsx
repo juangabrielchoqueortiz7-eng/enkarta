@@ -267,12 +267,20 @@ export function EventIcon({ name, className = '', stroke = 'currentColor' }: { n
   }
 }
 
-// ── Heart + swirl ornament ────────────────────────────────────────────────────
+// ── Heart + swirl ornament (with heartbeat) ───────────────────────────────────
 export function HeartSwirl({ color = '#2c4d77', className = '' }: { color?: string; className?: string }) {
   return (
     <svg viewBox="0 0 70 26" className={className} fill="none" aria-hidden>
-      {/* small filled heart */}
-      <path d="M20 9c0-2.4-3.4-2.4-3.4 0 0-2.4-3.4-2.4-3.4 0 0 2.6 3.4 5 3.4 5s3.4-2.4 3.4-5Z" fill={color} />
+      <style>{`
+        @keyframes hbBeat {
+          0%, 28%, 62%, 100% { transform: scale(1); }
+          14% { transform: scale(1.35); }
+          40% { transform: scale(1.15); }
+        }
+        .hb-heart { transform-box: fill-box; transform-origin: center; animation: hbBeat 1.5s ease-in-out infinite; }
+      `}</style>
+      {/* small filled heart — beats like a heartbeat */}
+      <path className="hb-heart" d="M20 9c0-2.4-3.4-2.4-3.4 0 0-2.4-3.4-2.4-3.4 0 0 2.6 3.4 5 3.4 5s3.4-2.4 3.4-5Z" fill={color} />
       {/* flowing swirl */}
       <path d="M20 9c8-5 20-4 24 1 2.4 3-1 6-3.4 4.2-2-1.5-.4-4 2.4-3.4" stroke={color} strokeWidth="0.9" strokeLinecap="round" />
       {/* tiny accent dot */}
