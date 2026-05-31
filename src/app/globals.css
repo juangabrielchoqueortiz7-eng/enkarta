@@ -1,27 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Cinzel:wght@400;500;600;700&family=Great+Vibes&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Nunito:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-primary: #B8975A;
+  --color-secondary: #FAF7F2;
+  --color-accent: #2C2519;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Outfit', sans-serif;
+  color: #2C2519;
+  background: #FAF7F2;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAF7F2;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #B8975A;
+  border-radius: 3px;
+}
+
+/* Invitation template base styles */
+.invitation-section {
+  @apply opacity-0;
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.invitation-section:nth-child(1) { animation-delay: 0.1s; }
+.invitation-section:nth-child(2) { animation-delay: 0.2s; }
+.invitation-section:nth-child(3) { animation-delay: 0.3s; }
+.invitation-section:nth-child(4) { animation-delay: 0.4s; }
+.invitation-section:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
   }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Countdown flip animation */
+.countdown-card {
+  perspective: 600px;
+}
+
+.countdown-number {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Collapsible section animation */
+.collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.collapsible-content.open {
+  max-height: 2000px;
+  transition: max-height 0.5s ease-in;
+}
+
+/* Admin table */
+.admin-table th {
+  @apply text-left text-xs font-semibold uppercase tracking-wider text-gray-500 px-4 py-3;
+}
+
+.admin-table td {
+  @apply px-4 py-3 text-sm;
+}
+
+/* Color picker input */
+input[type="color"] {
+  -webkit-appearance: none;
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: 2px solid #e5e7eb;
+  border-radius: 50%;
+}
+
+/* Music toggle button */
+.music-toggle {
+  @apply fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-300;
+}
+
+.music-toggle:hover {
+  transform: scale(1.1);
+}
+
+/* Template cover screen */
+.template-cover {
+  @apply fixed inset-0 z-50 flex flex-col items-center justify-center transition-all duration-700;
+}
+
+.template-cover.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(1.05);
 }
