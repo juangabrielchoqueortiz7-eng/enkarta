@@ -267,24 +267,29 @@ export function EventIcon({ name, className = '', stroke = 'currentColor' }: { n
   }
 }
 
-// ── Heart + swirl ornament (with heartbeat) ───────────────────────────────────
-export function HeartSwirl({ color = '#2c4d77', className = '' }: { color?: string; className?: string }) {
+// ── Two interlocking hearts ornament (with heartbeat) ─────────────────────────
+const HEART_PATH = 'M0 3 C0 0 -4 0 -4 3 C-4 6.5 0 9.3 0 10.4 C0 9.3 4 6.5 4 3 C4 0 0 0 0 3 Z';
+export function HeartDuo({ color = '#1e3a5f', shine = '#8aa0c4', className = '' }: { color?: string; shine?: string; className?: string }) {
   return (
-    <svg viewBox="0 0 70 26" className={className} fill="none" aria-hidden>
+    <svg viewBox="0 0 50 30" className={className} fill="none" aria-hidden>
       <style>{`
         @keyframes hbBeat {
-          0%, 28%, 62%, 100% { transform: scale(1); }
-          14% { transform: scale(1.35); }
-          40% { transform: scale(1.15); }
+          0%, 30%, 62%, 100% { transform: scale(1); }
+          14% { transform: scale(1.16); }
+          42% { transform: scale(1.06); }
         }
-        .hb-heart { transform-box: fill-box; transform-origin: center; animation: hbBeat 1.5s ease-in-out infinite; }
+        .hb-beat { transform-box: fill-box; transform-origin: center; animation: hbBeat 1.5s ease-in-out infinite; }
       `}</style>
-      {/* small filled heart — beats like a heartbeat */}
-      <path className="hb-heart" d="M20 9c0-2.4-3.4-2.4-3.4 0 0-2.4-3.4-2.4-3.4 0 0 2.6 3.4 5 3.4 5s3.4-2.4 3.4-5Z" fill={color} />
-      {/* flowing swirl */}
-      <path d="M20 9c8-5 20-4 24 1 2.4 3-1 6-3.4 4.2-2-1.5-.4-4 2.4-3.4" stroke={color} strokeWidth="0.9" strokeLinecap="round" />
-      {/* tiny accent dot */}
-      <circle cx="9" cy="6" r="0.9" fill={color} opacity="0.7" />
+      <g className="hb-beat">
+        {/* outline heart — behind, upper-right */}
+        <path d={HEART_PATH} transform="translate(31.5 7) scale(1.25) rotate(8 0 5)" stroke={color} strokeWidth="0.9" />
+        {/* filled heart — front, lower-left */}
+        <path d={HEART_PATH} transform="translate(22.5 8) scale(1.5)" fill={color} />
+        {/* glossy shine on the filled heart */}
+        <path d="M18.6 11.4 C 20 9.7 22 9.6 23.4 10.8" stroke={shine} strokeWidth="1" strokeLinecap="round" />
+      </g>
+      {/* tiny accent heart — top-left */}
+      <path d={HEART_PATH} transform="translate(12.5 7) scale(0.62)" fill={color} />
     </svg>
   );
 }
