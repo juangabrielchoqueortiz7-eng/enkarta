@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { InvitationContent } from './types';
-import { useCountdown, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig } from './shared';
+import { useCountdown, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartSwirl } from './shared';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const C = {
@@ -267,13 +267,18 @@ export default function Azure({ data }: { data: InvitationContent }) {
           </p>
         </Reveal>
 
-        {/* Date — circular badge with SÁBADO ── JULIO */}
-        <Reveal delay={180} className="mt-10 flex items-center justify-center max-w-xl mx-auto">
+        {/* Heart + swirl ornament */}
+        <Reveal delay={140} className="mt-8 flex justify-center">
+          <HeartSwirl color={C.navy} className="w-16 opacity-80" />
+        </Reveal>
+
+        {/* Date — oval badge with SÁBADO ── JULIO */}
+        <Reveal delay={180} className="mt-6 flex items-center justify-center max-w-xl mx-auto">
           <div className="flex-1 flex items-center justify-end gap-3 min-w-0">
             <span className="font-cinzel tracking-[0.2em] text-[11px] sm:text-base whitespace-nowrap" style={{ color: C.soft }}>{data.weekday}</span>
             <div className="h-px flex-1 max-w-[70px]" style={{ background: C.line }} />
           </div>
-          <div className="relative z-10 -mx-3 sm:-mx-4 w-28 h-28 sm:w-36 sm:h-36 rounded-full flex flex-col items-center justify-center flex-shrink-0" style={{ border: `1px solid ${C.line}`, background: C.bg }}>
+          <div className="relative z-10 -mx-3 sm:-mx-4 w-24 h-32 sm:w-32 sm:h-40 flex flex-col items-center justify-center flex-shrink-0" style={{ border: `1px solid ${C.line}`, borderRadius: '50%', background: C.bg }}>
             <span className="font-cinzel tracking-[0.16em] text-[8px] sm:text-[10px]" style={{ color: C.soft }}>{data.city.toUpperCase()}</span>
             <span className="font-playfair font-bold leading-none" style={{ color: C.navy, fontSize: 'clamp(40px,9vw,58px)' }}>{data.day}</span>
             <span className="font-cinzel tracking-[0.14em] text-[9px] sm:text-[11px] mt-0.5" style={{ color: C.soft }}>{data.year}</span>

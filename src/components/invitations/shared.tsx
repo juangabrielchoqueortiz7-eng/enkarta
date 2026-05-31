@@ -166,38 +166,45 @@ export function CopyBtn({ value, color = 'currentColor' }: { value: string; colo
 export function EventIcon({ name, className = '', stroke = 'currentColor' }: { name: string; className?: string; stroke?: string }) {
   const common = { fill: 'none', stroke, strokeWidth: 1.25, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   switch (name) {
-    case 'church': // gothic arch + couple + cross
+    case 'church': // gothic arch + bride & groom + cross
       return (
         <svg viewBox="0 0 48 52" className={className} {...common}>
-          <path d="M24 3v7M21 6h6" />
-          <path d="M12 49V26C12 16 17.5 11 24 11s12 5 12 15v23" />
-          <path d="M12 49h24" />
-          {/* couple */}
-          <circle cx="20.5" cy="29" r="2.3" />
-          <path d="M20.5 31.5c-1.6 1.4-2.2 4-2.4 6.6M20.5 31.5c1.4 1.2 2 3 2.4 5" />
-          <circle cx="28" cy="29" r="2.3" />
-          <path d="M28 31.5c1.5 1.4 2 4 1.6 7M28 31.5 24.8 42h6.4z" />
-          <path d="M22.5 34.5h3" />
+          {/* cross */}
+          <path d="M24 2.5V9M21 5.2h6" />
+          {/* pointed arch */}
+          <path d="M11.5 49.5V25.5C11.5 14 17.5 9 24 9s12.5 5 12.5 16.5v24" />
+          <path d="M11 49.5h26" />
+          {/* bride (left): head, veil, A-line dress */}
+          <circle cx="20" cy="26" r="2.4" />
+          <path d="M17.9 25.2C15.4 29 15.6 38 16.6 45" />
+          <path d="M20 28.4 16.6 45h6.8z" />
+          {/* groom (right): head, torso, arm to bride, legs */}
+          <circle cx="28.4" cy="26.4" r="2.4" />
+          <path d="M28.4 28.8v9.4M28.4 31.5 23.6 33M28.4 38.2 26 45M28.4 38.2 30.8 45" />
         </svg>
       );
-    case 'cheers': // clinking flutes + sparkle
+    case 'cheers': // clinking champagne flutes + sparkle
       return (
         <svg viewBox="0 0 48 48" className={className} {...common}>
-          <path d="M15 9 21 11.5 19.3 22c-.2 1.1-1.6 1.1-1.8 0L15 9Z" />
-          <path d="M33 9 27 11.5 28.7 22c.2 1.1 1.6 1.1 1.8 0L33 9Z" />
-          <path d="M18.4 22.2 18.9 33M29.6 22.2 29.1 33" />
-          <path d="M15.5 34h6.5M26 34h6.5" />
-          {/* sparkle */}
-          <path d="M24 4v4M21 6l1.5 1.4M27 6l-1.5 1.4M24 9.5l0 1.5" opacity="0.9" />
+          {/* left flute (rim tilts toward center) */}
+          <path d="M15.5 9 21.5 11 19 21 Z" />
+          <path d="M19 21v9.5M16 31h6" />
+          {/* right flute */}
+          <path d="M32.5 9 26.5 11 29 21 Z" />
+          <path d="M29 21v9.5M26 31h6" />
+          {/* sparkle at the clink */}
+          <path d="M24 3.5v3.8M21.4 5.4 22.9 6.7M26.6 5.4 25.1 6.7" opacity="0.9" />
         </svg>
       );
-    case 'dance': // dancing couple
+    case 'dance': // dancing couple — groom + bride with flared dress
       return (
         <svg viewBox="0 0 48 48" className={className} {...common}>
+          {/* groom */}
           <circle cx="18" cy="12" r="2.6" />
-          <path d="M18 14.6 18 27M18 18.5 26 22.5M18 27 14.5 40M18 27 21 39" />
+          <path d="M18 14.6V27M18 18.5 26.5 22.5M18 27 14.5 40M18 27 21 39" />
+          {/* bride */}
           <circle cx="30.5" cy="11" r="2.6" />
-          <path d="M30.5 13.6 30.5 23M30.5 17.5 23 21M30.5 23 24.5 41h12.5z" />
+          <path d="M30.5 13.6V23M30.5 17.5 22.5 21M30.5 23 24.5 41h12.4z" />
         </svg>
       );
     case 'rings':
@@ -216,19 +223,27 @@ export function EventIcon({ name, className = '', stroke = 'currentColor' }: { n
           <path d="M9 10v8M9 18a3 3 0 006 0M12 10v8M39 10c-3 0-4 4-4 8h4z" />
         </svg>
       );
-    case 'dress': // suit + dress on hangers
+    case 'dress': // flared dress + suit jacket with bowtie, on hangers
       return (
         <svg viewBox="0 0 48 48" className={className} {...common}>
-          {/* suit hanger */}
-          <path d="M15 9c0-1.6 2.4-1.6 2.4 0" />
-          <path d="M10 13 16.2 9.6 22.4 13" />
-          <path d="M12 13 12 39 20.4 39 20.4 13" />
-          <path d="M16.2 13 13.6 19 16.2 21 18.8 19 16.2 13" />
-          {/* dress hanger */}
-          <path d="M31 9c0-1.6 2.4-1.6 2.4 0" />
-          <path d="M26 13 32.2 9.6 38.4 13" />
-          <path d="M32.2 13 32.2 19M28.6 19h7.2" />
-          <path d="M32.2 19 27 39 37.4 39 32.2 19" />
+          {/* ── dress (left) ── */}
+          <path d="M15.5 8.2c0-1.4 2-1.4 2 0" />
+          <path d="M11.2 12.4 16.5 9.4 21.8 12.4" />
+          {/* fitted bodice */}
+          <path d="M13.8 12.8 16.5 11.6 19.2 12.8" />
+          <path d="M14.4 13.2 15.6 21M18.6 13.2 17.4 21M15.6 21h1.8" />
+          {/* flared A-line skirt */}
+          <path d="M15.6 21 11 39h11l-4.6-18" />
+          {/* ── suit (right) ── */}
+          <path d="M30.5 8.2c0-1.4 2-1.4 2 0" />
+          <path d="M26.2 12.4 31.5 9.4 36.8 12.4" />
+          {/* jacket body */}
+          <path d="M28 12.8 28.3 39h6.4l.3-26.2" />
+          {/* lapels V */}
+          <path d="M29 13 31.5 20 34 13" />
+          <path d="M31.5 20V39" />
+          {/* bowtie */}
+          <path d="M30.2 13.6 31.5 14.5 30.2 15.4ZM32.8 13.6 31.5 14.5 32.8 15.4Z" />
         </svg>
       );
     case 'camera':
@@ -250,6 +265,20 @@ export function EventIcon({ name, className = '', stroke = 'currentColor' }: { n
     default:
       return null;
   }
+}
+
+// ── Heart + swirl ornament ────────────────────────────────────────────────────
+export function HeartSwirl({ color = '#2c4d77', className = '' }: { color?: string; className?: string }) {
+  return (
+    <svg viewBox="0 0 70 26" className={className} fill="none" aria-hidden>
+      {/* small filled heart */}
+      <path d="M20 9c0-2.4-3.4-2.4-3.4 0 0-2.4-3.4-2.4-3.4 0 0 2.6 3.4 5 3.4 5s3.4-2.4 3.4-5Z" fill={color} />
+      {/* flowing swirl */}
+      <path d="M20 9c8-5 20-4 24 1 2.4 3-1 6-3.4 4.2-2-1.5-.4-4 2.4-3.4" stroke={color} strokeWidth="0.9" strokeLinecap="round" />
+      {/* tiny accent dot */}
+      <circle cx="9" cy="6" r="0.9" fill={color} opacity="0.7" />
+    </svg>
+  );
 }
 
 // ── Orchid sprig divider (refined botanical) ──────────────────────────────────
