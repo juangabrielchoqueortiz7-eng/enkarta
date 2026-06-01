@@ -1,34 +1,27 @@
 import { notFound } from 'next/navigation';
 import Azure from '@/components/invitations/Azure';
+import Primicia from '@/components/invitations/Primicia';
 import { azureSample } from '@/components/invitations/sampleData';
-import { InvitationContent } from '@/components/invitations/types';
 
 interface Props {
   params: Promise<{ template: string }>;
   searchParams: Promise<{ n?: string; m?: string }>;
 }
 
-const registry: Record<string, { Comp: (p: { data: InvitationContent }) => JSX.Element; data: InvitationContent }> = {
-  azure: { Comp: Azure, data: azureSample },
-};
-
 export default async function MuestraPage({ params, searchParams }: Props) {
   const { template } = await params;
   const { n, m } = await searchParams;
+  const key = template.toLowerCase();
 
-  const entry = registry[template.toLowerCase()];
-  if (!entry) notFound();
-
-  const data: InvitationContent = {
-    ...entry.data,
-    guestName: m ?? entry.data.guestName,
-    guestPasses: n ?? entry.data.guestPasses,
-  };
-
-  const { Comp } = entry;
-  return <Comp data={data} />;
+  if (key === 'azure') {
+    return <Azure data={{ ...azureSample, guestName: m ?? azureSample.guestName, guestPasses: n ?? azureSample.guestPasses }} />;
+  }
+  if (key === 'primicia') {
+    return <Primicia guestName={m} guestPasses={n} />;
+  }
+  notFound();
 }
 
 export function generateStaticParams() {
-  return [{ template: 'azure' }];
+  return [{ template: 'azure' }, { template: 'primicia' }];
 }
