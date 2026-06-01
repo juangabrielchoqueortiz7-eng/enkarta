@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Azure from '@/components/invitations/Azure';
 import Primicia from '@/components/invitations/Primicia';
+import Passport from '@/components/invitations/Passport';
 import { azureSample } from '@/components/invitations/sampleData';
 
 interface Props {
@@ -19,9 +20,12 @@ export default async function MuestraPage({ params, searchParams }: Props) {
   if (key === 'primicia') {
     return <Primicia guestName={m} guestPasses={n} />;
   }
+  if (key === 'passport') {
+    return <Passport guestName={m} guestPasses={n} />;
+  }
   notFound();
 }
 
 export function generateStaticParams() {
-  return [{ template: 'azure' }, { template: 'primicia' }];
+  return [{ template: 'azure' }, { template: 'primicia' }, { template: 'passport' }];
 }
