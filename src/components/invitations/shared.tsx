@@ -267,72 +267,94 @@ export function EventIcon({ name, className = '', stroke = 'currentColor' }: { n
   }
 }
 
-// ── Heart loader: solid heart breaks into 3 orbiting hearts, then fuses back ───
-const HEART_VB = 'M12 20.6 C2.8 13.6 3.4 5.4 8 5.4 C10.4 5.4 12 7.9 12 7.9 C12 7.9 13.6 5.4 16 5.4 C20.6 5.4 21.2 13.6 12 20.6 Z';
-export function HeartLoader({ color = '#1e3a5f', size = 96, className = '' }: { color?: string; size?: number; className?: string }) {
-  const Heart = (cls: string, solid: boolean) => (
-    <svg viewBox="0 0 24 24" className={cls} aria-hidden>
-      <path d={HEART_VB} fill={solid ? color : 'none'} stroke={solid ? 'none' : color} strokeWidth={solid ? 0 : 2} strokeLinejoin="round" />
-    </svg>
+// ── Heart loader (matches reference): two interlocking hearts at rest; the
+//    filled heart leaves, the outline heart re-draws itself (self-tracing line)
+//    while three little hearts orbit, then it all fuses back. Loops forever. ────
+const HEART_C = 'M0 4 C-2 0 -8.5 0 -8.5 5.2 C-8.5 10.5 -2 13.8 0 16.2 C2 13.8 8.5 10.5 8.5 5.2 C8.5 0 2 0 0 4 Z';
+export function HeartLoader({ color = '#1e3a5f', shine = '#7d93b8', size = 100, className = '' }: { color?: string; shine?: string; size?: number; className?: string }) {
+  const mini = (cls: string) => (
+    <svg viewBox="-9 -1 18 18" className={`hl-mini ${cls}`}><path d={HEART_C} fill={color} /></svg>
   );
   return (
     <div className={`hl ${className}`} style={{ width: size, height: size }} aria-hidden>
       <style>{`
         .hl { position: relative; }
-        .hl svg { position: absolute; left: 50%; top: 50%; transform-origin: center; }
-        .hl .hl-big   { width: 46%; margin-left: -23%; margin-top: -21%; }
-        .hl .hl-small { width: 17%; margin-left: -8.5%;  margin-top: -8%;  }
-        .hl .hl-sol { animation: hlSolid 2.6s infinite; }
-        .hl .hl-s1 { animation: hlFly1 2.6s ease-in-out infinite; }
-        .hl .hl-s2 { animation: hlFly2 2.6s ease-in-out infinite; }
-        .hl .hl-s3 { animation: hlFly3 2.6s ease-in-out infinite; }
+        .hl svg { position: absolute; top: 50%; transform-origin: center; overflow: visible; }
+        .hl .hl-outline { width: 44%; left: 56%; margin-left: -22%; margin-top: -22%; }
+        .hl .hl-fill    { width: 44%; left: 44%; margin-left: -22%; margin-top: -22%; }
+        .hl .hl-tiny    { width: 13%; left: 33%; top: 31%; margin-left: -6.5%; margin-top: -6.5%; }
+        .hl .hl-mini    { width: 16%; left: 50%; margin-left: -8%; margin-top: -8%; }
 
-        @keyframes hlSolid {
-          0%, 6%  { transform: scale(1); animation-timing-function: cubic-bezier(.6,.04,.98,.34); }
-          13%     { transform: scale(0); }
-          82%     { transform: scale(0); animation-timing-function: cubic-bezier(.34,1.56,.64,1); }
+        .hl .hl-rest { animation: hlRest 4.2s infinite; }
+        .hl .hl-draw { stroke-dasharray: 100; animation: hlDraw 4.2s ease-in-out infinite; }
+        .hl .hl-m1 { animation: hlM1 4.2s ease-in-out infinite; }
+        .hl .hl-m2 { animation: hlM2 4.2s ease-in-out infinite; }
+        .hl .hl-m3 { animation: hlM3 4.2s ease-in-out infinite; }
+
+        /* filled + tiny hearts: present at rest, gone while it traces, bounce back */
+        @keyframes hlRest {
+          0%, 40% { transform: scale(1); animation-timing-function: cubic-bezier(.6,.04,.98,.34); }
+          45%     { transform: scale(0); }
+          86%     { transform: scale(0); animation-timing-function: cubic-bezier(.34,1.56,.64,1); }
           100%    { transform: scale(1); }
         }
-        /* heart 1 — bursts up, arcs over to the right, flips, returns */
-        @keyframes hlFly1 {
-          0%,10% { transform: translate(0,0) scale(0) rotate(0deg);       opacity: 0; }
-          16%    { transform: translate(0,0) scale(.9) rotate(0deg);      opacity: 1; }
-          37%    { transform: translate(-55%,-250%) scale(.9) rotate(-180deg); opacity: 1; }
-          57%    { transform: translate(225%,-205%) scale(.9) rotate(-300deg); opacity: 1; }
-          75%    { transform: translate(110%,-45%) scale(.8) rotate(-360deg); opacity: 1; }
-          80%    { transform: translate(0,0) scale(.45) rotate(-360deg);  opacity: 0; }
-          100%   { transform: translate(0,0) scale(0) rotate(-360deg);    opacity: 0; }
+        /* outline heart: drawn at rest, erases, then re-traces itself */
+        @keyframes hlDraw {
+          0%, 42% { stroke-dashoffset: 0; }
+          47%     { stroke-dashoffset: 100; }
+          85%     { stroke-dashoffset: 0; }
+          100%    { stroke-dashoffset: 0; }
         }
-        /* heart 2 — bursts left, arcs down, flips, returns */
-        @keyframes hlFly2 {
-          0%,12% { transform: translate(0,0) scale(0) rotate(0deg);       opacity: 0; }
-          18%    { transform: translate(0,0) scale(.9) rotate(0deg);      opacity: 1; }
-          39%    { transform: translate(-260%,-60%) scale(.9) rotate(170deg); opacity: 1; }
-          59%    { transform: translate(-200%,190%) scale(.9) rotate(320deg); opacity: 1; }
-          77%    { transform: translate(-70%,70%) scale(.8) rotate(360deg); opacity: 1; }
-          82%    { transform: translate(0,0) scale(.45) rotate(360deg);   opacity: 0; }
-          100%   { transform: translate(0,0) scale(0) rotate(360deg);     opacity: 0; }
+        /* three little hearts orbit with a flip while the outline traces */
+        @keyframes hlM1 {
+          0%,47% { transform: translate(0,0) scale(0) rotate(0deg);        opacity: 0; }
+          52%    { transform: translate(0,0) scale(.9) rotate(0deg);       opacity: 1; }
+          63%    { transform: translate(-55%,-240%) scale(.9) rotate(-180deg); opacity: 1; }
+          73%    { transform: translate(220%,-200%) scale(.9) rotate(-300deg); opacity: 1; }
+          83%    { transform: translate(110%,-40%) scale(.8) rotate(-360deg);  opacity: 1; }
+          86%    { transform: translate(0,0) scale(.4) rotate(-360deg);    opacity: 0; }
+          100%   { transform: translate(0,0) scale(0) rotate(-360deg);     opacity: 0; }
         }
-        /* heart 3 — bursts right, arcs down, flips, returns */
-        @keyframes hlFly3 {
-          0%,14% { transform: translate(0,0) scale(0) rotate(0deg);       opacity: 0; }
-          20%    { transform: translate(0,0) scale(.9) rotate(0deg);      opacity: 1; }
-          41%    { transform: translate(250%,-35%) scale(.9) rotate(-170deg); opacity: 1; }
-          61%    { transform: translate(185%,205%) scale(.9) rotate(-320deg); opacity: 1; }
-          79%    { transform: translate(60%,75%) scale(.8) rotate(-360deg); opacity: 1; }
-          84%    { transform: translate(0,0) scale(.45) rotate(-360deg);  opacity: 0; }
-          100%   { transform: translate(0,0) scale(0) rotate(-360deg);    opacity: 0; }
+        @keyframes hlM2 {
+          0%,48% { transform: translate(0,0) scale(0) rotate(0deg);        opacity: 0; }
+          53%    { transform: translate(0,0) scale(.9) rotate(0deg);       opacity: 1; }
+          64%    { transform: translate(-250%,-55%) scale(.9) rotate(170deg); opacity: 1; }
+          74%    { transform: translate(-195%,185%) scale(.9) rotate(320deg); opacity: 1; }
+          84%    { transform: translate(-65%,65%) scale(.8) rotate(360deg);  opacity: 1; }
+          87%    { transform: translate(0,0) scale(.4) rotate(360deg);     opacity: 0; }
+          100%   { transform: translate(0,0) scale(0) rotate(360deg);      opacity: 0; }
+        }
+        @keyframes hlM3 {
+          0%,49% { transform: translate(0,0) scale(0) rotate(0deg);        opacity: 0; }
+          54%    { transform: translate(0,0) scale(.9) rotate(0deg);       opacity: 1; }
+          65%    { transform: translate(245%,-30%) scale(.9) rotate(-170deg); opacity: 1; }
+          75%    { transform: translate(180%,195%) scale(.9) rotate(-320deg); opacity: 1; }
+          85%    { transform: translate(55%,70%) scale(.8) rotate(-360deg);  opacity: 1; }
+          88%    { transform: translate(0,0) scale(.4) rotate(-360deg);    opacity: 0; }
+          100%   { transform: translate(0,0) scale(0) rotate(-360deg);     opacity: 0; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .hl .hl-sol, .hl .hl-s1, .hl .hl-s2, .hl .hl-s3 { animation: none; }
-          .hl .hl-s1, .hl .hl-s2, .hl .hl-s3 { opacity: 0; }
+          .hl .hl-rest, .hl .hl-draw, .hl .hl-m1, .hl .hl-m2, .hl .hl-m3 { animation: none; }
+          .hl .hl-mini { opacity: 0; }
+          .hl .hl-draw { stroke-dashoffset: 0; }
         }
       `}</style>
-      {Heart('hl-big hl-out', false)}
-      {Heart('hl-big hl-sol', true)}
-      {Heart('hl-small hl-s1', true)}
-      {Heart('hl-small hl-s2', true)}
-      {Heart('hl-small hl-s3', true)}
+
+      {/* outline heart (back-right) — self-drawing */}
+      <svg viewBox="-9 -1 18 18" className="hl-outline">
+        <path className="hl-draw" d={HEART_C} pathLength={100} fill="none" stroke={color} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {/* filled heart (front-left) with a soft shine */}
+      <svg viewBox="-9 -1 18 18" className="hl-fill hl-rest">
+        <path d={HEART_C} fill={color} />
+        <path d="M-5 5.6 C-3.6 3.9 -1.6 3.7 -0.4 4.9" fill="none" stroke={shine} strokeWidth="1" strokeLinecap="round" />
+      </svg>
+      {/* tiny accent heart (top-left) */}
+      <svg viewBox="-9 -1 18 18" className="hl-tiny hl-rest"><path d={HEART_C} fill={color} /></svg>
+      {/* three orbiting little hearts */}
+      {mini('hl-m1')}
+      {mini('hl-m2')}
+      {mini('hl-m3')}
     </div>
   );
 }
