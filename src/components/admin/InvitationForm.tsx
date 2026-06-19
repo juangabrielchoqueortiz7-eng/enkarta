@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { InvitationTemplate, InvitationType, Sponsor, ItineraryItem, TEMPLATE_OPTIONS, TYPE_OPTIONS } from '@/lib/types';
+import { LottieIconMeta } from '@/lib/lottie-utils';
+import IconLibrary from '@/components/admin/IconLibrary';
+import LottieIcon from '@/components/ui/LottieIcon';
 
 interface CollapsibleProps {
   title: string;
@@ -62,6 +65,117 @@ function TextArea({ label, ...props }: { label: string } & React.TextareaHTMLAtt
   );
 }
 
+// ─── Itinerary Editor con picker de íconos Lottie ────────────────────────────
+
+function ItineraryEditor({
+  itinerary,
+  onChange,
+}: {
+  itinerary: ItineraryItem[];
+  onChange: (items: ItineraryItem[]) => void;
+}) {
+  // índice del paso que tiene el picker abierto (-1 = ninguno)
+  const [pickerOpen, setPickerOpen] = useState<number>(-1);
+
+  const update = (i: number, patch: Partial<ItineraryItem>) => {
+    const updated = [...itinerary];
+    updated[i] = { ...updated[i], ...patch };
+    onChange(updated);
+  };
+
+  const handleIconSelect = (i: number, icon: LottieIconMeta) => {
+    update(i, { icon: icon.path });   // guardamos la ruta Lottie, ej: /lottie/boda/marriage.json
+    setPickerOpen(-1);
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-outfit text-gray-600 mb-2">Itinerario</label>
+      <div className="space-y-2">
+        {itinerary.map((item, i) => (
+          <div key={i} className="rounded-xl border border-gray-200 overflow-hidden">
+            {/* Fila principal */}
+            <div className="flex gap-2 p-2 items-center">
+
+              {/* Botón selector de ícono */}
+              <button
+                type="button"
+                onClick={() => setPickerOpen(pickerOpen === i ? -1 : i)}
+                title="Elegir ícono Lottie"
+                className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                  pickerOpen === i
+                    ? 'border-enkarta-gold bg-enkarta-gold/10'
+                    : 'border-gray-200 hover:border-enkarta-gold/50 bg-gray-50'
+                }`}
+              >
+                {item.icon && item.icon.startsWith('/lottie/') ? (
+                  <LottieIcon icon={item.icon} size={36} loop autoplay lazy={false} />
+                ) : (
+                  <span className="text-gray-300 text-xl">🎭</span>
+                )}
+              </button>
+
+              {/* Hora */}
+              <input
+                value={item.time}
+                onChange={e => update(i, { time: e.target.value })}
+                className="w-20 px-3 py-2 rounded-xl border border-gray-200 focus:border-enkarta-gold outline-none transition-all font-outfit text-sm"
+                placeholder="16:00"
+              />
+
+              {/* Etiqueta */}
+              <input
+                value={item.label}
+                onChange={e => update(i, { label: e.target.value })}
+                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 focus:border-enkarta-gold outline-none transition-all font-outfit text-sm"
+                placeholder="Ceremonia Religiosa"
+              />
+
+              {/* Quitar paso */}
+              {itinerary.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => onChange(itinerary.filter((_, j) => j !== i))}
+                  className="text-red-300 hover:text-red-500 px-2 flex-shrink-0"
+                >✕</button>
+              )}
+            </div>
+
+            {/* Picker Lottie (desplegable) */}
+            {pickerOpen === i && (
+              <div className="border-t border-gray-100 p-3 bg-gray-50">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-outfit text-gray-500">Selecciona un ícono para este paso:</p>
+                  {item.icon && item.icon.startsWith('/lottie/') && (
+                    <button
+                      type="button"
+                      onClick={() => update(i, { icon: '' })}
+                      className="text-xs text-red-400 hover:text-red-600 font-outfit"
+                    >
+                      Quitar ícono
+                    </button>
+                  )}
+                </div>
+                <IconLibrary
+                  onSelect={(icon) => handleIconSelect(i, icon)}
+                  selectedId={item.icon?.split('/').pop()?.replace('.json', '')}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange([...itinerary, { time: '', label: '', icon: '' }])}
+        className="mt-2 text-xs text-enkarta-gold hover:underline font-outfit"
+      >
+        + Agregar paso
+      </button>
+    </div>
+  );
+}
+
 interface Props {
   initialData?: {
     id: string;
@@ -102,7 +216,7 @@ export default function InvitationForm({ initialData }: Props) {
 
   // Form state
   const [slug, setSlug] = useState(initialData?.slug || '');
-  const [template, setTemplate] = useState<InvitationTemplate>(initialData?.template || 'perla');
+  const [template, setTemplate] = useState<InvitationTemplate>(initialData?.template || 'azure');
   const [type, setType] = useState<InvitationType>(initialData?.type || 'boda');
   const [names, setNames] = useState(initialData?.names || '');
   const [eventDate, setEventDate] = useState(initialData?.event_date || '');
@@ -256,7 +370,10 @@ export default function InvitationForm({ initialData }: Props) {
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <span className="block text-sm font-outfit font-medium">{t.label}</span>
+                      <span className="block text-sm font-outfit font-medium">
+                        {t.label}
+                        {t.premium && <span className="ml-1 align-middle text-[9px] uppercase tracking-wide text-enkarta-gold">★</span>}
+                      </span>
                       <span className="block text-xs text-gray-400 mt-0.5">{t.description}</span>
                     </button>
                   ))}
@@ -413,37 +530,7 @@ export default function InvitationForm({ initialData }: Props) {
             </div>
 
             {/* Itinerary */}
-            <div>
-              <label className="block text-sm font-outfit text-gray-600 mb-1">Itinerario</label>
-              {itinerary.map((item, i) => (
-                <div key={i} className="flex gap-2 mb-2">
-                  <input
-                    value={item.time}
-                    onChange={(e) => {
-                      const updated = [...itinerary];
-                      updated[i] = { ...updated[i], time: e.target.value };
-                      setItinerary(updated);
-                    }}
-                    className="w-24 px-3 py-2 rounded-xl border border-gray-200 focus:border-enkarta-gold outline-none transition-all font-outfit text-sm"
-                    placeholder="13:00"
-                  />
-                  <input
-                    value={item.label}
-                    onChange={(e) => {
-                      const updated = [...itinerary];
-                      updated[i] = { ...updated[i], label: e.target.value };
-                      setItinerary(updated);
-                    }}
-                    className="flex-1 px-3 py-2 rounded-xl border border-gray-200 focus:border-enkarta-gold outline-none transition-all font-outfit text-sm"
-                    placeholder="Ceremonia Religiosa"
-                  />
-                  {itinerary.length > 1 && (
-                    <button type="button" onClick={() => setItinerary(itinerary.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600 px-2">✕</button>
-                  )}
-                </div>
-              ))}
-              <button type="button" onClick={() => setItinerary([...itinerary, { time: '', label: '' }])} className="text-xs text-enkarta-gold hover:underline font-outfit">+ Agregar paso</button>
-            </div>
+            <ItineraryEditor itinerary={itinerary} onChange={setItinerary} />
 
             <InputField label="Mensaje de regalos" value={giftMessage} onChange={(e) => setGiftMessage(e.target.value)} placeholder="Si deseas hacernos un obsequio..." />
             <InputField label="Cuenta bancaria" value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} placeholder="Banco BCP - 10000888888888" />

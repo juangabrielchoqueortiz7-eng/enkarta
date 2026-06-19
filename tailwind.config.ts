@@ -56,13 +56,15 @@ const config: Config = {
         },
       },
       fontFamily: {
-        playfair: ['Playfair Display', 'serif'],
-        cormorant: ['Cormorant Garamond', 'serif'],
-        cinzel: ['Cinzel', 'serif'],
-        great: ['Great Vibes', 'cursive'],
-        lora: ['Lora', 'serif'],
+        // Las invitaciones leen variables CSS (definidas por FontScope cuando el
+        // cliente personaliza la tipografía) con fallback a la fuente original.
+        playfair: ['var(--ek-font-heading, "Playfair Display")', 'serif'],
+        cormorant: ['var(--ek-font-body, "Cormorant Garamond")', 'serif'],
+        cinzel: ['var(--ek-font-heading, Cinzel)', 'serif'],
+        great: ['var(--ek-font-script, "Great Vibes")', 'cursive'],
+        lora: ['var(--ek-font-body, Lora)', 'serif'],
         dmserif: ['DM Serif Display', 'serif'],
-        nunito: ['Nunito', 'sans-serif'],
+        nunito: ['var(--ek-font-body, Nunito)', 'sans-serif'],
         outfit: ['Outfit', 'sans-serif'],
       },
       animation: {

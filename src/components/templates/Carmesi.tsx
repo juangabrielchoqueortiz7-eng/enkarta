@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { InvitationParsed } from '@/lib/types';
 import Countdown from '../Countdown';
 
@@ -97,8 +98,8 @@ export default function Carmesi({ invitation }: { invitation: InvitationParsed }
           )}
 
           {inv.cover_image_url && (
-            <div className="invitation-section mx-6 rounded-xl overflow-hidden">
-              <img src={inv.cover_image_url} alt="" className="w-full h-[50vh] object-cover" />
+            <div className="invitation-section mx-6 rounded-xl overflow-hidden relative h-[50vh]">
+              <Image src={inv.cover_image_url} alt="" fill className="object-cover" sizes="(max-width: 640px) 100vw, 512px" />
             </div>
           )}
 

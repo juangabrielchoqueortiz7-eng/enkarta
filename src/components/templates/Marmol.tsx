@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { InvitationParsed } from '@/lib/types';
 import Countdown from '../Countdown';
 
@@ -48,8 +49,8 @@ export default function Marmol({ invitation }: { invitation: InvitationParsed })
       {entered && (
         <div className="max-w-lg mx-auto">
           {inv.cover_image_url && (
-            <div className="invitation-section">
-              <img src={inv.cover_image_url} alt="Foto" className="w-full h-[60vh] object-cover" />
+            <div className="invitation-section relative h-[60vh]">
+              <Image src={inv.cover_image_url} alt="Foto" fill className="object-cover" sizes="(max-width: 640px) 100vw, 512px" />
             </div>
           )}
 

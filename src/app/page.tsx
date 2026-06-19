@@ -1,9 +1,114 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
+import { motion, MotionConfig, useMotionValue, useSpring, useInView, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+
+// ── Scroll reveal (entrada elegante al hacer scroll) ─────────────────────────
+function Reveal({ children, delay = 0, y = 32, className = '' }: {
+  children: React.ReactNode; delay?: number; y?: number; className?: string;
+}) {
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-70px' }}
+      transition={{ duration: 0.85, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ── Tilt 3D (perspectiva que sigue al cursor) ────────────────────────────────
+function Tilt3D({ children, max = 9, scale = 1.015, className = '' }: {
+  children: React.ReactNode; max?: number; scale?: number; className?: string;
+}) {
+  const rx = useMotionValue(0);
+  const ry = useMotionValue(0);
+  const srx = useSpring(rx, { stiffness: 160, damping: 20 });
+  const sry = useSpring(ry, { stiffness: 160, damping: 20 });
+  const [hover, setHover] = useState(false);
+  const reduced = useReducedMotion();
+
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (reduced) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    ry.set(px * max * 2);
+    rx.set(-py * max * 2);
+  };
+  const onLeave = () => { rx.set(0); ry.set(0); setHover(false); };
+
+  return (
+    <div className={className} style={{ perspective: '1400px' }} onMouseMove={onMove} onMouseEnter={() => setHover(true)} onMouseLeave={onLeave}>
+      <motion.div
+        style={{ rotateX: srx, rotateY: sry, transformStyle: 'preserve-3d' }}
+        animate={{ scale: hover ? scale : 1 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+}
+
+// ── Contador animado (stats del hero) ────────────────────────────────────────
+function CountUp({ value, suffix = '' }: { value: number; suffix?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (!inView) return;
+    const dur = 1400;
+    const t0 = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      const p = Math.min((t - t0) / dur, 1);
+      setN(Math.round(value * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, value]);
+  return <span ref={ref}>{n}{suffix}</span>;
+}
+
+// ── Partículas doradas flotantes (hero) ──────────────────────────────────────
+function GoldParticles({ count = 14 }: { count?: number }) {
+  const reduced = useReducedMotion();
+  // posiciones deterministas (evita mismatch de hidratación)
+  const parts = Array.from({ length: count }, (_, i) => {
+    const seed = (i * 137.508) % 100;
+    return {
+      left: `${(seed * 0.97 + 2) % 96}%`,
+      top: `${(i * 61.8 + 8) % 88}%`,
+      size: 2 + (i % 3) * 1.5,
+      dur: 7 + (i % 5) * 2.2,
+      delay: (i % 7) * 0.9,
+    };
+  });
+  if (reduced) return null;
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {parts.map((p, i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full"
+          style={{ left: p.left, top: p.top, width: p.size, height: p.size, background: 'radial-gradient(circle, rgba(224,192,116,0.9) 0%, rgba(184,151,90,0.25) 70%, transparent 100%)', boxShadow: '0 0 6px rgba(212,178,106,0.55)' }}
+          animate={{ y: [0, -26, 0], x: [0, i % 2 === 0 ? 10 : -10, 0], opacity: [0.15, 0.75, 0.15] }}
+          transition={{ duration: p.dur, delay: p.delay, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      ))}
+    </div>
+  );
+}
 
 // ── Phone frame (dark — hero section) ───────────────────────────────────────
-function PhoneFrame({ bg, accent, textColor, children, className = '' }: {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function PhoneFrame({ bg, accent: _accent, textColor, children, className = '' }: {
   bg: string; accent: string; textColor: string; children: React.ReactNode; className?: string;
 }) {
   return (
@@ -68,7 +173,7 @@ function CoverScreen({ t }: { t: (typeof templates)[0] }) {
   return (
     <div className="relative overflow-hidden" style={{ minHeight: '230px' }}>
       {t.img ? (
-        <img src={t.img} alt={t.name} className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: 'center 15%' }} draggable={false} />
+        <Image src={t.img} alt={t.name} fill className="object-cover" style={{ objectPosition: 'center 15%' }} sizes="(max-width: 1024px) 30vw, 180px" draggable={false} />
       ) : (
         <div className="absolute inset-0" style={{ background: `linear-gradient(175deg, ${t.coverEnd} 0%, ${t.coverStart} 55%, rgba(0,0,0,0.55) 100%)` }} />
       )}
@@ -222,7 +327,8 @@ function TabletCarousel() {
         <div className="absolute overflow-hidden" style={{ top: '16px', left: '36px', right: '16px', bottom: '16px', borderRadius: '1.8rem' }}>
           {/* Photos carousel */}
           {slides.map((sl, i) => (
-            <img key={i} src={sl.img} alt="" className="absolute inset-0 w-full h-full object-cover"
+            <Image key={i} src={sl.img} alt="" fill priority={i === 0} className="object-cover"
+              sizes="(max-width: 768px) 80vw, 570px"
               style={{ opacity: i === current ? 1 : 0, transition: 'opacity 1.2s ease-in-out', objectPosition: 'center 15%' }} />
           ))}
           {/* Invitation panel — right side overlay */}
@@ -263,18 +369,18 @@ function TabletCarousel() {
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 const templates = [
-  { name: 'Azure',      tag: 'Clásico',   desc: 'Azul · Elegante & Clásico',    bg: '#f8fbff', card: '#deeaf8', text: '#1a3a5c', accent: '#3a7ab5', coverStart: '#1a3a5c', coverEnd: '#2e6da4',    n1: 'Laura',   n2: 'Kevin',     dateStr: '15 · Nov · 2025', floral: false, img: '/catalog/azure.jpg' },
-  { name: 'Primicia',   tag: 'Moderno',   desc: 'Oscuro · Drama & Oro',          bg: '#0e0e0e', card: '#1c1c1c', text: '#d4a030', accent: '#c89828', coverStart: '#1a0f02', coverEnd: '#3a2508',    n1: 'Jhoana',  n2: 'Nikol',     dateStr: '22 · Oct · 2025', floral: false, img: '/catalog/primicia.jpg' },
-  { name: 'Passport',   tag: 'Viajero',   desc: 'Salvia · Aventura & Mapa',      bg: '#f5f3ed', card: '#e8e2d0', text: '#3a4a28', accent: '#6a8a45', coverStart: '#2a3a18', coverEnd: '#4a6a28',    n1: 'Robert',  n2: 'Isabella',  dateStr: '08 · Abr · 2025', floral: false, img: '/catalog/passport.jpg' },
-  { name: 'Paradise',   tag: 'Bohemio',   desc: 'Verde · Boho & Natural',         bg: '#f0f4ed', card: '#daeacc', text: '#2a5030', accent: '#5a8a40', coverStart: '#2a5030', coverEnd: '#4a8a50',    n1: 'Laura',   n2: 'Elvis',     dateStr: '30 · May · 2025', floral: true,  img: '/catalog/paradise.jpg' },
-  { name: 'Obsidiana',  tag: 'Nocturno',  desc: 'Negro · Sofisticado',            bg: '#0d1117', card: '#1a2030', text: '#c8d0b8', accent: '#7a9060', coverStart: '#0d1117', coverEnd: '#1a2a12',    n1: 'Karlene', n2: 'María',     dateStr: '30 · Ene · 2026', floral: false, img: '/catalog/obsidiana.jpg' },
-  { name: 'Dolce Vita', tag: 'Romántico', desc: 'Blanco · Floral & Script',       bg: '#fffdf8', card: '#f0ecd8', text: '#5a6a38', accent: '#8a9a4a', coverStart: '#c8b890', coverEnd: '#e0cc98',    n1: 'José',    n2: 'Nikol',     dateStr: '14 · Jun · 2025', floral: true,  img: '/catalog/dolcevita.jpg' },
-  { name: 'Grazia',     tag: 'Gala',      desc: 'Marina · Noche & Brillo',        bg: '#1b2631', card: '#243244', text: '#d8cc9a', accent: '#c8a840', coverStart: '#0d1520', coverEnd: '#1b2631',    n1: 'Lorenzo', n2: 'Isabella',  dateStr: '19 · Jul · 2025', floral: false, img: '/catalog/grazia.jpg' },
-  { name: 'Carmesí',    tag: 'Dramático', desc: 'Rojo · Pasión & Lujo',           bg: '#1a0a0a', card: '#2a1010', text: '#e0a0a0', accent: '#c06070', coverStart: '#3a0a12', coverEnd: '#1a0a0a',    n1: 'José',    n2: 'María',     dateStr: '11 · Ago · 2025', floral: false, img: '/catalog/carmesi.jpg' },
-  { name: 'Perla',      tag: 'Clásico',   desc: 'Crema · Hojas & Dorado',         bg: '#FAF7F2', card: '#f0ebe2', text: '#5a6e5a', accent: '#B8975A', coverStart: '#3a4e3a', coverEnd: '#5a7e5a',    n1: 'Camila',  n2: 'Alejandro', dateStr: '14 · Jun · 2025', floral: true,  img: '/catalog/perla.jpg' },
-  { name: 'Euforia',    tag: 'Floral',    desc: 'Beige · Cálido & Festivo',       bg: '#fff8f2', card: '#fde8d0', text: '#7a5028', accent: '#c08038', coverStart: '#7a5028', coverEnd: '#b07840',    n1: 'Andrea',  n2: 'Marget',    dateStr: '03 · Sep · 2025', floral: true,  img: '/catalog/euforia.jpg' },
-  { name: 'Rose Gold',  tag: 'Romántico', desc: 'Rosa · Suave & Floral',          bg: '#fff5f7', card: '#fce0e8', text: '#8a3050', accent: '#c87090', coverStart: '#8a3050', coverEnd: '#c06080',    n1: 'Lucía',   n2: 'Pablo',     dateStr: '28 · Sep · 2025', floral: true,  img: '/catalog/rosegold.jpg' },
-  { name: 'Allegria',   tag: 'Festivo',   desc: 'Esmeralda · Vivo & Fresco',      bg: '#f0fff5', card: '#d0f0e0', text: '#1a5a35', accent: '#2a8a50', coverStart: '#1a5a35', coverEnd: '#2a8a50',    n1: 'María',   n2: 'Vincent',   dateStr: '15 · Oct · 2025', floral: false, img: '/catalog/allegria.jpg' },
+  { name: 'Azure',      tag: 'Clásico',   desc: 'Azul · Elegante & Clásico',    bg: '#f8fbff', card: '#deeaf8', text: '#1a3a5c', accent: '#3a7ab5', coverStart: '#1a3a5c', coverEnd: '#2e6da4',    n1: 'Laura',   n2: 'Kevin',     dateStr: '15 · Nov · 2025', floral: false, img: '/catalog/azure.jpg', demoPath: '/muestra/azure?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Primicia',   tag: 'Moderno',   desc: 'Oscuro · Drama & Oro',          bg: '#0e0e0e', card: '#1c1c1c', text: '#d4a030', accent: '#c89828', coverStart: '#1a0f02', coverEnd: '#3a2508',    n1: 'Jhoana',  n2: 'Nikol',     dateStr: '22 · Oct · 2025', floral: false, img: '/catalog/primicia.jpg', demoPath: '/muestra/primicia?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Passport',   tag: 'Viajero',   desc: 'Salvia · Aventura & Mapa',      bg: '#f5f3ed', card: '#e8e2d0', text: '#3a4a28', accent: '#6a8a45', coverStart: '#2a3a18', coverEnd: '#4a6a28',    n1: 'Robert',  n2: 'Isabella',  dateStr: '08 · Abr · 2025', floral: false, img: '/catalog/passport.jpg', demoPath: '/muestra/passport?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Paradise',   tag: 'Bohemio',   desc: 'Salvia · Boho & Natural',        bg: '#eceedd', card: '#dde2c8', text: '#3c4a2a', accent: '#5f6b47', coverStart: '#3c4a2a', coverEnd: '#5f6b47',    n1: 'Laura',   n2: 'Elvis',     dateStr: '30 · May · 2025', floral: true,  img: '/catalog/paradise.jpg', demoPath: '/muestra/paradise?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Obsidiana',  tag: 'Nocturno',  desc: 'Negro · Oro & Mármol',           bg: '#100f0c', card: '#1c1b14', text: '#ece6d6', accent: '#c6a86a', coverStart: '#100f0c', coverEnd: '#3a3d28',    n1: 'Karlene', n2: 'María',     dateStr: '30 · Ene · 2026', floral: false, img: '/catalog/obsidiana.jpg', demoPath: '/muestra/obsidiana?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Dolce Vita', tag: 'Romántico', desc: 'Marfil · Botánico & Script',     bg: '#fbfaf3', card: '#eef0dd', text: '#3b3b35', accent: '#4f7a52', coverStart: '#c2a368', coverEnd: '#e0d2a8',    n1: 'José',    n2: 'Nikol',     dateStr: '14 · Jun · 2025', floral: true,  img: '/catalog/dolcevita.jpg', demoPath: '/muestra/dolcevita?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Grazia',     tag: 'Minimal',   desc: 'Champagne · Fino & Chic',        bg: '#fdfcf8', card: '#f1e9d8', text: '#2c2c27', accent: '#bca478', coverStart: '#a8916a', coverEnd: '#d8c9a8',    n1: 'Lorenzo', n2: 'Isabella',  dateStr: '19 · Jul · 2025', floral: false, img: '/catalog/grazia.jpg', demoPath: '/muestra/grazia?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Carmesí',    tag: 'Dramático', desc: 'Vino · Rosas & Oro',             bg: '#f6efe3', card: '#f0e3cf', text: '#4a3733', accent: '#871a2f', coverStart: '#871a2f', coverEnd: '#6d1424',    n1: 'José',    n2: 'María',     dateStr: '11 · Ago · 2025', floral: true,  img: '/catalog/carmesi.jpg', demoPath: '/muestra/carmesi?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Napoly',     tag: 'Clásico',   desc: 'Taupe · Rosa empolvado',         bg: '#fbf8f3', card: '#f3e8e0', text: '#5a4d44', accent: '#b98a86', coverStart: '#6f6052', coverEnd: '#b98a86',    n1: 'Nestor',  n2: 'Sandra',    dateStr: '07 · Sep · 2026', floral: true,  img: '/catalog/perla.jpg', demoPath: '/muestra/napoly?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Euforia',    tag: 'Floral',    desc: 'Mocha · Cálido & Acuarela',      bg: '#f7f1e5', card: '#efe3cd', text: '#5d5040', accent: '#8a7257', coverStart: '#6b563f', coverEnd: '#a08458',    n1: 'Andrea',  n2: 'Marget',    dateStr: '03 · Sep · 2025', floral: true,  img: '/catalog/euforia.jpg', demoPath: '/muestra/euforia?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Rose Gold',  tag: 'Romántico', desc: 'Blush · Suave & Floral',         bg: '#fdf6f1', card: '#f8e3da', text: '#7a6157', accent: '#b97f86', coverStart: '#b97f86', coverEnd: '#d8a8a0',    n1: 'Lucía',   n2: 'Pablo',     dateStr: '28 · Sep · 2025', floral: true,  img: '/catalog/rosegold.jpg', demoPath: '/muestra/rosegold?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Allegria',   tag: 'Minimal',   desc: 'Salvia · Limpio & Fresco',       bg: '#fbfbf8', card: '#e9ede5', text: '#3a3a34', accent: '#8c9a86', coverStart: '#6f7d69', coverEnd: '#8c9a86',    n1: 'María',   n2: 'Vincent',   dateStr: '15 · Oct · 2025', floral: false, img: '/catalog/allegria.jpg', demoPath: '/muestra/allegria?m=Daniel%20Martinez&n=2%20pases' },
 ];
 
 const features = [
@@ -365,6 +471,73 @@ const faqs = [
 
 const WA = "https://wa.me/0000000000?text=Hola%20Enkarta%21%20Me%20gustaría%20reservar%20una%20invitación%20digital.";
 
+const smartConfirmationCards = [
+  {
+    title: 'Confirmaciones unicas',
+    desc: 'Cada invitado recibe su acceso personal y responde una sola vez.',
+    badge: 'RSVP',
+    icon: (
+      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-12 h-12">
+        <path d="M10 22h44v26a6 6 0 0 1-6 6H16a6 6 0 0 1-6-6V22Z" />
+        <path d="m12 24 20 15 20-15" />
+        <path d="M24 17h16" />
+        <path d="M28 11h8" />
+        <circle cx="46" cy="42" r="7" />
+        <path d="m43.5 42 1.8 1.8 3.6-4" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Tickets y mesas',
+    desc: 'Pases, cantidad de cupos y numero de mesa visibles desde el enlace personal.',
+    badge: 'ACCESO',
+    icon: (
+      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-12 h-12">
+        <path d="M13 22h38a4 4 0 0 1 4 4v6a5 5 0 0 0-5 5 5 5 0 0 0 5 5v6a4 4 0 0 1-4 4H13a4 4 0 0 1-4-4v-6a5 5 0 0 0 5-5 5 5 0 0 0-5-5v-6a4 4 0 0 1 4-4Z" />
+        <path d="M25 22v30" strokeDasharray="4 4" />
+        <path d="M32 30h12" />
+        <path d="M32 38h8" />
+        <path d="M16 33h4" />
+      </svg>
+    ),
+  },
+  {
+    title: 'QR personal',
+    desc: 'Codigo listo para validar ingreso y evitar reenvios no autorizados.',
+    badge: 'QR',
+    icon: (
+      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-12 h-12">
+        <rect x="18" y="9" width="28" height="46" rx="5" />
+        <rect x="25" y="18" width="4" height="4" />
+        <rect x="33" y="18" width="4" height="4" />
+        <rect x="25" y="26" width="4" height="4" />
+        <rect x="33" y="26" width="4" height="4" />
+        <rect x="29" y="34" width="4" height="4" />
+        <circle cx="45" cy="42" r="8" />
+        <path d="m42.4 42 1.8 1.8 3.8-4.2" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Panel en tiempo real',
+    desc: 'Visualiza quien confirma, rechaza o queda pendiente en un mismo tablero.',
+    badge: 'LIVE',
+    icon: (
+      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-12 h-12">
+        <rect x="10" y="12" width="44" height="40" rx="5" />
+        <path d="M10 22h44" />
+        <circle cx="17" cy="17" r="1.5" fill="currentColor" stroke="none" />
+        <circle cx="23" cy="17" r="1.5" fill="currentColor" stroke="none" />
+        <circle cx="29" cy="17" r="1.5" fill="currentColor" stroke="none" />
+        <path d="M18 40c3-5 7-8 12-8s8 2 11 7 6 5 9 1" />
+        <circle cx="20" cy="40" r="2.5" />
+        <circle cx="32" cy="32" r="2.5" />
+        <circle cx="42" cy="39" r="2.5" />
+      </svg>
+    ),
+  },
+];
+
 // ── Check / X icons ───────────────────────────────────────────────────────────
 function Check({ dark }: { dark?: boolean }) {
   return (
@@ -381,21 +554,97 @@ function Cross() {
   );
 }
 
+function SmartConfirmationShowcase() {
+  return (
+    <div className="relative mt-14">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute left-[8%] top-10 h-40 w-40 rounded-full blur-3xl" style={{ background: 'rgba(255,255,255,0.08)' }} />
+        <div className="absolute right-[10%] bottom-0 h-48 w-48 rounded-full blur-3xl" style={{ background: 'rgba(62,41,8,0.22)' }} />
+        <div className="absolute left-1/2 top-4 h-[82%] w-px -translate-x-1/2" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.3), rgba(255,255,255,0.05))' }} />
+      </div>
+
+      <div className="relative flex flex-col items-center gap-4 mb-10">
+        <div className="inline-flex items-center gap-3 rounded-full px-5 py-2 text-white/90 backdrop-blur-sm" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)' }}>
+          <span className="font-cormorant text-2xl sm:text-3xl">Paquete</span>
+          <span className="rounded-full px-4 py-2 font-outfit text-xs sm:text-sm tracking-[0.25em] uppercase" style={{ background: '#5b4317', boxShadow: '0 12px 28px rgba(45,30,6,0.28)' }}>
+            Exclusive
+          </span>
+        </div>
+        <div className="h-px w-36" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent)' }} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        {smartConfirmationCards.map((card, index) => (
+          <div
+            key={card.title}
+            className="group relative overflow-hidden rounded-[30px] px-7 py-8 text-left text-white"
+            style={{
+              background: 'linear-gradient(180deg, rgba(205,188,151,0.26) 0%, rgba(196,176,137,0.2) 100%)',
+              border: '1px solid rgba(255,255,255,0.14)',
+              boxShadow: '0 18px 44px rgba(68,50,20,0.18), inset 0 1px 0 rgba(255,255,255,0.08)',
+              animation: `smartCardFloat ${6 + index * 0.7}s ease-in-out ${index * 0.4}s infinite`,
+            }}
+          >
+            <div
+              className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+              style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.16), transparent 55%)' }}
+            />
+            <div className="absolute right-4 top-4 rounded-full px-3 py-1 text-[10px] font-outfit tracking-[0.22em] uppercase" style={{ background: 'rgba(71,48,11,0.45)', border: '1px solid rgba(255,255,255,0.12)' }}>
+              {card.badge}
+            </div>
+            <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl" style={{ background: 'rgba(255,255,255,0.06)', color: '#fff', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)' }}>
+              <div style={{ animation: `smartIconPulse ${4.5 + index * 0.4}s ease-in-out infinite` }}>
+                {card.icon}
+              </div>
+            </div>
+            <h4 className="font-cormorant text-3xl leading-none mb-3">{card.title}</h4>
+            <p className="font-outfit text-[15px] leading-7 text-white/78">{card.desc}</p>
+            <div className="mt-6 flex items-center gap-2 text-white/70">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#fff', animation: `smartDotBlink ${1.9 + index * 0.2}s ease-in-out infinite` }} />
+              <span className="font-outfit text-xs tracking-[0.18em] uppercase">Monitoreo activo</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const [openFaq, setOpenFaq]   = useState<number | null>(null);
   const [currency, setCurrency] = useState<'bs' | 'usd'>('bs');
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Parallax suave del hero al hacer scroll
+  const heroRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+  const heroGlowY = useTransform(scrollYProgress, [0, 1], [0, 120]);
+  const heroTabletY = useTransform(scrollYProgress, [0, 1], [0, -60]);
 
   const pkgs = [
-    { key: 'exclusive', label: 'EXCLUSIVE', bs: 1100, usd: 157, color: '#443313', dark: true,  lightCard: false },
-    { key: 'premium',   label: 'PREMIUM',   bs: 930,  usd: 133, color: '#AB9976', dark: false, lightCard: false },
-    { key: 'plus',      label: 'PLUS',      bs: 750,  usd: 107, color: '#F8F6F3', dark: false, lightCard: true  },
+    { key: 'exclusive', label: 'EXCLUSIVE', bs: 1100, usd: 157, tag: 'El más completo',
+      feats: ['Confirmación inteligente + QR de acceso', 'Apertura tipo sobre exclusiva', 'Galería de hasta 20 fotos', 'Hospedaje, calendario y nº de mesa'] },
+    { key: 'premium',   label: 'PREMIUM',   bs: 930,  usd: 133, tag: 'El favorito',
+      feats: ['Música de fondo personalizada', 'Nombres de invitados y pases', 'Galería de hasta 8 fotos', 'Confirmación por planilla'] },
+    { key: 'plus',      label: 'PLUS',      bs: 750,  usd: 107, tag: 'Esencial',
+      feats: ['Confirmación por WhatsApp', 'Ubicación Maps y cuenta regresiva', 'Itinerario y dress code', 'Sugerencia de regalos'] },
   ];
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#FAF7F2' }}>
     {/* ── Global premium animations ── */}
     <style>{`
+      html { scroll-behavior: smooth; }
       @keyframes shimmerSlide {
         0%   { transform: translateX(-200%) skewX(-20deg); }
         100% { transform: translateX(400%)  skewX(-20deg); }
@@ -420,10 +669,27 @@ export default function LandingPage() {
         0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
         50%       { opacity: 1; transform: scale(1) rotate(180deg); }
       }
+      @keyframes smartCardFloat {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-12px); }
+      }
+      @keyframes smartIconPulse {
+        0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.92; }
+        50% { transform: scale(1.06) rotate(-2deg); opacity: 1; }
+      }
+      @keyframes smartDotBlink {
+        0%, 100% { opacity: 0.35; transform: scale(0.9); }
+        50% { opacity: 1; transform: scale(1.15); }
+      }
     `}</style>
 
       {/* ── Nav (light, airy) ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b" style={{ backgroundColor: 'rgba(250,247,242,0.82)', borderColor: 'rgba(139,125,95,0.15)' }}>
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b transition-all duration-500"
+        style={{
+          backgroundColor: scrolled ? 'rgba(250,247,242,0.94)' : 'rgba(250,247,242,0.82)',
+          borderColor: 'rgba(139,125,95,0.15)',
+          boxShadow: scrolled ? '0 10px 36px rgba(90,78,52,0.12)' : 'none',
+        }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           <h1 className="font-cinzel text-xl tracking-wide" style={{
             backgroundImage: 'linear-gradient(90deg, #8B7D5F 0%, #B8975A 30%, #e0c074 50%, #B8975A 70%, #8B7D5F 100%)',
@@ -436,38 +702,85 @@ export default function LandingPage() {
             <span className="font-great text-3xl">E</span>nkarta
           </h1>
           <div className="hidden md:flex items-center gap-7 font-outfit text-sm" style={{ color: 'rgba(44,37,25,0.55)' }}>
-            {['Bodas','XV Años','Graduaciones','Bautizos'].map(l => (
-              <a key={l} href="#catalogo" className="transition-colors hover:text-enkarta-dark">{l}</a>
+            {[['Bodas','#catalogo'],['XV Años','#catalogo'],['Graduaciones','#catalogo'],['Bautizos','#catalogo'],['Precios','#precios']].map(([l, href]) => (
+              <a key={l} href={href} className="relative group transition-colors hover:text-enkarta-dark py-1">
+                {l}
+                <span className="absolute left-0 -bottom-0.5 h-px w-0 group-hover:w-full transition-all duration-300" style={{ backgroundColor: '#B8975A' }} />
+              </a>
             ))}
-            <a href="#precios" className="transition-colors hover:text-enkarta-dark">Precios</a>
           </div>
           <div className="flex items-center gap-3">
-            <a href="/admin" className="px-4 py-2 border rounded-lg font-outfit text-sm font-medium transition-all"
-               style={{ borderColor: 'rgba(139,125,95,0.35)', color: 'rgba(44,37,25,0.7)' }}>
+            <a href="/panel" className="hidden md:inline-block px-4 py-2 border rounded-lg font-outfit text-sm font-medium transition-all duration-300 hover:-translate-y-px"
+               style={{ borderColor: 'rgba(139,125,95,0.35)', color: 'rgba(44,37,25,0.7)' }}
+               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#B8975A'; (e.currentTarget as HTMLElement).style.color = '#8B7D5F'; }}
+               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(139,125,95,0.35)'; (e.currentTarget as HTMLElement).style.color = 'rgba(44,37,25,0.7)'; }}>
               Iniciar Sesión
             </a>
             <a href={WA} target="_blank" rel="noopener noreferrer"
-               className="px-4 py-2 rounded-lg font-outfit text-sm font-semibold text-white transition-all"
-               style={{ backgroundColor: '#8B7D5F' }}>
+               className="px-4 py-2 rounded-lg font-outfit text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-px hover:shadow-lg"
+               style={{ backgroundColor: '#8B7D5F', boxShadow: '0 4px 16px rgba(139,125,95,0.25)' }}>
               Contactar
             </a>
+            {/* Hamburguesa (solo móvil) */}
+            <button
+              onClick={() => setMenuOpen(o => !o)}
+              aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={menuOpen}
+              className="md:hidden w-10 h-10 flex flex-col items-center justify-center gap-[5px] rounded-lg transition-colors"
+              style={{ color: '#8B7D5F' }}
+            >
+              <span className="block h-[2px] w-5 rounded-full bg-current transition-all duration-300" style={{ transform: menuOpen ? 'translateY(7px) rotate(45deg)' : 'none' }} />
+              <span className="block h-[2px] w-5 rounded-full bg-current transition-all duration-300" style={{ opacity: menuOpen ? 0 : 1 }} />
+              <span className="block h-[2px] w-5 rounded-full bg-current transition-all duration-300" style={{ transform: menuOpen ? 'translateY(-7px) rotate(-45deg)' : 'none' }} />
+            </button>
           </div>
         </div>
+
+        {/* Panel móvil desplegable */}
+        <motion.div
+          initial={false}
+          animate={{ height: menuOpen ? 'auto' : 0, opacity: menuOpen ? 1 : 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="md:hidden overflow-hidden border-t"
+          style={{ backgroundColor: 'rgba(250,247,242,0.97)', borderColor: 'rgba(139,125,95,0.12)' }}
+        >
+          <div className="px-6 py-4 flex flex-col gap-1 font-outfit text-sm">
+            {[['Bodas','#catalogo'],['XV Años','#catalogo'],['Graduaciones','#catalogo'],['Bautizos','#catalogo'],['Precios','#precios'],['Preguntas','#faq']].map(([l, href]) => (
+              <a key={l} href={href} onClick={() => setMenuOpen(false)}
+                 className="py-2.5 px-3 rounded-lg transition-colors hover:bg-enkarta-gold/10"
+                 style={{ color: 'rgba(44,37,25,0.7)' }}>
+                {l}
+              </a>
+            ))}
+            <div className="h-px my-2" style={{ backgroundColor: 'rgba(139,125,95,0.15)' }} />
+            <a href="/panel" onClick={() => setMenuOpen(false)}
+               className="py-2.5 px-3 rounded-lg transition-colors hover:bg-enkarta-gold/10"
+               style={{ color: '#8B7D5F' }}>
+              Iniciar Sesión
+            </a>
+          </div>
+        </motion.div>
       </nav>
 
       {/* ── Hero (light, airy, editorial) ── */}
-      <section className="relative min-h-screen flex flex-col" style={{
+      <section ref={heroRef} className="relative min-h-screen flex flex-col" style={{
         background: 'radial-gradient(ellipse at 50% 12%, #fdfbf7 0%, #f6f0e7 45%, #ece2d4 100%)',
       }}>
-        {/* Soft warm light glows */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Soft warm light glows (parallax) */}
+        <motion.div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ y: heroGlowY }}>
           <div className="absolute top-[-10%] left-[10%] w-[480px] h-[480px] rounded-full blur-3xl" style={{ background: 'radial-gradient(circle, rgba(212,184,120,0.18) 0%, transparent 70%)' }} />
           <div className="absolute bottom-[5%] right-[8%] w-[420px] h-[420px] rounded-full blur-3xl" style={{ background: 'radial-gradient(circle, rgba(139,125,95,0.14) 0%, transparent 70%)' }} />
-        </div>
+        </motion.div>
+        <GoldParticles />
 
         {/* Centered brand emblem + tagline */}
-        <div className="relative z-10 flex flex-col items-center pt-28 px-6">
-          <div className="flex items-center gap-3 mb-5">
+        <motion.div
+          className="relative z-10 flex flex-col items-center pt-28 px-6"
+          initial="hidden"
+          animate="show"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.14, delayChildren: 0.15 } } }}
+        >
+          <motion.div variants={{ hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }} className="flex items-center gap-3 mb-5">
             <div className="w-12 h-12 rounded-full border flex items-center justify-center" style={{ borderColor: 'rgba(139,125,95,0.4)', background: 'rgba(212,184,120,0.1)', animation: 'goldPulse 2.8s ease-in-out infinite' }}>
               <span className="font-great text-2xl" style={{ color: '#8B7D5F' }}>E</span>
             </div>
@@ -479,33 +792,54 @@ export default function LandingPage() {
               backgroundClip: 'text',
               animation: 'logoShimmer 6s linear infinite',
             }}>Enkarta</span>
-          </div>
+          </motion.div>
 
-          <p className="font-cormorant text-center tracking-[0.18em]" style={{ color: 'rgba(44,37,25,0.55)', fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 500 }}>
+          <motion.p variants={{ hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}
+            className="font-cormorant text-center tracking-[0.18em]" style={{ color: 'rgba(44,37,25,0.55)', fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 500 }}>
             Celebra con elegancia
-          </p>
-          <h1 className="font-great text-center" style={{ color: '#8B7D5F', fontSize: 'clamp(44px, 6.5vw, 76px)', lineHeight: 1.05 }}>
+          </motion.p>
+          <motion.h1 variants={{ hidden: { opacity: 0, y: 28, scale: 0.97 }, show: { opacity: 1, y: 0, scale: 1, transition: { duration: 1, ease: [0.22, 1, 0.36, 1] } } }}
+            className="font-great text-center" style={{ color: '#8B7D5F', fontSize: 'clamp(44px, 6.5vw, 76px)', lineHeight: 1.05 }}>
             invita con estilo
-          </h1>
+          </motion.h1>
 
-          <div className="flex items-center gap-4 mt-4 mb-2">
+          <motion.div variants={{ hidden: { opacity: 0, scaleX: 0.4 }, show: { opacity: 1, scaleX: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}
+            className="flex items-center gap-4 mt-4 mb-2">
             <div className="h-px w-16" style={{ backgroundColor: 'rgba(139,125,95,0.45)' }} />
             <span className="font-outfit text-sm tracking-[0.4em]" style={{ color: 'rgba(139,125,95,0.7)' }}>2026</span>
             <div className="h-px w-16" style={{ backgroundColor: 'rgba(139,125,95,0.45)' }} />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        {/* Tablet carousel — centered, floating */}
+        {/* Tablet carousel — centered, floating, 3D tilt */}
         <div className="relative z-10 flex-1 flex items-center justify-center px-6 py-10">
-          <div className="w-full max-w-2xl">
-            <TabletCarousel />
-          </div>
+          <motion.div
+            className="w-full max-w-2xl"
+            style={{ y: heroTabletY }}
+            initial={{ opacity: 0, y: 60, rotateX: 14 }}
+            animate={{ opacity: 1, y: 0, rotateX: 0 }}
+            transition={{ duration: 1.1, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Tilt3D max={7} scale={1.012}>
+              <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}>
+                <TabletCarousel />
+              </motion.div>
+            </Tilt3D>
+          </motion.div>
         </div>
 
         {/* CTAs + stats */}
-        <div className="relative z-10 flex flex-col items-center pb-16 px-6">
+        <motion.div
+          className="relative z-10 flex flex-col items-center pb-16 px-6"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        >
           <div className="flex flex-col sm:flex-row items-center gap-4 mb-10">
-            <a href="#catalogo" className="px-9 py-3.5 rounded-full font-outfit font-semibold text-white transition-all text-sm" style={{ backgroundColor: '#8B7D5F', boxShadow: '0 8px 28px rgba(139,125,95,0.3)' }}>
+            <a href="#catalogo" className="relative overflow-hidden px-9 py-3.5 rounded-full font-outfit font-semibold text-white transition-all duration-300 text-sm hover:-translate-y-0.5 hover:shadow-xl group" style={{ backgroundColor: '#8B7D5F', boxShadow: '0 8px 28px rgba(139,125,95,0.3)' }}>
+              <span className="absolute inset-0 pointer-events-none overflow-hidden rounded-full">
+                <span className="absolute top-0 bottom-0 w-1/3 opacity-0 group-hover:opacity-100" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)', animation: 'shimmerSlide 1.6s ease-in-out infinite' }} />
+              </span>
               Ver Catálogo
             </a>
             <a href={WA} target="_blank" rel="noopener noreferrer"
@@ -516,14 +850,26 @@ export default function LandingPage() {
           </div>
 
           <div className="flex gap-10 sm:gap-14">
-            {[['200+','Invitaciones'],['12','Diseños'],['100%','Satisfacción']].map(([n, l]) => (
-              <div key={l} className="text-center">
-                <p className="font-cinzel text-2xl font-semibold" style={{ color: '#5a4e34' }}>{n}</p>
+            {[[200, '+', 'Invitaciones'], [12, '', 'Diseños'], [100, '%', 'Satisfacción']].map(([n, suffix, l]) => (
+              <div key={l as string} className="text-center">
+                <p className="font-cinzel text-2xl font-semibold" style={{ color: '#5a4e34' }}>
+                  <CountUp value={n as number} suffix={suffix as string} />
+                </p>
                 <p className="font-outfit text-[11px] mt-1" style={{ color: 'rgba(44,37,25,0.4)' }}>{l}</p>
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
+
+        {/* Scroll hint */}
+        <motion.div
+          className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8, duration: 1 }}
+        >
+          <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(139,125,95,0.55)" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* ── Event type pills ── */}
@@ -543,33 +889,50 @@ export default function LandingPage() {
       {/* ── Catalog ── */}
       <section id="catalogo" className="py-28 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-20">
+          <Reveal className="text-center mb-20">
             <p className="font-great text-4xl mb-2" style={{ color: '#B8975A' }}>Catálogo</p>
             <h3 className="font-cinzel text-3xl sm:text-4xl tracking-[0.08em]" style={{ color: '#5a4e34' }}>INVITACIONES ÚNICAS</h3>
             <p className="font-cormorant mt-4 max-w-xl mx-auto" style={{ color: 'rgba(44,37,25,0.55)', fontSize: '20px', fontWeight: 500 }}>
               Descubre diseños únicos creados por nuestro equipo de expertos para tus momentos más especiales.
             </p>
-          </div>
+          </Reveal>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-24">
-            {templates.map((t) => (
-              <a key={t.name} href={WA} target="_blank" rel="noopener noreferrer" className="group">
-                <DualPhoneCard t={t} />
-              </a>
-            ))}
+            {templates.map((t, i) => {
+              const isDemo = 'demoPath' in t;
+              return (
+              <Reveal key={t.name} delay={(i % 4) * 0.1} y={44}>
+                <a
+                  href={isDemo ? t.demoPath : WA}
+                  target={isDemo ? undefined : '_blank'}
+                  rel={isDemo ? undefined : 'noopener noreferrer'}
+                  className="group block"
+                >
+                  <Tilt3D max={6} scale={1.02}>
+                    <DualPhoneCard t={t} />
+                  </Tilt3D>
+                  <div className="mt-3 text-center">
+                    <span className="font-outfit text-[11px] uppercase tracking-[0.22em]" style={{ color: isDemo ? '#B8975A' : 'rgba(44,37,25,0.38)' }}>
+                      {isDemo ? 'Abrir invitación' : 'Disponible a pedido'}
+                    </span>
+                  </div>
+                </a>
+              </Reveal>
+              );
+            })}
           </div>
-          <div className="text-center mt-20">
+          <Reveal className="text-center mt-20">
             <a href={WA} target="_blank" rel="noopener noreferrer"
-               className="inline-block px-9 py-3.5 border rounded-full font-outfit font-semibold transition-all"
+               className="inline-block px-9 py-3.5 border rounded-full font-outfit font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                style={{ borderColor: 'rgba(139,125,95,0.5)', color: '#8B7D5F' }}>
               Pedir mi invitación
             </a>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── Editorial transition: primer detalle ── */}
       <section className="py-28 px-6" style={{ backgroundColor: '#F4EEE5' }}>
-        <div className="max-w-2xl mx-auto text-center">
+        <Reveal className="max-w-2xl mx-auto text-center">
           <h2 className="font-great mb-8" style={{ color: '#8B7D5F', fontSize: 'clamp(44px, 6vw, 72px)', lineHeight: 1 }}>
             primer detalle
           </h2>
@@ -579,12 +942,18 @@ export default function LandingPage() {
             nuestra tecnología permite <strong style={{ color: '#5a4e34' }}>personalizar la invitación con el nombre de cada invitado</strong>,
             haciendo que cada destinatario se sienta parte especial de su historia.
           </p>
-        </div>
+        </Reveal>
       </section>
 
       {/* ── Olive block: confirmación inteligente ── */}
-      <section className="py-24 px-6 text-center" style={{ backgroundColor: '#8B7D5F' }}>
-        <div className="max-w-3xl mx-auto">
+      <section className="relative overflow-hidden py-24 px-6 text-center" style={{ background: 'linear-gradient(180deg, #a99465 0%, #9f8a5d 100%)' }}>
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-x-0 top-0 h-px" style={{ background: 'rgba(255,255,255,0.2)' }} />
+          <div className="absolute left-[8%] top-[18%] h-56 w-56 rounded-full blur-3xl" style={{ background: 'rgba(255,255,255,0.08)' }} />
+          <div className="absolute right-[7%] bottom-[10%] h-72 w-72 rounded-full blur-3xl" style={{ background: 'rgba(78,52,12,0.18)' }} />
+        </div>
+        <div className="relative max-w-6xl mx-auto">
+          <Reveal>
           <p className="font-cormorant tracking-[0.15em] mb-1" style={{ color: 'rgba(255,255,255,0.75)', fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 500 }}>
             Sistema de confirmación
           </p>
@@ -595,24 +964,27 @@ export default function LandingPage() {
             Gestiona tus invitaciones en tiempo real: conoce quién confirma, rechaza o queda pendiente
             de forma segura, todo desde un panel exclusivo.
           </p>
+          </Reveal>
+          <SmartConfirmationShowcase />
         </div>
       </section>
 
       {/* ── Features (premium) ── */}
       <section className="py-28 px-4" style={{ backgroundColor: '#FAF7F2' }}>
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-20">
+          <Reveal className="text-center mb-20">
             <p className="font-great text-4xl mb-2" style={{ color: '#B8975A' }}>Incluye</p>
             <h3 className="font-cinzel text-3xl sm:text-4xl tracking-[0.08em]" style={{ color: '#5a4e34' }}>TODO LO QUE NECESITAS</h3>
             <p className="font-cormorant mt-4 max-w-lg mx-auto" style={{ color: 'rgba(44,37,25,0.55)', fontSize: '20px', fontWeight: 500 }}>
               Cada invitación Enkarta viene cargada con funciones que sorprenderán a tus invitados.
             </p>
-          </div>
+          </Reveal>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {features.map((f) => (
-              <div key={f.title}
-                className="bg-white rounded-2xl p-5 flex flex-col items-center text-center gap-3 border border-transparent hover:border-enkarta-gold/25 hover:shadow-lg transition-all duration-300 group">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-300 group-hover:bg-enkarta-gold/10"
+            {features.map((f, i) => (
+              <Reveal key={f.title} delay={(i % 4) * 0.07} y={26}>
+              <div
+                className="h-full bg-white rounded-2xl p-5 flex flex-col items-center text-center gap-3 border border-transparent hover:border-enkarta-gold/25 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:bg-enkarta-gold/10 group-hover:scale-110 group-hover:rotate-3"
                   style={{ backgroundColor: 'rgba(184,151,90,0.07)', color: '#B8975A' }}>
                   {f.icon}
                 </div>
@@ -621,6 +993,7 @@ export default function LandingPage() {
                   <p className="font-outfit text-xs text-gray-400 mt-1 leading-relaxed">{f.desc}</p>
                 </div>
               </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -631,7 +1004,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto">
 
           {/* Heading */}
-          <div className="text-center mb-10">
+          <Reveal className="text-center mb-10">
             <h3 className="font-cinzel text-4xl sm:text-5xl" style={{ color: '#5a4e34', letterSpacing: '0.12em' }}>
               3 PAQUETES
             </h3>
@@ -647,72 +1020,103 @@ export default function LandingPage() {
                 </button>
               ))}
             </div>
-          </div>
+          </Reveal>
 
-          {/* Price cards — uniform: colored header + white price box */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6 items-stretch">
-            {pkgs.map(pkg => {
-              const headerBg = pkg.dark
-                ? 'linear-gradient(150deg, #2a3f54 0%, #1b2a3a 52%, #121d29 100%)'
-                : pkg.key === 'premium'
-                  ? 'linear-gradient(150deg, #b8a684 0%, #AB9976 100%)'
-                  : 'linear-gradient(150deg, #ddd0b0 0%, #ccbb95 100%)';
-              const labelColor = pkg.dark ? null : pkg.key === 'plus' ? '#4a3f28' : '#ffffff';
+          {/* Price cards — EXCLUSIVE destacada, PREMIUM/PLUS elegantes */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-4 mb-8 items-stretch max-w-3xl mx-auto">
+            {pkgs.map((pkg, pi) => {
+              const isExclusive = pkg.key === 'exclusive';
+              const isPremium = pkg.key === 'premium';
               return (
-              <div key={pkg.key}
-                className="relative flex flex-col rounded-2xl p-2.5 transition-all hover:-translate-y-1 duration-300 overflow-hidden"
-                style={{ background: headerBg, boxShadow: '0 10px 30px rgba(90,78,52,0.16)' }}>
+              <Reveal key={pkg.key} delay={pi * 0.12} y={40} className="flex">
+              <div
+                className={`relative w-full flex flex-col rounded-3xl overflow-hidden transition-transform duration-300 hover:-translate-y-1.5 ${isExclusive ? 'sm:scale-[1.06] sm:z-10' : ''}`}
+                style={isExclusive ? {
+                  background: 'linear-gradient(168deg, #20314a 0%, #15202f 48%, #0c141e 100%)',
+                  animation: 'exclusiveBorder 3.8s ease-in-out infinite',
+                } : {
+                  background: '#ffffff',
+                  border: `1px solid ${isPremium ? 'rgba(171,153,118,0.45)' : 'rgba(139,125,95,0.22)'}`,
+                  boxShadow: '0 14px 36px rgba(90,78,52,0.12)',
+                }}>
 
-                {/* Header zone — label (+ EXCLUSIVE effects) */}
-                <div className="relative py-3.5 text-center overflow-hidden">
-                  {pkg.dark && (<>
-                    {/* Radial gold glow */}
-                    <div className="absolute inset-0 pointer-events-none" style={{
-                      background: 'radial-gradient(ellipse at 50% 45%, rgba(200,170,100,0.28) 0%, transparent 72%)',
-                    }} />
-                    {/* Slow shimmer sweep */}
-                    <div className="absolute inset-0 pointer-events-none" style={{ overflow: 'hidden' }}>
-                      <div style={{
-                        position: 'absolute', top: '-30%', left: 0, width: '45%', height: '160%',
-                        background: 'linear-gradient(90deg, transparent 0%, rgba(240,200,100,0.22) 40%, rgba(255,255,255,0.18) 50%, rgba(240,200,100,0.22) 60%, transparent 100%)',
-                        animation: 'shimmerSlide 6.5s linear infinite',
-                      }} />
-                    </div>
-                    {/* Sparkles */}
-                    <div className="absolute top-1.5 right-3 w-1 h-1 rounded-full" style={{ backgroundColor: '#f0d080', animation: 'sparkleFloat 3.2s ease-in-out infinite', opacity: 0.7 }} />
-                    <div className="absolute bottom-2 left-3 w-0.5 h-0.5 rounded-full" style={{ backgroundColor: '#f0d080', animation: 'sparkleFloat 3.6s ease-in-out infinite 1.1s', opacity: 0.55 }} />
-                  </>)}
+                {isExclusive && (<>
+                  {/* Hilo dorado superior + brillo suave */}
+                  <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #e8c870 30%, #fff6e0 50%, #e8c870 70%, transparent)' }} />
+                  <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(200,170,100,0.16) 0%, transparent 55%)' }} />
+                  <div className="absolute top-4 right-5 w-1 h-1 rounded-full pointer-events-none" style={{ backgroundColor: '#f0d080', animation: 'sparkleFloat 3.2s ease-in-out infinite', opacity: 0.8 }} />
+                  <div className="absolute bottom-6 left-5 w-1 h-1 rounded-full pointer-events-none" style={{ backgroundColor: '#f0d080', animation: 'sparkleFloat 3.8s ease-in-out infinite 1.2s', opacity: 0.6 }} />
+                </>)}
 
-                  {pkg.dark ? (
-                    <p className="relative font-outfit font-bold text-[10px] sm:text-sm tracking-widest sm:tracking-[0.2em]" style={{
-                      backgroundImage: 'linear-gradient(90deg, #B8975A 0%, #e8c870 28%, #fff6e0 50%, #e8c870 72%, #B8975A 100%)',
-                      backgroundSize: '250% auto',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      animation: 'goldTextShimmer 7s linear infinite',
-                    }}>{pkg.label}</p>
-                  ) : (
-                    <p className="relative font-outfit font-bold text-[10px] sm:text-sm tracking-widest sm:tracking-[0.2em]"
-                      style={{ color: labelColor! }}>{pkg.label}</p>
-                  )}
+                {/* Cinta superior */}
+                <div className="pt-5 pb-1 text-center relative">
+                  <span className="inline-block px-4 py-1 rounded-full font-outfit text-[9px] tracking-[0.24em] uppercase"
+                    style={isExclusive
+                      ? { background: 'rgba(232,200,112,0.14)', border: '1px solid rgba(232,200,112,0.4)', color: '#e8c870' }
+                      : { background: 'rgba(139,125,95,0.07)', border: '1px solid rgba(139,125,95,0.2)', color: '#8B7D5F' }}>
+                    {pkg.tag}
+                  </span>
                 </div>
 
-                {/* White price box */}
-                <div className="bg-white rounded-xl py-5 sm:py-7 text-center flex-1 flex flex-col justify-center">
-                  <div className="flex items-start justify-center gap-0.5">
-                    <span className="font-outfit text-xs sm:text-sm mt-1 sm:mt-2" style={{ color: 'rgba(139,125,95,0.7)' }}>
+                {/* Nombre del paquete */}
+                <div className="relative text-center pt-2 pb-1">
+                  {isExclusive && (
+                    <svg className="mx-auto mb-1.5" width="26" height="18" viewBox="0 0 26 18" fill="none">
+                      <path d="M2 15.5 L1 5 L7.5 9.5 L13 2 L18.5 9.5 L25 5 L24 15.5 Z" stroke="#e8c870" strokeWidth="1.3" strokeLinejoin="round" fill="rgba(232,200,112,0.12)" />
+                      <circle cx="13" cy="2" r="1.3" fill="#e8c870" /><circle cx="1.5" cy="4.6" r="1.1" fill="#e8c870" /><circle cx="24.5" cy="4.6" r="1.1" fill="#e8c870" />
+                    </svg>
+                  )}
+                  <p className="relative font-outfit font-bold text-sm tracking-[0.22em]" style={isExclusive ? {
+                    backgroundImage: 'linear-gradient(90deg, #B8975A 0%, #e8c870 28%, #fff6e0 50%, #e8c870 72%, #B8975A 100%)',
+                    backgroundSize: '250% auto',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    animation: 'goldTextShimmer 7s linear infinite',
+                  } : { color: '#5a4e34' }}>{pkg.label}</p>
+                </div>
+
+                {/* Precio */}
+                <div className="text-center py-3">
+                  <div className="flex items-start justify-center gap-1">
+                    <span className="font-outfit text-sm mt-2" style={{ color: isExclusive ? 'rgba(232,200,112,0.7)' : 'rgba(139,125,95,0.7)' }}>
                       {currency === 'bs' ? 'Bs' : 'USD'}
                     </span>
-                    <span className="font-playfair text-2xl sm:text-4xl font-bold" style={{ color: '#8B7D5F' }}>
+                    <span className="font-playfair text-[42px] leading-none font-bold" style={{ color: isExclusive ? '#e8c870' : '#8B7D5F' }}>
                       {currency === 'bs' ? pkg.bs : pkg.usd}
                     </span>
                   </div>
-                  {pkg.dark && (
-                    <p className="font-outfit text-[9px] mt-1.5 tracking-widest uppercase" style={{ color: 'rgba(139,125,95,0.65)' }}>Premium</p>
-                  )}
+                </div>
+
+                {/* Divisor */}
+                <div className="mx-7 h-px" style={{ background: isExclusive
+                  ? 'linear-gradient(90deg, transparent, rgba(232,200,112,0.5), transparent)'
+                  : 'linear-gradient(90deg, transparent, rgba(139,125,95,0.3), transparent)' }} />
+
+                {/* Funciones destacadas */}
+                <ul className="flex-1 px-6 py-4 space-y-2.5">
+                  {pkg.feats.map(f => (
+                    <li key={f} className="flex items-start gap-2">
+                      <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill={isExclusive ? '#e8c870' : '#B8975A'}>
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-outfit text-[12px] leading-snug" style={{ color: isExclusive ? 'rgba(255,255,255,0.82)' : 'rgba(44,37,25,0.65)' }}>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA del paquete */}
+                <div className="px-6 pb-6">
+                  <a href={WA} target="_blank" rel="noopener noreferrer"
+                    className="block text-center py-2.5 rounded-full font-outfit text-xs font-semibold tracking-wide transition-all"
+                    style={isExclusive
+                      ? { background: 'linear-gradient(90deg, #B8975A, #d8b876)', color: '#10131a', boxShadow: '0 6px 22px rgba(184,151,90,0.4)' }
+                      : { border: '1.5px solid rgba(139,125,95,0.45)', color: '#8B7D5F' }}>
+                    Reservar {pkg.label.charAt(0) + pkg.label.slice(1).toLowerCase()}
+                  </a>
                 </div>
               </div>
+              </Reveal>
               );
             })}
           </div>
@@ -777,15 +1181,15 @@ export default function LandingPage() {
       {/* ── Servicios Adicionales ── */}
       <section className="py-28 px-4" style={{ backgroundColor: '#FAF7F2' }}>
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
+          <Reveal className="text-center mb-16">
             <h3 className="font-cinzel text-3xl sm:text-4xl" style={{ color: '#5a4e34', letterSpacing: '0.1em' }}>
               SERVICIOS ADICIONALES
             </h3>
             <div className="w-16 h-px mx-auto mt-5" style={{ backgroundColor: '#8B7D5F' }} />
-          </div>
+          </Reveal>
           <div className="space-y-0">
             {additionalServices.map((s, i) => (
-              <div key={i} className={`py-6 ${i < additionalServices.length - 1 ? 'border-b border-[#B8975A]/15' : ''}`}>
+              <Reveal key={i} delay={Math.min(i * 0.05, 0.3)} y={20} className={`py-6 ${i < additionalServices.length - 1 ? 'border-b border-[#B8975A]/15' : ''}`}>
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mb-2">
                   <h4 className="font-playfair text-base sm:text-lg font-semibold text-enkarta-dark">{s.name}</h4>
                   <p className="font-outfit font-bold text-enkarta-dark whitespace-nowrap flex-shrink-0 ml-auto" style={{ fontSize: '1rem' }}>
@@ -793,7 +1197,7 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <p className="font-outfit text-sm leading-relaxed" style={{ color: '#B8975A' }}>{s.desc}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -802,19 +1206,21 @@ export default function LandingPage() {
       {/* ── How it works ── */}
       <section id="como-funciona" className="py-28 px-4 bg-white">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
+          <Reveal className="text-center mb-16">
             <p className="font-great text-4xl mb-2" style={{ color: '#B8975A' }}>Proceso</p>
             <h3 className="font-cinzel text-3xl sm:text-4xl tracking-[0.06em]" style={{ color: '#5a4e34' }}>¿CÓMO FUNCIONA?</h3>
-          </div>
+          </Reveal>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {steps.map((s) => (
-              <div key={s.num} className="bg-gray-50 p-6 rounded-2xl hover:shadow-lg transition-all duration-300">
+            {steps.map((s, i) => (
+              <Reveal key={s.num} delay={i * 0.12} y={30}>
+              <div className="h-full bg-gray-50 p-6 rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(184,151,90,0.1)' }}>
                   <span className="font-playfair text-sm font-bold" style={{ color: '#B8975A' }}>{s.num}</span>
                 </div>
                 <h4 className="font-outfit font-semibold text-enkarta-dark mb-2">{s.title}</h4>
                 <p className="font-outfit text-sm text-gray-500 leading-relaxed">{s.desc}</p>
               </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -823,13 +1229,14 @@ export default function LandingPage() {
       {/* ── Testimonials ── */}
       <section className="py-28 px-4" style={{ backgroundColor: '#f0ebe4' }}>
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
+          <Reveal className="text-center mb-16">
             <p className="font-great text-4xl mb-2" style={{ color: '#B8975A' }}>Opiniones</p>
             <h3 className="font-cinzel text-3xl sm:text-4xl tracking-[0.06em]" style={{ color: '#5a4e34' }}>LO QUE DICEN NUESTROS CLIENTES</h3>
-          </div>
+          </Reveal>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {testimonials.map((t, i) => (
-              <div key={i} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300">
+              <Reveal key={i} delay={(i % 2) * 0.12} y={30}>
+              <div className="h-full bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                 <div className="flex gap-0.5 mb-4">
                   {Array.from({ length: t.stars }).map((_, s) => (
                     <svg key={s} className="w-4 h-4" viewBox="0 0 20 20" fill="#B8975A">
@@ -837,7 +1244,7 @@ export default function LandingPage() {
                     </svg>
                   ))}
                 </div>
-                <p className="font-cormorant leading-relaxed mb-5 italic" style={{ color: 'rgba(44,37,25,0.7)', fontSize: '18px', fontWeight: 500 }}>"{t.text}"</p>
+                <p className="font-cormorant leading-relaxed mb-5 italic" style={{ color: 'rgba(44,37,25,0.7)', fontSize: '18px', fontWeight: 500 }}>&ldquo;{t.text}&rdquo;</p>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#B8975A' }}>
                     <span className="font-playfair text-sm font-bold text-white">{t.initial}</span>
@@ -848,6 +1255,7 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -856,13 +1264,14 @@ export default function LandingPage() {
       {/* ── FAQ ── */}
       <section id="faq" className="py-28 px-4 bg-white">
         <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-16">
+          <Reveal className="text-center mb-16">
             <p className="font-great text-4xl mb-2" style={{ color: '#B8975A' }}>Preguntas</p>
             <h3 className="font-cinzel text-3xl sm:text-4xl tracking-[0.06em]" style={{ color: '#5a4e34' }}>FRECUENTES</h3>
-          </div>
+          </Reveal>
           <div className="space-y-3">
             {faqs.map((faq, i) => (
-              <div key={i} className="border border-gray-100 rounded-2xl overflow-hidden">
+              <Reveal key={i} delay={Math.min(i * 0.06, 0.3)} y={18}>
+              <div className="border border-gray-100 rounded-2xl overflow-hidden hover:border-enkarta-gold/30 transition-colors duration-300">
                 <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
                   className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
                   <span className="font-outfit font-medium text-enkarta-dark text-sm pr-4">{faq.q}</span>
@@ -871,12 +1280,18 @@ export default function LandingPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                {openFaq === i && (
+                <motion.div
+                  initial={false}
+                  animate={{ height: openFaq === i ? 'auto' : 0, opacity: openFaq === i ? 1 : 0 }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
                   <div className="px-6 pb-4 border-t border-gray-50">
                     <p className="font-outfit text-sm text-gray-500 leading-relaxed pt-3">{faq.a}</p>
                   </div>
-                )}
+                </motion.div>
               </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -888,7 +1303,7 @@ export default function LandingPage() {
           <div className="absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(184,151,90,0.06)' }} />
           <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(184,151,90,0.06)' }} />
         </div>
-        <div className="max-w-2xl mx-auto relative z-10">
+        <Reveal className="max-w-2xl mx-auto relative z-10">
           <p className="font-great text-4xl mb-4" style={{ color: '#B8975A' }}>¿Lista para empezar?</p>
           <h3 className="font-playfair text-3xl sm:text-4xl mb-4 leading-tight">
             Cuéntanos los detalles de tu evento y empieza tu invitación{' '}
@@ -903,7 +1318,7 @@ export default function LandingPage() {
             </svg>
             Reserva tu Invitación
           </a>
-        </div>
+        </Reveal>
       </section>
 
       {/* ── Footer ── */}
@@ -919,5 +1334,6 @@ export default function LandingPage() {
         </div>
       </footer>
     </div>
+    </MotionConfig>
   );
 }

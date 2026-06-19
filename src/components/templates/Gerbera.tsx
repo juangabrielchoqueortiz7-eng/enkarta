@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { InvitationParsed } from '@/lib/types';
 import Countdown from '../Countdown';
 
@@ -23,8 +24,8 @@ export default function Gerbera({ invitation }: { invitation: InvitationParsed }
         }}>
           <p className="text-xs uppercase tracking-[0.4em] font-medium mb-4" style={{ color: accent }}>Nuestra boda</p>
           {inv.cover_image_url && (
-            <div className="w-48 h-48 rounded-full overflow-hidden mb-6 border-4 shadow-xl" style={{ borderColor: primary }}>
-              <img src={inv.cover_image_url} alt="" className="w-full h-full object-cover" />
+            <div className="relative w-48 h-48 rounded-full overflow-hidden mb-6 border-4 shadow-xl" style={{ borderColor: primary }}>
+              <Image src={inv.cover_image_url} alt="" fill className="object-cover" sizes="192px" />
             </div>
           )}
           <button onClick={() => setEntered(true)}
@@ -59,8 +60,8 @@ export default function Gerbera({ invitation }: { invitation: InvitationParsed }
           )}
 
           {inv.cover_image_url && (
-            <div className="invitation-section mx-6 rounded-3xl overflow-hidden shadow-xl">
-              <img src={inv.cover_image_url} alt="" className="w-full h-[50vh] object-cover" />
+            <div className="invitation-section mx-6 rounded-3xl overflow-hidden shadow-xl relative h-[50vh]">
+              <Image src={inv.cover_image_url} alt="" fill className="object-cover" sizes="(max-width: 640px) 100vw, 512px" />
             </div>
           )}
 

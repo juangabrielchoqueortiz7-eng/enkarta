@@ -1,0 +1,83 @@
+{
+  "version": "1.0",
+  "categories": [
+    {
+      "id": "boda",
+      "label": "Boda",
+      "emoji": "💍",
+      "icons": [
+        { "id": "church",   "label": "Iglesia",    "path": "/lottie/boda/church.json",   "tags": ["ceremonia", "iglesia", "boda"] },
+        { "id": "rings",    "label": "Anillos",    "path": "/lottie/boda/rings.json",    "tags": ["anillos", "boda"] },
+        { "id": "cheers",   "label": "Brindis",    "path": "/lottie/boda/cheers.json",   "tags": ["brindis", "copas", "recepcion"] },
+        { "id": "dance",    "label": "Baile",      "path": "/lottie/boda/dance.json",    "tags": ["baile", "pista", "fiesta"] },
+        { "id": "dinner",   "label": "Cena",       "path": "/lottie/boda/dinner.json",   "tags": ["cena", "comida"] },
+        { "id": "party",    "label": "Fiesta",     "path": "/lottie/boda/party.json",    "tags": ["fiesta", "celebracion"] },
+        { "id": "dove",     "label": "Paloma",     "path": "/lottie/boda/dove.json",     "tags": ["paloma", "paz"] },
+        { "id": "flowers",  "label": "Flores",     "path": "/lottie/boda/flowers.json",  "tags": ["flores", "ramo"] },
+        { "id": "couple",   "label": "Pareja",     "path": "/lottie/boda/couple.json",   "tags": ["pareja", "novios"] }
+      ]
+    },
+    {
+      "id": "xv",
+      "label": "XV Años",
+      "emoji": "👑",
+      "icons": [
+        { "id": "crown",    "label": "Corona",     "path": "/lottie/xv/crown.json",      "tags": ["corona", "princesa", "xv"] },
+        { "id": "rose",     "label": "Rosa",       "path": "/lottie/xv/rose.json",       "tags": ["rosa", "flor"] },
+        { "id": "cake",     "label": "Pastel",     "path": "/lottie/xv/cake.json",       "tags": ["pastel", "torta", "cumpleanos"] },
+        { "id": "dress",    "label": "Vestido",    "path": "/lottie/xv/dress.json",      "tags": ["vestido", "xv"] },
+        { "id": "tiara",    "label": "Tiara",      "path": "/lottie/xv/tiara.json",      "tags": ["tiara", "corona"] },
+        { "id": "dance_xv", "label": "Vals",       "path": "/lottie/xv/dance_xv.json",   "tags": ["vals", "baile", "xv"] }
+      ]
+    },
+    {
+      "id": "cumpleanos",
+      "label": "Cumpleaños",
+      "emoji": "🎂",
+      "icons": [
+        { "id": "cake_bday","label": "Pastel",     "path": "/lottie/cumpleanos/cake_bday.json", "tags": ["pastel", "velas"] },
+        { "id": "balloon",  "label": "Globo",      "path": "/lottie/cumpleanos/balloon.json",   "tags": ["globo", "celebracion"] },
+        { "id": "confetti", "label": "Confeti",    "path": "/lottie/cumpleanos/confetti.json",  "tags": ["confeti", "fiesta"] },
+        { "id": "gift_bday","label": "Regalo",     "path": "/lottie/cumpleanos/gift_bday.json", "tags": ["regalo", "caja"] }
+      ]
+    },
+    {
+      "id": "baby_shower",
+      "label": "Baby Shower",
+      "emoji": "🍼",
+      "icons": [
+        { "id": "baby",     "label": "Bebé",       "path": "/lottie/baby_shower/baby.json",    "tags": ["bebe", "recien nacido"] },
+        { "id": "bottle",   "label": "Biberón",    "path": "/lottie/baby_shower/bottle.json",  "tags": ["biberon", "bebe"] },
+        { "id": "stroller", "label": "Cochecito",  "path": "/lottie/baby_shower/stroller.json","tags": ["cochecito", "bebe"] },
+        { "id": "star_baby","label": "Estrella",   "path": "/lottie/baby_shower/star_baby.json","tags": ["estrella", "bebe"] }
+      ]
+    },
+    {
+      "id": "bautizo",
+      "label": "Bautizo",
+      "emoji": "✝️",
+      "icons": [
+        { "id": "cross",    "label": "Cruz",       "path": "/lottie/bautizo/cross.json",       "tags": ["cruz", "bautizo"] },
+        { "id": "dove_bap", "label": "Paloma",     "path": "/lottie/bautizo/dove_bap.json",    "tags": ["paloma", "paz"] },
+        { "id": "water",    "label": "Agua",       "path": "/lottie/bautizo/water.json",       "tags": ["agua", "bautizo"] },
+        { "id": "candle",   "label": "Vela",       "path": "/lottie/bautizo/candle.json",      "tags": ["vela", "luz"] }
+      ]
+    },
+    {
+      "id": "general",
+      "label": "General",
+      "emoji": "✨",
+      "icons": [
+        { "id": "calendar", "label": "Calendario", "path": "/lottie/general/calendar.json",   "tags": ["fecha", "calendario"] },
+        { "id": "location", "label": "Ubicación",  "path": "/lottie/general/location.json",   "tags": ["mapa", "lugar", "pin"] },
+        { "id": "music",    "label": "Música",     "path": "/lottie/general/music.json",      "tags": ["musica", "nota"] },
+        { "id": "gift",     "label": "Regalo",     "path": "/lottie/general/gift.json",       "tags": ["regalo", "obsequio"] },
+        { "id": "heart",    "label": "Corazón",    "path": "/lottie/general/heart.json",      "tags": ["corazon", "amor"] },
+        { "id": "star",     "label": "Estrella",   "path": "/lottie/general/star.json",       "tags": ["estrella", "favorito"] },
+        { "id": "clock",    "label": "Reloj",      "path": "/lottie/general/clock.json",      "tags": ["reloj", "hora"] },
+        { "id": "camera",   "label": "Cámara",     "path": "/lottie/general/camera.json",     "tags": ["camara", "foto", "galeria"] },
+        { "id": "whatsapp", "label": "WhatsApp",   "path": "/lottie/general/whatsapp.json",   "tags": ["whatsapp", "mensaje"] }
+      ]
+    }
+  ]
+}

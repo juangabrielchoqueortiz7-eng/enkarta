@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { InvitationContent } from './types';
-import { useCountdown, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartLoader } from './shared';
+import { useEffect, useRef, useState, useContext, createContext } from 'react';
+import Image from 'next/image';
+import { InvitationContent, TemplateTheme } from './types';
+import { useCountdown, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartLoader, PhotoGrid } from './shared';
+import { ParallaxLayer } from '@/lib/scroll-motion';
 
-// ── Palette ───────────────────────────────────────────────────────────────────
-const C = {
+// ── Palette por defecto ─────────────────────────────────────────────────────────
+const DEFAULT_C = {
   bg: '#fbfdff',
   navy: '#1e3a5f',
   navyDeep: '#16304f',
@@ -14,8 +16,27 @@ const C = {
   line: 'rgba(30,58,95,0.45)',
 };
 
+type AzurePalette = typeof DEFAULT_C;
+
+// Contexto de tema: cada componente decorativo lee la paleta de aquí.
+const ThemeCtx = createContext<AzurePalette>(DEFAULT_C);
+const useC = () => useContext(ThemeCtx);
+
+/** Mapea la paleta semántica editable a los colores internos de Azure. */
+function resolveAzureTheme(t?: TemplateTheme): AzurePalette {
+  return {
+    bg:       t?.bg          || DEFAULT_C.bg,
+    navy:     t?.primary     || DEFAULT_C.navy,
+    navyDeep: t?.primaryDeep || DEFAULT_C.navyDeep,
+    ink:      t?.text        || DEFAULT_C.ink,
+    soft:     t?.muted       || DEFAULT_C.soft,
+    line:     t?.line        || DEFAULT_C.line,
+  };
+}
+
 // ── Detailed orchid blossom ───────────────────────────────────────────────────
 function OrchidBloom({ x, y, s, o = 0.9 }: { x: number; y: number; s: number; o?: number }) {
+  const C = useC();
   return (
     <g transform={`translate(${x} ${y}) scale(${s})`} opacity={o}>
       {/* dorsal sepal */}
@@ -41,6 +62,7 @@ function OrchidBloom({ x, y, s, o = 0.9 }: { x: number; y: number; s: number; o?
 
 // ── Corner orchid spray (fixed frame) ─────────────────────────────────────────
 function OrchidCluster({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  const C = useC();
   const leaf = (x: number, y: number, rx: number, ry: number, rot: number, o: number) => (
     <g transform={`rotate(${rot} ${x} ${y})`} opacity={o}>
       <path d={`M${x - rx} ${y} Q ${x} ${y - ry * 1.6} ${x + rx} ${y} Q ${x} ${y + ry * 1.6} ${x - rx} ${y} Z`} />
@@ -84,13 +106,18 @@ function WatercolorBg() {
       {blot('82%', '34%', '380px', 0.08)}
       {blot('30%', '64%', '460px', 0.09)}
       {blot('72%', '82%', '420px', 0.08)}
-      {/* faint large leaves drifting through */}
-      <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice" viewBox="0 0 400 900" fill="none" stroke="#5f7ba6" strokeWidth="1" opacity="0.12">
-        {[[60, 120, 40], [330, 260, -30], [110, 480, 20], [300, 640, -18], [200, 820, 8], [40, 720, -40]].map(([x, y, rot], i) => (
-          <g key={i} transform={`rotate(${rot} ${x} ${y})`}>
-            <path d={`M${x} ${y} C ${x - 50} ${y - 70}, ${x - 30} ${y - 150}, ${x} ${y - 200} C ${x + 30} ${y - 150}, ${x + 50} ${y - 70}, ${x} ${y} Z`} />
-            <line x1={x} y1={y} x2={x} y2={y - 200} strokeWidth="0.6" />
-          </g>
+      {/* hojas suaves rellenas, pequeñas y muy tenues (textura, no contornos) */}
+      <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMid slice" viewBox="0 0 1200 1600" fill="#6e87b0" stroke="none" opacity="0.06" aria-hidden>
+        {([
+          [150, 300, 150, 35], [1040, 240, 120, -28], [320, 760, 130, 18],
+          [980, 900, 150, -20], [620, 1180, 120, 8], [120, 1120, 110, -42],
+          [1080, 1340, 130, 24], [700, 460, 100, -12], [430, 1380, 115, 50],
+        ] as [number, number, number, number][]).map(([x, y, s, rot], i) => (
+          <path
+            key={i}
+            transform={`rotate(${rot} ${x} ${y})`}
+            d={`M${x} ${y} C ${x - s * 0.22} ${y - s * 0.35}, ${x - s * 0.14} ${y - s * 0.8}, ${x} ${y - s} C ${x + s * 0.14} ${y - s * 0.8}, ${x + s * 0.22} ${y - s * 0.35}, ${x} ${y} Z`}
+          />
         ))}
       </svg>
     </div>
@@ -99,6 +126,7 @@ function WatercolorBg() {
 
 // ── Monogram (intertwined initials in a soft ring) ────────────────────────────
 function Monogram({ a, b, size = 150 }: { a: string; b: string; size?: number }) {
+  const C = useC();
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
       <div className="absolute inset-0 rounded-full border" style={{ borderColor: 'rgba(30,58,95,0.18)' }} />
@@ -108,32 +136,18 @@ function Monogram({ a, b, size = 150 }: { a: string; b: string; size?: number })
   );
 }
 
-// ── Circular orchid wreath with script names ──────────────────────────────────
-function CircleWreath({ groom, bride, size = 300 }: { groom: string; bride: string; size?: number }) {
+// ── Circular watercolor floral wreath with script names ───────────────────────
+// Usa la corona de acuarela (rosas azules) provista; los nombres van al centro.
+function CircleWreath({ groom, bride, size = 320 }: { groom: string; bride: string; size?: number }) {
+  const C = useC();
   return (
     <div className="relative mx-auto" style={{ width: size, height: size }}>
-      <svg viewBox="0 0 300 300" className="absolute inset-0 w-full h-full" fill="none" stroke={C.navy} strokeWidth="1" aria-hidden>
-        <circle cx="150" cy="150" r="118" opacity="0.55" />
-        {/* small accent sprig upper-left */}
-        <g opacity="0.8" transform="translate(74 70) rotate(-30) scale(0.6)">
-          <path d="M0 0 C 14 -6, 28 -4, 40 6" strokeLinecap="round" />
-          <ellipse cx="14" cy="-2" rx="6" ry="2.4" transform="rotate(-18 14 -2)" />
-        </g>
-        <OrchidBloom x={74} y={70} s={0.5} o={0.85} />
-        {/* lower-right floral cluster trailing along the ring */}
-        <path d="M250 178 C 240 210, 215 238, 182 252" strokeLinecap="round" opacity="0.7" />
-        <ellipse cx="232" cy="208" rx="9" ry="3.4" transform="rotate(48 232 208)" opacity="0.6" />
-        <ellipse cx="208" cy="232" rx="9" ry="3.4" transform="rotate(70 208 232)" opacity="0.6" />
-        <ellipse cx="258" cy="186" rx="7" ry="3" transform="rotate(36 258 186)" opacity="0.5" />
-        <OrchidBloom x={252} y={172} s={0.7} o={0.9} />
-        <OrchidBloom x={224} y={222} s={0.92} o={0.9} />
-        <OrchidBloom x={180} y={250} s={0.66} o={0.85} />
-        <g opacity="0.6"><ellipse cx="160" cy="262" rx="6" ry="2.6" transform="rotate(82 160 262)" /></g>
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="font-great leading-[0.9]" style={{ color: C.navy, fontSize: size * 0.2 }}>{groom}</span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/azure/wreath.png" alt="" className="absolute inset-0 h-full w-full object-contain" draggable={false} />
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center" style={{ paddingTop: size * 0.04 }}>
+        <span className="font-great leading-[0.85]" style={{ color: C.navy, fontSize: size * 0.19 }}>{groom}</span>
         <span className="font-cormorant" style={{ color: C.soft, fontSize: size * 0.07 }}>&amp;</span>
-        <span className="font-great leading-[0.9]" style={{ color: C.navy, fontSize: size * 0.2 }}>{bride}</span>
+        <span className="font-great leading-[0.85]" style={{ color: C.navy, fontSize: size * 0.19 }}>{bride}</span>
       </div>
     </div>
   );
@@ -141,6 +155,7 @@ function CircleWreath({ groom, bride, size = 300 }: { groom: string; bride: stri
 
 // ── Outline button (azure style) ──────────────────────────────────────────────
 function OutlineBtn({ children, onClick, href }: { children: React.ReactNode; onClick?: () => void; href?: string }) {
+  const C = useC();
   const cls =
     'inline-flex items-center justify-center gap-2 px-8 py-3 font-cinzel text-[11px] sm:text-[12px] tracking-[0.18em] uppercase transition-all duration-300 hover:bg-[#1e3a5f] hover:text-white';
   const style = { border: `1px solid ${C.line}`, color: C.ink, borderRadius: '20px 6px 20px 6px' } as React.CSSProperties;
@@ -150,7 +165,22 @@ function OutlineBtn({ children, onClick, href }: { children: React.ReactNode; on
 
 // ── Section heading (caps) + script ──────────────────────────────────────────
 function CapsTitle({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const C = useC();
   return <h3 className={`font-cinzel tracking-[0.16em] ${className}`} style={{ color: C.soft }}>{children}</h3>;
+}
+
+// Icono de sección con escala/color/colores/velocidad. Definido a NIVEL DE MÓDULO
+// (no dentro de Azure) para que no se remonte en cada re-render del countdown; si
+// se remontara, los iconos Lottie se reiniciarían cada segundo (parpadeo).
+function SecIcon({ name, className, scale = 1, color, colors, speed }: {
+  name: string; className?: string; scale?: number; color?: string;
+  colors?: Record<string, string>; speed?: number;
+}) {
+  return (
+    <span className="inline-flex items-center justify-center" style={{ transform: `scale(${scale})` }}>
+      <EventIcon name={name} className={className} stroke={color} lottieColors={colors} speed={speed} />
+    </span>
+  );
 }
 
 export default function Azure({ data }: { data: InvitationContent }) {
@@ -158,12 +188,33 @@ export default function Azure({ data }: { data: InvitationContent }) {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const enter = () => {
-    document.getElementById('az-intro')?.scrollIntoView({ behavior: 'smooth' });
-    if (data.musicUrl && audioRef.current) {
-      audioRef.current.play().then(() => setPlaying(true)).catch(() => {});
-    }
-  };
+  // Tema y decoración resueltos desde config (con defaults de diseño)
+  const C = resolveAzureTheme(data.theme);
+  const decor = data.decor ?? {};
+  const showCorners   = decor.corners?.on !== false;
+  const cornerOpacity = decor.corners?.opacity ?? 1;
+  const cornerColor   = decor.corners?.color;
+  const showFeathers  = decor.floating?.on !== false;
+  const bgStyle       = decor.background ?? 'art';
+  const dividers      = decor.dividers ?? 'art';
+  const showLoader    = decor.loader !== 'none';
+  // Paleta para recolorear sólo los adornos de esquina (si se eligió un color propio)
+  const cornerPalette = cornerColor ? { ...C, navy: cornerColor, ink: cornerColor, soft: cornerColor } : C;
+
+  // Iconos editables desde el panel (con fallback al icono por defecto del diseño)
+  const iconColor = data.iconColor || C.navy;
+  const iconScale = data.iconScale ?? 1;
+  const iconOf = (key: string, def: string) => data.icons?.[key] || def;
+  const iconColorsOf = (key: string) => data.iconColorsMap?.[key];
+  const iconSpeedOf = (key: string) => data.iconSpeedsMap?.[key];
+
+  const SectionDivider = ({ className }: { className?: string }) =>
+    dividers === 'none'
+      ? null
+      : dividers === 'line'
+        ? <div className={className} style={{ height: 1, background: C.line }} />
+        : <OrchidSprig color={C.navy} className={className} />;
+
   const toggleMusic = () => {
     const a = audioRef.current;
     if (!a) return;
@@ -174,9 +225,10 @@ export default function Azure({ data }: { data: InvitationContent }) {
   useEffect(() => {
     document.body.style.background = C.bg;
     return () => { document.body.style.background = ''; };
-  }, []);
+  }, [C.bg]);
 
   return (
+    <ThemeCtx.Provider value={C}>
     <div className="relative min-h-screen w-full overflow-x-hidden" style={{ background: C.bg, color: C.ink }}>
       {/* keyframes */}
       <style>{`
@@ -190,55 +242,51 @@ export default function Azure({ data }: { data: InvitationContent }) {
         @keyframes azBounce { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(8px);} }
         @keyframes azFadeUp { from{opacity:0; transform:translateY(20px);} to{opacity:1; transform:translateY(0);} }
         @keyframes azDrift { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-14px);} }
-        @keyframes azParallax { from { transform: translateY(0) scale(1.12); } to { transform: translateY(-60px) scale(1.12); } }
-        @supports (animation-timeline: scroll()) {
-          .az-parallax { animation: azParallax linear both; animation-timeline: scroll(root); }
-        }
+        @keyframes azHeartAura { 0%,100%{ transform: scale(0.94); opacity: 0.18; } 50%{ transform: scale(1.16); opacity: 0.34; } }
+        @keyframes azHeartOrbit { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes azHeartFloat { 0%,100%{ transform: translateY(0px); } 50%{ transform: translateY(-10px); } }
       `}</style>
 
-      {/* ── Parallax watercolor background (fixed, rises subtly on scroll via CSS) ── */}
-      <div className="az-parallax pointer-events-none fixed inset-0 z-0" aria-hidden style={{ transform: 'scale(1.12)' }}>
-        <WatercolorBg />
-      </div>
+      {/* ── Fondo: acuarela (art) / sólido / degradado ── */}
+      {bgStyle === 'art' && (
+        <ParallaxLayer className="pointer-events-none fixed inset-0 z-0" style={{ scale: 1.12 }}>
+          <WatercolorBg />
+        </ParallaxLayer>
+      )}
+      {bgStyle === 'gradient' && (
+        <div className="pointer-events-none fixed inset-0 z-0" aria-hidden
+          style={{ background: `linear-gradient(160deg, ${C.bg} 0%, ${C.navy}1f 100%)` }} />
+      )}
 
-      {/* ── Fixed corner orchid frame ── */}
-      <div className="pointer-events-none fixed inset-0 z-[1]" aria-hidden>
-        <OrchidCluster className="absolute -top-8 -left-8 w-[44vw] max-w-[340px] min-w-[190px] opacity-90" />
-        <OrchidCluster className="absolute -bottom-8 -right-8 w-[44vw] max-w-[340px] min-w-[190px] opacity-90" style={{ transform: 'scaleX(-1) scaleY(-1)' }} />
-        <OrchidCluster className="absolute -bottom-10 -left-10 w-[30vw] max-w-[230px] min-w-[140px] opacity-65" style={{ transform: 'scaleY(-1)' }} />
-        <OrchidCluster className="absolute -top-10 -right-10 w-[30vw] max-w-[230px] min-w-[140px] opacity-55" style={{ transform: 'scaleX(-1)' }} />
-      </div>
+      {/* ── Marco de adornos de esquina (orquídeas) ── */}
+      {showCorners && (
+        <ThemeCtx.Provider value={cornerPalette}>
+          <div className="pointer-events-none fixed inset-0 z-[1]" aria-hidden style={{ opacity: cornerOpacity }}>
+            <OrchidCluster className="absolute -top-8 -left-8 w-[44vw] max-w-[340px] min-w-[190px] opacity-90" />
+            <OrchidCluster className="absolute -bottom-8 -right-8 w-[44vw] max-w-[340px] min-w-[190px] opacity-90" style={{ transform: 'scaleX(-1) scaleY(-1)' }} />
+            <OrchidCluster className="absolute -bottom-10 -left-10 w-[30vw] max-w-[230px] min-w-[140px] opacity-65" style={{ transform: 'scaleY(-1)' }} />
+            <OrchidCluster className="absolute -top-10 -right-10 w-[30vw] max-w-[230px] min-w-[140px] opacity-55" style={{ transform: 'scaleX(-1)' }} />
+          </div>
+        </ThemeCtx.Provider>
+      )}
 
-      <Particles color="#3a5a82" tip="#9aa9d6" count={6} />
+      {showFeathers && (
+        <Particles
+          color={decor.floating?.color ?? '#3a5a82'}
+          tip={decor.floating?.tip ?? '#9aa9d6'}
+          count={decor.floating?.count ?? 6}
+        />
+      )}
 
       {data.musicUrl && <audio ref={audioRef} src={data.musicUrl} loop />}
 
       {/* ── Music toggle ── */}
-      <button onClick={toggleMusic} className="fixed bottom-5 right-5 z-50 w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110"
+      {data.musicUrl && (<button onClick={toggleMusic} className="fixed bottom-5 right-5 z-50 w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110"
         style={{ background: C.navy, color: '#fff' }} aria-label="Música">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ animation: playing ? 'spin 4s linear infinite' : 'none' }}>
           <path d="M9 17a3 3 0 11-2-2.83V5l11-2v10.17A3 3 0 1116 14V7L9 8.4V17z" />
         </svg>
-      </button>
-
-      {/* ════════ COVER ════════ */}
-      <section className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        <div style={{ animation: 'azFadeUp 1.2s ease' }} className="flex flex-col items-center">
-          <Monogram a={data.initials[0]} b={data.initials[1]} size={160} />
-          <h1 className="font-cinzel mt-5 tracking-[0.14em]" style={{ color: C.navy, fontSize: 'clamp(26px,5vw,46px)' }}>
-            {data.groom} <span style={{ color: C.soft }}>&amp;</span> {data.bride}
-          </h1>
-          <p className="font-cinzel mt-2 tracking-[0.4em] text-[11px] sm:text-sm" style={{ color: C.soft }}>
-            {data.month.toUpperCase()} {data.day} · {data.year}
-          </p>
-          <div className="mt-8 flex flex-col items-center gap-5">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={C.soft} strokeWidth="1.5" style={{ animation: 'azBounce 1.8s ease-in-out infinite' }}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-            </svg>
-            <OutlineBtn onClick={enter}>Ingresar a mi invitación</OutlineBtn>
-          </div>
-        </div>
-      </section>
+      </button>)}
 
       {/* ════════ INTRO (script names in orchid wreath) ════════ */}
       <section id="az-intro" className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 text-center">
@@ -251,6 +299,33 @@ export default function Azure({ data }: { data: InvitationContent }) {
           </p>
         </Reveal>
       </section>
+
+      {/* ════════ FOTO DE PORTADA (solo si el cliente subió una) ════════ */}
+      {data.coverImage && (
+        <section id="az-photo" className="relative z-10 pb-4 px-6 flex justify-center">
+          <Reveal className="relative w-full max-w-[340px]">
+            {/* Marco de arco con doble línea */}
+            <div
+              className="relative overflow-hidden"
+              style={{ borderRadius: '170px 170px 14px 14px', border: `1px solid ${C.line}`, padding: 8, background: C.bg, boxShadow: '0 22px 50px rgba(30,58,95,0.14)' }}
+            >
+              <div className="relative overflow-hidden" style={{ borderRadius: '162px 162px 8px 8px', aspectRatio: '3/4' }}>
+                <Image
+                  src={data.coverImage}
+                  alt={`${data.groom} y ${data.bride}`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 90vw, 340px"
+                />
+              </div>
+            </div>
+            {/* Orquídea decorativa sobre el marco */}
+            <div className="pointer-events-none absolute -bottom-5 -right-7 w-28 opacity-90" style={{ transform: 'rotate(-8deg)' }}>
+              <OrchidCluster />
+            </div>
+          </Reveal>
+        </section>
+      )}
 
       {/* ════════ WELCOME + COUNTDOWN ════════ */}
       <section id="az-welcome" className="relative z-10 pt-16 pb-20 px-6 text-center">
@@ -267,10 +342,24 @@ export default function Azure({ data }: { data: InvitationContent }) {
           </p>
         </Reveal>
 
-        {/* Heart loader ornament (hearts burst & fuse) */}
-        <Reveal delay={140} className="mt-6 flex justify-center">
-          <HeartLoader color={C.navy} size={90} className="opacity-90" />
+        {/* Heart loader ornament (hearts burst & fuse) — opcional */}
+        {showLoader && (
+        <Reveal delay={140} className="mt-8 flex justify-center">
+          <div className="relative flex items-center justify-center" style={{ animation: 'azHeartFloat 4.6s ease-in-out infinite' }}>
+            <div className="absolute h-28 w-28 rounded-full" style={{ background: 'radial-gradient(circle, rgba(30,58,95,0.22) 0%, transparent 70%)', animation: 'azHeartAura 3.8s ease-in-out infinite' }} />
+            <div className="absolute h-40 w-40 rounded-full border" style={{ borderColor: 'rgba(30,58,95,0.12)', animation: 'azHeartOrbit 14s linear infinite' }}>
+              <span className="absolute left-1/2 top-0 h-2.5 w-2.5 -translate-x-1/2 rounded-full" style={{ background: C.navy }} />
+            </div>
+            <div className="absolute h-48 w-48 rounded-full border" style={{ borderColor: 'rgba(30,58,95,0.08)', animation: 'azHeartOrbit 19s linear infinite reverse' }}>
+              <span className="absolute bottom-3 left-8 h-2 w-2 rounded-full" style={{ background: C.soft }} />
+              <span className="absolute right-10 top-10 h-1.5 w-1.5 rounded-full" style={{ background: C.ink }} />
+            </div>
+            <div className="relative rounded-full px-6 py-6" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.74) 0%, rgba(240,246,255,0.64) 100%)', boxShadow: '0 24px 60px rgba(30,58,95,0.12), inset 0 1px 0 rgba(255,255,255,0.85)' }}>
+              <HeartLoader color={C.navy} shine="#8ca5c7" size={104} className="opacity-95" />
+            </div>
+          </div>
         </Reveal>
+        )}
 
         {/* Date — oval badge with SÁBADO ── JULIO */}
         <Reveal delay={180} className="mt-6 flex items-center justify-center max-w-xl mx-auto">
@@ -306,7 +395,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
 
         {/* Blessing + parents */}
         <Reveal delay={120} className="mt-16">
-          <OrchidSprig color={C.navy} className="w-24 mx-auto mb-6 opacity-70" />
+          <SectionDivider className="w-24 mx-auto mb-6 opacity-70" />
           <CapsTitle className="text-[12px] sm:text-[15px]">{data.blessing}</CapsTitle>
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto font-cormorant" style={{ color: C.ink, fontSize: '17px' }}>
             <div>{data.parentsGroom.map((p) => <p key={p}>{p}</p>)}</div>
@@ -317,14 +406,14 @@ export default function Azure({ data }: { data: InvitationContent }) {
 
       {/* ════════ CEREMONY + RECEPTION ════════ */}
       <section className="relative z-10 py-10 px-6">
-        <OrchidSprig color={C.navy} className="w-24 mx-auto mb-12 opacity-70" />
+        <SectionDivider className="w-24 mx-auto mb-12 opacity-70" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-12 max-w-3xl mx-auto">
           {[
-            { icon: 'church', title: 'Ceremonia Religiosa', d: data.ceremony },
-            { icon: 'cheers', title: 'Recepción Social', d: data.reception },
+            { icon: iconOf('ceremony', 'church'), sec: 'ceremony', title: 'Ceremonia Religiosa', d: data.ceremony },
+            { icon: iconOf('reception', 'cheers'), sec: 'reception', title: 'Recepción Social', d: data.reception },
           ].map((b, i) => (
             <Reveal key={b.title} delay={i * 120} className="flex flex-col items-center text-center">
-              <EventIcon name={b.icon} className="w-12 h-12 mb-3" stroke={C.navy} />
+              <SecIcon name={b.icon} className="w-12 h-12 mb-3" scale={iconScale} color={iconColor} colors={iconColorsOf(b.sec)} speed={iconSpeedOf(b.sec)} />
               <CapsTitle className="text-[13px] sm:text-[15px]">{b.title}</CapsTitle>
               <div className="mt-3 flex items-stretch justify-center gap-3">
                 <p className="font-playfair font-bold" style={{ color: C.navy, fontSize: 'clamp(26px,5vw,34px)' }}>{b.d.time}</p>
@@ -342,7 +431,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
       {/* ════════ DRESS CODE ════════ */}
       <section className="relative z-10 py-16 px-6 text-center">
         <Reveal className="flex flex-col items-center">
-          <EventIcon name="dress" className="w-12 h-12 mb-3" stroke={C.navy} />
+          <SecIcon name={iconOf('dress', 'dress')} className="w-12 h-12 mb-3" scale={iconScale} color={iconColor} colors={iconColorsOf('dress')} speed={iconSpeedOf('dress')} />
           <CapsTitle className="text-[14px] sm:text-[16px]">Dress Code</CapsTitle>
           <div className="mt-3 font-cormorant" style={{ color: C.ink, fontSize: '17px' }}>
             <p><span className="font-semibold">Hombres:</span> <span style={{ color: C.soft }}>{data.dressCode.men}</span></p>
@@ -353,21 +442,21 @@ export default function Azure({ data }: { data: InvitationContent }) {
 
       {/* ════════ ITINERARIO ════════ */}
       <section className="relative z-10 py-8 px-6 text-center">
-        <OrchidSprig color={C.navy} className="w-24 mx-auto mb-4 opacity-70" />
+        <SectionDivider className="w-24 mx-auto mb-4 opacity-70" />
         <Reveal>
           <h2 className="font-great" style={{ color: C.navy, fontSize: 'clamp(34px,6vw,52px)' }}>Itinerario</h2>
         </Reveal>
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-4 max-w-3xl mx-auto">
           {data.itinerary.map((it, i) => (
             <Reveal key={it.label} delay={i * 120} className="flex flex-col items-center">
-              <EventIcon name={it.icon} className="w-10 h-10 mb-3" stroke={C.navy} />
+              <SecIcon name={it.icon} className="w-10 h-10 mb-3" scale={iconScale} color={iconColor} colors={it.iconColors} speed={it.iconSpeed} />
               <div className="w-full h-px my-2" style={{ background: C.line }} />
               <p className="font-cormorant" style={{ color: C.soft, fontSize: '16px' }}>{it.label}</p>
               <p className="font-cinzel tracking-[0.1em] mt-1" style={{ color: C.navy, fontSize: '18px' }}>{it.time}</p>
             </Reveal>
           ))}
         </div>
-        <OrchidSprig color={C.navy} className="w-24 mx-auto mt-10 opacity-70" />
+        <SectionDivider className="w-24 mx-auto mt-10 opacity-70" />
       </section>
 
       {/* ════════ GIFT (navy) ════════ */}
@@ -387,7 +476,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
           {data.gift.qrUrl && (
             <Reveal delay={120} className="rounded-2xl p-6 flex flex-col items-center justify-center" style={{ border: '1px solid rgba(255,255,255,0.3)' }}>
               <p className="font-cinzel tracking-[0.16em] text-[13px] mb-3" style={{ color: 'rgba(255,255,255,0.85)' }}>Transferencia QR</p>
-              <img src={data.gift.qrUrl} alt="QR" className="w-40 h-40 rounded-lg bg-white p-1" />
+              <Image src={data.gift.qrUrl} alt="QR" width={160} height={160} className="w-40 h-40 rounded-lg bg-white p-1 object-contain" />
             </Reveal>
           )}
         </div>
@@ -396,11 +485,12 @@ export default function Azure({ data }: { data: InvitationContent }) {
       {/* ════════ GALLERY ════════ */}
       <section className="relative z-10 py-20 px-6 text-center">
         <Reveal className="flex flex-col items-center">
-          <EventIcon name="camera" className="w-12 h-12 mb-4" stroke={C.navy} />
+          <SecIcon name={iconOf('gallery', 'camera')} className="w-12 h-12 mb-4" scale={iconScale} color={iconColor} colors={iconColorsOf('gallery')} speed={iconSpeedOf('gallery')} />
           <p className="font-cormorant max-w-md mx-auto" style={{ color: C.soft, fontSize: '16px' }}>{data.gallery.message}</p>
+          <PhotoGrid images={data.galleryImages} className="mt-7 max-w-lg mx-auto" />
           <div className="mt-5"><OutlineBtn href={data.gallery.shareUrl}>Compartir fotografías</OutlineBtn></div>
         </Reveal>
-        <OrchidSprig color={C.navy} className="w-24 mx-auto my-12 opacity-70" />
+        <SectionDivider className="w-24 mx-auto my-12 opacity-70" />
         <Reveal className="flex flex-col items-center">
           <CapsTitle className="text-[13px] sm:text-[15px] max-w-md mx-auto leading-relaxed">{data.rsvp.message}</CapsTitle>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.soft} strokeWidth="1.5" className="my-4" style={{ animation: 'azBounce 1.8s ease-in-out infinite' }}>
@@ -418,5 +508,6 @@ export default function Azure({ data }: { data: InvitationContent }) {
         </p>
       </footer>
     </div>
+    </ThemeCtx.Provider>
   );
 }

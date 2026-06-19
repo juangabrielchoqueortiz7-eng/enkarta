@@ -1,6 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import type { IconCustomization } from './types';
+import type { ParticleShape } from '@/lib/types';
+import { ScrollReveal } from '@/lib/scroll-motion';
 
 // ── Live countdown hook ───────────────────────────────────────────────────────
 export function useCountdown(isoDate: string) {
@@ -25,50 +29,356 @@ export function useCountdown(isoDate: string) {
   return t;
 }
 
-// ── Scroll reveal wrapper (fade-in-up when in view) ───────────────────────────
+// ── Scroll reveal wrapper ─────────────────────────────────────────────────────
+// Delega en el motor compartido `ScrollReveal` (src/lib/scroll-motion.tsx). Así
+// todas las plantillas que usan <Reveal> responden al preset global de
+// transiciones (fade / 3D / parallax) elegido en el panel "Animación", sin
+// cambiar su código. Mantiene la API antigua (children/className/delay/style).
 export function Reveal({
   children,
   className = '',
   delay = 0,
-  as: Tag = 'div',
+  style,
 }: {
   children: React.ReactNode;
   className?: string;
   delay?: number;
-  as?: keyof JSX.IntrinsicElements;
+  style?: React.CSSProperties;
 }) {
-  const ref = useRef<HTMLElement | null>(null);
-  const [shown, setShown] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          setShown(true);
-          obs.disconnect();
-        }
-      },
-      { threshold: 0.15, rootMargin: '0px 0px -8% 0px' }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  const Component = Tag as any;
   return (
-    <Component
-      ref={ref as any}
-      className={className}
-      style={{
-        opacity: shown ? 1 : 0,
-        transform: shown ? 'translateY(0)' : 'translateY(34px)',
-        transition: `opacity 1s ease ${delay}ms, transform 1s cubic-bezier(0.22,1,0.36,1) ${delay}ms`,
-      }}
-    >
+    <ScrollReveal className={className} delay={delay} style={style}>
       {children}
-    </Component>
+    </ScrollReveal>
+  );
+}
+
+// ── Lightbox (visor de fotos a pantalla completa) ─────────────────────────────
+// Compartido por toda galería de la app: abre la foto a pantalla completa, con
+// navegación (flechas / swipe / teclado), contador y cierre con Escape o tap.
+export function Lightbox({
+  images,
+  index,
+  onClose,
+  onIndex,
+}: {
+  images: string[];
+  index: number;
+  onClose: () => void;
+  onIndex: (i: number) => void;
+}) {
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const total = images.length;
+  const [mounted, setMounted] = useState(false);
+
+  const go = useCallback((dir: number) => {
+    onIndex((index + dir + total) % total);
+  }, [index, total, onIndex]);
+
+  // Solo portamos en cliente (document existe tras montar).
+  useEffect(() => { setMounted(true); }, []);
+
+  // Teclado: ←/→ navega, Esc cierra.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      else if (e.key === 'ArrowRight') go(1);
+      else if (e.key === 'ArrowLeft') go(-1);
+    };
+    window.addEventListener('keydown', onKey);
+    // Bloquea el scroll del fondo mientras el visor está abierto.
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+  }, [go, onClose]);
+
+  const onTouchStart = (e: React.TouchEvent) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!touch.current) return;
+    const dx = e.changedTouches[0].clientX - touch.current.x;
+    const dy = e.changedTouches[0].clientY - touch.current.y;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
+    else if (dy > 80) onClose(); // deslizar hacia abajo cierra
+    touch.current = null;
+  };
+
+  if (!mounted) return null;
+
+  // Portal a <body>: evita que un ancestro con `transform` (ScrollReveal/3D)
+  // capture el position:fixed y descoloque el visor.
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center"
+      style={{ background: 'rgba(12,10,8,0.94)', backdropFilter: 'blur(4px)', animation: 'ekLbFade .25s ease' }}
+      onClick={onClose}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      role="dialog"
+      aria-modal="true"
+    >
+      <style>{`
+        @keyframes ekLbFade { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes ekLbZoom { from { opacity: 0; transform: scale(.94) } to { opacity: 1; transform: scale(1) } }
+      `}</style>
+
+      {/* Cerrar */}
+      <button
+        onClick={onClose}
+        aria-label="Cerrar"
+        className="absolute top-4 right-4 z-10 flex h-11 w-11 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+
+      {/* Contador */}
+      {total > 1 && (
+        <span className="absolute top-5 left-1/2 -translate-x-1/2 font-outfit text-[13px] tracking-[0.2em] text-white/70">
+          {index + 1} / {total}
+        </span>
+      )}
+
+      {/* Flecha anterior */}
+      {total > 1 && (
+        <button
+          onClick={e => { e.stopPropagation(); go(-1); }}
+          aria-label="Anterior"
+          className="absolute left-2 sm:left-5 z-10 flex h-12 w-12 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 6l-6 6 6 6" /></svg>
+        </button>
+      )}
+
+      {/* Imagen */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        key={index}
+        src={images[index]}
+        alt=""
+        onClick={e => e.stopPropagation()}
+        className="max-h-[88vh] max-w-[92vw] object-contain rounded-lg shadow-2xl"
+        style={{ animation: 'ekLbZoom .3s cubic-bezier(0.22,1,0.36,1)' }}
+      />
+
+      {/* Flecha siguiente */}
+      {total > 1 && (
+        <button
+          onClick={e => { e.stopPropagation(); go(1); }}
+          aria-label="Siguiente"
+          className="absolute right-2 sm:right-5 z-10 flex h-12 w-12 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6l6 6-6 6" /></svg>
+        </button>
+      )}
+
+      {/* Miniaturas (en pantallas amplias) */}
+      {total > 1 && (
+        <div className="absolute bottom-4 left-1/2 hidden -translate-x-1/2 gap-2 sm:flex">
+          {images.map((src, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={`${src}-${i}`}
+              src={src}
+              alt=""
+              onClick={e => { e.stopPropagation(); onIndex(i); }}
+              className="h-12 w-12 cursor-pointer rounded object-cover transition-all"
+              style={{ outline: i === index ? '2px solid #fff' : '2px solid transparent', opacity: i === index ? 1 : 0.5 }}
+            />
+          ))}
+        </div>
+      )}
+    </div>,
+    document.body,
+  );
+}
+
+// Imagen con aparición progresiva: arranca transparente y se funde al cargar
+// (placeholder suave en el contenedor). Evita el "salto" brusco de las fotos.
+export function FadeImg({ className, style, ...rest }: React.ImgHTMLAttributes<HTMLImageElement>) {
+  const ref = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { if (ref.current?.complete) setLoaded(true); }, []);
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      ref={ref}
+      alt=""
+      loading="lazy"
+      onLoad={() => setLoaded(true)}
+      className={className}
+      style={{ ...style, opacity: loaded ? 1 : 0, transition: 'opacity .6s ease, transform .5s ease', filter: loaded ? 'none' : 'blur(8px)' }}
+      {...rest}
+    />
+  );
+}
+
+export type GalleryLayout = 'grid' | 'masonry' | 'polaroid' | 'carousel';
+
+// Lupa de hover compartida por las celdas de la galería.
+function ZoomHint() {
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-300 group-hover:bg-black/20 group-hover:opacity-100">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.6"><circle cx="11" cy="11" r="7" /><path strokeLinecap="round" d="M21 21l-4.3-4.3M11 8v6M8 11h6" /></svg>
+    </div>
+  );
+}
+
+// Hook reutilizable: estado del lightbox + el nodo a renderizar. Lo usan las
+// galerías propias de cada plantilla (mosaico polaroid, etc.) para abrir foto.
+export function useLightbox(images?: string[]) {
+  const [open, setOpen] = useState<number | null>(null);
+  const list = images ?? [];
+  const node = open !== null && list.length
+    ? <Lightbox images={list} index={open} onClose={() => setOpen(null)} onIndex={setOpen} />
+    : null;
+  return { openAt: (i: number) => setOpen(i), node };
+}
+
+// Galería de mosaico (estilo "Nosotros" de las plantillas) con lightbox incluido.
+// variant: polaroid (marco blanco inclinado) | rounded (esquinas redondeadas) | grid.
+export function MasonryGallery({
+  images,
+  variant = 'polaroid',
+  aspect = '3 / 4',
+  className = '',
+}: {
+  images?: string[];
+  variant?: 'polaroid' | 'rounded' | 'grid';
+  aspect?: string;
+  className?: string;
+}) {
+  const lb = useLightbox(images);
+  if (!images || images.length === 0) return null;
+
+  if (variant === 'grid') {
+    return (
+      <>
+        <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${className}`}>
+          {images.map((src, i) => (
+            <div key={`${src}-${i}`} onClick={() => lb.openAt(i)} className={`group relative overflow-hidden rounded-2xl ${i % 3 === 1 ? 'sm:translate-y-6' : ''}`} style={{ aspectRatio: aspect, cursor: 'zoom-in' }}>
+              <FadeImg src={src} className="h-full w-full object-cover group-hover:scale-105" />
+              <ZoomHint />
+            </div>
+          ))}
+        </div>
+        {lb.node}
+      </>
+    );
+  }
+
+  const polaroid = variant === 'polaroid';
+  return (
+    <>
+      <div className={`columns-2 gap-4 sm:columns-3 ${className}`}>
+        {images.map((src, i) => (
+          <div
+            key={`${src}-${i}`}
+            onClick={() => lb.openAt(i)}
+            className={`group mb-4 inline-block w-full shadow-md ${polaroid ? 'bg-white p-2 pb-4' : 'overflow-hidden rounded-2xl'}`}
+            style={{ transform: `rotate(${(i % 3 - 1) * (polaroid ? 2.2 : 2)}deg)`, cursor: 'zoom-in' }}
+          >
+            <div className="relative overflow-hidden" style={{ aspectRatio: aspect }}>
+              <FadeImg src={src} className="h-full w-full object-cover group-hover:scale-105" />
+              <ZoomHint />
+            </div>
+          </div>
+        ))}
+      </div>
+      {lb.node}
+    </>
+  );
+}
+
+// ── Photo gallery (renders uploaded images) ───────────────────────────────────
+export function PhotoGrid({
+  images,
+  className = '',
+  radius = 16,
+  lightbox = true,
+  layout = 'grid',
+}: {
+  images?: string[];
+  className?: string;
+  radius?: number;
+  /** Permite abrir cada foto a pantalla completa (por defecto, sí). */
+  lightbox?: boolean;
+  /** Disposición visual de la galería. */
+  layout?: GalleryLayout;
+}) {
+  const [open, setOpen] = useState<number | null>(null);
+  const cursor = lightbox ? 'zoom-in' : 'default';
+  const click = (i: number) => (lightbox ? () => setOpen(i) : undefined);
+
+  if (!images || images.length === 0) return null;
+
+  const visor = lightbox && open !== null
+    ? <Lightbox images={images} index={open} onClose={() => setOpen(null)} onIndex={setOpen} />
+    : null;
+
+  // Masonry: alturas alternadas con columnas CSS (efecto Pinterest).
+  if (layout === 'masonry') {
+    return (
+      <>
+        <div className={className} style={{ columnGap: 8, columnCount: 2, pointerEvents: 'auto' }}>
+          {images.map((src, i) => (
+            <div key={`${src}-${i}`} onClick={click(i)} className="group relative mb-2 inline-block w-full overflow-hidden bg-black/5" style={{ borderRadius: radius, cursor }}>
+              <FadeImg src={src} className="w-full object-cover group-hover:scale-105" />
+              {lightbox && <ZoomHint />}
+            </div>
+          ))}
+        </div>
+        {visor}
+      </>
+    );
+  }
+
+  // Polaroid: fotos con marco blanco, ligeramente inclinadas.
+  if (layout === 'polaroid') {
+    return (
+      <>
+        <div className={`flex flex-wrap justify-center gap-4 ${className}`} style={{ pointerEvents: 'auto' }}>
+          {images.map((src, i) => (
+            <div key={`${src}-${i}`} onClick={click(i)} className="group relative bg-white p-2 pb-7 shadow-lg transition-transform duration-300 hover:z-10 hover:!rotate-0 hover:scale-105" style={{ width: 'min(40vw,160px)', transform: `rotate(${(i % 3 - 1) * 3}deg)`, cursor }}>
+              <div className="relative overflow-hidden" style={{ aspectRatio: '1 / 1' }}>
+                <FadeImg src={src} className="h-full w-full object-cover" />
+                {lightbox && <ZoomHint />}
+              </div>
+            </div>
+          ))}
+        </div>
+        {visor}
+      </>
+    );
+  }
+
+  // Carrusel: tira horizontal con scroll por gesto.
+  if (layout === 'carousel') {
+    return (
+      <>
+        <div className={`flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 ${className}`} style={{ pointerEvents: 'auto', scrollbarWidth: 'thin' }}>
+          {images.map((src, i) => (
+            <div key={`${src}-${i}`} onClick={click(i)} className="group relative shrink-0 snap-center overflow-hidden bg-black/5" style={{ width: 'min(70vw,260px)', aspectRatio: '3 / 4', borderRadius: radius, cursor }}>
+              <FadeImg src={src} className="h-full w-full object-cover group-hover:scale-105" />
+              {lightbox && <ZoomHint />}
+            </div>
+          ))}
+        </div>
+        {visor}
+      </>
+    );
+  }
+
+  // Grid (por defecto): cuadrícula cuadrada.
+  return (
+    <>
+      <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 ${className}`} style={{ pointerEvents: 'auto' }}>
+        {images.map((src, i) => (
+          <div key={`${src}-${i}`} onClick={click(i)} className="group relative overflow-hidden bg-black/5" style={{ borderRadius: radius, aspectRatio: '1 / 1', cursor }}>
+            <FadeImg src={src} className="h-full w-full object-cover group-hover:scale-105" />
+            {lightbox && <ZoomHint />}
+          </div>
+        ))}
+      </div>
+      {visor}
+    </>
   );
 }
 
@@ -95,10 +405,73 @@ function Feather({ color, tip }: { color: string; tip: string }) {
   );
 }
 
-// ── Floating feather particles (subtle, spread everywhere) ────────────────────
-export function Particles({ color = '#3a5a82', tip = '#9aa9d6', count = 6 }: { color?: string; tip?: string; count?: number }) {
+// ── Formas de partícula (caen suavemente). 10 diseños a elegir. ───────────────
+export function ParticleShapeSvg({ shape, color, tip }: { shape: ParticleShape; color: string; tip: string }) {
+  switch (shape) {
+    case 'petal':
+      return <svg width="20" height="26" viewBox="0 0 20 26"><path d="M10 1 C3 8,3 18,10 25 C17 18,17 8,10 1Z" fill={color} /><path d="M10 4 V22" stroke={tip} strokeWidth="0.6" opacity="0.5" /></svg>;
+    case 'blossom':
+      return (
+        <svg width="26" height="26" viewBox="-13 -13 26 26" fill={color}>
+          {[0, 72, 144, 216, 288].map(a => <ellipse key={a} cx="0" cy="-7" rx="3.4" ry="6" transform={`rotate(${a})`} />)}
+          <circle cx="0" cy="0" r="2.6" fill={tip} />
+        </svg>
+      );
+    case 'heart':
+      return <svg width="24" height="22" viewBox="-12 -2 24 22" fill={color}><path d="M0 4 C-2 0 -8.5 0 -8.5 5.2 C-8.5 10.5 -2 13.8 0 16.2 C2 13.8 8.5 10.5 8.5 5.2 C8.5 0 2 0 0 4 Z" /></svg>;
+    case 'star':
+      return <svg width="22" height="22" viewBox="0 0 24 24" fill={color}><path d="M12 1l2.9 6.6 7.1.6-5.4 4.7 1.7 7L12 17.8 5.7 20.5l1.7-7L2 8.8l7.1-.6z" /></svg>;
+    case 'leaf':
+      return <svg width="18" height="26" viewBox="0 0 18 26"><path d="M9 1 C1 7,1 19,9 25 C17 19,17 7,9 1Z" fill={color} /><path d="M9 3 V23 M9 9 L4 7 M9 9 L14 7 M9 14 L4.5 12 M9 14 L13.5 12" stroke={tip} strokeWidth="0.7" fill="none" opacity="0.6" /></svg>;
+    case 'sparkle':
+      return <svg width="20" height="20" viewBox="-10 -10 20 20" fill={color}><path d="M0 -10 C1 -3 3 -1 10 0 C3 1 1 3 0 10 C-1 3 -3 1 -10 0 C-3 -1 -1 -3 0 -10Z" /></svg>;
+    case 'circle':
+      return <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill={color} /></svg>;
+    case 'ring':
+      return <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke={color} strokeWidth="2" /></svg>;
+    case 'butterfly':
+      return (
+        <svg width="26" height="22" viewBox="-13 -11 26 22" fill={color}>
+          <ellipse cx="-6" cy="-4" rx="6" ry="5" transform="rotate(-18 -6 -4)" />
+          <ellipse cx="6" cy="-4" rx="6" ry="5" transform="rotate(18 6 -4)" />
+          <ellipse cx="-5" cy="5" rx="4.5" ry="4" transform="rotate(18 -5 5)" opacity="0.85" />
+          <ellipse cx="5" cy="5" rx="4.5" ry="4" transform="rotate(-18 5 5)" opacity="0.85" />
+          <rect x="-0.7" y="-6" width="1.4" height="13" rx="0.7" fill={tip} />
+        </svg>
+      );
+    case 'snow':
+      return (
+        <svg width="22" height="22" viewBox="-11 -11 22 22" fill="none" stroke={color} strokeWidth="1.1" strokeLinecap="round">
+          {[0, 60, 120].map(a => <line key={a} x1="0" y1="-10" x2="0" y2="10" transform={`rotate(${a})`} />)}
+          {[0, 60, 120, 180, 240, 300].map(a => <g key={a} transform={`rotate(${a})`}><line x1="0" y1="-10" x2="-3" y2="-7" /><line x1="0" y1="-10" x2="3" y2="-7" /></g>)}
+        </svg>
+      );
+    case 'confetti':
+      return <svg width="12" height="18" viewBox="0 0 12 18"><rect x="2" y="1" width="8" height="16" rx="2" fill={color} transform="rotate(20 6 9)" /></svg>;
+    case 'maple':
+      return <svg width="22" height="24" viewBox="-11 -2 22 24" fill={color}><path d="M0 22 L-1 13 L-8 16 L-5 9 L-11 8 L-5 5 L-7 -1 L-1 2 L0 -2 L1 2 L7 -1 L5 5 L11 8 L5 9 L8 16 L1 13 Z" /></svg>;
+    case 'diamond':
+      return <svg width="16" height="20" viewBox="0 0 16 20" fill={color}><path d="M8 0 L16 9 L8 20 L0 9 Z" /><path d="M0 9 H16" stroke={tip} strokeWidth="0.6" opacity="0.5" /></svg>;
+    case 'note':
+      return (
+        <svg width="20" height="24" viewBox="0 0 20 24" fill={color}>
+          <ellipse cx="6" cy="18" rx="5" ry="4" transform="rotate(-18 6 18)" />
+          <rect x="10" y="3" width="1.8" height="15" />
+          <path d="M11.8 3 C 16 4, 17 8, 15 11 C 16 7, 14 5, 11.8 6 Z" />
+        </svg>
+      );
+    case 'bird':
+      return <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round"><path d="M2 10 Q 7 2 13 9 Q 19 2 24 10" /></svg>;
+    case 'feather':
+    default:
+      return <Feather color={color} tip={tip} />;
+  }
+}
+
+// ── Partículas que caen (sutiles, repartidas). 10 formas a elegir. ─────────────
+export function Particles({ color = '#3a5a82', tip = '#9aa9d6', count = 6, shape = 'feather' }: { color?: string; tip?: string; count?: number; shape?: ParticleShape }) {
   // evenly spread across the full width with light jitter
-  const feathers = Array.from({ length: count }, (_, i) => {
+  const items = Array.from({ length: count }, (_, i) => {
     const base = (i + 0.5) * (100 / count);
     const jitter = ((i * 37) % 14) - 7;
     return {
@@ -112,7 +485,7 @@ export function Particles({ color = '#3a5a82', tip = '#9aa9d6', count = 6 }: { c
   });
   return (
     <div className="pointer-events-none fixed inset-0 z-[6] overflow-hidden" aria-hidden>
-      {feathers.map((f, i) => (
+      {items.map((f, i) => (
         <span
           key={i}
           style={{
@@ -124,10 +497,10 @@ export function Particles({ color = '#3a5a82', tip = '#9aa9d6', count = 6 }: { c
             '--spin': f.spin,
             '--s': String(f.scale),
             animation: `featherFall ${f.duration} ease-in-out ${f.delay} infinite`,
-            opacity: 0.32,
+            opacity: 0.4,
           }}
         >
-          <Feather color={color} tip={tip} />
+          <ParticleShapeSvg shape={shape} color={color} tip={tip} />
         </span>
       ))}
     </div>
@@ -162,65 +535,115 @@ export function CopyBtn({ value, color = 'currentColor' }: { value: string; colo
   );
 }
 
-// ── Shared line-art icon set (refined, Invitali-style) ────────────────────────
-export function EventIcon({ name, className = '', stroke = 'currentColor' }: { name: string; className?: string; stroke?: string }) {
+// ── Shared line-art icon set — soporta Lottie JSON y SVG de respaldo ─────────
+//    Si `name` es una ruta Lottie ("/lottie/...") renderiza la animación.
+//    Si no, usa el SVG clásico como fallback.
+export function EventIcon({ name, className = '', stroke = 'currentColor', lottieColors, tint, speed, custom, sec }: {
+  name: string;
+  className?: string;
+  stroke?: string;
+  /** Mapa de colores para Lottie: { '#colorOriginal': '#colorNuevo' } */
+  lottieColors?: Record<string, string>;
+  /** Tinta el icono Lottie a un solo color. Si no se da, usa `stroke` (cuando es hex). */
+  tint?: string;
+  /** Velocidad de la animación Lottie (1 = normal). */
+  speed?: number;
+  /** Personalización del panel (icono/color/velocidad por sección). */
+  custom?: IconCustomization;
+  /** Clave de sección para leer la personalización de `custom`. */
+  sec?: string;
+}) {
+  // Resuelve la personalización del panel (icono, colores, velocidad y color por sección).
+  if (custom) {
+    if (sec && custom.icons?.[sec]) name = custom.icons[sec];
+    if (sec && lottieColors == null) lottieColors = custom.iconColorsMap?.[sec];
+    if (sec && speed == null) speed = custom.iconSpeedsMap?.[sec];
+    if (custom.iconColor) stroke = custom.iconColor;
+  }
+
+  // Los iconos animados conservan sus colores propios; sólo se recolorean si el
+  // usuario edita colores concretos (lottieColors) o pide un tinte explícito (tint).
+  const lottieTint = tint;
+  // Icono propio subido por el usuario (PNG/SVG/JPG) → renderizar como imagen
+  if (name && (/\.(png|jpe?g|svg|webp|gif)(\?|$)/i.test(name) || (/^https?:\/\//.test(name) && !name.endsWith('.json')))) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={name} alt="" className={className} style={{ objectFit: 'contain' }} draggable={false} />;
+  }
+
+  // Si es ruta Lottie → renderizar animación
+  if (name && (name.startsWith('/lottie/') || name.endsWith('.json') || name.includes('/'))) {
+    // Import dinámico inline para no romper el bundle en SSR
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const LottieIcon = require('@/components/ui/LottieIcon').default;
+    return (
+      <LottieIcon
+        icon={name}
+        size={48}
+        colors={lottieColors}
+        tint={lottieTint}
+        speed={speed}
+        loop
+        autoplay
+        lazy={false}
+        className={className}
+      />
+    );
+  }
+
+  // Fallback: SVG hardcodeado clásico
   const common = { fill: 'none', stroke, strokeWidth: 1.25, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   switch (name) {
-    case 'church': // gothic arch + bride & groom + cross
+    case 'church': // refined chapel badge
       return (
         <svg viewBox="0 0 48 52" className={className} {...common}>
-          {/* cross */}
-          <path d="M24 2.5V9M21 5.2h6" />
-          {/* pointed arch */}
-          <path d="M11.5 49.5V25.5C11.5 14 17.5 9 24 9s12.5 5 12.5 16.5v24" />
-          <path d="M11 49.5h26" />
-          {/* bride (left): head, veil, A-line dress */}
-          <circle cx="20" cy="26" r="2.4" />
-          <path d="M17.9 25.2C15.4 29 15.6 38 16.6 45" />
-          <path d="M20 28.4 16.6 45h6.8z" />
-          {/* groom (right): head, torso, arm to bride, legs */}
-          <circle cx="28.4" cy="26.4" r="2.4" />
-          <path d="M28.4 28.8v9.4M28.4 31.5 23.6 33M28.4 38.2 26 45M28.4 38.2 30.8 45" />
+          <path d="M24 4v5M21.6 6.4h4.8" />
+          <path d="M14 48V21.8c0-7 4.5-11.8 10-11.8s10 4.8 10 11.8V48" />
+          <path d="M14 48h20" />
+          <path d="M20.8 30.5a2.3 2.3 0 1 0 0-.01Z" />
+          <path d="M27.3 30.5a2.3 2.3 0 1 0 0-.01Z" />
+          <path d="M19 38.2c.2-2.6 1.1-4.6 2.7-6" />
+          <path d="M21.7 32.2 18.8 46h5.9l-2.1-10.4" />
+          <path d="M26.4 32.5v7.6M26.4 34.8l-3.2 1.6M26.4 40.1 24.2 46M26.4 40.1 28.6 46" />
         </svg>
       );
-    case 'cheers': // clinking champagne flutes + sparkle
+    case 'cheers': // refined champagne flutes
       return (
         <svg viewBox="0 0 48 48" className={className} {...common}>
-          {/* left flute (rim tilts toward center) */}
-          <path d="M15.5 9 21.5 11 19 21 Z" />
-          <path d="M19 21v9.5M16 31h6" />
-          {/* right flute */}
-          <path d="M32.5 9 26.5 11 29 21 Z" />
-          <path d="M29 21v9.5M26 31h6" />
-          {/* sparkle at the clink */}
-          <path d="M24 3.5v3.8M21.4 5.4 22.9 6.7M26.6 5.4 25.1 6.7" opacity="0.9" />
+          <path d="M15.4 11.5h5.8l-1.8 9.1c-.3 1.7-1.8 2.9-3.6 2.9h-.2c-1.8 0-3.2-1.2-3.6-2.9l-1.8-9.1h5.2" />
+          <path d="M16.6 23.5v7.4M13.6 33.4h6" />
+          <path d="M32.6 11.5h5.8l-1.8 9.1c-.3 1.7-1.8 2.9-3.6 2.9h-.2c-1.8 0-3.2-1.2-3.6-2.9l-1.8-9.1h5.2" />
+          <path d="M33.8 23.5v7.4M30.8 33.4h6" />
+          <path d="M24 6.5v3.6M21.7 8.2h4.6M19.8 11.2l2.1 1.5M28.2 11.2l-2.1 1.5" opacity="0.92" />
         </svg>
       );
-    case 'dance': // dancing couple — groom + bride with flared dress
+    case 'dance': // refined dancing couple
       return (
         <svg viewBox="0 0 48 48" className={className} {...common}>
-          {/* groom */}
-          <circle cx="18" cy="12" r="2.6" />
-          <path d="M18 14.6V27M18 18.5 26.5 22.5M18 27 14.5 40M18 27 21 39" />
-          {/* bride */}
-          <circle cx="30.5" cy="11" r="2.6" />
-          <path d="M30.5 13.6V23M30.5 17.5 22.5 21M30.5 23 24.5 41h12.4z" />
+          <circle cx="18" cy="12" r="2.5" />
+          <circle cx="30" cy="12" r="2.5" />
+          <path d="M18 15.2v8.4M18 18.8l5.9 3.5M18 23.6 15 36.5M18 23.6l2.5 11" />
+          <path d="M30 15.2v6.8M30 18.2l-6.1 4.2M30 22l-4.8 14.5h10L31 22" />
+          <path d="M23.9 22.3 26.3 19" />
         </svg>
       );
     case 'rings':
       return (
         <svg viewBox="0 0 48 48" className={className} {...common}>
-          <circle cx="19" cy="29" r="9" />
-          <circle cx="30" cy="29" r="9" />
-          <path d="M16 18l3-6h6l3 6M19 12l5 6 5-6" />
+          <circle cx="19" cy="29.5" r="8.4" />
+          <circle cx="29.6" cy="29.5" r="8.4" />
+          <path d="M18.8 19.7 22 13h4.4l3.2 6.7" />
+          <path d="M22 13c.9 2.2 2 3.8 4.2 5.7" />
+          <path d="M26.4 13c-.9 2.2-2 3.8-4.2 5.7" />
+          <path d="M24 10.2v-2" />
         </svg>
       );
     case 'dinner':
       return (
         <svg viewBox="0 0 48 48" className={className} {...common}>
-          <circle cx="24" cy="26" r="11" />
-          <circle cx="24" cy="26" r="5" />
-          <path d="M9 10v8M9 18a3 3 0 006 0M12 10v8M39 10c-3 0-4 4-4 8h4z" />
+          <circle cx="24.2" cy="26" r="9.8" />
+          <circle cx="24.2" cy="26" r="4.2" />
+          <path d="M10.8 11v8.4M13.5 11v8.4M16.2 11v8.4M10.8 19.4c0 1.9 1.2 3.1 2.7 3.1s2.7-1.2 2.7-3.1" />
+          <path d="M36.6 11c-2.4 0-4.3 2.9-4.3 6.6v4.7M36.6 11v25" />
         </svg>
       );
     case 'dress': // flared dress + suit jacket with bowtie, on hangers

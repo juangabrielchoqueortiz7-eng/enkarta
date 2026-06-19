@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { InvitationParsed } from '@/lib/types';
 import Countdown from '../Countdown';
 
@@ -78,8 +79,8 @@ export default function Perla({ invitation }: { invitation: InvitationParsed }) 
         <div className="max-w-lg mx-auto">
           {/* Cover Image */}
           {inv.cover_image_url && (
-            <div className="invitation-section">
-              <img src={inv.cover_image_url} alt="Foto" className="w-full h-[70vh] object-cover" />
+            <div className="invitation-section relative h-[70vh]">
+              <Image src={inv.cover_image_url} alt="Foto" fill className="object-cover" sizes="(max-width: 640px) 100vw, 512px" />
             </div>
           )}
 

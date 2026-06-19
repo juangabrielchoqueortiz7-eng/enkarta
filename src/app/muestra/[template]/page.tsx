@@ -1,31 +1,81 @@
 import { notFound } from 'next/navigation';
-import Azure from '@/components/invitations/Azure';
-import Primicia from '@/components/invitations/Primicia';
-import Passport from '@/components/invitations/Passport';
-import { azureSample } from '@/components/invitations/sampleData';
+import { PREMIUM_REGISTRY, PREMIUM_KEYS } from '@/lib/template-registry';
+import EntryGate from '@/components/invitations/EntryGate';
+import BlockRenderer from '@/components/invitations/BlockRenderer';
+import { PageMotionProvider } from '@/lib/scroll-motion';
+import { contentToLayout } from '@/lib/layout-presets';
+import { themeForTemplate } from '@/lib/template-themes';
+import type { PageMotionPreset, TemplateDecor, ParticleShape, CornerStyle } from '@/lib/types';
+import { entryPropsFor } from '@/components/invitations/entry/config';
+import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample } from '@/components/invitations/sampleData';
 
 interface Props {
   params: Promise<{ template: string }>;
-  searchParams: Promise<{ n?: string; m?: string }>;
+  searchParams: Promise<{ n?: string; m?: string; full?: string; mo?: string; blocks?: string; fp?: string; cs?: string }>;
 }
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Datos de muestra por key pública de /muestra (carmesi = carmesi_v2 del registry).
+const SAMPLES: Record<string, any> = {
+  azure: azureSample,
+  primicia: primiciaSample,
+  passport: passportSample,
+  paradise: paradiseSample,
+  obsidiana: obsidianaSample,
+  dolcevita: dolceVitaSample,
+  grazia: graziaSample,
+  carmesi: carmesiSample,
+  napoly: napolySample,
+  euforia: euforiaSample,
+  rosegold: roseGoldSample,
+  allegria: allegriaSample,
+};
 
 export default async function MuestraPage({ params, searchParams }: Props) {
   const { template } = await params;
-  const { n, m } = await searchParams;
-  const key = template.toLowerCase();
+  const { n, m, full, mo, blocks, fp, cs } = await searchParams;
+  let key = template.toLowerCase();
+  if (key === 'carmesi_v2') key = 'carmesi';
 
-  if (key === 'azure') {
-    return <Azure data={{ ...azureSample, guestName: m ?? azureSample.guestName, guestPasses: n ?? azureSample.guestPasses }} />;
-  }
-  if (key === 'primicia') {
-    return <Primicia guestName={m} guestPasses={n} />;
-  }
-  if (key === 'passport') {
-    return <Passport guestName={m} guestPasses={n} />;
-  }
-  notFound();
+  const sample = SAMPLES[key];
+  const registryEntry = PREMIUM_REGISTRY[key === 'carmesi' ? 'carmesi_v2' : key];
+  if (!sample || !registryEntry) notFound();
+
+  const { Comp } = registryEntry;
+  const data = { ...sample, guestName: m ?? sample.guestName, guestPasses: n ?? sample.guestPasses };
+
+  // ?mo=cinematic3d|parallaxBook|elegant|minimal|none → previsualizar un preset.
+  const motionVal = mo ? { preset: mo as PageMotionPreset } : undefined;
+  // ?blocks=1 → previsualizar la versión por bloques (constructor) de la plantilla.
+  // ?fp=<forma>&cs=<estilo esquina> → previsualizar partículas/adornos concretos.
+  const previewDecor: TemplateDecor | undefined = (fp || cs)
+    ? {
+        background: 'art',
+        floating: fp ? { on: true, shape: fp as ParticleShape } : undefined,
+        corners: cs ? { on: true, style: cs as CornerStyle } : undefined,
+      }
+    : key === 'azure'
+      ? { background: 'art', corners: { on: true }, floating: { on: true }, ...(data.decor ?? {}) }
+      : data.decor;
+  const el = blocks === '1' ? (
+    <BlockRenderer layout={contentToLayout(data, key)} theme={data.theme ?? themeForTemplate(key)} motion={motionVal} decor={previewDecor} musicUrl={data.musicUrl} slug={key} gated={full !== '1'} />
+  ) : (
+    <PageMotionProvider value={motionVal} gated={full !== '1'}>
+      <Comp data={data} />
+    </PageMotionProvider>
+  );
+
+  // El enlace directo (?full=1) salta la portada de entrada.
+  if (full === '1') return el;
+
+  const gate = entryPropsFor(key, data);
+  return (
+    <EntryGate template={key} names={gate.names} initials={gate.initials} dateLine={gate.dateLine} coverImage={gate.coverImage}>
+      {el}
+    </EntryGate>
+  );
 }
 
 export function generateStaticParams() {
-  return [{ template: 'azure' }, { template: 'primicia' }, { template: 'passport' }];
+  return PREMIUM_KEYS.map(template => ({ template }));
 }

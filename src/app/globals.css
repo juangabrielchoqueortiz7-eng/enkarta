@@ -20,6 +20,17 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Accesibilidad: el usuario pidió menos movimiento → se desactivan
+   animaciones y transiciones CSS en todo el sitio. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 body {
   font-family: 'Outfit', sans-serif;
   color: #2C2519;
@@ -132,3 +143,32 @@ input[type="color"]::-webkit-color-swatch {
   pointer-events: none;
   transform: scale(1.05);
 }
+
+/* ── Movimiento de los elementos decorativos flotantes (stickers) ──────────────
+   El idle (mecer/flotar/latir) y la entrada son muy sutiles y solo se aplican si
+   el visitante no pidió "menos animación". */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes ekElemIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes ekSway {
+    0%, 100% { transform: rotate(-2.2deg); }
+    50%      { transform: rotate(2.2deg); }
+  }
+  @keyframes ekFloat {
+    0%, 100% { transform: translateY(-4px); }
+    50%      { transform: translateY(4px); }
+  }
+  @keyframes ekBreathe {
+    0%, 100% { transform: scale(0.97); }
+    50%      { transform: scale(1.03); }
+  }
+  .ek-elem-in    { animation: ekElemIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .ek-anim-sway    { animation: ekElemIn 0.7s cubic-bezier(0.22,1,0.36,1) both, ekSway 5.5s ease-in-out 0.7s infinite; transform-origin: top center; }
+  .ek-anim-float   { animation: ekElemIn 0.7s cubic-bezier(0.22,1,0.36,1) both, ekFloat 6s ease-in-out 0.7s infinite; }
+  .ek-anim-breathe { animation: ekElemIn 0.7s cubic-bezier(0.22,1,0.36,1) both, ekBreathe 5s ease-in-out 0.7s infinite; }
+}
+
+/* SVG subido recoloreado e inyectado inline: que ocupe el ancho del contenedor. */
+.ek-inline-svg svg { width: 100%; height: auto; display: block; }
