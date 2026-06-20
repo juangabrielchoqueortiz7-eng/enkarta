@@ -5,6 +5,7 @@ import { InvitationParsed } from '@/lib/types';
 import { PREMIUM_REGISTRY } from '@/lib/template-registry';
 import { PageMotionProvider } from '@/lib/scroll-motion';
 import { gateInvitation, resolveFeatures } from '@/lib/packages';
+import { resolveLayoutBindings } from '@/lib/block-bindings';
 import BlockRenderer from '@/components/invitations/BlockRenderer';
 import FontScope from '@/components/invitations/FontScope';
 import SmartRsvp from '@/components/invitations/SmartRsvp';
@@ -37,7 +38,8 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
   // Cambiar de preset re-monta la plantilla para volver a reproducir la animación.
   const motionPreset = invitation.config?.motion?.preset ?? 'elegant';
   // En modo editor de bloques se usa el layout SIN gatear (para poder editarlo todo).
-  const cfg = (blockEditor ? rawInvitation.config : invitation.config) ?? {};
+  const renderInvitation = blockEditor ? rawInvitation : invitation;
+  const cfg = renderInvitation.config ?? {};
   const hasBlocks = !!cfg.layout?.blocks?.length;
   // La confirmación inteligente se muestra al final del preview (sin invitado, modo abierto).
   const smartRsvpOn = !blockEditor && resolveFeatures(invitation.config).smartRsvp;
@@ -95,12 +97,13 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
             {hasBlocks ? (
               <BlockRenderer
                 key={motionPreset}
-                layout={cfg.layout!}
+                layout={resolveLayoutBindings(cfg.layout!, renderInvitation)}
                 theme={cfg.theme}
                 nightTheme={cfg.nightTheme}
                 nightDefault={cfg.nightDefault}
                 motion={cfg.motion}
                 decor={cfg.decor}
+                tokens={cfg.tokens}
                 editor={blockEditor}
                 selectedId={selectedBlockId}
                 onSelectBlock={onSelectBlock}
@@ -108,6 +111,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
                 onEditProp={onEditBlockProp}
                 previewScale={scale}
                 scrollRoot={scrollRef}
+                viewportMode={device}
               />
             ) : (
             <PageMotionProvider key={motionPreset} value={invitation.config?.motion} scrollRoot={scrollRef}>

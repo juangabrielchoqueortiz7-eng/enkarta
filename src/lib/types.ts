@@ -1,3 +1,5 @@
+import { migrateBuilderConfig } from './layout-migrations';
+
 export type InvitationStatus = 'draft' | 'ready' | 'expired' | 'disabled';
 
 export type InvitationTemplate =
@@ -122,6 +124,8 @@ export interface BuilderConfig {
   /** El modo noche arranca activado (p. ej. eventos nocturnos). */
   nightDefault?: boolean;
   decor?: TemplateDecor;
+  /** Tokens de composición para mantener el ADN visual del modelo. */
+  tokens?: TemplateTokens;
   // ── Transiciones de scroll / 3D (editable desde el panel "Animación") ──
   motion?: PageMotion;
   // ── Documento por bloques (constructor visual). Si existe, manda sobre la plantilla legacy. ──
@@ -172,6 +176,15 @@ export interface TemplateTheme {
   line?: string;        // líneas divisorias
   bg?: string;          // fondo de la página
   onPrimary?: string;   // texto sobre bloques de color primario (ej. blanco/crema)
+}
+
+/** Tokens de composición por modelo para mantener consistencia al editar. */
+export interface TemplateTokens {
+  contentWidth?: number;
+  sectionInset?: number;
+  sectionRadius?: number;
+  spacing?: 'compact' | 'normal' | 'airy';
+  surface?: 'flat' | 'soft' | 'card';
 }
 
 /** Formas disponibles para las partículas que caen. */
@@ -311,6 +324,16 @@ export interface BlockStyle {
   maxWidth?: number;   // px (0 = ancho completo)
 }
 
+/** Override por breakpoint del layout libre de un bloque. */
+export interface BlockViewportLayout {
+  x?: number;
+  y?: number;
+  w?: number;
+  rotate?: number;
+  anchor?: 'tl' | 'tc' | 'tr' | 'ml' | 'mc' | 'mr' | 'bl' | 'bc' | 'br';
+  z?: number;
+}
+
 /**
  * Transformación libre del bloque ("lienzo libre"): desplazamiento, ancho y giro.
  * Se aplica como transform sobre un envoltorio (no rompe el flujo; permite
@@ -331,7 +354,13 @@ export interface BlockLayout {
   anchor?: 'tl' | 'tc' | 'tr' | 'ml' | 'mc' | 'mr' | 'bl' | 'bc' | 'br';
   /** Profundidad de apilado del elemento flotante (mayor = más al frente). */
   z?: number;
+  /** Ajustes específicos de móvil. */
+  mobile?: BlockViewportLayout;
+  /** Ajustes específicos de escritorio. */
+  desktop?: BlockViewportLayout;
 }
+
+export type BlockBindings = Record<string, string>;
 
 /** Un bloque del documento: tipo + contenido + estilo + animación. */
 export interface Block {
@@ -345,6 +374,8 @@ export interface Block {
   animation?: BlockAnimation;
   /** Transformación libre (posición/tamaño/giro) del lienzo. */
   layout?: BlockLayout;
+  /** Enlaces opcionales a datos globales de la invitación. */
+  bindings?: BlockBindings;
   /** Bloques hijos (solo para el tipo 'group' = columnas). */
   children?: Block[];
   /** Bloqueado: no se puede seleccionar/mover en el lienzo (panel de capas). */
@@ -396,10 +427,13 @@ export interface Attendee {
 }
 
 /** Documento por bloques de una invitación. */
+export const LAYOUT_VERSION = 2 as const;
 export interface PageLayout {
-  version: 1;
+  version: 1 | 2;
   /** Plantilla de la que se generó (para referencia). */
   basePreset?: InvitationTemplate;
+  /** ID del preset con el que se sembró. */
+  presetKey?: string;
   blocks: Block[];
 }
 
@@ -501,11 +535,11 @@ function safeParseJSON<T>(value: string | null, fallback: T): T {
  */
 export function parseConfig(value: unknown): BuilderConfig {
   if (!value) return {};
-  if (typeof value === 'object') return value as BuilderConfig;
+  if (typeof value === 'object') return migrateBuilderConfig(value as BuilderConfig);
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
-      return typeof parsed === 'object' && parsed ? (parsed as BuilderConfig) : {};
+      return typeof parsed === 'object' && parsed ? migrateBuilderConfig(parsed as BuilderConfig) : {};
     } catch {
       return {};
     }

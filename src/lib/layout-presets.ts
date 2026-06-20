@@ -1,17 +1,30 @@
 // Genera un `PageLayout` por defecto a partir de los datos de la invitación.
 // Es lo que ejecuta el botón "Convertir a bloques editables" del panel: siembra
-// los bloques con el contenido actual; a partir de ahí el layout es la fuente de
-// verdad y se edita bloque a bloque.
+// los bloques con el contenido actual; a partir de ahí el layout puede seguir
+// sincronizado con los datos globales mediante bindings opcionales.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import type { InvitationParsed, PageLayout, Block, BlockType } from './types';
+import type { InvitationParsed, PageLayout, Block, BlockType, BlockBindings } from './types';
+import { LAYOUT_VERSION } from './types';
 
 let _seq = 0;
 function uid(type: string) {
   return `${type}-${Date.now().toString(36)}-${(_seq++).toString(36)}`;
 }
-function blk(type: BlockType, props: Record<string, unknown>, style?: Block['style']): Block {
-  return { id: uid(type), type, props, ...(style ? { style } : {}) };
+
+function blk(
+  type: BlockType,
+  props: Record<string, unknown>,
+  style?: Block['style'],
+  bindings?: BlockBindings,
+): Block {
+  return {
+    id: uid(type),
+    type,
+    props,
+    ...(style ? { style } : {}),
+    ...(bindings ? { bindings } : {}),
+  };
 }
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -50,6 +63,18 @@ function parseBank(raw: string | null) {
   return { bank: bank?.trim() ?? raw, account: account?.trim() ?? '' };
 }
 
+// Metadatos estructurales del preset (versión, plantilla base). No cambia el
+// diseño: el contenido de los bloques lo siembra `invitationToLayout`.
+function applyTemplatePreset(layout: PageLayout, inv: InvitationParsed): PageLayout {
+  return {
+    ...layout,
+    version: LAYOUT_VERSION,
+    basePreset: inv.template,
+    presetKey: inv.template,
+    blocks: [...layout.blocks],
+  };
+}
+
 /** Construye el layout por defecto desde el registro de la invitación. */
 export function invitationToLayout(inv: InvitationParsed): PageLayout {
   const cfg = inv.config ?? {};
@@ -71,35 +96,88 @@ export function invitationToLayout(inv: InvitationParsed): PageLayout {
     || (cfg.photoUrl as string)
     || (cfg.galleryImages as string[] | undefined)?.[0]
     || '';
+
   blocks.push(blk('cover', {
-    groom, bride,
+    groom,
+    bride,
     tagline: (cfg.welcomeTitle as string) || 'Nos casamos',
     image: coverImg,
-  }, { padTop: 80, padBottom: 40 }));
+  }, { padTop: 80, padBottom: 40 }, {
+    groom: 'couple.groom',
+    bride: 'couple.bride',
+    tagline: 'couple.tagline',
+    image: 'media.coverImage',
+  }));
 
   const intro = (cfg.introMessage as string) || inv.message;
-  if (intro) blocks.push(blk('text', { text: intro, italic: false }, { maxWidth: 560 }));
+  if (intro) {
+    blocks.push(blk('text', { text: intro, italic: false }, { maxWidth: 560 }, {
+      text: 'content.intro',
+    }));
+  }
 
-  blocks.push(blk('dateBadge', { ...dp, city: (cfg.city as string) || '' }));
-  blocks.push(blk('countdown', { isoDate: iso, label: 'Solo faltan' }));
-  blocks.push(blk('calendar', { title: `${groom} & ${bride}`, isoDate: iso, duration: 5, location: inv.ceremony_place || '', label: 'Añadir a mi calendario' }, { padTop: 8, padBottom: 16 }));
+  blocks.push(blk('dateBadge', { ...dp, city: (cfg.city as string) || '' }, undefined, {
+    weekday: 'event.date.weekday',
+    day: 'event.date.day',
+    month: 'event.date.month',
+    year: 'event.date.year',
+    city: 'event.city',
+  }));
+  blocks.push(blk('countdown', { isoDate: iso, label: 'Solo faltan' }, undefined, {
+    isoDate: 'event.isoDate',
+  }));
+  blocks.push(blk('calendar', {
+    title: `${groom} & ${bride}`,
+    isoDate: iso,
+    duration: 5,
+    location: inv.ceremony_place || '',
+    label: 'Añadir a mi calendario',
+  }, { padTop: 8, padBottom: 16 }, {
+    title: 'calendar.title',
+    isoDate: 'event.isoDate',
+    location: 'calendar.location',
+  }));
   blocks.push(blk('divider', { style: 'art' }, { padTop: 8, padBottom: 8 }));
 
   blocks.push(blk('eventCard', {
-    title: 'Ceremonia', time: inv.ceremony_time ? `${inv.ceremony_time} h` : '16:00 h',
-    place: inv.ceremony_place || 'Iglesia', address: inv.ceremony_address || '',
-    mapsUrl: mapsUrl(inv.ceremony_place, inv.ceremony_address), icon: 'church',
+    title: 'Ceremonia',
+    time: inv.ceremony_time ? `${inv.ceremony_time} h` : '16:00 h',
+    place: inv.ceremony_place || 'Iglesia',
+    address: inv.ceremony_address || '',
+    mapsUrl: mapsUrl(inv.ceremony_place, inv.ceremony_address),
+    icon: 'church',
+  }, undefined, {
+    time: 'event.ceremony.time',
+    place: 'event.ceremony.place',
+    address: 'event.ceremony.address',
+    mapsUrl: 'event.ceremony.mapsUrl',
   }));
 
   if (inv.reception_place || inv.reception_time) {
     blocks.push(blk('eventCard', {
-      title: 'Recepción', time: inv.reception_time ? `${inv.reception_time} h` : '18:00 h',
-      place: inv.reception_place || 'Salón', address: inv.reception_address || '',
-      mapsUrl: mapsUrl(inv.reception_place, inv.reception_address), icon: 'cheers',
+      title: 'Recepción',
+      time: inv.reception_time ? `${inv.reception_time} h` : '18:00 h',
+      place: inv.reception_place || 'Salón',
+      address: inv.reception_address || '',
+      mapsUrl: mapsUrl(inv.reception_place, inv.reception_address),
+      icon: 'cheers',
+    }, undefined, {
+      time: 'event.reception.time',
+      place: 'event.reception.place',
+      address: 'event.reception.address',
+      mapsUrl: 'event.reception.mapsUrl',
     }));
   }
 
-  blocks.push(blk('dressCode', { title: 'Código de vestimenta', men: dress.men, women: dress.women, icon: 'dress' }));
+  blocks.push(blk('dressCode', {
+    title: 'Código de vestimenta',
+    men: dress.men,
+    women: dress.women,
+    icon: 'dress',
+  }, undefined, {
+    men: 'content.dress.men',
+    women: 'content.dress.women',
+  }));
 
   const items = (inv.itinerary ?? []).map(it => ({ time: it.time, label: it.label, icon: it.icon || 'rings', iconColors: it.iconColors, iconSpeed: it.iconSpeed }));
   if (items.length) {
@@ -109,14 +187,25 @@ export function invitationToLayout(inv: InvitationParsed): PageLayout {
   blocks.push(blk('gift', {
     title: 'Sugerencia de Regalo',
     message: inv.gift_message || 'Tu presencia es nuestro mejor regalo.',
-    bank: bank.bank, account: bank.account, holder: '',
+    bank: bank.bank,
+    account: bank.account,
+    holder: '',
     qrUrl: (cfg.giftQrUrl as string) || '',
-  }, { padTop: 56, padBottom: 56 }));
+  }, { padTop: 56, padBottom: 56 }, {
+    message: 'content.giftMessage',
+    bank: 'content.bank.bank',
+    account: 'content.bank.account',
+    qrUrl: 'links.giftQrUrl',
+  }));
 
   blocks.push(blk('gallery', {
     message: (cfg.galleryMessage as string) || 'Comparte con nosotros tus fotos del evento.',
     images: (cfg.galleryImages as string[]) || [],
     shareUrl: inv.gallery_url || '',
+  }, undefined, {
+    message: 'content.galleryMessage',
+    images: 'media.galleryImages',
+    shareUrl: 'links.galleryUrl',
   }));
 
   blocks.push(blk('rsvp', {
@@ -124,42 +213,22 @@ export function invitationToLayout(inv: InvitationParsed): PageLayout {
     message: (cfg.rsvpMessage as string) || 'Es muy importante para nosotros contar con tu presencia.',
     buttonLabel: 'Confirmar asistencia',
     whatsappUrl: waUrl(inv.phone_whatsapp),
+  }, undefined, {
+    message: 'content.rsvpMessage',
+    whatsappUrl: 'links.whatsappUrl',
   }));
 
-  return { version: 1, basePreset: inv.template, blocks };
-}
-
-/**
- * Preset 1:1 de Azure: parte del layout genérico pero reemplaza la portada por la
- * corona de acuarela (capas) con los nombres centrados encima — la pieza más
- * reconocible de Azure. (Piloto del enfoque "presets por plantilla".)
- */
-/** Portada de Azure: corona de acuarela (capa de fondo) + nombres centrados encima. */
-function azureWreathCover(groom: string, bride: string): Block {
   return {
-    id: uid('group'),
-    type: 'group',
-    props: { mode: 'overlay', columns: 1 },
-    style: { padTop: 72, padBottom: 24 },
-    children: [
-      { id: uid('image'), type: 'image', props: { url: '/azure/wreath.png', rounded: 0, maxHeight: 360, focal: '50% 50%' } },
-      { id: uid('cover'), type: 'cover', props: { groom, bride, tagline: '', image: '', family: 'great', size: 40 } },
-    ],
+    version: LAYOUT_VERSION,
+    basePreset: inv.template,
+    presetKey: inv.template,
+    blocks,
   };
 }
 
-export function presetForAzure(inv: InvitationParsed): PageLayout {
-  const base = invitationToLayout(inv);
-  const [groom, bride] = splitNames(inv.names);
-  base.blocks[0] = azureWreathCover(groom, bride);
-  base.basePreset = 'azure';
-  return base;
-}
-
-/** Elige el preset por plantilla (Azure tiene uno propio; el resto, el genérico). */
+/** Elige el preset por plantilla. */
 export function layoutForTemplate(inv: InvitationParsed): PageLayout {
-  if (inv.template === 'azure') return presetForAzure(inv);
-  return invitationToLayout(inv);
+  return applyTemplatePreset(invitationToLayout(inv), inv);
 }
 
 /**
@@ -170,15 +239,11 @@ export function layoutForTemplate(inv: InvitationParsed): PageLayout {
 export function contentToLayout(c: any, template?: string): PageLayout {
   const blocks: Block[] = [];
 
-  if (template === 'azure') {
-    blocks.push(azureWreathCover(c.groom || 'Lorena', c.bride || 'Marcos'));
-  } else {
-    blocks.push(blk('cover', {
-      groom: c.groom || 'Lorena', bride: c.bride || 'Marcos',
-      tagline: c.welcomeTitle || c.coverLabel || 'Nos casamos',
-      image: c.coverImage || '',
-    }, { padTop: 80, padBottom: 40 }));
-  }
+  blocks.push(blk('cover', {
+    groom: c.groom || 'Lorena', bride: c.bride || 'Marcos',
+    tagline: c.welcomeTitle || c.coverLabel || 'Nos casamos',
+    image: c.coverImage || '',
+  }, { padTop: 80, padBottom: 40 }));
 
   if (c.introMessage) blocks.push(blk('text', { text: c.introMessage }, { maxWidth: 560 }));
 
@@ -190,7 +255,13 @@ export function contentToLayout(c: any, template?: string): PageLayout {
     city: c.city || c.dateCity || '',
   }));
   blocks.push(blk('countdown', { isoDate: c.isoDate || new Date().toISOString(), label: 'Solo faltan' }));
-  blocks.push(blk('calendar', { title: `${c.groom || 'Lorena'} & ${c.bride || 'Marcos'}`, isoDate: c.isoDate || new Date().toISOString(), duration: 5, location: (c.ceremony || c.ceremonyReligious)?.place || '', label: 'Añadir a mi calendario' }, { padTop: 8, padBottom: 16 }));
+  blocks.push(blk('calendar', {
+    title: `${c.groom || 'Lorena'} & ${c.bride || 'Marcos'}`,
+    isoDate: c.isoDate || new Date().toISOString(),
+    duration: 5,
+    location: (c.ceremony || c.ceremonyReligious)?.place || '',
+    label: 'Añadir a mi calendario',
+  }, { padTop: 8, padBottom: 16 }));
   blocks.push(blk('divider', { style: 'art' }, { padTop: 8, padBottom: 8 }));
 
   const cer = c.ceremony || c.ceremonyReligious;
@@ -227,5 +298,12 @@ export function contentToLayout(c: any, template?: string): PageLayout {
     whatsappUrl: c.rsvp?.whatsappUrl || c.whatsapp || '',
   }));
 
-  return { version: 1, blocks };
+  const layout: PageLayout = {
+    version: LAYOUT_VERSION,
+    basePreset: template as PageLayout['basePreset'],
+    presetKey: template,
+    blocks,
+  };
+
+  return layout;
 }

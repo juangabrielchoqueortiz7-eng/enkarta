@@ -7,7 +7,7 @@
 // cfg.layout.blocks; el render flotante lo hace BlockRenderer.
 
 import { useState } from 'react';
-import { InvitationParsed, BuilderConfig, Block, BlockLayout } from '@/lib/types';
+import { InvitationParsed, BuilderConfig, Block, BlockLayout, LAYOUT_VERSION } from '@/lib/types';
 import { createElementBlock, createCornerSet, cloneBlock, DECOR_PACKS } from '@/components/invitations/blocks/registry';
 import { ELEMENTS, getElement, renderElement } from '@/components/invitations/blocks/elements-library';
 import { listUserPacks, saveUserPack, deleteUserPack, type UserDecorPack } from '@/lib/user-decor-packs';
@@ -49,7 +49,7 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect }: 
     onChange({ config: { ...cfg, decor: { ...decor, corners: { ...(decor.corners ?? {}), on: false } } } });
 
   const setBlocks = (next: Block[]) =>
-    onChange({ config: { ...cfg, layout: { version: 1, basePreset: layout?.basePreset ?? data.template, blocks: next } } });
+    onChange({ config: { ...cfg, layout: { version: LAYOUT_VERSION, basePreset: layout?.basePreset ?? data.template, presetKey: layout?.presetKey ?? data.template, blocks: next } } });
   const patchBlock = (id: string, patch: Partial<Block>) =>
     setBlocks(blocks.map(b => (b.id === id ? { ...b, ...patch } : b)));
 

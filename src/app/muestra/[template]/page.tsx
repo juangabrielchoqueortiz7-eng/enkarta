@@ -4,7 +4,7 @@ import EntryGate from '@/components/invitations/EntryGate';
 import BlockRenderer from '@/components/invitations/BlockRenderer';
 import { PageMotionProvider } from '@/lib/scroll-motion';
 import { contentToLayout } from '@/lib/layout-presets';
-import { themeForTemplate } from '@/lib/template-themes';
+import { themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import type { PageMotionPreset, TemplateDecor, ParticleShape, CornerStyle } from '@/lib/types';
 import { entryPropsFor } from '@/components/invitations/entry/config';
 import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample } from '@/components/invitations/sampleData';
@@ -58,7 +58,7 @@ export default async function MuestraPage({ params, searchParams }: Props) {
       ? { background: 'art', corners: { on: true }, floating: { on: true }, ...(data.decor ?? {}) }
       : data.decor;
   const el = blocks === '1' ? (
-    <BlockRenderer layout={contentToLayout(data, key)} theme={data.theme ?? themeForTemplate(key)} motion={motionVal} decor={previewDecor} musicUrl={data.musicUrl} slug={key} gated={full !== '1'} />
+    <BlockRenderer layout={contentToLayout(data, key)} theme={data.theme ?? themeForTemplate(key)} motion={motionVal} decor={previewDecor} tokens={data.tokens ?? tokensForTemplate(key)} musicUrl={data.musicUrl} slug={key} gated={full !== '1'} />
   ) : (
     <PageMotionProvider value={motionVal} gated={full !== '1'}>
       <Comp data={data} />

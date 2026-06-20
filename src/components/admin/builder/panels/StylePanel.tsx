@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { InvitationParsed, BuilderConfig } from '@/lib/types';
 import { FONT_CATALOG, DEFAULT_FAMILY, googleFontsUrl, FontRole } from '@/lib/fonts';
+import { tokensForTemplate } from '@/lib/template-themes';
 
 interface Props {
   data: InvitationParsed;
@@ -49,6 +50,9 @@ export default function StylePanel({ data, onChange }: Props) {
   const cfg: BuilderConfig = data.config ?? {};
   const setFont = (key: 'fontScript' | 'fontHeading' | 'fontBody', value: string) =>
     onChange({ config: { ...cfg, [key]: value || undefined } });
+  const tokens = cfg.tokens ?? tokensForTemplate(data.template);
+  const setTokens = (patch: Partial<NonNullable<BuilderConfig['tokens']>>) =>
+    onChange({ config: { ...cfg, tokens: { ...tokens, ...patch } } });
 
   return (
     <div className="space-y-6 p-4">
@@ -156,6 +160,54 @@ export default function StylePanel({ data, onChange }: Props) {
               </p>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">Ritmo Visual del Modelo</h4>
+        <p className="text-xs text-gray-400 font-outfit mb-3">
+          Estos tokens ayudan a que la invitación conserve el carácter del modelo aunque muevas bloques o cambies colores.
+        </p>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-outfit text-gray-500 mb-1">Espaciado</label>
+              <select className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit" value={tokens.spacing ?? 'normal'} onChange={e => setTokens({ spacing: e.target.value as typeof tokens.spacing })}>
+                <option value="compact">Compacto</option>
+                <option value="normal">Balanceado</option>
+                <option value="airy">Amplio</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-outfit text-gray-500 mb-1">Superficie</label>
+              <select className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit" value={tokens.surface ?? 'flat'} onChange={e => setTokens({ surface: e.target.value as typeof tokens.surface })}>
+                <option value="flat">Plana</option>
+                <option value="soft">Suave</option>
+                <option value="card">Tarjeta</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-outfit text-gray-500 mb-1">Ancho del contenido ({tokens.contentWidth ?? 680}px)</label>
+              <input type="range" min={560} max={820} step={10} value={tokens.contentWidth ?? 680} onChange={e => setTokens({ contentWidth: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
+            </div>
+            <div>
+              <label className="block text-xs font-outfit text-gray-500 mb-1">Radio de sección ({tokens.sectionRadius ?? 0}px)</label>
+              <input type="range" min={0} max={36} step={2} value={tokens.sectionRadius ?? 0} onChange={e => setTokens({ sectionRadius: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-outfit text-gray-500 mb-1">Aire lateral ({tokens.sectionInset ?? 24}px)</label>
+            <input type="range" min={12} max={40} step={2} value={tokens.sectionInset ?? 24} onChange={e => setTokens({ sectionInset: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
+          </div>
+          <button
+            type="button"
+            onClick={() => onChange({ config: { ...cfg, tokens: tokensForTemplate(data.template) } })}
+            className="text-xs text-gray-400 hover:underline font-outfit"
+          >
+            Restaurar tokens del modelo
+          </button>
         </div>
       </div>
 

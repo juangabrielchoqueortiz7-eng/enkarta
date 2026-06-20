@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { InvitationParsed, InvitationTemplate, InvitationPackage } from '@/lib/types';
 import { PACKAGE_PRESETS, PACKAGE_LABELS, resolveFeatures } from '@/lib/packages';
+import type { BuilderValidation } from '@/lib/builder-validation';
 
 interface Props {
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
   onDelete?: () => void;
+  validation: BuilderValidation;
 }
 
 const PREMIUM_TEMPLATES: { value: InvitationTemplate; label: string; available: boolean }[] = [
@@ -115,7 +117,7 @@ function HostAccessSection({ id }: { id: string; slug: string }) {
   );
 }
 
-export default function ConfigPanel({ data, onChange, onDelete }: Props) {
+export default function ConfigPanel({ data, onChange, onDelete, validation }: Props) {
   // Calcular si está expirada
   const isExpired = data.expires_at ? new Date(data.expires_at) < new Date() : false;
 
@@ -124,6 +126,44 @@ export default function ConfigPanel({ data, onChange, onDelete }: Props) {
 
       {/* Acceso del cliente (panel /panel) */}
       <HostAccessSection id={data.id} slug={data.slug} />
+
+      <div className="border-t border-gray-100 pt-5">
+        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">Checklist de Publicación</h4>
+        <div className={`p-3 rounded-xl border mb-3 ${
+          validation.errors.length
+            ? 'bg-red-50 border-red-200 text-red-700'
+            : validation.warnings.length
+              ? 'bg-amber-50 border-amber-200 text-amber-700'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+        }`}>
+          <p className="text-sm font-outfit font-medium">
+            {validation.errors.length
+              ? `Hay ${validation.errors.length} error(es) que bloquean la publicación`
+              : validation.warnings.length
+                ? `Hay ${validation.warnings.length} advertencia(s) para revisar`
+                : 'La invitación está lista para publicar'}
+          </p>
+          <p className="text-xs mt-0.5">
+            El botón Publicar ahora valida nombres, fecha, RSVP, galería, paquete y estructura visible.
+          </p>
+        </div>
+        {(validation.errors.length > 0 || validation.warnings.length > 0) && (
+          <div className="space-y-2">
+            {validation.errors.map((issue, i) => (
+              <div key={`err-${i}`} className="p-2.5 rounded-xl border border-red-100 bg-red-50">
+                <p className="text-sm text-red-700 font-outfit font-medium">{issue.title}</p>
+                <p className="text-xs text-red-500 font-outfit mt-0.5">{issue.detail}</p>
+              </div>
+            ))}
+            {validation.warnings.map((issue, i) => (
+              <div key={`warn-${i}`} className="p-2.5 rounded-xl border border-amber-100 bg-amber-50">
+                <p className="text-sm text-amber-700 font-outfit font-medium">{issue.title}</p>
+                <p className="text-xs text-amber-600 font-outfit mt-0.5">{issue.detail}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Estado del link */}
       <div>

@@ -8,21 +8,23 @@
 // abre el bloque aquí, y al revés).
 
 import { Reorder } from 'framer-motion';
-import { InvitationParsed, BuilderConfig, Block, BlockType, BlockLayout, ScrollPreset } from '@/lib/types';
+import { InvitationParsed, BuilderConfig, Block, BlockType, BlockLayout, ScrollPreset, LAYOUT_VERSION } from '@/lib/types';
 import { BLOCKS, PALETTE_GROUPS, SECTION_PRESETS, CHILD_PALETTE, createBlock, createOverlayGroup, FONT_OPTIONS, type FieldDef } from '@/components/invitations/blocks/registry';
 import { layoutForTemplate } from '@/lib/layout-presets';
-import { themeForTemplate, motionForTemplate } from '@/lib/template-themes';
+import { themeForTemplate, motionForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import { listUserTemplates, saveUserTemplate, deleteUserTemplate, type UserTemplate } from '@/lib/user-templates';
 import { useEffect, useState } from 'react';
 import ImageUploader from '../ImageUploader';
 import MultiImageUploader from '../MultiImageUploader';
 import IconPicker from '../IconPicker';
+import { detachBinding } from '@/lib/block-bindings';
 
 interface Props {
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
   selectedId: string;
   onSelect: (id: string) => void;
+  previewMode: 'mobile' | 'desktop';
 }
 
 const ANIM_PRESETS: { value: ScrollPreset; label: string }[] = [
@@ -144,7 +146,7 @@ function ListEditor({ items, itemFields, onChange, ownerId, eventType }: {
   );
 }
 
-export default function BlockEditorPanel({ data, onChange, selectedId, onSelect }: Props) {
+export default function BlockEditorPanel({ data, onChange, selectedId, onSelect, previewMode }: Props) {
   const cfg: BuilderConfig = data.config ?? {};
   const layout = cfg.layout;
   const blocks = layout?.blocks ?? [];
@@ -156,12 +158,12 @@ export default function BlockEditorPanel({ data, onChange, selectedId, onSelect 
   const [templates, setTemplates] = useState<UserTemplate[]>([]);
   useEffect(() => { listUserTemplates().then(setTemplates); }, []);
   const applyTemplate = (t: UserTemplate) =>
-    onChange({ config: { ...cfg, layout: t.layout, theme: t.theme ?? cfg.theme, motion: t.motion ?? cfg.motion } });
+    onChange({ config: { ...cfg, layout: t.layout, theme: t.theme ?? cfg.theme, motion: t.motion ?? cfg.motion, tokens: t.tokens ?? cfg.tokens } });
   const saveAsTemplate = () => {
     if (!layout) return;
     const name = window.prompt('Nombre de la plantilla:', data.names || 'Mi plantilla');
     if (name == null) return;
-    saveUserTemplate(name, { layout, theme: cfg.theme, motion: cfg.motion }).then(setTemplates);
+    saveUserTemplate(name, { layout, theme: cfg.theme, motion: cfg.motion, tokens: cfg.tokens }).then(setTemplates);
   };
   const removeTemplate = (id: string) => { deleteUserTemplate(id).then(setTemplates); };
 
@@ -184,7 +186,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, onSelect 
   );
 
   const setBlocks = (next: Block[]) =>
-    onChange({ config: { ...cfg, layout: { version: 1, basePreset: layout?.basePreset ?? data.template, blocks: next } } });
+    onChange({ config: { ...cfg, layout: { version: LAYOUT_VERSION, basePreset: layout?.basePreset ?? data.template, presetKey: layout?.presetKey ?? data.template, blocks: next } } });
 
   const patchBlock = (id: string, patch: Partial<Block>) =>
     setBlocks(blocks.map(b => (b.id === id ? { ...b, ...patch } : b)));
@@ -202,7 +204,15 @@ export default function BlockEditorPanel({ data, onChange, selectedId, onSelect 
         </div>
         <button
           type="button"
-          onClick={() => onChange({ config: { ...cfg, layout: layoutForTemplate(data), theme: cfg.theme ?? themeForTemplate(data.template), motion: cfg.motion ?? { preset: motionForTemplate(data.template) }, decor: cfg.decor ?? (data.template === 'azure' ? { background: 'art', corners: { on: true }, floating: { on: true } } : undefined) } })}
+          onClick={() => onChange({
+            config: {
+              ...cfg,
+              layout: layoutForTemplate(data),
+              theme: cfg.theme ?? themeForTemplate(data.template),
+              motion: cfg.motion ?? { preset: motionForTemplate(data.template) },
+              tokens: cfg.tokens ?? tokensForTemplate(data.template),
+            },
+          })}
           className="w-full py-3 text-sm font-outfit font-medium text-white bg-enkarta-gold rounded-xl hover:bg-enkarta-gold/90 shadow shadow-enkarta-gold/30"
         >
           Convertir a bloques editables
@@ -221,19 +231,43 @@ export default function BlockEditorPanel({ data, onChange, selectedId, onSelect 
   // ── Editor de un bloque seleccionado ──
   if (selected) {
     const def = BLOCKS[selected.type];
-    const setProp = (key: string, v: any) => patchBlock(selected.id, { props: { ...selected.props, [key]: v } });
+    const setProp = (key: string, v: any) => patchBlock(selected.id, { ...detachBinding(selected, key), props: { ...selected.props, [key]: v } });
     const setIcon = (key: string, v: string, colors?: any, speed?: number) =>
-      patchBlock(selected.id, { props: { ...selected.props, [key]: v, [`${key}Colors`]: colors, [`${key}Speed`]: speed } });
+      patchBlock(selected.id, { ...detachBinding(selected, key), props: { ...selected.props, [key]: v, [`${key}Colors`]: colors, [`${key}Speed`]: speed } });
     const setStyle = (patch: Record<string, any>) => patchBlock(selected.id, { style: { ...(selected.style ?? {}), ...patch } });
     const setAnim = (patch: Record<string, any>) => patchBlock(selected.id, { animation: { ...(selected.animation ?? {}), ...patch } });
-    const setLayout = (patch: Partial<BlockLayout>) => patchBlock(selected.id, { layout: { ...(selected.layout ?? {}), ...patch } });
+    const setBaseLayout = (patch: Partial<BlockLayout>) => patchBlock(selected.id, { layout: { ...(selected.layout ?? {}), ...patch } });
     const st = selected.style ?? {};
     const lay = selected.layout ?? {};
+    const currentViewport = previewMode === 'mobile' ? (lay.mobile ?? {}) : (lay.desktop ?? {});
+    const currentViewportKey = previewMode === 'mobile' ? 'mobile' : 'desktop';
+    const setLayout = (patch: Partial<BlockLayout>) => {
+      const nextViewport = { ...currentViewport, ...patch };
+      patchBlock(selected.id, {
+        layout: {
+          ...lay,
+          [currentViewportKey]: nextViewport,
+        },
+      });
+    };
+    const clearViewportLayout = () => {
+      const next = { ...lay };
+      delete next[currentViewportKey];
+      patchBlock(selected.id, { layout: Object.keys(next).length ? next : undefined });
+    };
     // Hijos (columnas)
     const kids = selected.children ?? [];
     const setKids = (next: Block[]) => patchBlock(selected.id, { children: next });
-    const setKidProp = (i: number, key: string, val: any) => setKids(kids.map((c, j) => (j === i ? { ...c, props: { ...c.props, [key]: val } } : c)));
-    const setKidIcon = (i: number, key: string, val: string, colors?: any, speed?: number) => setKids(kids.map((c, j) => (j === i ? { ...c, props: { ...c.props, [key]: val, [`${key}Colors`]: colors, [`${key}Speed`]: speed } } : c)));
+    const setKidProp = (i: number, key: string, val: any) => setKids(kids.map((c, j) => {
+      if (j !== i) return c;
+      const detached = detachBinding(c, key);
+      return { ...c, ...detached, props: { ...c.props, [key]: val } };
+    }));
+    const setKidIcon = (i: number, key: string, val: string, colors?: any, speed?: number) => setKids(kids.map((c, j) => {
+      if (j !== i) return c;
+      const detached = detachBinding(c, key);
+      return { ...c, ...detached, props: { ...c.props, [key]: val, [`${key}Colors`]: colors, [`${key}Speed`]: speed } };
+    }));
     const setKidLayout = (i: number, patch: Partial<BlockLayout>) => setKids(kids.map((c, j) => (j === i ? { ...c, layout: { ...(c.layout ?? {}), ...patch } } : c)));
     const moveKid = (i: number, dir: number) => { const n = [...kids]; const j = i + dir; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; setKids(n); };
     const isOverlay = (selected.props.mode ?? 'columns') === 'overlay';
@@ -252,6 +286,11 @@ export default function BlockEditorPanel({ data, onChange, selectedId, onSelect 
         {/* Contenido */}
         <div className="space-y-3">
           <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Contenido</h4>
+          {selected.bindings && Object.keys(selected.bindings).length > 0 && (
+            <p className="text-xs text-amber-700 font-outfit bg-amber-50 border border-amber-100 rounded-xl p-2.5">
+              Este bloque está enlazado a datos globales. Si editas un campo aquí, ese enlace se rompe solo para ese campo.
+            </p>
+          )}
           {def?.fields.map(f => (
             f.kind === 'list' ? (
               <Labeled key={f.key} label={f.label}>
@@ -447,30 +486,38 @@ export default function BlockEditorPanel({ data, onChange, selectedId, onSelect 
         <div className="space-y-3 border-t border-gray-100 pt-4">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Posición y tamaño</h4>
-            <button type="button" onClick={() => patchBlock(selected.id, { layout: undefined })} className="text-xs text-gray-400 hover:text-gray-700 font-outfit">Centrar / reset</button>
+            <button type="button" onClick={clearViewportLayout} className="text-xs text-gray-400 hover:text-gray-700 font-outfit">Reset {previewMode}</button>
           </div>
-          <p className="text-xs text-gray-400 font-outfit">También puedes arrastrar el bloque y su tirador en la vista previa.</p>
+          <p className="text-xs text-gray-400 font-outfit">Estás ajustando la vista <strong className="text-gray-500">{previewMode === 'mobile' ? 'móvil' : 'escritorio'}</strong>. También puedes arrastrar el bloque en la vista previa.</p>
           <div className="grid grid-cols-2 gap-3">
-            <Labeled label={`Horizontal (${lay.x ?? 0})`}>
-              <input type="range" min={-200} max={200} step={2} value={lay.x ?? 0} onChange={e => setLayout({ x: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
+            <Labeled label={`Horizontal (${currentViewport.x ?? lay.x ?? 0})`}>
+              <input type="range" min={-200} max={200} step={2} value={currentViewport.x ?? lay.x ?? 0} onChange={e => setLayout({ x: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
             </Labeled>
-            <Labeled label={`Vertical (${lay.y ?? 0})`}>
-              <input type="range" min={-200} max={200} step={2} value={lay.y ?? 0} onChange={e => setLayout({ y: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
+            <Labeled label={`Vertical (${currentViewport.y ?? lay.y ?? 0})`}>
+              <input type="range" min={-200} max={200} step={2} value={currentViewport.y ?? lay.y ?? 0} onChange={e => setLayout({ y: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
             </Labeled>
-            <Labeled label={`Ancho (${lay.w ? `${lay.w}px` : 'auto'})`}>
-              <input type="range" min={0} max={900} step={10} value={lay.w ?? 0} onChange={e => setLayout({ w: parseInt(e.target.value) || undefined })} className="w-full accent-enkarta-gold" />
+            <Labeled label={`Ancho ${(currentViewport.w ?? lay.w) ? `(${currentViewport.w ?? lay.w}px)` : '(auto)'}`}>
+              <input type="range" min={0} max={900} step={10} value={currentViewport.w ?? lay.w ?? 0} onChange={e => setLayout({ w: parseInt(e.target.value) || undefined })} className="w-full accent-enkarta-gold" />
             </Labeled>
-            <Labeled label={`Rotación (${lay.rotate ?? 0}°)`}>
-              <input type="range" min={-20} max={20} step={1} value={lay.rotate ?? 0} onChange={e => setLayout({ rotate: parseInt(e.target.value) || undefined })} className="w-full accent-enkarta-gold" />
+            <Labeled label={`Rotación (${currentViewport.rotate ?? lay.rotate ?? 0}°)`}>
+              <input type="range" min={-20} max={20} step={1} value={currentViewport.rotate ?? lay.rotate ?? 0} onChange={e => setLayout({ rotate: parseInt(e.target.value) || undefined })} className="w-full accent-enkarta-gold" />
             </Labeled>
           </div>
           <Labeled label="Visible en">
-            <select className={inputCls} value={lay.hideOn ?? ''} onChange={e => setLayout({ hideOn: (e.target.value || undefined) as BlockLayout['hideOn'] })}>
+            <select className={inputCls} value={lay.hideOn ?? ''} onChange={e => setBaseLayout({ hideOn: (e.target.value || undefined) as BlockLayout['hideOn'] })}>
               <option value="">Siempre (móvil y escritorio)</option>
               <option value="desktop">Solo en móvil</option>
               <option value="mobile">Solo en escritorio</option>
             </select>
           </Labeled>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => patchBlock(selected.id, { layout: undefined })} className="flex-1 py-2 text-xs font-outfit text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50">
+              Reset total
+            </button>
+            <button type="button" onClick={() => setBaseLayout({ x: 0, y: 0, w: undefined, rotate: undefined })} className="flex-1 py-2 text-xs font-outfit text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50">
+              Recentrar base
+            </button>
+          </div>
         </div>
 
         {/* Acciones */}

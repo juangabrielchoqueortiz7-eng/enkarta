@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Invitation, Guest } from '@/lib/types';
 
 interface Props {
@@ -23,7 +23,7 @@ export default function ConfirmationsDashboard({ invitations }: Props) {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
     Promise.all(
       invitations.map(inv =>
@@ -35,9 +35,11 @@ export default function ConfirmationsDashboard({ invitations }: Props) {
     )
       .then(setRows)
       .finally(() => setLoading(false));
-  };
+  }, [invitations]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [invitations]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const withGuests = useMemo(() => rows.filter(r => r.guests.length > 0), [rows]);
 

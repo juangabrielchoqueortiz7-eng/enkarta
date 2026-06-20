@@ -2,7 +2,8 @@
 // en otras invitaciones. Se guardan en la NUBE (API /api/admin/templates → JSON en
 // Supabase Storage), con respaldo en localStorage si la red falla.
 
-import type { PageLayout, TemplateTheme, PageMotion } from './types';
+import type { PageLayout, TemplateTheme, PageMotion, TemplateTokens } from './types';
+import { migratePageLayout } from './layout-migrations';
 
 export interface UserTemplate {
   id: string;
@@ -11,6 +12,7 @@ export interface UserTemplate {
   layout: PageLayout;
   theme?: TemplateTheme;
   motion?: PageMotion;
+  tokens?: TemplateTokens;
 }
 
 const KEY = 'enkarta_user_templates';
@@ -35,7 +37,9 @@ export async function listUserTemplates(): Promise<UserTemplate[]> {
     const res = await fetch(API, { cache: 'no-store' });
     if (!res.ok) throw new Error('fetch');
     const arr = await res.json();
-    const list = Array.isArray(arr) ? (arr as UserTemplate[]) : [];
+    const list = Array.isArray(arr)
+      ? (arr as UserTemplate[]).map(t => ({ ...t, layout: migratePageLayout(t.layout) ?? t.layout }))
+      : [];
     writeLocal(list); // espejo local
     return list;
   } catch {
@@ -52,16 +56,17 @@ async function persist(all: UserTemplate[]) {
 
 export async function saveUserTemplate(
   name: string,
-  data: { layout: PageLayout; theme?: TemplateTheme; motion?: PageMotion },
+  data: { layout: PageLayout; theme?: TemplateTheme; motion?: PageMotion; tokens?: TemplateTokens },
 ): Promise<UserTemplate[]> {
   const current = await listUserTemplates();
   const tpl: UserTemplate = {
     id: `tpl-${Date.now().toString(36)}`,
     name: name.trim() || 'Plantilla',
     createdAt: Date.now(),
-    layout: data.layout,
+    layout: migratePageLayout(data.layout) ?? data.layout,
     theme: data.theme,
     motion: data.motion,
+    tokens: data.tokens,
   };
   const next = [tpl, ...current].slice(0, 50);
   await persist(next);

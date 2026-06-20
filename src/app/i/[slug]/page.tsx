@@ -16,6 +16,7 @@ import FontScope from '@/components/invitations/FontScope';
 import SmartRsvp from '@/components/invitations/SmartRsvp';
 import { PageMotionProvider } from '@/lib/scroll-motion';
 import { gateInvitation, resolveFeatures } from '@/lib/packages';
+import { resolveLayoutBindings } from '@/lib/block-bindings';
 import { findGuestByPublicId } from '@/lib/guests';
 import { headers } from 'next/headers';
 
@@ -185,7 +186,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const content = (
     <>
       {hasBlocks ? (
-        <BlockRenderer layout={config.layout!} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} musicUrl={config.musicUrl} slug={invitation.slug} gated={entryEnabled} />
+        <BlockRenderer layout={resolveLayoutBindings(config.layout!, parsed)} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} gated={entryEnabled} />
       ) : (
         <PageMotionProvider value={config.motion} gated={entryEnabled}>
           {templateEl}

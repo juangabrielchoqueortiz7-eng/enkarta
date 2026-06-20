@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { InvitationParsed, BlockLayout, Block } from '@/lib/types';
 import { cloneBlock } from '@/components/invitations/blocks/registry';
@@ -14,6 +14,8 @@ import MotionPanel from './panels/MotionPanel';
 import BlockEditorPanel from './panels/BlockEditorPanel';
 import ElementsPanel from './panels/ElementsPanel';
 import GuestsPanel from './panels/GuestsPanel';
+import { detachBinding } from '@/lib/block-bindings';
+import { validateInvitationBuilder } from '@/lib/builder-validation';
 
 type Tab = 'content' | 'blocks' | 'elements' | 'style' | 'decor' | 'motion' | 'media' | 'guests' | 'config';
 
@@ -48,6 +50,7 @@ export default function InvitationBuilder({ initialData }: Props) {
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [previewMode, setPreviewMode] = useState<'mobile' | 'desktop'>('mobile');
   const hasChanges = useRef(false);
+  const validation = useMemo(() => validateInvitationBuilder(data), [data]);
 
   // ── Historial (deshacer / rehacer) ──
   const dataRef = useRef<InvitationParsed>(initialData);
@@ -83,9 +86,20 @@ export default function InvitationBuilder({ initialData }: Props) {
     const cfg = prev.config ?? {};
     const layout = cfg.layout;
     if (!layout) return;
-    const blocks = layout.blocks.map(b => (b.id === id ? { ...b, layout: { ...(b.layout ?? {}), ...patch } } : b));
+    const blocks = layout.blocks.map(b => {
+      if (b.id !== id) return b;
+      const current = b.layout ?? {};
+      const target = previewMode === 'mobile' ? 'mobile' : 'desktop';
+      return {
+        ...b,
+        layout: {
+          ...current,
+          [target]: { ...(current[target] ?? {}), ...patch },
+        },
+      };
+    });
     commit({ ...prev, config: { ...cfg, layout: { ...layout, blocks } } }, true);
-  }, [commit]);
+  }, [commit, previewMode]);
 
   // Edición de texto en línea desde el preview (commit con historial).
   const editBlockProp = useCallback((id: string, key: string, value: string) => {
@@ -93,7 +107,11 @@ export default function InvitationBuilder({ initialData }: Props) {
     const cfg = prev.config ?? {};
     const layout = cfg.layout;
     if (!layout) return;
-    const blocks = layout.blocks.map(b => (b.id === id ? { ...b, props: { ...b.props, [key]: value } } : b));
+    const blocks = layout.blocks.map(b => {
+      if (b.id !== id) return b;
+      const detached = detachBinding(b, key);
+      return { ...b, ...detached, props: { ...b.props, [key]: value } };
+    });
     commit({ ...prev, config: { ...cfg, layout: { ...layout, blocks } } });
   }, [commit]);
 
@@ -199,6 +217,14 @@ export default function InvitationBuilder({ initialData }: Props) {
   }, [data, silentSave]);
 
   const handleSave = async (status?: 'draft' | 'ready') => {
+    if (status === 'ready' && validation.errors.length) {
+      alert(`No se puede publicar todavía.\n\n${validation.errors.map((e, i) => `${i + 1}. ${e.title}`).join('\n')}`);
+      return;
+    }
+    if (status === 'ready' && validation.warnings.length) {
+      const proceed = confirm(`Hay ${validation.warnings.length} advertencia(s) antes de publicar.\n\n${validation.warnings.map((w, i) => `${i + 1}. ${w.title}`).join('\n')}\n\n¿Publicar de todas formas?`);
+      if (!proceed) return;
+    }
     setSaving(true);
     try {
       const payload = payloadFrom(data, status);
@@ -351,6 +377,26 @@ export default function InvitationBuilder({ initialData }: Props) {
 
           {/* Derecha: acciones */}
           <div className="flex items-center gap-2 flex-shrink-0">
+            <span className={`hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-outfit ${
+              validation.errors.length
+                ? 'bg-red-50 text-red-600'
+                : validation.warnings.length
+                  ? 'bg-amber-50 text-amber-600'
+                  : 'bg-emerald-50 text-emerald-600'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                validation.errors.length
+                  ? 'bg-red-500'
+                  : validation.warnings.length
+                    ? 'bg-amber-500'
+                    : 'bg-emerald-500'
+              }`} />
+              {validation.errors.length
+                ? `${validation.errors.length} error(es)`
+                : validation.warnings.length
+                  ? `${validation.warnings.length} advertencia(s)`
+                  : 'Lista para publicar'}
+            </span>
             <span className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-outfit transition-colors ${autoSaving ? 'bg-amber-50 text-amber-600' : savedAt ? 'bg-green-50 text-green-600' : 'text-transparent'}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${autoSaving ? 'bg-amber-400 animate-pulse' : savedAt ? 'bg-green-500' : 'bg-transparent'}`} />
               {autoSaving
@@ -429,14 +475,14 @@ export default function InvitationBuilder({ initialData }: Props) {
           {/* Contenido del panel (scrollable) */}
           <div className="flex-1 overflow-y-auto">
             {activeTab === 'content' && <ContentPanel data={data} onChange={handleChange} />}
-            {activeTab === 'blocks'  && <BlockEditorPanel data={data} onChange={handleChange} selectedId={selectedBlockId} onSelect={setSelectedBlockId} />}
+            {activeTab === 'blocks'  && <BlockEditorPanel data={data} onChange={handleChange} selectedId={selectedBlockId} onSelect={setSelectedBlockId} previewMode={previewMode} />}
             {activeTab === 'elements' && <ElementsPanel data={data} onChange={handleChange} selectedId={selectedBlockId} onSelect={setSelectedBlockId} />}
             {activeTab === 'style'   && <StylePanel   data={data} onChange={handleChange} />}
             {activeTab === 'decor'   && <DecorPanel   data={data} onChange={handleChange} />}
             {activeTab === 'motion'  && <MotionPanel  data={data} onChange={handleChange} />}
             {activeTab === 'media'   && <MediaPanel   data={data} onChange={handleChange} />}
             {activeTab === 'guests'  && <GuestsPanel  data={data} />}
-            {activeTab === 'config'  && <ConfigPanel  data={data} onChange={handleChange} onDelete={handleDelete} />}
+            {activeTab === 'config'  && <ConfigPanel  data={data} onChange={handleChange} onDelete={handleDelete} validation={validation} />}
           </div>
         </div>
 
