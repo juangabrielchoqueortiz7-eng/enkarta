@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Reveal, EventIcon, MasonryGallery } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE } from './shared';
+import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto (taupe/mocha + rosa empolvado/malva + dorado) ──────────────
 const DEFAULT_C = {
@@ -160,7 +161,6 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
     const s = data.isoDate.replace(/[-:]/g, '').slice(0, 15) + 'Z';
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Boda ${data.groom} & ${data.bride}`)}&dates=${s}/${s}`;
   })();
-  const pad = (n: number) => String(n).padStart(2, '0');
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Horas' }, { v: mins, l: 'Mins.' }, { v: secs, l: 'Segs.' }];
   const ceremonies = [
     { icon: 'church', title: 'Ceremonia Religiosa', c: data.ceremonyReligious, img: data.galleryImages[0] },
@@ -183,29 +183,29 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
 
       {/* ════════ PORTADA ════════ */}
       <section className="relative md:grid md:min-h-screen md:grid-cols-2">
-        <div className="relative h-[44vh] md:h-auto">
+        <div className="relative overflow-hidden h-[44vh] md:h-auto">
           {data.coverImage && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover ek-kenburns" />
           )}
         </div>
         <div className="relative flex flex-col items-center justify-center overflow-hidden px-8 py-16 text-center" style={{ background: C.paper }}>
           <BlushFloral className="pointer-events-none absolute -right-2 top-2 w-36" />
           <div className="relative z-10" style={{ animation: 'npFade 1.1s ease' }}>
-            <Script style={{ fontSize: 'clamp(46px,11vw,68px)', color: C.taupeDeep }}>{data.groom}</Script>
+            <Script style={{ fontSize: TYPE.display, color: C.taupeDeep }}><WriteOn>{data.groom}</WriteOn></Script>
             <p style={{ fontFamily: F.serif, color: C.taupe, fontSize: '24px' }}>&amp;</p>
-            <Script style={{ fontSize: 'clamp(46px,11vw,68px)', color: C.taupeDeep }}>{data.bride}</Script>
+            <Script style={{ fontSize: TYPE.display, color: C.taupeDeep }}><WriteOn delay={450}>{data.bride}</WriteOn></Script>
             <Caps className="mt-7" style={{ fontSize: '14px', color: C.taupeDeep }}>¡Nos casamos!</Caps>
-            <p className="mx-auto mt-3 max-w-sm" style={{ fontFamily: F.serif, fontSize: '15px', color: C.ink, lineHeight: 1.6 }}>{data.introMessage}</p>
+            <p className="mx-auto mt-3 max-w-sm" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.6 }}>{data.introMessage}</p>
           </div>
         </div>
       </section>
 
       {/* ════════ INVITADO (taupe) ════════ */}
       <Wave fill={C.taupe} />
-      <section className="relative px-6 py-12 text-center" style={{ background: C.taupe, color: C.cream }}>
+      <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.taupe, color: C.cream }}>
         <Reveal className="mx-auto max-w-xl">
-          <p style={{ fontFamily: F.serif, fontSize: '15px' }}>Su presencia es el regalo más valioso que podemos recibir:</p>
+          <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>Su presencia es el regalo más valioso que podemos recibir:</p>
           <div className="mx-auto my-3 flex max-w-xs items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.gold }} /><Heart color={C.gold} /><span className="h-px flex-1" style={{ background: C.gold }} /></div>
           {data.guestPasses && <Script style={{ fontSize: '40px', color: C.cream }}>{data.guestPasses}</Script>}
           <p style={{ fontSize: '14px' }}>Hemos reservado:</p>
@@ -223,7 +223,7 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
             {[{ t: 'Padres del Novio', p: data.parentsGroom }, { t: 'Padres de la Novia', p: data.parentsBride }].map(col => (
               <div key={col.t}>
                 <Caps style={{ fontSize: '14px', color: C.rose }}>{col.t}</Caps>
-                <div className="mt-2 space-y-1" style={{ fontFamily: F.serif, fontSize: '17px', color: C.ink }}>{col.p.map((n, i) => <p key={i}>{n}</p>)}</div>
+                <div className="mt-2 space-y-1" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink }}>{col.p.map((n, i) => <p key={i}>{n}</p>)}</div>
               </div>
             ))}
           </div>
@@ -233,7 +233,7 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ FECHA + COUNTDOWN ════════ */}
-      <section className="px-6 py-10 text-center" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.paper }}>
         <Reveal className="mx-auto max-w-2xl">
           <div className="flex items-center justify-center gap-2">
             <span className="hidden h-px flex-1 sm:block" style={{ background: C.rose, maxWidth: 90 }} />
@@ -246,25 +246,25 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
             <span className="hidden text-[13px] tracking-[0.16em] sm:block" style={{ fontFamily: F.serif, textTransform: 'uppercase', color: C.ink }}>{data.dateMonth}</span>
             <span className="hidden h-px flex-1 sm:block" style={{ background: C.rose, maxWidth: 90 }} />
           </div>
-          <p className="mt-4 italic" style={{ fontFamily: F.serif, fontSize: '15px', color: C.rose }}>Faltan</p>
+          <p className="mt-4 italic" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.rose }}>Faltan</p>
           <div className="mt-2 flex items-center justify-center gap-3">
             <Flourish className="hidden w-24 sm:block" />
             <div className="flex gap-4">
               {cd.map(c => (
                 <div key={c.l}>
-                  <p style={{ fontFamily: F.serif, fontSize: 'clamp(24px,6vw,34px)', fontWeight: 600, lineHeight: 1, color: C.taupeDeep }}>{pad(c.v)}</p>
+                  <p style={{ fontFamily: F.serif, fontSize: 'clamp(24px,6vw,34px)', fontWeight: 600, lineHeight: 1, color: C.taupeDeep }}><Odometer value={c.v} /></p>
                   <p className="text-[12px]" style={{ color: C.rose }}>{c.l}</p>
                 </div>
               ))}
             </div>
             <Flourish className="hidden w-24 scale-x-[-1] sm:block" />
           </div>
-          <div className="mt-6"><OutBtn href={gcal}>📅 Agendar el evento</OutBtn></div>
+          <div className="mt-6"><OutBtn href={gcal}><CalIcon />Agendar el evento</OutBtn></div>
         </Reveal>
       </section>
 
       {/* ════════ CEREMONIA (fotos en arco) + DRESS CODE + ITINERARIO ════════ */}
-      <section className="px-6 py-10" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
         <div className="mx-auto max-w-3xl">
           <div className="grid gap-10 sm:grid-cols-2">
             {ceremonies.map((b, i) => (
@@ -286,7 +286,7 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
           <Reveal className="mt-12 flex flex-col items-center text-center">
             <EventIcon name="dress" className="mb-1 h-12 w-12" stroke={C.rose} custom={data} sec="dress" />
             <Caps style={{ fontSize: '15px', color: C.taupeDeep }}>Código de vestimenta</Caps>
-            <p style={{ fontSize: '16px', color: C.ink }}>{data.dressCode}</p>
+            <p style={{ fontSize: TYPE.body, color: C.ink }}>{data.dressCode}</p>
           </Reveal>
 
           <Flourish className="mx-auto my-9 w-40" />
@@ -299,7 +299,7 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
                   <EventIcon name={it.icon ?? 'rings'} className="h-11 w-11" stroke={C.rose} custom={data} lottieColors={it.iconColors} speed={it.iconSpeed} />
                   <span className="my-2 block h-px w-12" style={{ background: C.line }} />
                   <p className="text-[12px]" style={{ fontFamily: F.serif, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.taupeDeep }}>{it.label}</p>
-                  <p style={{ fontFamily: F.serif, fontSize: '15px', color: C.gold }}>{it.time}</p>
+                  <p style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.gold }}>{it.time}</p>
                 </div>
               ))}
             </div>
@@ -309,7 +309,7 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
 
       {/* ════════ NOSOTROS (collage) ════════ */}
       {data.galleryImages.length > 0 && (
-        <section className="px-6 py-12" style={{ background: C.paper }}>
+        <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
           <Reveal className="mx-auto max-w-4xl text-center">
             <Script style={{ fontSize: '44px' }}>Nosotros</Script>
             <MasonryGallery images={data.galleryImages} className="mt-8" />
@@ -318,7 +318,7 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
       )}
 
       {/* ════════ HOSPEDAJE + GALERÍA ════════ */}
-      <section className="px-6 py-12" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
         <div className="mx-auto max-w-3xl">
           {data.lodging.length > 0 && (
             <Reveal className="rounded-3xl p-6 text-center" style={{ background: C.taupe, color: C.cream }}>
@@ -329,8 +329,8 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
                   <img src={data.lodging[0].image} alt="" className="h-48 w-full object-cover" />
                 </div>
                 <div className="text-center sm:text-left">
-                  <p style={{ fontFamily: F.serif, fontSize: '15px', lineHeight: 1.5 }}>{data.lodging[0].desc}</p>
-                  {data.lodgingContact && <p className="mt-3" style={{ fontFamily: F.serif, fontSize: '16px' }}>{data.lodgingContact}</p>}
+                  <p style={{ fontFamily: F.serif, fontSize: TYPE.body, lineHeight: 1.5 }}>{data.lodging[0].desc}</p>
+                  {data.lodgingContact && <p className="mt-3" style={{ fontFamily: F.serif, fontSize: TYPE.body }}>{data.lodgingContact}</p>}
                 </div>
               </div>
             </Reveal>
@@ -338,7 +338,7 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
           <Reveal className="mt-10 text-center">
             <div className="mx-auto max-w-md rounded-3xl px-6 py-8" style={{ border: `1px solid ${C.line}` }}>
               <EventIcon name="camera" className="mx-auto mb-3 h-11 w-11" stroke={C.rose} custom={data} sec="gallery" />
-              <p style={{ fontFamily: F.serif, fontSize: '15px', color: C.ink, lineHeight: 1.6 }}>{data.galleryMsg}</p>
+              <p style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.6 }}>{data.galleryMsg}</p>
               <div className="mt-5"><OutBtn href={data.galleryUrl}>Compartir fotografías</OutBtn></div>
             </div>
           </Reveal>
@@ -346,23 +346,23 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ SOLO ADULTOS ════════ */}
-      <section className="px-6 py-12 text-center" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.paper }}>
         <Reveal className="mx-auto max-w-xl">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full" style={{ border: `1px solid ${C.rose}` }}>
             <BabyNo color={C.rose} className="h-12 w-12" />
           </div>
           <Script style={{ fontSize: '40px' }}>Solo Adultos</Script>
-          <p className="mt-2" style={{ fontFamily: F.serif, fontSize: '16px', color: C.ink, lineHeight: 1.6 }}>{data.noKids}</p>
+          <p className="mt-2" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.6 }}>{data.noKids}</p>
         </Reveal>
       </section>
 
       {/* ════════ REGALO (taupe) ════════ */}
       <Wave fill={C.taupe} />
-      <section className="relative px-6 py-14 text-center" style={{ background: C.taupe, color: C.cream }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.taupe, color: C.cream }}>
         <Reveal className="mx-auto max-w-3xl">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.gold} custom={data} sec="gift" />
           <Script style={{ fontSize: '42px', color: C.gold }}>Sugerencia de Regalo</Script>
-          <p className="mx-auto mt-3 max-w-xl" style={{ fontFamily: F.serif, fontSize: '16px', lineHeight: 1.6 }}>{data.giftMessage}</p>
+          <p className="mx-auto mt-3 max-w-xl" style={{ fontFamily: F.serif, fontSize: TYPE.body, lineHeight: 1.6 }}>{data.giftMessage}</p>
           <div className="mt-7 grid gap-4 sm:grid-cols-3">
             {data.giftCash && (
               <div className="flex flex-col items-center justify-center rounded-2xl px-5 py-8" style={{ border: `1px solid ${C.gold}` }}>
@@ -373,8 +373,8 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
             {data.giftBank && (
               <div className="flex flex-col items-center justify-center rounded-2xl px-5 py-7" style={{ border: `1px solid ${C.gold}` }}>
                 <Caps style={{ fontSize: '13px', color: C.gold }}>{data.giftBank.bank}</Caps>
-                <p style={{ fontFamily: F.serif, fontSize: '15px' }}>{data.giftBank.account}</p>
-                <p style={{ fontFamily: F.serif, fontSize: '15px' }}>{data.giftBank.holder}</p>
+                <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>{data.giftBank.account}</p>
+                <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>{data.giftBank.holder}</p>
                 {data.giftQrUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={data.giftQrUrl} alt="QR" className="mt-3 h-32 w-32 rounded-lg bg-white p-2" />
@@ -392,10 +392,10 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
       <Wave fill={C.taupe} flip />
 
       {/* ════════ CONFIRMACIÓN ════════ */}
-      <section className="px-6 py-14 text-center" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
         <Reveal className="mx-auto max-w-xl">
           <Script style={{ fontSize: '44px' }}>{data.rsvpClosing ?? 'Confirmar asistencia'}</Script>
-          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.serif, fontSize: '15px', color: C.ink, lineHeight: 1.5 }}>Es muy importante para nosotros confirmar tu asistencia.</p>
+          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>Es muy importante para nosotros confirmar tu asistencia.</p>
           <div className="mt-5"><OutBtn href={data.whatsapp}>Confirmar asistencia</OutBtn></div>
         </Reveal>
       </section>

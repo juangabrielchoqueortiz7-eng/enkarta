@@ -10,7 +10,8 @@ import { useReducedMotion } from 'framer-motion';
 import type { Block, BlockType, BlockLayout } from '@/lib/types';
 import { useBlockTheme } from './theme';
 import { Editable, useBlockData, useBlockEdit } from './editable';
-import { useCountdown, CopyBtn, PhotoGrid, EventIcon, OrchidSprig, type GalleryLayout } from '../shared';
+import { useCountdown, CopyBtn, PhotoGrid, EventIcon, OrchidSprig, Odometer, Tilt, type GalleryLayout } from '../shared';
+import { Stagger, RevealDraw, PinnedStory } from '@/lib/scroll-motion';
 import { PetalBurst } from '../effects';
 import { renderElement, getElement } from './elements-library';
 import { sanitizeSvg } from '@/lib/sanitize-svg';
@@ -77,7 +78,7 @@ function Pill({ href, children, filled }: { href?: string; children: React.React
     : { border: `1px solid ${t.line}`, color: t.primary, borderRadius: '20px 6px 20px 6px' };
   return (
     <a href={href || '#'} target="_blank" rel="noreferrer"
-      className="inline-flex items-center justify-center px-7 py-2.5 font-cinzel uppercase tracking-[0.18em] text-[11px] transition-opacity hover:opacity-90"
+      className={`inline-flex items-center justify-center px-7 py-2.5 font-cinzel uppercase tracking-[0.18em] text-[11px] transition-opacity hover:opacity-90 ek-shine ${filled ? 'ek-shine-auto' : ''}`}
       style={style}>
       {children}
     </a>
@@ -90,10 +91,10 @@ const CoverBlock: React.FC<{ block: Block }> = ({ block }) => {
   const image = str(block, 'image');
   return (
     <div className="flex flex-col items-center">
-      <Editable as="h1" k="groom" value={str(block, 'groom', 'Lorena')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={{ color: t.primary, fontSize: 'clamp(44px,13vw,76px)', ...typoStyle(block) }} />
+      <Editable as="h1" k="groom" effect="write" value={str(block, 'groom', 'Lorena')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={{ color: t.primary, fontSize: 'clamp(44px,13vw,76px)', ...typoStyle(block) }} />
       <span className="font-cormorant my-1" style={{ color: t.muted, fontSize: '24px' }}>&amp;</span>
-      <Editable as="h1" k="bride" value={str(block, 'bride', 'Marcos')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={{ color: t.primary, fontSize: 'clamp(44px,13vw,76px)', ...typoStyle(block) }} />
-      <Editable as="p" k="tagline" value={str(block, 'tagline', 'Nos casamos')} className="font-cinzel uppercase tracking-[0.22em] mt-5" style={{ color: t.muted, fontSize: '12px' }} />
+      <Editable as="h1" k="bride" effect="write" value={str(block, 'bride', 'Marcos')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={{ color: t.primary, fontSize: 'clamp(44px,13vw,76px)', ...typoStyle(block) }} />
+      <Editable as="p" k="tagline" effect="cascade" value={str(block, 'tagline', 'Nos casamos')} className="font-cinzel uppercase tracking-[0.22em] mt-5" style={{ color: t.muted, fontSize: '12px' }} />
       {image && (
         <div className="mt-8 w-full overflow-hidden rounded-2xl shadow-sm" style={{ maxWidth: 480, border: `1px solid ${t.line}` }}>
           <img src={image} alt="" className="w-full object-cover" style={{ maxHeight: 600, objectPosition: str(block, 'focal', '50% 50%') }} />
@@ -110,9 +111,9 @@ const HeadingBlock: React.FC<{ block: Block }> = ({ block }) => {
   const size = num(block, 'size', 0);
   const fc = famClass(block);
   const ts = typoStyle(block);
-  if (font === 'script') return <Editable as="h2" k="text" value={text} className={fc || 'font-great'} style={{ color: t.primary, fontSize: size ? `${size}px` : 'clamp(34px,7vw,52px)', ...ts }} />;
-  if (font === 'serif') return <Editable as="h2" k="text" value={text} className={fc || 'font-playfair'} style={{ color: t.primary, fontSize: size ? `${size}px` : 'clamp(24px,5vw,36px)', ...ts }} />;
-  return <Editable as="h2" k="text" value={text} className={fc || 'font-cinzel uppercase tracking-[0.18em]'} style={{ color: t.muted, fontSize: size ? `${size}px` : 'clamp(14px,3vw,18px)', ...ts }} />;
+  if (font === 'script') return <Editable as="h2" k="text" effect="write" value={text} className={fc || 'font-great'} style={{ color: t.primary, fontSize: size ? `${size}px` : 'clamp(34px,7vw,52px)', ...ts }} />;
+  if (font === 'serif') return <Editable as="h2" k="text" effect="cascadeWords" value={text} className={fc || 'font-playfair'} style={{ color: t.primary, fontSize: size ? `${size}px` : 'clamp(24px,5vw,36px)', ...ts }} />;
+  return <Editable as="h2" k="text" effect="cascade" value={text} className={fc || 'font-cinzel uppercase tracking-[0.18em]'} style={{ color: t.muted, fontSize: size ? `${size}px` : 'clamp(14px,3vw,18px)', ...ts }} />;
 };
 
 const TextBlock: React.FC<{ block: Block }> = ({ block }) => (
@@ -185,7 +186,7 @@ const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
       <div className="flex items-baseline justify-center gap-5">
         {units.map(([n, l]) => (
           <div key={l} className="flex flex-col items-center">
-            <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: 'clamp(28px,7vw,44px)' }}>{String(n).padStart(2, '0')}</span>
+            <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: 'clamp(28px,7vw,44px)' }}><Odometer value={n} /></span>
             <span className="font-cinzel uppercase tracking-widest mt-1" style={{ color: t.muted, fontSize: '10px' }}>{l}</span>
           </div>
         ))}
@@ -245,7 +246,7 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
   return (
     <div>
       {str(block, 'title') && <h2 className="font-great mb-6" style={{ color: t.primary, fontSize: 'clamp(32px,6vw,48px)' }}>{str(block, 'title')}</h2>}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-2xl mx-auto">
+      <Stagger className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-2xl mx-auto" step={130}>
         {items.map((it, i) => (
           <div key={i} className="flex flex-col items-center">
             <span className="inline-flex w-10 h-10 mb-2"><EventIcon name={it.icon || 'rings'} className="w-10 h-10" stroke={t.primary} lottieColors={it.iconColors} speed={it.iconSpeed} /></span>
@@ -254,7 +255,7 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
             <p className="font-cinzel tracking-[0.1em] mt-1" style={{ color: t.primary, fontSize: '18px' }}>{it.time}</p>
           </div>
         ))}
-      </div>
+      </Stagger>
     </div>
   );
 };
@@ -266,17 +267,17 @@ const GiftBlock: React.FC<{ block: Block }> = ({ block }) => {
       <h2 className="font-great" style={{ color: t.primary, fontSize: 'clamp(32px,6vw,48px)' }}>{str(block, 'title', 'Sugerencia de Regalo')}</h2>
       {str(block, 'message') && <p className="font-cormorant mt-3 mb-8 mx-auto" style={{ color: 'inherit', maxWidth: 480, fontSize: '17px' }}>{str(block, 'message')}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
-        <div className="rounded-2xl p-6 text-left" style={{ background: t.primaryDeep, color: t.onPrimary }}>
+        <Tilt className="rounded-2xl p-6 text-left" style={{ background: t.primaryDeep, color: t.onPrimary }}>
           <p className="font-cinzel uppercase tracking-[0.16em] text-[12px] opacity-80">Transferencia bancaria</p>
           <p className="font-cinzel font-bold mt-3">{str(block, 'bank', 'Banco')}</p>
           <p className="font-cormorant mt-1 text-[15px]">{str(block, 'account', '000-0000')} <CopyBtn value={str(block, 'account')} color={t.onPrimary} /></p>
           {str(block, 'holder') && <p className="font-cinzel text-[12px] tracking-wide mt-2 opacity-80">{str(block, 'holder')}</p>}
-        </div>
+        </Tilt>
         {str(block, 'qrUrl') && (
-          <div className="rounded-2xl p-6 flex flex-col items-center justify-center" style={{ border: `1px solid ${t.line}` }}>
+          <Tilt className="rounded-2xl p-6 flex flex-col items-center justify-center" style={{ border: `1px solid ${t.line}` }}>
             <p className="font-cinzel uppercase tracking-[0.16em] text-[12px] mb-3" style={{ color: t.muted }}>Transferencia QR</p>
             <img src={str(block, 'qrUrl')} alt="QR" className="w-36 h-36 rounded-lg" />
-          </div>
+          </Tilt>
         )}
       </div>
     </div>
@@ -289,9 +290,46 @@ const GalleryBlock: React.FC<{ block: Block }> = ({ block }) => {
   return (
     <div className="flex flex-col items-center">
       {str(block, 'message') && <p className="font-cormorant mb-6 mx-auto" style={{ color: t.muted, maxWidth: 420, fontSize: '16px' }}>{str(block, 'message')}</p>}
-      <PhotoGrid images={list<string>(block, 'images')} layout={layout} className={layout === 'carousel' ? 'w-full' : 'max-w-lg mx-auto'} />
+      <PhotoGrid images={list<string>(block, 'images')} layout={layout} className={layout === 'carousel' || layout === 'coverflow' ? 'w-full' : 'max-w-lg mx-auto'} />
       {str(block, 'shareUrl') && <div className="mt-6"><Pill href={str(block, 'shareUrl')}>Compartir fotos</Pill></div>}
     </div>
+  );
+};
+
+// Historia fija: foto anclada a pantalla completa + frases ligadas al scroll.
+// En el editor se muestra una versión compacta (el sticky de 240vh haría el
+// lienzo inmanejable); la publicación usa PinnedStory (scrubbing real).
+const StoryBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const { editing } = useBlockEdit();
+  const image = str(block, 'image');
+  const focal = str(block, 'focal', '50% 50%');
+  const overlay = Math.min(85, Math.max(0, num(block, 'overlay', 40))) / 100;
+  const slides = list<{ text?: string }>(block, 'slides').map(s => s.text || '').filter(Boolean);
+  const texts = slides.length ? slides : ['Nuestra historia'];
+
+  if (editing) {
+    return (
+      <div className="relative overflow-hidden" style={{ minHeight: 300, background: '#1c1916' }}>
+        {image && <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: focal, opacity: 0.9 }} />}
+        <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${overlay})` }} />
+        <div className="relative z-10 flex flex-col items-center justify-center gap-4 px-8 py-14 text-center">
+          <span className="font-outfit text-[10px] uppercase tracking-[0.2em] text-white/60">🎬 Historia fija — en la invitación real la foto queda anclada y las frases pasan con el scroll</span>
+          {texts.map((t, i) => (
+            <p key={i} className="font-cormorant text-white" style={{ fontSize: 'clamp(18px,3vw,24px)', lineHeight: 1.4 }}>{t}</p>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <PinnedStory
+      image={image || undefined}
+      focal={focal}
+      overlay={overlay}
+      slides={texts}
+      heightVh={Math.min(400, Math.max(150, num(block, 'height', 240)))}
+    />
   );
 };
 
@@ -347,7 +385,7 @@ function RsvpForm({ block }: { block: Block }) {
           </div>
         )}
         <textarea style={{ ...field, minHeight: 70 }} placeholder="Mensaje para los novios (opcional)" value={msg} onChange={e => setMsg(e.target.value)} />
-        <button onClick={submit} disabled={busy} className="w-full font-cinzel uppercase tracking-[0.18em] text-[12px] py-3 transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: t.primary, color: t.onPrimary, borderRadius: '20px 6px 20px 6px' }}>
+        <button onClick={submit} disabled={busy} className="w-full font-cinzel uppercase tracking-[0.18em] text-[12px] py-3 transition-opacity hover:opacity-90 disabled:opacity-50 ek-shine ek-shine-auto" style={{ background: t.primary, color: t.onPrimary, borderRadius: '20px 6px 20px 6px' }}>
           {busy ? 'Enviando…' : str(block, 'buttonLabel', 'Confirmar asistencia')}
         </button>
       </div>
@@ -379,8 +417,10 @@ const ButtonBlock: React.FC<{ block: Block }> = ({ block }) => (
 
 const DividerBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
-  if (str(block, 'style', 'art') === 'line') return <div className="mx-auto" style={{ height: 1, width: 120, background: t.line }} />;
-  return <OrchidSprig color={t.primary} className="w-28 mx-auto opacity-70" />;
+  if (str(block, 'style', 'art') === 'line') {
+    return <RevealDraw><div className="mx-auto" style={{ height: 1, width: 120, background: t.line }} /></RevealDraw>;
+  }
+  return <RevealDraw duration={1.4}><OrchidSprig color={t.primary} className="w-28 mx-auto opacity-70" /></RevealDraw>;
 };
 
 const SpacerBlock: React.FC<{ block: Block }> = ({ block }) => <div style={{ height: num(block, 'height', 40) }} aria-hidden />;
@@ -1074,6 +1114,7 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
       { key: 'layout', label: 'Estilo de galería', kind: 'select', options: [
         { value: 'grid', label: 'Cuadrícula' }, { value: 'masonry', label: 'Mosaico (Pinterest)' },
         { value: 'polaroid', label: 'Polaroids inclinadas' }, { value: 'carousel', label: 'Carrusel horizontal' },
+        { value: 'coverflow', label: 'Carrusel 3D (coverflow)' },
       ] },
       { key: 'images', label: 'Fotos', kind: 'images' },
       { key: 'shareUrl', label: 'Enlace para compartir', kind: 'text' },
@@ -1131,6 +1172,26 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     fields: [
       { key: 'title', label: 'Título', kind: 'text' },
       { key: 'message', label: 'Mensaje', kind: 'textarea' },
+    ],
+  },
+  story: {
+    label: 'Historia fija', icon: '🎬', Component: StoryBlock,
+    defaultProps: {
+      image: '', focal: '50% 50%', overlay: 40, height: 240,
+      slides: [
+        { text: 'Todo comenzó con una mirada…' },
+        { text: 'Después vinieron mil aventuras juntos.' },
+        { text: 'Y hoy queremos celebrar la más grande contigo.' },
+      ],
+    },
+    fields: [
+      { key: 'image', label: 'Foto de fondo', kind: 'image' },
+      { key: 'focal', label: 'Encuadre (punto focal)', kind: 'focal' },
+      { key: 'overlay', label: 'Oscurecer (%)', kind: 'number', min: 0, max: 85 },
+      { key: 'height', label: 'Duración del efecto (vh)', kind: 'number', min: 150, max: 400 },
+      { key: 'slides', label: 'Frases', kind: 'list', itemFields: [
+        { key: 'text', label: 'Frase', kind: 'textarea' },
+      ] },
     ],
   },
   guestbook: {
@@ -1292,7 +1353,7 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
 /** Orden de la paleta "Añadir bloque" (lista plana, por compatibilidad). */
 export const BLOCK_PALETTE: BlockType[] = [
   'cover', 'monogram', 'heading', 'text', 'quote', 'image', 'video', 'countdown', 'dateBadge', 'calendar',
-  'eventCard', 'map', 'dressCode', 'itinerary', 'timeline', 'parents', 'lodging', 'gift', 'gallery', 'beforeAfter',
+  'eventCard', 'map', 'dressCode', 'itinerary', 'timeline', 'story', 'parents', 'lodging', 'gift', 'gallery', 'beforeAfter',
   'rsvp', 'tableFinder', 'guestbook', 'hashtag', 'button', 'ornament', 'group', 'divider', 'spacer',
 ];
 
@@ -1300,7 +1361,7 @@ export const BLOCK_PALETTE: BlockType[] = [
 export const PALETTE_GROUPS: { label: string; types: BlockType[] }[] = [
   { label: 'Esenciales',  types: ['heading', 'text', 'quote', 'monogram', 'image', 'video', 'cover'] },
   { label: 'El evento',   types: ['eventCard', 'dateBadge', 'countdown', 'itinerary', 'map', 'calendar'] },
-  { label: 'Fotos',       types: ['gallery', 'timeline', 'beforeAfter'] },
+  { label: 'Fotos',       types: ['gallery', 'timeline', 'story', 'beforeAfter'] },
   { label: 'Invitados',   types: ['rsvp', 'tableFinder', 'guestbook', 'dressCode', 'parents', 'lodging', 'gift', 'hashtag'] },
   { label: 'Diseño',      types: ['group', 'button', 'ornament', 'divider', 'spacer'] },
 ];

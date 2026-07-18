@@ -278,6 +278,22 @@ export function contentToLayout(c: any, template?: string): PageLayout {
     blocks.push(blk('itinerary', { title: 'Itinerario', items: c.itinerary.map((it: any) => ({ time: it.time, label: it.label, icon: it.icon || 'rings', iconColors: it.iconColors, iconSpeed: it.iconSpeed })) }));
   }
 
+  // Historia fija (pinned storytelling) — solo si hay una foto que anclar.
+  const storyImg = c.coverImage || (Array.isArray(c.galleryImages) && c.galleryImages[0]) || '';
+  if (storyImg) {
+    blocks.push(blk('story', {
+      image: storyImg,
+      focal: '50% 50%',
+      overlay: 45,
+      height: 240,
+      slides: [
+        { text: 'Todo comenzó con una mirada…' },
+        { text: 'Después vinieron mil aventuras juntos.' },
+        { text: 'Y hoy queremos celebrar la más grande contigo.' },
+      ],
+    }));
+  }
+
   const g = c.gift;
   blocks.push(blk('gift', {
     title: 'Sugerencia de Regalo',

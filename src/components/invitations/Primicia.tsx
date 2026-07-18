@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
-import { Reveal, useCountdown, PhotoGrid, EventIcon } from './shared';
+import { Reveal, useCountdown, Odometer, PhotoGrid, EventIcon, SECTION } from './shared';
+import { WriteOn } from '@/lib/scroll-motion';
 import { PrimiciaContent, TemplateTheme } from './types';
 
 const DEFAULT_C = { paper: '#fdfcfa', ink: '#1a1714', soft: '#3c372f', faint: '#7a7368', rule: '#1a1714' };
@@ -289,15 +290,15 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
 
       <section id="pr-hero" className="relative">
         <div className="relative w-full overflow-hidden" style={{ height: '92vh' }}>
-          <Photo src={data.photoUrl} className="absolute inset-0 h-full w-full" />
+          <Photo src={data.photoUrl} className="absolute inset-0 h-full w-full ek-kenburns" />
           <div
             className="absolute inset-0"
             style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, transparent 40%, rgba(0,0,0,0.45) 100%)' }}
           />
           <div className="absolute inset-x-0 bottom-[13%] px-6 text-center text-white">
-            <p style={{ fontFamily: FONT.script, fontSize: 'clamp(46px,11vw,104px)', lineHeight: 0.9 }}>{data.groom}</p>
+            <p style={{ fontFamily: FONT.script, fontSize: 'clamp(46px,11vw,104px)', lineHeight: 0.9 }}><WriteOn>{data.groom}</WriteOn></p>
             <p style={{ fontFamily: FONT.script, fontSize: 'clamp(22px,5vw,40px)', margin: '2px 0' }}>&amp;</p>
-            <p style={{ fontFamily: FONT.script, fontSize: 'clamp(46px,11vw,104px)', lineHeight: 0.9 }}>{data.bride}</p>
+            <p style={{ fontFamily: FONT.script, fontSize: 'clamp(46px,11vw,104px)', lineHeight: 0.9 }}><WriteOn delay={500}>{data.bride}</WriteOn></p>
           </div>
           <svg viewBox="0 0 100 8" preserveAspectRatio="none" className="absolute bottom-0 left-0 w-full" style={{ height: '7vh' }} aria-hidden>
             <path d="M0 8 L0 4 Q 50 -2 100 4 L100 8 Z" fill={C.paper} />
@@ -310,7 +311,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         </div>
       </section>
 
-      <section className="mx-auto max-w-2xl px-6 py-16 text-center">
+      <section className={`mx-auto max-w-2xl px-6 ${SECTION.base} text-center`}>
         <Reveal>
           <Head style={{ fontSize: 'clamp(18px,4vw,26px)' }}>Bienvenidos a la invitacion de nuestra Boda</Head>
           <Rule className="mx-auto mb-6 mt-6 w-24" />
@@ -327,7 +328,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         </Reveal>
       </section>
 
-      <section className="px-6 py-12 text-center">
+      <section className={`px-6 ${SECTION.tight} text-center`}>
         <Reveal>
           <Head style={{ fontSize: 'clamp(16px,3.6vw,24px)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
             El gran dia se acerca y no puedes faltar
@@ -359,7 +360,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
                   style={{ background: C.ink, color: C.paper, width: 'clamp(64px,18vw,92px)', height: 'clamp(64px,18vw,92px)' }}
                 >
                   <span style={{ fontFamily: FONT.head, fontWeight: 800, fontSize: 'clamp(26px,7vw,40px)' }}>
-                    {String(n).padStart(2, '0')}
+                    <Odometer value={n as number} />
                   </span>
                 </div>
                 <p className="mt-2" style={{ fontFamily: FONT.head, fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
@@ -371,7 +372,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         </Reveal>
       </section>
 
-      <section className="mx-auto max-w-5xl px-6 py-16">
+      <section className={`mx-auto max-w-5xl px-6 ${SECTION.base}`}>
         <Reveal>
           <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-12">
             <Photo src={data.photoUrl} className="w-full" style={{ height: 'clamp(360px,60vw,540px)' }} />
@@ -390,7 +391,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         </Reveal>
       </section>
 
-      <section className="mx-auto max-w-5xl px-6 py-12">
+      <section className={`mx-auto max-w-5xl px-6 ${SECTION.tight}`}>
         <Reveal>
           <Head className="mb-10 text-center" style={{ fontSize: 'clamp(15px,3.4vw,22px)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Con la bendicion de Dios y de nuestros padres
@@ -418,7 +419,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         </Reveal>
       </section>
 
-      <section className="px-6 py-16">
+      <section className={`px-6 ${SECTION.base}`}>
         <Reveal>
           <Head className="mb-12 text-center" style={{ fontSize: 'clamp(24px,5vw,38px)' }}>
             Itinerario
@@ -483,7 +484,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         </Reveal>
       </section>
 
-      <section className="px-6 py-16 text-center">
+      <section className={`px-6 ${SECTION.base} text-center`}>
         <Reveal>
           {data.icons?.dress && (
             <EventIcon name="" custom={data} sec="dress" className="mx-auto mb-3 h-11 w-11" stroke={C.ink} />
@@ -498,7 +499,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         </Reveal>
       </section>
 
-      <section className="mx-auto max-w-3xl px-6 py-12">
+      <section className={`mx-auto max-w-3xl px-6 ${SECTION.tight}`}>
         <Reveal>
           <div className="mb-8 flex justify-center">
             {data.icons?.ceremony ? (
@@ -542,7 +543,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         </Reveal>
       </section>
 
-      <section className="mx-auto max-w-3xl px-6 py-10">
+      <section className={`mx-auto max-w-3xl px-6 ${SECTION.tight}`}>
         <Reveal>
           <div className="flex items-center gap-5 p-5" style={{ border: `1.5px solid ${C.ink}` }}>
             <svg width="44" height="44" viewBox="0 0 48 48" fill="none" stroke={C.ink} strokeWidth="1.2" className="shrink-0">
@@ -558,7 +559,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         </Reveal>
       </section>
 
-      <section className="mx-auto max-w-5xl px-6 py-14">
+      <section className={`mx-auto max-w-5xl px-6 ${SECTION.base}`}>
         <Reveal>
           <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-12">
             <div>
@@ -585,7 +586,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         </Reveal>
       </section>
 
-      <section className="mx-auto max-w-2xl px-6 py-14 text-center">
+      <section className={`mx-auto max-w-2xl px-6 ${SECTION.base} text-center`}>
         <Reveal>
           <div className="p-8" style={{ border: `1.5px solid ${C.ink}` }}>
             {data.icons?.gift && (
@@ -611,7 +612,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
       </section>
 
       {data.galleryImages && data.galleryImages.length > 0 && (
-        <section className="mx-auto max-w-3xl px-6 py-14 text-center">
+        <section className={`mx-auto max-w-3xl px-6 ${SECTION.base} text-center`}>
           <Reveal>
             {data.icons?.gallery && (
               <EventIcon name="" custom={data} sec="gallery" className="mx-auto mb-3 h-11 w-11" stroke={C.ink} />

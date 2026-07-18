@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import Image from 'next/image';
 import { InvitationContent, TemplateTheme } from './types';
-import { useCountdown, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartLoader, PhotoGrid } from './shared';
-import { ParallaxLayer } from '@/lib/scroll-motion';
+import { useCountdown, Odometer, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartLoader, PhotoGrid, SECTION } from './shared';
+import { ParallaxLayer, WriteOn } from '@/lib/scroll-motion';
 
 // ── Palette por defecto ─────────────────────────────────────────────────────────
 const DEFAULT_C = {
@@ -145,9 +145,9 @@ function CircleWreath({ groom, bride, size = 320 }: { groom: string; bride: stri
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/azure/wreath.png" alt="" className="absolute inset-0 h-full w-full object-contain" draggable={false} />
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center" style={{ paddingTop: size * 0.04 }}>
-        <span className="font-great leading-[0.85]" style={{ color: C.navy, fontSize: size * 0.19 }}>{groom}</span>
+        <span className="font-great leading-[0.85]" style={{ color: C.navy, fontSize: size * 0.19 }}><WriteOn>{groom}</WriteOn></span>
         <span className="font-cormorant" style={{ color: C.soft, fontSize: size * 0.07 }}>&amp;</span>
-        <span className="font-great leading-[0.85]" style={{ color: C.navy, fontSize: size * 0.19 }}>{bride}</span>
+        <span className="font-great leading-[0.85]" style={{ color: C.navy, fontSize: size * 0.19 }}><WriteOn delay={450}>{bride}</WriteOn></span>
       </div>
     </div>
   );
@@ -385,7 +385,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
             {[[days, 'Días'], [hours, 'Horas'], [mins, 'Min.'], [secs, 'Seg.']].map(([n, l]) => (
               <div key={l as string} className="flex items-baseline gap-0.5">
                 <span className="font-playfair font-bold leading-none" style={{ color: C.navy, fontSize: 'clamp(26px,6vw,40px)' }}>
-                  {String(n).padStart(2, '0')}
+                  <Odometer value={n as number} />
                 </span>
                 <span className="font-cormorant" style={{ color: C.soft, fontSize: '12px' }}>{l}</span>
               </div>
@@ -405,7 +405,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
       </section>
 
       {/* ════════ CEREMONY + RECEPTION ════════ */}
-      <section className="relative z-10 py-10 px-6">
+      <section className={`relative z-10 ${SECTION.tight} px-6`}>
         <SectionDivider className="w-24 mx-auto mb-12 opacity-70" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-12 max-w-3xl mx-auto">
           {[
@@ -429,7 +429,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
       </section>
 
       {/* ════════ DRESS CODE ════════ */}
-      <section className="relative z-10 py-16 px-6 text-center">
+      <section className={`relative z-10 ${SECTION.base} px-6 text-center`}>
         <Reveal className="flex flex-col items-center">
           <SecIcon name={iconOf('dress', 'dress')} className="w-12 h-12 mb-3" scale={iconScale} color={iconColor} colors={iconColorsOf('dress')} speed={iconSpeedOf('dress')} />
           <CapsTitle className="text-[14px] sm:text-[16px]">Dress Code</CapsTitle>
@@ -441,7 +441,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
       </section>
 
       {/* ════════ ITINERARIO ════════ */}
-      <section className="relative z-10 py-8 px-6 text-center">
+      <section className={`relative z-10 ${SECTION.tight} px-6 text-center`}>
         <SectionDivider className="w-24 mx-auto mb-4 opacity-70" />
         <Reveal>
           <h2 className="font-great" style={{ color: C.navy, fontSize: 'clamp(34px,6vw,52px)' }}>Itinerario</h2>
@@ -483,7 +483,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
       </section>
 
       {/* ════════ GALLERY ════════ */}
-      <section className="relative z-10 py-20 px-6 text-center">
+      <section className={`relative z-10 ${SECTION.roomy} px-6 text-center`}>
         <Reveal className="flex flex-col items-center">
           <SecIcon name={iconOf('gallery', 'camera')} className="w-12 h-12 mb-4" scale={iconScale} color={iconColor} colors={iconColorsOf('gallery')} speed={iconSpeedOf('gallery')} />
           <p className="font-cormorant max-w-md mx-auto" style={{ color: C.soft, fontSize: '16px' }}>{data.gallery.message}</p>

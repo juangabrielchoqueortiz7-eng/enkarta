@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { GraziaContent, TemplateTheme } from './types';
-import { useCountdown, Reveal, EventIcon, MasonryGallery } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, Monogram, SECTION, TYPE } from './shared';
+import { WriteOn, CascadeText } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
 const DEFAULT_C = {
@@ -81,7 +82,6 @@ export default function Grazia({ data }: { data: GraziaContent }) {
     const s = data.isoDate.replace(/[-:]/g, '').slice(0, 15) + 'Z';
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Boda ${data.groom} & ${data.bride}`)}&dates=${s}/${s}`;
   })();
-  const pad = (n: number) => String(n).padStart(2, '0');
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Hrs' }, { v: mins, l: 'Mins' }, { v: secs, l: 'Segs' }];
 
   return (
@@ -98,26 +98,26 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       </button>)}
 
       {/* ════════ PORTADA ════════ */}
-      <section className="relative flex min-h-screen items-center justify-center px-6">
+      <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
         {data.coverImage && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover ek-kenburns" />
         )}
         <div className="relative z-10 flex flex-col items-center justify-center rounded-full px-10 py-12 text-center"
           style={{ background: 'rgba(253,252,248,0.96)', width: 'min(80vw,320px)', height: 'min(80vw,320px)', animation: 'gzFade 1.2s ease' }}>
-          <Script style={{ fontSize: '28px', color: C.ink }}>{data.coverLabel ?? 'La boda de'}</Script>
-          <Caps style={{ fontSize: 'clamp(20px,5vw,28px)', color: C.ink }}>{data.groom}</Caps>
+          <Script style={{ fontSize: '28px', color: C.ink }}><WriteOn>{data.coverLabel ?? 'La boda de'}</WriteOn></Script>
+          <Caps style={{ fontSize: TYPE.subtitle, color: C.ink }}><CascadeText text={data.groom} delay={350} /></Caps>
           <div className="my-1 flex items-center gap-3"><span className="h-px w-8" style={{ background: C.ink }} /><span style={{ fontFamily: F.script, fontSize: 22, color: C.ink }}>&amp;</span><span className="h-px w-8" style={{ background: C.ink }} /></div>
-          <Caps style={{ fontSize: 'clamp(20px,5vw,28px)', color: C.ink }}>{data.bride}</Caps>
+          <Caps style={{ fontSize: TYPE.subtitle, color: C.ink }}><CascadeText text={data.bride} delay={700} /></Caps>
           <Caps className="mt-3" style={{ fontSize: '11px', color: C.ink }}>{data.dateText}</Caps>
         </div>
       </section>
 
       {/* ════════ SAVE THE DATE ════════ */}
-      <section className="px-6 py-16 text-center" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
         <Reveal className="mx-auto max-w-2xl">
-          <Caps style={{ fontSize: 'clamp(22px,4vw,32px)', color: C.ink }}>Save the Date</Caps>
-          <p className="mx-auto mt-5 max-w-lg" style={{ fontFamily: F.body, fontSize: '18px', color: C.ink, lineHeight: 1.6 }}>{data.saveDateMsg}</p>
+          <Caps style={{ fontSize: TYPE.title, color: C.ink }}>Save the Date</Caps>
+          <p className="mx-auto mt-5 max-w-lg" style={{ fontFamily: F.body, fontSize: TYPE.lead, color: C.ink, lineHeight: 1.6 }}>{data.saveDateMsg}</p>
 
           <div className="mt-10 flex items-start justify-center gap-8 sm:gap-16">
             {[{ img: data.groomPhoto, name: data.groomName }, { img: data.bridePhoto, name: data.brideName }].map((p, i) => (
@@ -126,14 +126,14 @@ export default function Grazia({ data }: { data: GraziaContent }) {
                   {p.img
                     ? // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.img} alt="" className="h-full w-full object-cover" />
-                    : <div className="h-full w-full" style={{ background: C.gray }} />}
+                    : <Monogram name={p.name} bg={C.gray} fg={C.gold} ring={C.line} />}
                 </div>
                 <Script className="mt-4" style={{ fontSize: '26px', color: C.ink }}>{p.name}</Script>
               </div>
             ))}
           </div>
 
-          <Caps className="mt-12" style={{ fontSize: 'clamp(18px,3.5vw,26px)', color: C.ink }}>{data.dateText}</Caps>
+          <Caps className="mt-12" style={{ fontSize: TYPE.subtitle, color: C.ink }}>{data.dateText}</Caps>
           <p className="mt-1" style={{ fontFamily: F.caps, fontSize: '20px', letterSpacing: '0.05em', color: C.ink }}>{data.timeText}</p>
 
           <div className="mx-auto mt-6 max-w-sm rounded-2xl px-4 py-4" style={{ border: `1px solid ${C.line}` }}>
@@ -141,18 +141,18 @@ export default function Grazia({ data }: { data: GraziaContent }) {
             <div className="mt-2 grid grid-cols-4 gap-2">
               {cd.map(c => (
                 <div key={c.l}>
-                  <p style={{ fontFamily: F.caps, fontSize: '26px', fontWeight: 600, lineHeight: 1, color: C.ink }}>{pad(c.v)}</p>
+                  <p style={{ fontFamily: F.caps, fontSize: '26px', fontWeight: 600, lineHeight: 1, color: C.ink }}><Odometer value={c.v} /></p>
                   <p className="text-[11px]" style={{ color: C.ink }}>{c.l}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className="mt-7"><TanBtn href={gcal}>📅 Agendar el evento</TanBtn></div>
+          <div className="mt-7"><TanBtn href={gcal}><CalIcon />Agendar el evento</TanBtn></div>
         </Reveal>
       </section>
 
       {/* ════════ INVITADO (tan) ════════ */}
-      <section className="px-6 py-12 text-center" style={{ background: C.tan, color: C.cream }}>
+      <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.tan, color: C.cream }}>
         <Reveal className="mx-auto max-w-xl">
           {data.guestName && <Script style={{ fontSize: '42px', color: C.cream }}>{data.guestName}</Script>}
           <p style={{ fontSize: '15px' }}>Hemos reservado:</p>
@@ -162,7 +162,7 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       </section>
 
       {/* ════════ PADRES + CEREMONIA ════════ */}
-      <section className="px-6 py-16" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.base}`} style={{ background: C.paper }}>
         <div className="mx-auto max-w-3xl">
           <Reveal className="grid gap-10 text-center sm:grid-cols-2">
             {[{ t: 'Padres del Novio', p: data.parentsGroom }, { t: 'Padres de la Novia', p: data.parentsBride }].map(col => (
@@ -182,7 +182,7 @@ export default function Grazia({ data }: { data: GraziaContent }) {
               <div key={b.title} className="flex flex-col items-center">
                 <Script style={{ fontSize: '24px' }}>{b.title}</Script>
                 <Caps className="mt-1" style={{ fontSize: '18px', color: C.ink }}>{b.c.date}</Caps>
-                <p className="mt-3" style={{ fontFamily: F.body, fontSize: '15px', color: C.ink }}>{b.c.place}</p>
+                <p className="mt-3" style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink }}>{b.c.place}</p>
                 <div className="mt-4 flex items-center gap-3">
                   <span className="rounded px-4 py-2 text-[13px]" style={{ border: `1px solid ${C.line}`, color: C.ink, fontFamily: F.body }}>{b.c.time}</span>
                   <TanBtn href={b.c.maps}>Ubicación</TanBtn>
@@ -194,9 +194,9 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       </section>
 
       {/* ════════ ITINERARIO ════════ */}
-      <section className="px-6 py-12" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
         <Reveal className="mx-auto max-w-5xl">
-          <Caps className="text-center" style={{ fontSize: 'clamp(18px,3vw,24px)', color: C.ink }}>Itinerario</Caps>
+          <Caps className="text-center" style={{ fontSize: TYPE.title, color: C.ink }}>Itinerario</Caps>
           <div className="mt-10 grid grid-cols-2 gap-y-9 sm:grid-cols-4 lg:grid-cols-8">
             {data.itinerary.map((it, i) => (
               <div key={i} className="flex flex-col items-center text-center">
@@ -212,26 +212,26 @@ export default function Grazia({ data }: { data: GraziaContent }) {
 
       {/* ════════ HOSPEDAJE ════════ */}
       {data.lodging.length > 0 && (
-        <section className="px-6 py-8" style={{ background: C.paper }}>
+        <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
           <Reveal className="mx-auto max-w-2xl rounded-sm px-6 py-8 text-center" style={{ border: `1px solid ${C.line}` }}>
             <Caps style={{ fontSize: '15px', color: C.ink }}>{data.lodgingTitle ?? 'Sugerencia de hospedaje'}</Caps>
-            <p className="mx-auto mt-4 max-w-md" style={{ fontFamily: F.body, fontSize: '15px', color: C.ink, lineHeight: 1.5 }}>{data.lodging[0].desc}</p>
+            <p className="mx-auto mt-4 max-w-md" style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>{data.lodging[0].desc}</p>
             <div className="mt-5"><TanBtn href="#" filled={false}>Descuento especial</TanBtn></div>
-            {data.lodgingContact && <p className="mt-4" style={{ fontFamily: F.body, fontSize: '15px', color: C.ink }}>{data.lodgingContact}</p>}
+            {data.lodgingContact && <p className="mt-4" style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink }}>{data.lodgingContact}</p>}
           </Reveal>
         </section>
       )}
 
       {/* ════════ REGALO (gris) ════════ */}
-      <section className="px-6 py-14 text-center" style={{ background: C.gray }}>
+      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.gray }}>
         <Reveal className="mx-auto max-w-2xl">
           <Script style={{ fontSize: '46px' }}>Sugerencia de Regalo</Script>
-          <p className="mx-auto mt-3 max-w-lg" style={{ fontFamily: F.body, fontSize: '15px', color: C.ink, lineHeight: 1.5 }}>{data.giftMessage}</p>
+          <p className="mx-auto mt-3 max-w-lg" style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>{data.giftMessage}</p>
           <div className="mt-6 space-y-3">
             {data.giftAccounts.map((a, i) => (
               <div key={i}>
                 <Caps style={{ fontSize: '15px', color: C.ink }}>{a.name}</Caps>
-                <p style={{ fontFamily: F.body, fontSize: '15px', color: C.ink }}>{a.account}</p>
+                <p style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink }}>{a.account}</p>
               </div>
             ))}
           </div>
@@ -246,25 +246,25 @@ export default function Grazia({ data }: { data: GraziaContent }) {
 
       {/* ════════ NUESTRA HISTORIA + GALERÍA ════════ */}
       {data.galleryImages.length > 0 && (
-        <section className="px-6 py-14" style={{ background: C.paper }}>
+        <section className={`px-6 ${SECTION.base}`} style={{ background: C.paper }}>
           <Reveal className="mx-auto max-w-4xl text-center">
             <Script style={{ fontSize: '44px' }}>{data.storyTitle ?? 'Nuestra Historia'}</Script>
-            <p className="mx-auto mt-4 max-w-xl" style={{ fontFamily: F.body, fontSize: '16px', color: C.ink, lineHeight: 1.6 }}>{data.storyMessage}</p>
+            <p className="mx-auto mt-4 max-w-xl" style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink, lineHeight: 1.6 }}>{data.storyMessage}</p>
             <MasonryGallery images={data.galleryImages} variant="rounded" className="mt-8" />
           </Reveal>
         </section>
       )}
 
       {/* ════════ SOLO ADULTOS (gris) ════════ */}
-      <section className="px-6 py-12 text-center" style={{ background: C.gray }}>
+      <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.gray }}>
         <Reveal className="mx-auto max-w-xl">
           <Script style={{ fontSize: '44px' }}>Solo Adultos</Script>
-          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.body, fontSize: '15px', color: C.ink, lineHeight: 1.5 }}>{data.noKids}</p>
+          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>{data.noKids}</p>
         </Reveal>
       </section>
 
       {/* ════════ CÓDIGO DE VESTIMENTA (negro) ════════ */}
-      <section className="px-6 py-20 text-center" style={{ background: C.black, color: C.cream }}>
+      <section className={`px-6 ${SECTION.roomy} text-center`} style={{ background: C.black, color: C.cream }}>
         <Reveal>
           <Script style={{ fontSize: '40px', color: C.gold }}>{data.dressCodeTitle ?? 'Código de vestimenta'}</Script>
           <p className="mt-2" style={{ fontFamily: F.caps, fontSize: '24px', letterSpacing: '0.08em', color: C.cream }}>{data.dressCode}</p>
@@ -272,16 +272,16 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       </section>
 
       {/* ════════ GALERÍA SHARE + CONFIRMACIÓN ════════ */}
-      <section className="px-6 py-14 text-center" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
         <Reveal className="mx-auto max-w-md rounded-sm px-6 py-8 text-center" style={{ border: `1px solid ${C.line}` }}>
           <EventIcon name="camera" className="mx-auto mb-3 h-11 w-11" stroke={C.tan} custom={data} sec="gallery" />
-          <p style={{ fontFamily: F.body, fontSize: '15px', color: C.ink, lineHeight: 1.5 }}>{data.galleryMsg}</p>
+          <p style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>{data.galleryMsg}</p>
           <div className="mt-5"><TanBtn href={data.galleryUrl}>Compartir fotografías</TanBtn></div>
         </Reveal>
 
         <Reveal className="mx-auto mt-12 max-w-lg">
           <Script style={{ fontSize: '44px' }}>Confirmar asistencia</Script>
-          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.body, fontSize: '15px', color: C.ink, lineHeight: 1.5 }}>{data.rsvpMessage}</p>
+          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>{data.rsvpMessage}</p>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="1.6" className="mx-auto my-4">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 14l6 6 6-6" />
           </svg>

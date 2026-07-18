@@ -154,13 +154,13 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   if (hasBlocks) {
     templateEl = null; // se reemplaza más abajo por <BlockRenderer> (con sus providers)
   } else if (premium) {
-    templateEl = <premium.Comp data={premium.map(parsed)} />;
+    templateEl = <div className="ek-invite"><premium.Comp data={premium.map(parsed)} /></div>;
   } else {
     const templates: Partial<Record<string, React.ComponentType<{ invitation: ReturnType<typeof parseInvitation> }>>> = {
       perla: Perla, marmol: Marmol, terra: Terra, sobre: Sobre, carmesi: Carmesi, gerbera: Gerbera,
     };
     const Template = templates[invitation.template] || Perla;
-    templateEl = <Template invitation={parsed} />;
+    templateEl = <div className="ek-invite"><Template invitation={parsed} /></div>;
   }
 
   // ── Pantalla de entrada / "sobre": enlace principal la muestra; ?full=1 la salta ──
@@ -219,15 +219,6 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   );
 }
 
-// Imagen de respaldo para la vista previa al compartir cuando la invitación
-// no tiene foto de portada: la foto del catálogo de su plantilla.
-const CATALOG_FALLBACK: Record<string, string> = {
-  azure: '/catalog/azure.jpg', primicia: '/catalog/primicia.jpg', passport: '/catalog/passport.jpg',
-  paradise: '/catalog/paradise.jpg', obsidiana: '/catalog/obsidiana.jpg', dolcevita: '/catalog/dolcevita.jpg',
-  grazia: '/catalog/grazia.jpg', carmesi_v2: '/catalog/carmesi.jpg', napoly: '/catalog/perla.jpg',
-  euforia: '/catalog/euforia.jpg', rosegold: '/catalog/rosegold.jpg', allegria: '/catalog/allegria.jpg',
-};
-
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
 
@@ -260,18 +251,16 @@ export async function generateMetadata({ params }: Props) {
     if (host) metadataBase = new URL(`${host.includes('localhost') ? 'http' : 'https'}://${host}`);
   } catch { /* sin host */ }
 
-  // Imagen de vista previa al compartir (WhatsApp/redes): la foto de portada,
-  // o la foto del catálogo de la plantilla como respaldo.
-  const cover = data?.cover_image_url || (data?.template ? CATALOG_FALLBACK[data.template] : undefined) || undefined;
-  const images = cover ? [{ url: cover, width: 1200, height: 630, alt: title }] : undefined;
-
+  // La imagen de vista previa al compartir la genera `opengraph-image.tsx`
+  // (nombres + fecha sobre la foto, con marca). Next la inyecta en og:image y
+  // twitter:image automáticamente, resolviéndola con metadataBase.
   return {
     title,
     description,
     metadataBase,
     // Las invitaciones son privadas: no indexar en buscadores.
     robots: { index: false, follow: false },
-    openGraph: { title, description, type: 'website', siteName: 'Enkarta', images },
-    twitter: { card: images ? 'summary_large_image' : 'summary', title, description, images: cover ? [cover] : undefined },
+    openGraph: { title, description, type: 'website', siteName: 'Enkarta' },
+    twitter: { card: 'summary_large_image', title, description },
   };
 }

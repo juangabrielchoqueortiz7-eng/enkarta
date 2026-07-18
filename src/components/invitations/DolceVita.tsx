@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Reveal, EventIcon, MasonryGallery } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE } from './shared';
+import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
 const DEFAULT_C = {
@@ -148,7 +149,6 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
     const s = data.isoDate.replace(/[-:]/g, '').slice(0, 15) + 'Z';
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Boda ${data.bride} & ${data.groom}`)}&dates=${s}/${s}`;
   })();
-  const pad = (n: number) => String(n).padStart(2, '0');
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Hrs' }, { v: mins, l: 'Mins' }, { v: secs, l: 'Segs' }];
 
   return (
@@ -166,10 +166,10 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
 
       {/* ════════ PORTADA ════════ */}
       <section className="relative md:grid md:min-h-screen md:grid-cols-2">
-        <div className="relative h-[42vh] md:h-auto">
+        <div className="relative overflow-hidden h-[42vh] md:h-auto">
           {data.coverImage && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover ek-kenburns" />
           )}
         </div>
         <div className="relative flex flex-col items-center justify-center px-8 py-16 text-center" style={{ background: C.paper }}>
@@ -177,16 +177,16 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
           <LeafSprig className="pointer-events-none absolute -left-6 bottom-2 w-24 opacity-60" style={{ transform: 'scaleX(-1) rotate(20deg)' }} />
           <div className="relative z-10" style={{ animation: 'dvFade 1.1s ease' }}>
             <Caps style={{ fontSize: 'clamp(13px,2vw,16px)', color: C.greenSoft }}>Tenemos el honor<br />de invitarte a nuestra boda</Caps>
-            <Script className="mt-7" style={{ fontSize: 'clamp(48px,11vw,72px)' }}>{data.groom}</Script>
+            <Script className="mt-7" style={{ fontSize: TYPE.display }}><WriteOn>{data.groom}</WriteOn></Script>
             <p style={{ fontFamily: F.serif, color: C.greenSoft, fontSize: '26px' }}>&amp;</p>
-            <Script style={{ fontSize: 'clamp(48px,11vw,72px)' }}>{data.bride}</Script>
+            <Script style={{ fontSize: TYPE.display }}><WriteOn delay={450}>{data.bride}</WriteOn></Script>
             <Caps className="mt-7" style={{ fontSize: '13px', color: C.greenSoft }}>¡Nos casamos!</Caps>
           </div>
         </div>
       </section>
 
       {/* ════════ FECHA + COUNTDOWN ════════ */}
-      <section className="relative overflow-hidden px-6 py-16 text-center" style={{ background: C.paper }}>
+      <section className={`relative overflow-hidden px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
         <LeafSprig className="pointer-events-none absolute left-0 top-10 w-44 opacity-25" mono style={{ transform: 'scaleX(-1)' }} />
         <LeafSprig className="pointer-events-none absolute right-0 bottom-10 w-44 opacity-25" />
         <Reveal className="relative z-10 mx-auto max-w-2xl">
@@ -210,22 +210,22 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
             <div className="flex gap-4">
               {cd.map(c => (
                 <div key={c.l}>
-                  <p style={{ fontFamily: F.serif, fontSize: 'clamp(26px,6vw,36px)', fontWeight: 600, lineHeight: 1, color: C.ink }}>{pad(c.v)}</p>
+                  <p style={{ fontFamily: F.serif, fontSize: 'clamp(26px,6vw,36px)', fontWeight: 600, lineHeight: 1, color: C.ink }}><Odometer value={c.v} /></p>
                   <p className="text-[12px]" style={{ color: C.greenSoft }}>{c.l}</p>
                 </div>
               ))}
             </div>
             <Flourish className="hidden w-24 scale-x-[-1] sm:block" />
           </div>
-          <div className="mt-7"><LeafBtn href={gcal}>📅 Agendar el evento</LeafBtn></div>
+          <div className="mt-7"><LeafBtn href={gcal}><CalIcon />Agendar el evento</LeafBtn></div>
         </Reveal>
       </section>
 
       {/* ════════ INTRO + INVITADO (verde) ════════ */}
       <Wave fill={C.green} />
-      <section className="relative px-6 py-14 text-center" style={{ background: C.green, color: C.cream }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.green, color: C.cream }}>
         <Reveal className="mx-auto max-w-2xl">
-          <p className="mx-auto max-w-xl italic" style={{ fontFamily: F.serif, fontSize: '19px', lineHeight: 1.7 }}>{data.introMessage}</p>
+          <p className="mx-auto max-w-xl italic" style={{ fontFamily: F.serif, fontSize: TYPE.lead, lineHeight: 1.7 }}>{data.introMessage}</p>
           <div className="mx-auto my-6 flex max-w-xs items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.gold }} /><span style={{ color: C.gold }}>♥</span><span className="h-px flex-1" style={{ background: C.gold }} /></div>
           {data.guestName && <Script style={{ fontSize: '40px', color: C.gold }}>{data.guestName}</Script>}
           {data.guestPasses && (
@@ -240,7 +240,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       <Wave fill={C.green} flip />
 
       {/* ════════ PADRES + PADRINOS ════════ */}
-      <section className="relative overflow-hidden px-6 py-16 text-center" style={{ background: C.paper }}>
+      <section className={`relative overflow-hidden px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
         <LeafSprig className="pointer-events-none absolute right-0 top-1/3 w-40 opacity-25" />
         <Reveal className="relative z-10">
           <Caps style={{ fontSize: 'clamp(15px,2.4vw,20px)', color: C.greenSoft }}>{data.blessing}</Caps>
@@ -258,7 +258,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ CEREMONIA + DRESS CODE + ITINERARIO ════════ */}
-      <section className="relative overflow-hidden px-6 py-14" style={{ background: C.paper }}>
+      <section className={`relative overflow-hidden px-6 ${SECTION.base}`} style={{ background: C.paper }}>
         <LeafSprig className="pointer-events-none absolute left-0 top-8 w-40 opacity-25" style={{ transform: 'scaleX(-1)' }} />
         <div className="relative z-10 mx-auto max-w-4xl">
           <div className="grid gap-10 sm:grid-cols-3">
@@ -283,7 +283,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
           <Reveal className="mt-12 flex flex-col items-center text-center">
             <EventIcon name="dress" className="mb-1 h-12 w-12" stroke={C.greenSoft} custom={data} sec="dress" />
             <Script style={{ fontSize: '28px' }}>Dress Code</Script>
-            <p style={{ fontSize: '16px', color: C.ink }}>{data.dressCode}</p>
+            <p style={{ fontSize: TYPE.body, color: C.ink }}>{data.dressCode}</p>
           </Reveal>
 
           <Flourish className="mx-auto my-10 w-40" />
@@ -296,7 +296,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
                   <EventIcon name={it.icon ?? 'rings'} className="h-11 w-11" stroke={C.gold} custom={data} lottieColors={it.iconColors} speed={it.iconSpeed} />
                   <p className="mt-2 text-[13px]" style={{ color: C.ink }}>{it.label}</p>
                   <span className="my-1 block h-px w-12" style={{ background: C.line }} />
-                  <p style={{ fontFamily: F.serif, fontSize: '17px', color: C.gold }}>{it.time}</p>
+                  <p style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.gold }}>{it.time}</p>
                 </div>
               ))}
             </div>
@@ -306,7 +306,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
 
       {/* ════════ NOSOTROS (collage polaroid) ════════ */}
       {data.galleryImages.length > 0 && (
-        <section className="relative overflow-hidden px-6 py-14" style={{ background: C.paper }}>
+        <section className={`relative overflow-hidden px-6 ${SECTION.base}`} style={{ background: C.paper }}>
           <LeafSprig className="pointer-events-none absolute right-0 top-0 w-44 opacity-25" />
           <Reveal className="relative z-10 mx-auto max-w-4xl">
             <Script className="text-center" style={{ fontSize: '44px' }}>Nosotros</Script>
@@ -316,7 +316,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       )}
 
       {/* ════════ HOSPEDAJE + GALERÍA ════════ */}
-      <section className="relative overflow-hidden px-6 py-14" style={{ background: C.paper }}>
+      <section className={`relative overflow-hidden px-6 ${SECTION.base}`} style={{ background: C.paper }}>
         <div className="relative z-10 mx-auto max-w-3xl">
           {data.lodging.length > 0 && (
             <Reveal className="rounded-3xl p-6" style={{ background: C.green, color: C.cream }}>
@@ -327,9 +327,9 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
                   <img src={data.lodging[0].image} alt="" className="h-52 w-full object-cover" />
                 </div>
                 <div className="text-center sm:text-left">
-                  <p style={{ fontFamily: F.serif, fontSize: '16px', lineHeight: 1.5 }}>{data.lodging[0].desc}</p>
+                  <p style={{ fontFamily: F.serif, fontSize: TYPE.body, lineHeight: 1.5 }}>{data.lodging[0].desc}</p>
                   <a href="#" className="mt-4 inline-block rounded-md px-6 py-2.5 text-[12px] tracking-[0.1em] uppercase" style={{ background: C.cream, color: C.green, fontFamily: F.serif }}>Descuento especial</a>
-                  {data.lodgingContact && <p className="mt-3" style={{ fontFamily: F.serif, fontSize: '16px' }}>{data.lodgingContact}</p>}
+                  {data.lodgingContact && <p className="mt-3" style={{ fontFamily: F.serif, fontSize: TYPE.body }}>{data.lodgingContact}</p>}
                 </div>
               </div>
             </Reveal>
@@ -339,7 +339,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
             <Caps className="mx-auto max-w-lg" style={{ fontSize: 'clamp(15px,2.4vw,19px)', color: C.greenSoft }}>La fiesta comenzará puntualmente, y queremos que disfrutes con nosotros de cada detalle. ¡Te agradeceríamos que llegues a tiempo!</Caps>
             <div className="mx-auto mt-8 max-w-md rounded-3xl px-6 py-8 text-center" style={{ border: `1px solid ${C.line}` }}>
               <EventIcon name="camera" className="mx-auto mb-3 h-11 w-11" stroke={C.greenSoft} custom={data} sec="gallery" />
-              <p style={{ fontFamily: F.serif, fontSize: '16px', color: C.ink, lineHeight: 1.6 }}>{data.galleryMsg}</p>
+              <p style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.6 }}>{data.galleryMsg}</p>
               <div className="mt-5"><LeafBtn href={data.galleryUrl}>Compartir fotografías</LeafBtn></div>
             </div>
           </Reveal>
@@ -347,24 +347,24 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ SOLO ADULTOS ════════ */}
-      <section className="relative overflow-hidden px-6 py-14 text-center" style={{ background: C.paper }}>
+      <section className={`relative overflow-hidden px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
         <Reveal className="mx-auto max-w-xl">
           <Flourish className="mx-auto mb-6 w-40" />
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full" style={{ border: `1px solid ${C.greenSoft}` }}>
             <BabyNo color={C.greenSoft} className="h-12 w-12" />
           </div>
-          <p style={{ fontFamily: F.serif, fontSize: '17px', color: C.ink, lineHeight: 1.6 }}>{data.noKids}</p>
+          <p style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.6 }}>{data.noKids}</p>
         </Reveal>
       </section>
 
       {/* ════════ REGALO (verde) ════════ */}
       <Wave fill={C.green} />
-      <section className="relative px-6 py-14 text-center" style={{ background: C.green, color: C.cream }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.green, color: C.cream }}>
         <Reveal className="mx-auto max-w-3xl">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.gold} custom={data} sec="gift" />
           <Script style={{ fontSize: '40px', color: C.gold }}>Sugerencia de Regalo</Script>
-          <p className="mx-auto mt-3 max-w-xl" style={{ fontFamily: F.serif, fontSize: '16px', lineHeight: 1.6 }}>{data.giftMessage}</p>
-          {data.giftThanks && <p className="mt-4 italic" style={{ fontFamily: F.serif, fontSize: '16px' }}>{data.giftThanks}</p>}
+          <p className="mx-auto mt-3 max-w-xl" style={{ fontFamily: F.serif, fontSize: TYPE.body, lineHeight: 1.6 }}>{data.giftMessage}</p>
+          {data.giftThanks && <p className="mt-4 italic" style={{ fontFamily: F.serif, fontSize: TYPE.body }}>{data.giftThanks}</p>}
           <div className="mt-7 grid gap-4 sm:grid-cols-3">
             {data.giftCash && (
               <div className="flex flex-col items-center justify-center rounded-2xl px-5 py-8" style={{ border: `1px solid ${C.gold}` }}>
@@ -375,8 +375,8 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
             {data.giftBank && (
               <div className="flex flex-col items-center justify-center rounded-2xl px-5 py-7" style={{ border: `1px solid ${C.gold}` }}>
                 <Script style={{ fontSize: '24px', color: C.gold }}>{data.giftBank.bank}</Script>
-                <p style={{ fontFamily: F.serif, fontSize: '15px' }}>{data.giftBank.account}</p>
-                <p style={{ fontFamily: F.serif, fontSize: '15px' }}>{data.giftBank.holder}</p>
+                <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>{data.giftBank.account}</p>
+                <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>{data.giftBank.holder}</p>
                 {data.giftQrUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={data.giftQrUrl} alt="QR" className="mt-3 h-32 w-32 rounded-lg bg-white p-2" />
@@ -394,7 +394,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       <Wave fill={C.green} flip />
 
       {/* ════════ CONFIRMACIÓN ════════ */}
-      <section className="relative overflow-hidden px-6 py-16 text-center" style={{ background: C.paper }}>
+      <section className={`relative overflow-hidden px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
         <LeafSprig className="pointer-events-none absolute -left-4 bottom-0 w-44" style={{ transform: 'scaleX(-1) rotate(10deg)' }} />
         <Reveal className="relative z-10 mx-auto max-w-xl">
           <Caps style={{ fontSize: 'clamp(18px,3vw,26px)', color: C.ink }}>{data.rsvpClosing}</Caps>

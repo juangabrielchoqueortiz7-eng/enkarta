@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Reveal, EventIcon, MasonryGallery } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE } from './shared';
+import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto (blush/durazno + rosa-dorado + crema) ──────────────────────
 const DEFAULT_C = {
@@ -134,7 +135,6 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
     const s = data.isoDate.replace(/[-:]/g, '').slice(0, 15) + 'Z';
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Boda ${data.groom} & ${data.bride}`)}&dates=${s}/${s}`;
   })();
-  const pad = (n: number) => String(n).padStart(2, '0');
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Horas' }, { v: mins, l: 'Mins.' }, { v: secs, l: 'Segs.' }];
 
   return (
@@ -152,29 +152,29 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
 
       {/* ════════ PORTADA ════════ */}
       <section className="relative md:grid md:min-h-screen md:grid-cols-2">
-        <div className="relative h-[44vh] md:h-auto">
+        <div className="relative overflow-hidden h-[44vh] md:h-auto">
           {data.coverImage && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover ek-kenburns" />
           )}
         </div>
         <div className="relative flex flex-col items-center justify-center overflow-hidden px-8 py-16 text-center" style={{ background: C.paper }}>
           <BlushFloral className="pointer-events-none absolute -right-2 top-6 w-36" />
           <div className="relative z-10" style={{ animation: 'rgFade 1.1s ease' }}>
-            <Script style={{ fontSize: 'clamp(46px,11vw,68px)' }}>{data.bride}</Script>
+            <Script style={{ fontSize: TYPE.display }}><WriteOn>{data.bride}</WriteOn></Script>
             <p style={{ fontFamily: F.serif, color: C.gold, fontSize: '24px' }}>&amp;</p>
-            <Script style={{ fontSize: 'clamp(46px,11vw,68px)' }}>{data.groom}</Script>
+            <Script style={{ fontSize: TYPE.display }}><WriteOn delay={450}>{data.groom}</WriteOn></Script>
             <Caps className="mt-7" style={{ fontSize: '14px', color: C.rose }}>¡Nos casamos!</Caps>
-            <p className="mx-auto mt-3 max-w-sm" style={{ fontFamily: F.serif, fontSize: '15px', color: C.ink, lineHeight: 1.6 }}>{data.introMessage}</p>
+            <p className="mx-auto mt-3 max-w-sm" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.6 }}>{data.introMessage}</p>
           </div>
         </div>
       </section>
 
       {/* ════════ INVITADO (durazno) ════════ */}
       <Wave fill={C.peach} />
-      <section className="relative px-6 py-12 text-center" style={{ background: C.peach, color: C.bandText }}>
+      <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.peach, color: C.bandText }}>
         <Reveal className="mx-auto max-w-xl">
-          <p style={{ fontFamily: F.serif, fontSize: '15px' }}>Su presencia es el regalo más valioso que podemos recibir</p>
+          <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>Su presencia es el regalo más valioso que podemos recibir</p>
           <div className="mx-auto my-3 flex max-w-xs items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.rose, opacity: 0.5 }} /><Heart color={C.rose} /><span className="h-px flex-1" style={{ background: C.rose, opacity: 0.5 }} /></div>
           {data.guestPasses && <Script style={{ fontSize: '40px' }}>{data.guestPasses}</Script>}
           <p style={{ fontSize: '14px' }}>Hemos reservado:</p>
@@ -193,7 +193,7 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
             {[{ t: 'Padres de la Novia', p: data.parentsBride }, { t: 'Padres del Novio', p: data.parentsGroom }].map(col => (
               <div key={col.t}>
                 <Caps style={{ fontSize: '14px', color: C.rose }}>{col.t}</Caps>
-                <div className="mt-2 space-y-1" style={{ fontFamily: F.serif, fontSize: '16px', color: C.ink }}>{col.p.map((n, i) => <p key={i}>{n}</p>)}</div>
+                <div className="mt-2 space-y-1" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink }}>{col.p.map((n, i) => <p key={i}>{n}</p>)}</div>
               </div>
             ))}
           </div>
@@ -203,7 +203,7 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ FECHA OVAL + COUNTDOWN ════════ */}
-      <section className="relative overflow-hidden px-6 py-10 text-center" style={{ background: C.paper }}>
+      <section className={`relative overflow-hidden px-6 ${SECTION.tight} text-center`} style={{ background: C.paper }}>
         <BlushFloral className="pointer-events-none absolute right-0 top-6 w-32 opacity-50" />
         <Reveal className="relative z-10 mx-auto max-w-2xl">
           <div className="flex items-center justify-center gap-2">
@@ -217,25 +217,25 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
             <span className="hidden text-[13px] tracking-[0.16em] sm:block" style={{ fontFamily: F.serif, textTransform: 'uppercase', color: C.ink }}>{data.dateMonth}</span>
             <span className="hidden h-px flex-1 sm:block" style={{ background: C.rose, opacity: 0.5, maxWidth: 90 }} />
           </div>
-          <p className="mt-6 italic" style={{ fontFamily: F.serif, fontSize: '15px', color: C.ink }}>Faltan</p>
+          <p className="mt-6 italic" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink }}>Faltan</p>
           <div className="mt-2 flex items-center justify-center gap-3">
             <Flourish className="hidden w-24 sm:block" />
             <div className="flex gap-4">
               {cd.map(c => (
                 <div key={c.l}>
-                  <p style={{ fontFamily: F.serif, fontSize: 'clamp(24px,6vw,34px)', fontWeight: 600, lineHeight: 1, color: C.rose }}>{pad(c.v)}</p>
+                  <p style={{ fontFamily: F.serif, fontSize: 'clamp(24px,6vw,34px)', fontWeight: 600, lineHeight: 1, color: C.rose }}><Odometer value={c.v} /></p>
                   <p className="text-[12px]" style={{ color: C.ink }}>{c.l}</p>
                 </div>
               ))}
             </div>
             <Flourish className="hidden w-24 scale-x-[-1] sm:block" />
           </div>
-          <div className="mt-6"><PeachBtn href={gcal}>📅 Agendar el Evento</PeachBtn></div>
+          <div className="mt-6"><PeachBtn href={gcal}><CalIcon />Agendar el Evento</PeachBtn></div>
         </Reveal>
       </section>
 
       {/* ════════ CEREMONIA + DRESS CODE + ITINERARIO ════════ */}
-      <section className="px-6 py-8" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
         <div className="mx-auto max-w-3xl">
           <div className="grid gap-10 sm:grid-cols-2">
             {[
@@ -258,7 +258,7 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
           <Reveal className="mt-12 flex flex-col items-center text-center">
             <EventIcon name="dress" className="mb-1 h-12 w-12" stroke={C.rose} custom={data} sec="dress" />
             <Caps style={{ fontSize: '14px', color: C.ink }}>Código de vestimenta</Caps>
-            <p style={{ fontSize: '16px', color: C.ink }}>{data.dressCode}</p>
+            <p style={{ fontSize: TYPE.body, color: C.ink }}>{data.dressCode}</p>
           </Reveal>
 
           <Flourish className="mx-auto my-9 w-40" />
@@ -270,7 +270,7 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
                 <div key={i} className="flex flex-col items-center text-center">
                   <EventIcon name={it.icon ?? 'rings'} className="h-10 w-10" stroke={C.rose} custom={data} lottieColors={it.iconColors} speed={it.iconSpeed} />
                   <span className="my-2 block h-px w-12" style={{ background: C.line }} />
-                  <p style={{ fontFamily: F.serif, fontSize: '15px', color: C.rose }}>{it.time}</p>
+                  <p style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.rose }}>{it.time}</p>
                   <p className="text-[12px]" style={{ fontFamily: F.serif, color: C.ink }}>{it.label}</p>
                 </div>
               ))}
@@ -281,7 +281,7 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
 
       {/* ════════ NOSOTROS (collage) ════════ */}
       {data.galleryImages.length > 0 && (
-        <section className="px-6 py-12" style={{ background: C.paper }}>
+        <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
           <Reveal className="mx-auto max-w-4xl text-center">
             <Script style={{ fontSize: '44px' }}>Nosotros</Script>
             <MasonryGallery images={data.galleryImages} className="mt-8" />
@@ -290,11 +290,11 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
       )}
 
       {/* ════════ AGRADECIMIENTO ════════ */}
-      <section className="px-6 py-10" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
         <Reveal className="mx-auto max-w-xl rounded-3xl px-7 py-8 text-center" style={{ border: `1px solid ${C.rose}` }}>
           <EventIcon name="dance" className="mx-auto mb-2 h-10 w-10" stroke={C.rose} custom={data} sec="thanks" />
           <Script style={{ fontSize: '40px' }}>Agradecimiento</Script>
-          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.serif, fontSize: '15px', color: C.ink, lineHeight: 1.6 }}>
+          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.6 }}>
             {data.thanksMessage ?? 'A Dios, a nuestros padres y a nuestros padrinos por su apoyo incondicional.'}
           </p>
         </Reveal>
@@ -302,11 +302,11 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
 
       {/* ════════ REGALO (durazno) ════════ */}
       <Wave fill={C.peach} />
-      <section className="relative px-6 py-14 text-center" style={{ background: C.peach, color: C.bandText }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.peach, color: C.bandText }}>
         <Reveal className="mx-auto max-w-2xl">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.rose} custom={data} sec="gift" />
           <Script style={{ fontSize: '42px' }}>Sugerencia de Regalo</Script>
-          <p className="mx-auto mt-3 max-w-xl" style={{ fontFamily: F.serif, fontSize: '15px', lineHeight: 1.6 }}>{data.giftMessage}</p>
+          <p className="mx-auto mt-3 max-w-xl" style={{ fontFamily: F.serif, fontSize: TYPE.body, lineHeight: 1.6 }}>{data.giftMessage}</p>
           {data.giftQrUrl && (
             <div className="mx-auto mt-6 max-w-md rounded-2xl px-6 py-7" style={{ border: `1px solid ${C.rose}` }}>
               <Caps style={{ fontSize: '14px', color: C.rose }}>Transferencia QR</Caps>
@@ -320,7 +320,7 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
       <Wave fill={C.peach} flip />
 
       {/* ════════ SOLO ADULTOS + GALERÍA ════════ */}
-      <section className="px-6 py-10" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
         <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-2">
           <Reveal className="rounded-2xl px-6 py-8 text-center" style={{ border: `1px solid ${C.line}` }}>
             <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full" style={{ border: `1px solid ${C.rose}` }}>
@@ -338,10 +338,10 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ CONFIRMACIÓN ════════ */}
-      <section className="px-6 py-14 text-center" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
         <Reveal className="mx-auto max-w-xl">
           <Script style={{ fontSize: '44px' }}>{data.rsvpClosing ?? 'Confirmar asistencia'}</Script>
-          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.serif, fontSize: '15px', color: C.ink, lineHeight: 1.5 }}>Es muy importante para nosotros confirmar tu asistencia.</p>
+          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>Es muy importante para nosotros confirmar tu asistencia.</p>
           <div className="mt-5"><PeachBtn href={data.whatsapp}>Confirmar asistencia</PeachBtn></div>
         </Reveal>
       </section>

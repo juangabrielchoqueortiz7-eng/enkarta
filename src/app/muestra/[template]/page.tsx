@@ -61,7 +61,7 @@ export default async function MuestraPage({ params, searchParams }: Props) {
     <BlockRenderer layout={contentToLayout(data, key)} theme={data.theme ?? themeForTemplate(key)} motion={motionVal} decor={previewDecor} tokens={data.tokens ?? tokensForTemplate(key)} musicUrl={data.musicUrl} slug={key} gated={full !== '1'} />
   ) : (
     <PageMotionProvider value={motionVal} gated={full !== '1'}>
-      <Comp data={data} />
+      <div className="ek-invite"><Comp data={data} /></div>
     </PageMotionProvider>
   );
 

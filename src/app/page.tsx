@@ -469,7 +469,10 @@ const faqs = [
   { q: '¿Cómo gestiono los pases de mis invitados?',         a: 'Cada invitado recibe su link personalizado con su nombre y número de pases. El paquete Exclusive incluye el sistema de confirmación inteligente.' },
 ];
 
-const WA = "https://wa.me/0000000000?text=Hola%20Enkarta%21%20Me%20gustaría%20reservar%20una%20invitación%20digital.";
+// Número de contacto de la landing: se configura con NEXT_PUBLIC_WA_PHONE en
+// .env.local (formato internacional sin +, p. ej. 59171234567).
+const WA_PHONE = process.env.NEXT_PUBLIC_WA_PHONE || '0000000000';
+const WA = `https://wa.me/${WA_PHONE}?text=Hola%20Enkarta%21%20Me%20gustaría%20reservar%20una%20invitación%20digital.`;
 
 const smartConfirmationCards = [
   {

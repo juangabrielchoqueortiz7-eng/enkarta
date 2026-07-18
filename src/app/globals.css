@@ -51,6 +51,33 @@ body {
   border-radius: 3px;
 }
 
+/* Brillo que barre los botones CTA (micro-interacción). La variante -auto
+   barre sola cada pocos segundos: en móvil no existe hover. */
+.ek-shine { position: relative; overflow: hidden; }
+.ek-shine::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: -80%;
+  width: 55%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.38), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+.ek-shine:hover::after { animation: ekShine 0.9s ease; }
+.ek-shine-auto::after { animation: ekShine 4.2s ease infinite; animation-delay: 1.2s; }
+@keyframes ekShine {
+  0% { left: -80%; }
+  38% { left: 130%; }
+  100% { left: 130%; }
+}
+
+/* Ken Burns: zoom lento continuo para fotos de portada (vaivén sutil). */
+@keyframes ekKenBurns {
+  from { transform: scale(1); }
+  to { transform: scale(1.09); }
+}
+.ek-kenburns { animation: ekKenBurns 16s ease-in-out infinite alternate; will-change: transform; }
+
 /* Invitation template base styles */
 .invitation-section {
   @apply opacity-0;
@@ -172,3 +199,13 @@ input[type="color"]::-webkit-color-swatch {
 
 /* SVG subido recoloreado e inyectado inline: que ocupe el ancho del contenedor. */
 .ek-inline-svg svg { width: 100%; height: auto; display: block; }
+
+/* ── Tipografía limpia (afecta solo a las invitaciones) ────────────────────────
+   `balance` reparte las líneas de los títulos de forma pareja (evita la última
+   palabra suelta); `pretty` evita viudas/huérfanas en párrafos. Ambos degradan
+   sin problema en navegadores que no los soportan. */
+.ek-invite h1, .ek-invite h2, .ek-invite h3, .ek-invite h4 { text-wrap: balance; }
+.ek-invite p { text-wrap: pretty; }
+/* Utilidades sueltas por si se quieren aplicar puntualmente. */
+.ek-balance { text-wrap: balance; }
+.ek-pretty  { text-wrap: pretty; }

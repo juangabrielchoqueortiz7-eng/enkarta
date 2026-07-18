@@ -160,6 +160,9 @@ function BlockView({ block }: { block: Block; tokens?: TemplateTokens }) {
   if (!def) return null;
   const Comp = def.Component;
 
+  // La historia fija va a sangre completa y gestiona su propia sección.
+  if (block.type === 'story') return <Comp block={block} />;
+
   const sectionStyle: React.CSSProperties = {
     background: bg,
     color,
@@ -186,6 +189,15 @@ function BlockView({ block }: { block: Block; tokens?: TemplateTokens }) {
 // Bloque en modo lectura: envoltorio de transform libre + animación.
 function LiveBlock({ block, layout, tokens }: { block: Block; layout?: BlockViewportLayout; tokens?: TemplateTokens }) {
   if (block.enabled === false) return null;
+  // La historia fija NO se envuelve en ScrollReveal ni transform: un ancestro
+  // con transform rompería el `position: sticky` del efecto anclado.
+  if (block.type === 'story') {
+    return (
+      <div className={hideClass(block.layout)}>
+        <BlockView block={block} tokens={tokens} />
+      </div>
+    );
+  }
   return (
     <div className={hideClass(block.layout)} style={freeStyle(layout)}>
       <ScrollReveal variant={block.animation?.preset} delay={block.animation?.delay ?? 0}>
@@ -392,7 +404,9 @@ export default function BlockRenderer({
       <BlockDataProvider value={{ slug }}>
         <PageMotionProvider value={motion} gated={gated} scrollRoot={scrollRoot}>
           <div
-            className="relative w-full min-h-screen overflow-x-hidden transition-colors duration-500"
+            // overflow-x-clip (no -hidden): hidden crearía un scrollport y
+            // rompería el position:sticky del bloque "historia fija".
+            className="ek-invite relative w-full min-h-screen overflow-x-clip transition-colors duration-500"
             style={{ background: bt.bg, color: bt.text }}
             onClick={editor ? () => onSelectBlock?.('') : undefined}
           >

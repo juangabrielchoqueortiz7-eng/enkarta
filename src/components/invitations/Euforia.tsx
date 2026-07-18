@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Reveal, EventIcon, MasonryGallery } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE } from './shared';
+import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto (mocha cálido + dorado + crema) ────────────────────────────
 const DEFAULT_C = {
@@ -153,7 +154,6 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
     const s = data.isoDate.replace(/[-:]/g, '').slice(0, 15) + 'Z';
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Boda ${data.groom} & ${data.bride}`)}&dates=${s}/${s}`;
   })();
-  const pad = (n: number) => String(n).padStart(2, '0');
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Hrs' }, { v: mins, l: 'Mins' }, { v: secs, l: 'Segs.' }];
 
   return (
@@ -171,33 +171,33 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
 
       {/* ════════ PORTADA ════════ */}
       <section className="relative md:grid md:min-h-screen md:grid-cols-2">
-        <div className="relative h-[42vh] md:h-auto">
+        <div className="relative overflow-hidden h-[42vh] md:h-auto">
           {data.coverImage && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover ek-kenburns" />
           )}
         </div>
         <div className="relative flex flex-col items-center justify-center overflow-hidden px-8 py-16 text-center" style={{ background: C.paper }}>
           <PastelLeaves className="pointer-events-none absolute right-0 bottom-2 w-40 opacity-60" />
           <div className="relative z-10" style={{ animation: 'efFade 1.1s ease' }}>
-            <p className="mx-auto max-w-sm italic" style={{ fontFamily: F.serif, fontSize: '15px', lineHeight: 1.6, color: C.ink }}>{data.introMessage}</p>
+            <p className="mx-auto max-w-sm italic" style={{ fontFamily: F.serif, fontSize: TYPE.body, lineHeight: 1.6, color: C.ink }}>{data.introMessage}</p>
             <div className="mt-6"><LeafWreath>
-              <Script style={{ fontSize: 'clamp(42px,9vw,62px)', color: C.gold }}>{data.groom}</Script>
+              <Script style={{ fontSize: 'clamp(42px,9vw,62px)', color: C.gold }}><WriteOn>{data.groom}</WriteOn></Script>
               <p style={{ fontFamily: F.serif, color: C.gold, fontSize: '24px' }}>&amp;</p>
-              <Script style={{ fontSize: 'clamp(42px,9vw,62px)', color: C.gold }}>{data.bride}</Script>
+              <Script style={{ fontSize: 'clamp(42px,9vw,62px)', color: C.gold }}><WriteOn delay={450}>{data.bride}</WriteOn></Script>
             </LeafWreath></div>
           </div>
         </div>
       </section>
 
       {/* ════════ ¡NOS CASAMOS! + INVITADO (mocha) ════════ */}
-      <section className="px-6 py-10 text-center" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.paper }}>
         <Caps style={{ fontSize: 'clamp(28px,6vw,42px)', color: C.mochaDeep }}>¡Nos casamos!</Caps>
       </section>
       <Wave fill={C.mocha} />
-      <section className="relative px-6 py-10 text-center" style={{ background: C.mocha, color: C.cream }}>
+      <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.mocha, color: C.cream }}>
         <Reveal className="mx-auto max-w-xl">
-          <p style={{ fontFamily: F.serif, fontSize: '15px' }}>Su presencia es el regalo más valioso que podemos recibir</p>
+          <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>Su presencia es el regalo más valioso que podemos recibir</p>
           {data.guestName && <Script className="mt-4" style={{ fontSize: '40px', color: C.cream }}>{data.guestName}</Script>}
           <p style={{ fontSize: '15px' }}>Hemos reservado:</p>
           {data.guestPasses && <Script style={{ fontSize: '36px', color: C.cream }}>{data.guestPasses}</Script>}
@@ -207,7 +207,7 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
       <Wave fill={C.mocha} flip />
 
       {/* ════════ FECHA (en línea) + COUNTDOWN ════════ */}
-      <section className="relative overflow-hidden px-6 py-12 text-center" style={{ background: C.paper }}>
+      <section className={`relative overflow-hidden px-6 ${SECTION.tight} text-center`} style={{ background: C.paper }}>
         <PastelLeaves className="pointer-events-none absolute right-0 bottom-6 w-40 opacity-40" />
         <Reveal className="relative z-10 mx-auto max-w-2xl">
           <div className="mb-5 flex justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill={C.mocha}><path d="M12 21C6 17 2 13.5 2 8.8 2 5.4 4.7 3 7.7 3 9.5 3 11 3.9 12 5.3 13 3.9 14.5 3 16.3 3 19.3 3 22 5.4 22 8.8 22 13.5 18 17 12 21z" /></svg></div>
@@ -220,25 +220,25 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
           </div>
           <Caps className="mt-3" style={{ fontSize: '13px', color: C.gold }}>{data.dateCity}, {data.dateMonth}, {data.dateYear}</Caps>
 
-          <p className="mt-8 italic" style={{ fontFamily: F.serif, fontSize: '16px', color: C.ink }}>Faltan</p>
+          <p className="mt-8 italic" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink }}>Faltan</p>
           <div className="mt-2 flex items-center justify-center gap-3">
             <Flourish className="hidden w-24 sm:block" />
             <div className="flex gap-4">
               {cd.map(c => (
                 <div key={c.l}>
-                  <p style={{ fontFamily: F.serif, fontSize: 'clamp(24px,6vw,34px)', fontWeight: 600, lineHeight: 1, color: C.mochaDeep }}>{pad(c.v)}</p>
+                  <p style={{ fontFamily: F.serif, fontSize: 'clamp(24px,6vw,34px)', fontWeight: 600, lineHeight: 1, color: C.mochaDeep }}><Odometer value={c.v} /></p>
                   <p className="text-[12px]" style={{ color: C.gold }}>{c.l}</p>
                 </div>
               ))}
             </div>
             <Flourish className="hidden w-24 scale-x-[-1] sm:block" />
           </div>
-          <div className="mt-6"><MochaBtn href={gcal}>📅 Agendar el evento</MochaBtn></div>
+          <div className="mt-6"><MochaBtn href={gcal}><CalIcon />Agendar el evento</MochaBtn></div>
         </Reveal>
       </section>
 
       {/* ════════ CEREMONIA + DRESS CODE + ITINERARIO ════════ */}
-      <section className="relative overflow-hidden px-6 py-10" style={{ background: C.paper }}>
+      <section className={`relative overflow-hidden px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
         <PastelLeaves className="pointer-events-none absolute left-0 top-10 w-36 opacity-30" style={{ transform: 'scaleX(-1)' }} />
         <div className="relative z-10 mx-auto max-w-3xl">
           <div className="grid gap-10 sm:grid-cols-2">
@@ -262,7 +262,7 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
           <Reveal className="mt-12 flex flex-col items-center text-center">
             <EventIcon name="dress" className="mb-1 h-12 w-12" stroke={C.gold} custom={data} sec="dress" />
             <Caps style={{ fontSize: '14px', color: C.mochaDeep }}>Código de vestimenta</Caps>
-            <p style={{ fontSize: '16px', color: C.ink }}>{data.dressCode}</p>
+            <p style={{ fontSize: TYPE.body, color: C.ink }}>{data.dressCode}</p>
           </Reveal>
 
           <Reveal className="mt-12">
@@ -273,7 +273,7 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
                   <EventIcon name={it.icon ?? 'rings'} className="h-10 w-10" stroke={C.gold} custom={data} lottieColors={it.iconColors} speed={it.iconSpeed} />
                   <span className="my-2 block h-px w-12" style={{ background: C.line }} />
                   <p className="text-[12px]" style={{ fontFamily: F.serif, color: C.ink }}>{it.label}</p>
-                  <p style={{ fontFamily: F.serif, fontSize: '15px', color: C.gold }}>{it.time}</p>
+                  <p style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.gold }}>{it.time}</p>
                 </div>
               ))}
             </div>
@@ -283,7 +283,7 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
 
       {/* ════════ NOSOTROS (collage) ════════ */}
       {data.galleryImages.length > 0 && (
-        <section className="px-6 py-12" style={{ background: C.paper }}>
+        <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
           <Reveal className="mx-auto max-w-4xl text-center">
             <Script style={{ fontSize: '44px' }}>Nosotros</Script>
             <MasonryGallery images={data.galleryImages} className="mt-8" />
@@ -292,7 +292,7 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
       )}
 
       {/* ════════ SOLO ADULTOS + GALERÍA (2 tarjetas) ════════ */}
-      <section className="px-6 py-8" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
         <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-2">
           <Reveal className="rounded-2xl px-6 py-8 text-center" style={{ border: `1px solid ${C.line}` }}>
             <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full" style={{ border: `1px solid ${C.gold}` }}>
@@ -311,7 +311,7 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
 
       {/* ════════ HOSPEDAJE ════════ */}
       {data.lodging.length > 0 && (
-        <section className="px-6 py-8" style={{ background: C.paper }}>
+        <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
           <Reveal className="mx-auto max-w-3xl rounded-3xl p-6" style={{ background: C.mocha, color: C.cream }}>
             <Script className="text-center" style={{ fontSize: '32px', color: C.cream }}>{data.lodgingTitle ?? 'Sugerencia de hospedaje'}</Script>
             <div className="mt-4 grid items-center gap-5 sm:grid-cols-2">
@@ -320,8 +320,8 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
                 <img src={data.lodging[0].image} alt="" className="h-48 w-full object-cover" />
               </div>
               <div className="text-center sm:text-left">
-                <p style={{ fontFamily: F.serif, fontSize: '15px', lineHeight: 1.5 }}>{data.lodging[0].desc}</p>
-                {data.lodgingContact && <p className="mt-3" style={{ fontFamily: F.serif, fontSize: '16px' }}>{data.lodgingContact}</p>}
+                <p style={{ fontFamily: F.serif, fontSize: TYPE.body, lineHeight: 1.5 }}>{data.lodging[0].desc}</p>
+                {data.lodgingContact && <p className="mt-3" style={{ fontFamily: F.serif, fontSize: TYPE.body }}>{data.lodgingContact}</p>}
               </div>
             </div>
           </Reveal>
@@ -330,11 +330,11 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
 
       {/* ════════ REGALO (mocha) ════════ */}
       <Wave fill={C.mocha} />
-      <section className="relative px-6 py-14 text-center" style={{ background: C.mocha, color: C.cream }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.mocha, color: C.cream }}>
         <Reveal className="mx-auto max-w-3xl">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.cream} custom={data} sec="gift" />
           <Script style={{ fontSize: '42px', color: C.cream }}>Sugerencia de Regalo</Script>
-          <p className="mx-auto mt-3 max-w-xl" style={{ fontFamily: F.serif, fontSize: '16px', lineHeight: 1.6 }}>{data.giftMessage}</p>
+          <p className="mx-auto mt-3 max-w-xl" style={{ fontFamily: F.serif, fontSize: TYPE.body, lineHeight: 1.6 }}>{data.giftMessage}</p>
           <div className="mt-7 grid gap-4 sm:grid-cols-3">
             {data.giftCash && (
               <div className="flex flex-col items-center justify-center rounded-2xl px-5 py-8" style={{ border: `1px solid ${C.cream}` }}>
@@ -345,8 +345,8 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
             {data.giftBank && (
               <div className="flex flex-col items-center justify-center rounded-2xl px-5 py-7" style={{ border: `1px solid ${C.cream}` }}>
                 <Caps style={{ fontSize: '13px', color: C.cream }}>{data.giftBank.bank}</Caps>
-                <p style={{ fontFamily: F.serif, fontSize: '15px' }}>{data.giftBank.account}</p>
-                <p style={{ fontFamily: F.serif, fontSize: '15px' }}>{data.giftBank.holder}</p>
+                <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>{data.giftBank.account}</p>
+                <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>{data.giftBank.holder}</p>
                 {data.giftQrUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={data.giftQrUrl} alt="QR" className="mt-3 h-32 w-32 rounded-lg bg-white p-2" />
@@ -364,10 +364,10 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
       <Wave fill={C.mocha} flip />
 
       {/* ════════ CONFIRMACIÓN ════════ */}
-      <section className="px-6 py-14 text-center" style={{ background: C.paper }}>
+      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
         <Reveal className="mx-auto max-w-xl">
           <Script style={{ fontSize: '44px' }}>{data.rsvpClosing ?? 'Confirmar asistencia'}</Script>
-          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.serif, fontSize: '15px', color: C.ink, lineHeight: 1.5 }}>Es muy importante para nosotros confirmar tu asistencia.</p>
+          <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>Es muy importante para nosotros confirmar tu asistencia.</p>
           <div className="mt-5"><MochaBtn href={data.whatsapp}>Confirmar asistencia</MochaBtn></div>
         </Reveal>
       </section>

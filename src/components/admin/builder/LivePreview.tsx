@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { InvitationParsed } from '@/lib/types';
 import { PREMIUM_REGISTRY } from '@/lib/template-registry';
 import { PageMotionProvider } from '@/lib/scroll-motion';
@@ -36,7 +36,35 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
   const dispH = isDesktop ? 560 : 600;
   const scale = dispW / logicalW;
   // Cambiar de preset re-monta la plantilla para volver a reproducir la animación.
+  // `playNonce` fuerza el re-montaje al pulsar ▶ para que los reveals se repitan.
   const motionPreset = invitation.config?.motion?.preset ?? 'elegant';
+  const [playNonce, setPlayNonce] = useState(0);
+  const remountKey = `${motionPreset}-${playNonce}`;
+
+  // ▶ Reproducir: recorre el preview de arriba a abajo con scroll suave para ver
+  // todas las animaciones de scroll sin salir del editor.
+  const [playing, setPlaying] = useState(false);
+  const playRaf = useRef(0);
+  const stopPlay = useCallback(() => { cancelAnimationFrame(playRaf.current); setPlaying(false); }, []);
+  useEffect(() => () => cancelAnimationFrame(playRaf.current), []);
+  const togglePlay = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (playing) { stopPlay(); return; }
+    setPlaying(true);
+    setPlayNonce(n => n + 1); // re-monta para repetir los reveals desde cero
+    el.scrollTop = 0;
+    const SPEED = 140; // px/s (a escala del preview)
+    let last = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      el.scrollTop += SPEED * dt;
+      if (el.scrollTop >= el.scrollHeight - el.clientHeight - 1) { stopPlay(); return; }
+      playRaf.current = requestAnimationFrame(step);
+    };
+    playRaf.current = requestAnimationFrame(step);
+  };
   // En modo editor de bloques se usa el layout SIN gatear (para poder editarlo todo).
   const renderInvitation = blockEditor ? rawInvitation : invitation;
   const cfg = renderInvitation.config ?? {};
@@ -72,10 +100,27 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
           </div>
         )}
 
+        {/* ▶ Reproducir demo de animaciones */}
+        <button
+          type="button"
+          onClick={togglePlay}
+          title={playing ? 'Detener' : 'Reproducir las animaciones de scroll'}
+          className="absolute right-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-gray-700 shadow-md ring-1 ring-gray-200 transition-transform hover:scale-105"
+          style={{ top: isDesktop ? 36 : 42 }}
+        >
+          {playing ? (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="5" height="16" rx="1.2" /><rect x="14" y="4" width="5" height="16" rx="1.2" /></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72c0 .93 1.02 1.5 1.82.98l10.02-6.86c.73-.5.73-1.58 0-2.08L9.82 4.16C9.02 3.64 8 4.21 8 5.14Z" /></svg>
+          )}
+        </button>
+
         {/* Contenedor de la plantilla — escalado al ancho del marco */}
         <div
           ref={scrollRef}
           className="overflow-hidden bg-white"
+          onWheel={() => { if (playing) stopPlay(); }}
+          onPointerDown={() => { if (playing) stopPlay(); }}
           style={{
             width: dispW,
             height: dispH,
@@ -96,7 +141,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
             <FontScope config={cfg}>
             {hasBlocks ? (
               <BlockRenderer
-                key={motionPreset}
+                key={remountKey}
                 layout={resolveLayoutBindings(cfg.layout!, renderInvitation)}
                 theme={cfg.theme}
                 nightTheme={cfg.nightTheme}
@@ -114,9 +159,9 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
                 viewportMode={device}
               />
             ) : (
-            <PageMotionProvider key={motionPreset} value={invitation.config?.motion} scrollRoot={scrollRef}>
+            <PageMotionProvider key={remountKey} value={invitation.config?.motion} scrollRoot={scrollRef}>
             {premium && premiumData ? (
-              <premium.Comp data={premiumData} />
+              <div className="ek-invite"><premium.Comp data={premiumData} /></div>
             ) : (
               <div className="flex flex-col items-center justify-center h-[600px] text-gray-400 gap-3">
                 <span className="text-5xl">🎨</span>

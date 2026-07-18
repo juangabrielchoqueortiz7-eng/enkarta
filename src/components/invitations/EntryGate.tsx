@@ -55,6 +55,14 @@ export default function EntryGate({
   const enter = () => {
     if (phase !== 'idle') return;
     setPhase('opening');
+    // Pantalla completa inmersiva (móvil y escritorio). Debe llamarse de forma
+    // síncrona dentro del gesto del usuario o el navegador la rechaza. En
+    // iPhone (Safari iOS) la API no existe para elementos: se ignora sin error.
+    try {
+      const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
+      if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+      else el.webkitRequestFullscreen?.();
+    } catch { /* sin soporte de fullscreen */ }
     // Inicia la música (si existe) tras el gesto del usuario.
     setTimeout(() => {
       const audio = document.querySelector('audio') as HTMLAudioElement | null;

@@ -294,6 +294,7 @@ export type BlockType =
   | 'beforeAfter' // comparador de dos fotos con deslizador
   | 'tableFinder' // buscador de mesa por nombre del invitado
   | 'guestbook'  // libro de mensajes / muro de saludos en vivo
+  | 'story'      // historia fija: foto anclada + frases ligadas al scroll
   | 'element';   // sticker decorativo flotante (librería curada o imagen subida)
 
 /** Animación de scroll de un bloque (override del preset global). */

@@ -6,6 +6,30 @@ import type { IconCustomization } from './types';
 import type { ParticleShape } from '@/lib/types';
 import { ScrollReveal } from '@/lib/scroll-motion';
 
+// ── Escala tipográfica compartida ─────────────────────────────────────────────
+// Roles, no valores sueltos: reemplaza los decenas de `clamp()` casi idénticos
+// que cada plantilla hardcodeaba, para que titulares, cuerpos y etiquetas
+// respiren igual en todo el producto. Son cadenas listas para `fontSize`.
+export const TYPE = {
+  display:  'clamp(46px,11vw,72px)', // nombres de pareja / script grande
+  title:    'clamp(24px,4.6vw,34px)', // títulos de sección
+  subtitle: 'clamp(20px,3.6vw,27px)', // subtítulos / script mediano
+  lead:     'clamp(17px,2.6vw,20px)', // mensaje destacado
+  body:     'clamp(15px,2vw,17px)',   // cuerpo
+  small:    'clamp(13px,1.8vw,15px)', // secundario
+  caption:  'clamp(11px,1.5vw,13px)', // etiquetas / overline
+  number:   'clamp(26px,5vw,40px)',   // dígitos de la cuenta regresiva
+} as const;
+
+// ── Ritmo de espaciado de secciones ───────────────────────────────────────────
+// Tres alturas estándar (padding vertical responsive) para un ritmo editorial
+// consistente, en vez del batiburrillo actual py-8/10/12/14/16.
+export const SECTION = {
+  tight: 'py-10 sm:py-12',
+  base:  'py-14 sm:py-16',
+  roomy: 'py-16 sm:py-20',
+} as const;
+
 // ── Live countdown hook ───────────────────────────────────────────────────────
 export function useCountdown(isoDate: string) {
   // Start at zeros so server and client first render match (avoids hydration mismatch),
@@ -27,6 +51,73 @@ export function useCountdown(isoDate: string) {
     return () => clearInterval(id);
   }, [isoDate]);
   return t;
+}
+
+// ── Odometer: número cuyos dígitos "ruedan" al cambiar (cuenta regresiva) ─────
+// Cada dígito es una columna 0-9 que se desliza verticalmente; hereda fuente y
+// color del contexto, así que sustituye a `String(n).padStart(2,'0')` sin más.
+export function Odometer({ value, pad = 2, className, style }: {
+  value: number;
+  pad?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const s = String(Math.max(0, Math.floor(value))).padStart(pad, '0');
+  const digits = s.split('');
+  return (
+    <span className={className} style={{ display: 'inline-flex', overflow: 'hidden', verticalAlign: 'baseline', ...style }} aria-label={s}>
+      {digits.map((d, i) => (
+        // key desde la derecha: si pasa de 100 a 99 días la columna no salta.
+        <span key={digits.length - i} aria-hidden style={{ display: 'inline-block', height: '1em', overflow: 'hidden' }}>
+          <span
+            style={{
+              display: 'block',
+              transform: `translateY(-${Number(d)}em)`,
+              transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
+            }}
+          >
+            {Array.from({ length: 10 }, (_, n) => (
+              <span key={n} style={{ display: 'block', height: '1em', lineHeight: '1em' }}>{n}</span>
+            ))}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+// ── Tilt: la tarjeta se inclina sutilmente siguiendo el cursor (desktop) ──────
+export function Tilt({ children, className, style, max = 7 }: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  /** Inclinación máxima en grados. */
+  max?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const onMove = (e: React.PointerEvent) => {
+    const el = ref.current;
+    if (!el || e.pointerType !== 'mouse') return;
+    const r = el.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    el.style.transform = `perspective(700px) rotateX(${(-py * max).toFixed(2)}deg) rotateY(${(px * max).toFixed(2)}deg)`;
+  };
+  const onLeave = () => {
+    const el = ref.current;
+    if (el) el.style.transform = 'perspective(700px) rotateX(0deg) rotateY(0deg)';
+  };
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{ transition: 'transform 0.35s ease', willChange: 'transform', ...style }}
+      onPointerMove={onMove}
+      onPointerLeave={onLeave}
+    >
+      {children}
+    </div>
+  );
 }
 
 // ── Scroll reveal wrapper ─────────────────────────────────────────────────────
@@ -210,7 +301,74 @@ export function FadeImg({ className, style, ...rest }: React.ImgHTMLAttributes<H
   );
 }
 
-export type GalleryLayout = 'grid' | 'masonry' | 'polaroid' | 'carousel';
+export type GalleryLayout = 'grid' | 'masonry' | 'polaroid' | 'carousel' | 'coverflow';
+
+// Carrusel 3D "coverflow": la foto central de frente, las laterales giradas en
+// profundidad. El ángulo/escala de cada celda se recalcula al hacer scroll.
+function CoverflowGallery({ images, radius = 16, lightbox = true, className = '' }: {
+  images: string[];
+  radius?: number;
+  lightbox?: boolean;
+  className?: string;
+}) {
+  const wrap = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState<number | null>(null);
+
+  const update = useCallback(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const center = el.scrollLeft + el.clientWidth / 2;
+    Array.from(el.children).forEach(child => {
+      const cell = child as HTMLElement;
+      const inner = cell.firstElementChild as HTMLElement | null;
+      if (!inner) return;
+      const mid = cell.offsetLeft + cell.offsetWidth / 2;
+      const t = Math.max(-1.2, Math.min(1.2, (mid - center) / (cell.offsetWidth * 1.1)));
+      inner.style.transform = `rotateY(${(-t * 36).toFixed(1)}deg) scale(${(1 - Math.min(1, Math.abs(t)) * 0.16).toFixed(3)})`;
+      inner.style.opacity = String(1 - Math.min(1, Math.abs(t)) * 0.35);
+      cell.style.zIndex = String(50 - Math.round(Math.abs(t) * 20));
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    // Arranca centrado en la primera foto y ajusta los ángulos iniciales.
+    update();
+    let raf = 0;
+    const onScroll = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => { el.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); cancelAnimationFrame(raf); };
+  }, [update]);
+
+  const visor = lightbox && open !== null
+    ? <Lightbox images={images} index={open} onClose={() => setOpen(null)} onIndex={setOpen} />
+    : null;
+
+  return (
+    <>
+      <div
+        ref={wrap}
+        className={`flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 ${className}`}
+        style={{ pointerEvents: 'auto', scrollbarWidth: 'none', paddingInline: 'max(10%, calc(50% - 115px))' }}
+      >
+        {images.map((src, i) => (
+          <div key={`${src}-${i}`} className="relative shrink-0 snap-center" style={{ width: 'min(58vw, 230px)', perspective: 900 }}>
+            <div
+              onClick={lightbox ? () => setOpen(i) : undefined}
+              className="group relative overflow-hidden bg-black/5 shadow-xl"
+              style={{ aspectRatio: '3 / 4', borderRadius: radius, cursor: lightbox ? 'zoom-in' : 'default', transition: 'opacity .2s linear', willChange: 'transform' }}
+            >
+              <FadeImg src={src} className="h-full w-full object-cover" />
+            </div>
+          </div>
+        ))}
+      </div>
+      {visor}
+    </>
+  );
+}
 
 // Lupa de hover compartida por las celdas de la galería.
 function ZoomHint() {
@@ -312,6 +470,11 @@ export function PhotoGrid({
   const visor = lightbox && open !== null
     ? <Lightbox images={images} index={open} onClose={() => setOpen(null)} onIndex={setOpen} />
     : null;
+
+  // Coverflow: carrusel 3D con la foto central de frente.
+  if (layout === 'coverflow') {
+    return <CoverflowGallery images={images} radius={radius} lightbox={lightbox} className={className} />;
+  }
 
   // Masonry: alturas alternadas con columnas CSS (efecto Pinterest).
   if (layout === 'masonry') {
@@ -823,5 +986,36 @@ export function OrchidSprig({ color = '#2c4d77', className = '', flip = false }:
       {orchid(72, 31, 0.62)}
       {orchid(88, 31, 0.78)}
     </svg>
+  );
+}
+
+/* Icono de calendario de trazo fino, para el botón "Agendar el evento".
+   Reemplaza al emoji 📅 (que renderiza distinto en cada dispositivo y rompe la
+   elegancia). Hereda el color con `currentColor`. */
+export function CalIcon({ className = '', size = 15 }: { className?: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
+      <path d="M3 9h18" />
+      <path d="M8 2.5v4M16 2.5v4" />
+    </svg>
+  );
+}
+
+/* Placeholder con carácter para cuando falta una foto.
+   En vez de un círculo/arco gris plano, muestra la inicial (o las iniciales de la
+   pareja, "L & I") en script sobre un tinte suave y un aro fino opcional. Se ve
+   intencional, no vacío. Pasa `second` para el monograma de pareja (portadas). */
+export function Monogram({ name, second, bg, fg, ring }: { name?: string; second?: string; bg: string; fg: string; ring?: string }) {
+  const a = (name?.trim()?.[0] ?? '·').toUpperCase();
+  const b = second?.trim()?.[0]?.toUpperCase();
+  return (
+    <div className="relative flex h-full w-full items-center justify-center" style={{ background: bg }}>
+      {ring && <span className="pointer-events-none absolute inset-[10%] rounded-full" style={{ border: `1px solid ${ring}` }} />}
+      <span style={{ fontFamily: "'Great Vibes', cursive", fontSize: `clamp(38px,${b ? 9 : 12}vw,64px)`, lineHeight: 1, color: fg }}>
+        {b ? `${a} & ${b}` : a}
+      </span>
+    </div>
   );
 }

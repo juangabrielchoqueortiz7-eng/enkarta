@@ -98,6 +98,31 @@ function WaxSeal({ theme, size = 84, initials }: { theme: EntryTheme; size?: num
   );
 }
 
+// Sello de lacre que se parte en dos al abrir: cada mitad (recorte con grieta
+// en zigzag) cae hacia su lado con un giro, como si el invitado lo rompiera.
+function BreakingSeal({ theme, initials, opening }: { theme: EntryTheme; initials: string; opening: boolean }) {
+  const CRACK_L = 'polygon(0 0, 55% 0, 45% 28%, 56% 55%, 44% 78%, 52% 100%, 0 100%)';
+  const CRACK_R = 'polygon(55% 0, 100% 0, 100% 100%, 52% 100%, 44% 78%, 56% 55%, 45% 28%)';
+  const half = (side: -1 | 1) => (
+    <motion.div
+      className="absolute inset-0"
+      style={{ clipPath: side === -1 ? CRACK_L : CRACK_R }}
+      animate={opening
+        ? { x: side * 30, y: side === 1 ? 46 : 32, rotate: side * 24, opacity: 0 }
+        : { x: 0, y: 0, rotate: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: ease.soft }}
+    >
+      <WaxSeal theme={theme} initials={initials} />
+    </motion.div>
+  );
+  return (
+    <div className="relative" style={{ width: 84, height: 84 }}>
+      {half(-1)}
+      {half(1)}
+    </div>
+  );
+}
+
 // ── Decorative sprig (line-art) ────────────────────────────────────────────────
 function Sprig({ kind, color, className, style }: { kind: Ornament; color: string; className?: string; style?: React.CSSProperties }) {
   if (kind === 'none') return null;
@@ -173,36 +198,45 @@ function EnvelopeScene({ theme, names, initials, dateLine, label, phase, onEnter
           variants={reveal} transition={{ duration: 0.8, ease: ease.soft }}
           className="relative" style={{ width: 'min(86vw, 360px)', aspectRatio: '3 / 2', perspective: 1400 }}
         >
-          {/* body */}
-          <div className="absolute inset-0" style={{ background: theme.panel, borderRadius: 8, boxShadow: '0 34px 64px -22px rgba(0,0,0,0.4)' }} />
-          {/* letter (peeks, lifts on open) */}
+          {/* Secuencia de apertura: lacre se rompe → solapa gira → carta sale →
+              el sobre entero se inclina hacia atrás en profundidad. */}
           <motion.div
-            className="absolute"
-            style={{ left: '7%', right: '7%', top: '-4%', bottom: '20%', background: '#fffdfa', borderRadius: 4, zIndex: 2, boxShadow: '0 6px 16px rgba(0,0,0,0.12)' }}
-            animate={opening ? { y: '-62%', opacity: 0 } : { y: 0, opacity: 1 }}
-            transition={{ duration: 0.85, ease: ease.soft, delay: opening ? 0.28 : 0 }}
-          />
-          {/* side + bottom inner flaps */}
-          <div className="absolute inset-0" style={{ clipPath: 'polygon(0 0,50% 46%,0 100%)', background: theme.panelEdge, zIndex: 3 }} />
-          <div className="absolute inset-0" style={{ clipPath: 'polygon(100% 0,50% 46%,100% 100%)', background: theme.panelEdge, zIndex: 3 }} />
-          <div className="absolute inset-0" style={{ clipPath: 'polygon(0 100%,50% 46%,100% 100%)', background: theme.panelEdge, zIndex: 3 }} />
-          <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: 8, border: `1px solid ${theme.accent}33`, zIndex: 4 }} />
-          {/* top flap */}
-          <motion.div
-            className="absolute left-0 right-0 top-0"
-            style={{ height: '56%', transformOrigin: 'top center', transformStyle: 'preserve-3d', clipPath: 'polygon(0 0,100% 0,50% 100%)', background: theme.panel, zIndex: 6 }}
-            animate={opening ? { rotateX: -168 } : { rotateX: 0 }}
-            transition={{ duration: 0.9, ease: ease.inOut }}
+            className="absolute inset-0"
+            style={{ transformStyle: 'preserve-3d' }}
+            animate={opening ? { rotateX: 18, y: 34, scale: 0.94 } : { rotateX: 0, y: 0, scale: 1 }}
+            transition={{ duration: 0.9, ease: ease.inOut, delay: opening ? 0.55 : 0 }}
           >
-            <div className="absolute inset-0" style={{ clipPath: 'polygon(0 0,100% 0,50% 100%)', background: 'linear-gradient(180deg, rgba(0,0,0,0.03), rgba(0,0,0,0.12))' }} />
-          </motion.div>
-          {/* wax seal at flap tip */}
-          <motion.div
-            className="absolute left-1/2" style={{ top: '32%', transform: 'translateX(-50%)', zIndex: 7 }}
-            animate={opening ? { scale: 0.5, opacity: 0 } : { scale: 1, opacity: 1 }}
-            transition={{ duration: 0.4 }}
-          >
-            <WaxSeal theme={theme} initials={initials} />
+            {/* body */}
+            <div className="absolute inset-0" style={{ background: theme.panel, borderRadius: 8, boxShadow: '0 34px 64px -22px rgba(0,0,0,0.4)' }} />
+            {/* letter (sale del sobre con las iniciales escritas) */}
+            <motion.div
+              className="absolute flex flex-col items-center pt-3"
+              style={{ left: '7%', right: '7%', top: '-4%', bottom: '20%', background: '#fffdfa', borderRadius: 4, zIndex: 2, boxShadow: '0 6px 16px rgba(0,0,0,0.12)' }}
+              animate={opening ? { y: '-84%', scale: 1.05 } : { y: 0, scale: 1 }}
+              transition={{ duration: 0.9, ease: ease.soft, delay: opening ? 0.5 : 0 }}
+            >
+              <span className="font-great" style={{ color: theme.script, fontSize: 26, lineHeight: 1.1 }}>{initials}</span>
+              <span className="mt-2 h-px w-1/2" style={{ background: `${theme.accent}55` }} />
+              <span className="mt-1.5 h-px w-1/3" style={{ background: `${theme.accent}33` }} />
+            </motion.div>
+            {/* side + bottom inner flaps */}
+            <div className="absolute inset-0" style={{ clipPath: 'polygon(0 0,50% 46%,0 100%)', background: theme.panelEdge, zIndex: 3 }} />
+            <div className="absolute inset-0" style={{ clipPath: 'polygon(100% 0,50% 46%,100% 100%)', background: theme.panelEdge, zIndex: 3 }} />
+            <div className="absolute inset-0" style={{ clipPath: 'polygon(0 100%,50% 46%,100% 100%)', background: theme.panelEdge, zIndex: 3 }} />
+            <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: 8, border: `1px solid ${theme.accent}33`, zIndex: 4 }} />
+            {/* top flap (gira en 3D tras romperse el lacre) */}
+            <motion.div
+              className="absolute left-0 right-0 top-0"
+              style={{ height: '56%', transformOrigin: 'top center', transformStyle: 'preserve-3d', clipPath: 'polygon(0 0,100% 0,50% 100%)', background: theme.panel, zIndex: 6 }}
+              animate={opening ? { rotateX: -168 } : { rotateX: 0 }}
+              transition={{ duration: 0.9, ease: ease.inOut, delay: opening ? 0.22 : 0 }}
+            >
+              <div className="absolute inset-0" style={{ clipPath: 'polygon(0 0,100% 0,50% 100%)', background: 'linear-gradient(180deg, rgba(0,0,0,0.03), rgba(0,0,0,0.12))' }} />
+            </motion.div>
+            {/* wax seal at flap tip (se parte en dos) */}
+            <div className="absolute left-1/2" style={{ top: '32%', transform: 'translateX(-50%)', zIndex: 7 }}>
+              <BreakingSeal theme={theme} initials={initials} opening={opening} />
+            </div>
           </motion.div>
         </motion.div>
 

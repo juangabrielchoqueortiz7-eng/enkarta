@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { ObsidianaContent, TemplateTheme } from './types';
-import { useCountdown, Reveal, EventIcon, MasonryGallery } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE } from './shared';
+import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
 const DEFAULT_C = {
@@ -157,12 +158,11 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
     const s = data.isoDate.replace(/[-:]/g, '').slice(0, 15) + 'Z';
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Boda ${data.bride} & ${data.groom}`)}&dates=${s}/${s}`;
   })();
-  const pad = (n: number) => String(n).padStart(2, '0');
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Hrs' }, { v: mins, l: 'Mins' }, { v: secs, l: 'Segs' }];
 
   // Banda de sección
   const Band = ({ tone = 'black', children, className = '' }: { tone?: 'black' | 'olive'; children: React.ReactNode; className?: string }) => (
-    <section className={`relative overflow-hidden px-6 py-16 ${className}`} style={{ background: tone === 'olive' ? C.olive : C.black, color: C.cream }}>
+    <section className={`relative overflow-hidden px-6 ${SECTION.base} ${className}`} style={{ background: tone === 'olive' ? C.olive : C.black, color: C.cream }}>
       {tone === 'black' && <MarbleVeins />}
       {tone === 'black' && <>
         <Frond className="pointer-events-none absolute -right-6 top-10 w-20 opacity-70" style={{ transform: 'rotate(18deg)' }} />
@@ -196,10 +196,10 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
 
       {/* ════════ PORTADA (split foto/panel) ════════ */}
       <section className="relative md:grid md:min-h-screen md:grid-cols-2">
-        <div className="relative h-[44vh] md:h-auto">
+        <div className="relative overflow-hidden h-[44vh] md:h-auto">
           {data.coverImage && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={data.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover ek-kenburns" />
           )}
         </div>
         <div className="relative flex flex-col items-center justify-center overflow-hidden px-6 py-16 text-center" style={{ background: C.black, color: C.cream }}>
@@ -207,9 +207,9 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
           <Frond className="pointer-events-none absolute -right-4 bottom-0 w-24 opacity-80" style={{ transform: 'rotate(8deg)' }} />
           <div className="relative z-10" style={{ animation: 'obFade 1.1s ease' }}>
             <GoldFrame>
-              <Script style={{ fontSize: 'clamp(46px,11vw,72px)' }}>{data.bride}</Script>
+              <Script style={{ fontSize: TYPE.display }}><WriteOn>{data.bride}</WriteOn></Script>
               <p style={{ fontFamily: F.caps, color: C.cream, fontSize: '20px', margin: '0' }}>&amp;</p>
-              <Script style={{ fontSize: 'clamp(46px,11vw,72px)' }}>{data.groom}</Script>
+              <Script style={{ fontSize: TYPE.display }}><WriteOn delay={450}>{data.groom}</WriteOn></Script>
               <div className="mt-5 flex items-center justify-center gap-4" style={{ fontFamily: F.caps, color: C.cream, letterSpacing: '0.08em' }}>
                 <span className="text-[12px]">{data.dateWeekday}</span>
                 <span style={{ width: 1, height: 38, background: C.gold }} />
@@ -219,7 +219,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
               </div>
               <p className="mt-3 text-[12px] tracking-[0.22em]" style={{ fontFamily: F.caps, color: C.goldSoft }}>{data.datePlace}</p>
             </GoldFrame>
-            <p className="mx-auto mt-7 max-w-sm italic" style={{ fontFamily: F.serif, fontSize: '16px', lineHeight: 1.5, color: C.creamDim }}>{data.introMessage}</p>
+            <p className="mx-auto mt-7 max-w-sm italic" style={{ fontFamily: F.serif, fontSize: TYPE.body, lineHeight: 1.5, color: C.creamDim }}>{data.introMessage}</p>
           </div>
         </div>
       </section>
@@ -228,7 +228,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       <Wave fill={C.olive} />
       <Band tone="olive">
         <Reveal className="text-center">
-          <p style={{ fontSize: '15px', color: C.creamDim }}>Bienvenidos a la invitación de nuestra boda</p>
+          <p style={{ fontSize: TYPE.body, color: C.creamDim }}>Bienvenidos a la invitación de nuestra boda</p>
           <div className="mx-auto my-3 flex max-w-xs items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.line }} /><span className="h-1 w-1 rounded-full" style={{ background: C.gold }} /><span className="h-px flex-1" style={{ background: C.line }} /></div>
           {data.guestName && <Script style={{ fontSize: '42px' }}>{data.guestName}</Script>}
           {data.guestPasses && (
@@ -249,12 +249,12 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
           <div className="mx-auto mt-4 grid max-w-md grid-cols-4 gap-2 rounded-2xl px-3 py-5" style={{ border: `1px solid ${C.line}` }}>
             {cd.map(c => (
               <div key={c.l}>
-                <p style={{ fontFamily: F.serif, fontSize: 'clamp(28px,7vw,40px)', color: C.goldSoft, lineHeight: 1 }}>{pad(c.v)}</p>
+                <p style={{ fontFamily: F.serif, fontSize: 'clamp(28px,7vw,40px)', color: C.goldSoft, lineHeight: 1 }}><Odometer value={c.v} /></p>
                 <p className="mt-1 text-[12px]" style={{ color: C.creamDim }}>{c.l}</p>
               </div>
             ))}
           </div>
-          <div className="mt-6"><OliveBtn href={gcal}>📅 Agendar el evento</OliveBtn></div>
+          <div className="mt-6"><OliveBtn href={gcal}><CalIcon />Agendar el evento</OliveBtn></div>
           <Frond className="mx-auto mt-10 w-16 opacity-90" style={{ transform: 'rotate(90deg)' }} />
         </Reveal>
       </Band>
@@ -267,7 +267,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
             {[{ t: 'Padres del Novio', p: data.parentsGroom }, { t: 'Padres de la Novia', p: data.parentsBride }].map(col => (
               <div key={col.t}>
                 <p style={{ fontFamily: F.serif, fontSize: '20px', letterSpacing: '0.05em', color: C.goldSoft }}>{col.t}</p>
-                <div className="mt-2 space-y-1" style={{ fontSize: '16px', color: C.cream }}>{col.p.map((n, i) => <p key={i}>{n}</p>)}</div>
+                <div className="mt-2 space-y-1" style={{ fontSize: TYPE.body, color: C.cream }}>{col.p.map((n, i) => <p key={i}>{n}</p>)}</div>
               </div>
             ))}
           </div>
@@ -296,7 +296,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
         <Reveal className="mt-12 flex flex-col items-center text-center">
           <EventIcon name="dress" className="mb-3 h-16 w-16" stroke={C.gold} custom={data} sec="dress" />
           <Caps style={{ fontSize: '18px', color: C.cream }}>Vestimenta</Caps>
-          <p className="mt-1" style={{ fontSize: '16px', color: C.creamDim }}>{data.dressCode}</p>
+          <p className="mt-1" style={{ fontSize: TYPE.body, color: C.creamDim }}>{data.dressCode}</p>
         </Reveal>
       </Band>
 
@@ -345,12 +345,12 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
         <Reveal className="text-center">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.gold} custom={data} sec="gift" />
           <Script style={{ fontSize: '40px' }}>Sugerencia de Regalo</Script>
-          <p className="mx-auto mt-3 max-w-md" style={{ fontSize: '15px', color: C.creamDim, lineHeight: 1.6 }}>{data.giftMessage}</p>
+          <p className="mx-auto mt-3 max-w-md" style={{ fontSize: TYPE.body, color: C.creamDim, lineHeight: 1.6 }}>{data.giftMessage}</p>
           <div className="mt-7 grid gap-4 sm:grid-cols-2">
             {data.giftEnvelopes && (
               <div className="flex flex-col items-center justify-center rounded-2xl px-6 py-9" style={{ border: `1px solid ${C.gold}` }}>
                 <EnvelopeMoney color={C.gold} className="mb-4 h-14 w-16" />
-                <p style={{ fontSize: '17px', color: C.cream }}>{data.giftEnvelopes}</p>
+                <p style={{ fontSize: TYPE.body, color: C.cream }}>{data.giftEnvelopes}</p>
               </div>
             )}
             {data.giftQrUrl && (
@@ -395,14 +395,14 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
         <Reveal className="text-center">
           <Script style={{ fontSize: '48px' }}>{data.thanksTitle ?? 'Agradecimiento'}</Script>
           <div className="mx-auto my-4 flex max-w-sm items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.line }} /><span className="h-1 w-1 rounded-full" style={{ background: C.gold }} /><span className="h-px flex-1" style={{ background: C.line }} /></div>
-          <p className="mx-auto max-w-xl" style={{ fontSize: '15px', color: C.creamDim, lineHeight: 1.6 }}>{data.thanksMessage}</p>
+          <p className="mx-auto max-w-xl" style={{ fontSize: TYPE.body, color: C.creamDim, lineHeight: 1.6 }}>{data.thanksMessage}</p>
           {data.padrinos.length > 0 && (
             <div className="mt-7 rounded-2xl px-6 py-8" style={{ border: `1px solid ${C.gold}` }}>
               <div className="grid gap-7 sm:grid-cols-3">
                 {data.padrinos.map((p, i) => (
                   <div key={i}>
                     <p style={{ fontFamily: F.serif, fontSize: '17px', letterSpacing: '0.04em', color: C.goldSoft }}>{p.role}</p>
-                    <div className="mt-1 space-y-0.5" style={{ fontSize: '15px', color: C.cream }}>{p.names.map((n, j) => <p key={j}>{n}</p>)}</div>
+                    <div className="mt-1 space-y-0.5" style={{ fontSize: TYPE.body, color: C.cream }}>{p.names.map((n, j) => <p key={j}>{n}</p>)}</div>
                   </div>
                 ))}
               </div>
@@ -418,7 +418,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
           <Caps className="mx-auto max-w-xl" style={{ fontSize: 'clamp(16px,2.6vw,22px)', color: C.cream }}>{data.rsvpClosing}</Caps>
           <div className="mx-auto mt-8 max-w-md rounded-3xl px-6 py-8 text-center" style={{ border: `1px solid ${C.gold}`, background: C.olive }}>
             <EventIcon name="camera" className="mx-auto mb-3 h-12 w-12" stroke={C.gold} custom={data} sec="gallery" />
-            <p style={{ fontSize: '15px', color: C.cream, lineHeight: 1.6 }}>{data.galleryMsg}</p>
+            <p style={{ fontSize: TYPE.body, color: C.cream, lineHeight: 1.6 }}>{data.galleryMsg}</p>
             <div className="mt-5"><GoldBtn href={data.galleryUrl}>Compartir fotografías</GoldBtn></div>
           </div>
         </Reveal>

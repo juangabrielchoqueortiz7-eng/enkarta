@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import Image from 'next/image';
-import { EventIcon, Reveal, useCountdown, PhotoGrid } from './shared';
+import { EventIcon, Reveal, useCountdown, Odometer, PhotoGrid, SECTION } from './shared';
+import { WriteOn } from '@/lib/scroll-motion';
 import { PassportContent, TemplateTheme } from './types';
 
 const DEFAULT_C = {
@@ -254,7 +255,7 @@ export default function Passport({ data }: { data: PassportContent }) {
 
       <section id="pp-intro" className="px-6 pb-4 pt-10 text-center">
         <Reveal className="mx-auto flex max-w-xl flex-col items-center">
-          <Script style={{ fontSize: 'clamp(40px,9vw,64px)' }}>{data.groom} &amp; {data.bride}</Script>
+          <Script style={{ fontSize: 'clamp(40px,9vw,64px)' }}><WriteOn duration={1.9}>{data.groom} &amp; {data.bride}</WriteOn></Script>
           <Caps className="mt-5" style={{ color: C.dark, fontSize: 'clamp(18px,4.5vw,28px)', letterSpacing: '0.12em' }}>{data.announce}</Caps>
           <p className="mt-6 italic" style={{ fontFamily: F.body, fontSize: '19px', lineHeight: 1.7, color: C.darkSoft }}>{data.verse}</p>
           <p className="mt-2 italic" style={{ fontFamily: F.body, fontSize: '15px', color: C.darkSoft }}>{data.verseRef}</p>
@@ -295,7 +296,7 @@ export default function Passport({ data }: { data: PassportContent }) {
       )}
 
       <Wave fill={C.sage} />
-      <section className="px-6 py-8 text-center" style={{ background: C.sage, color: C.creamText }}>
+      <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.sage, color: C.creamText }}>
         <Reveal className="mx-auto flex max-w-xl flex-col items-center">
           <p style={{ fontFamily: F.body, fontSize: '20px', color: C.creamText }}>{data.callout}</p>
           <p style={{ fontFamily: F.script, fontSize: '34px', marginTop: 4 }}>{data.callout2}</p>
@@ -316,7 +317,7 @@ export default function Passport({ data }: { data: PassportContent }) {
       </section>
       <Wave fill={C.cream} />
 
-      <section className="px-6 py-12 text-center">
+      <section className={`px-6 ${SECTION.tight} text-center`}>
         <Reveal className="mx-auto max-w-2xl">
           <Caps style={{ fontSize: 'clamp(13px,3.2vw,18px)', letterSpacing: '0.16em' }}>Con la bendicion de Dios y de nuestros padres</Caps>
           <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2">
@@ -352,7 +353,7 @@ export default function Passport({ data }: { data: PassportContent }) {
               ].map(([n, label]) => (
                 <div key={label as string} className="text-center">
                   <p style={{ fontFamily: F.caps, fontWeight: 700, fontSize: 'clamp(24px,6vw,36px)', lineHeight: 1, color: C.dark }}>
-                    {String(n).padStart(2, '0')}
+                    <Odometer value={n as number} />
                   </p>
                   <p className="mt-1.5" style={{ fontFamily: F.body, fontSize: '14px', color: C.darkSoft }}>{label}</p>
                 </div>
@@ -364,7 +365,7 @@ export default function Passport({ data }: { data: PassportContent }) {
         </Reveal>
       </section>
 
-      <section className="px-6 py-12 text-center">
+      <section className={`px-6 ${SECTION.tight} text-center`}>
         <Reveal className="flex flex-col items-center">
           {data.icons?.ceremony ? (
             <EventIcon name="" custom={data} sec="ceremony" className="h-10 w-10" stroke={C.sage} />
@@ -381,7 +382,7 @@ export default function Passport({ data }: { data: PassportContent }) {
         </Reveal>
       </section>
 
-      <section className="px-6 py-12 text-center">
+      <section className={`px-6 ${SECTION.tight} text-center`}>
         <Reveal className="mx-auto max-w-xl">
           {data.icons?.dress && (
             <EventIcon name="" custom={data} sec="dress" className="mx-auto mb-2 h-10 w-10" stroke={C.sage} />
@@ -411,7 +412,7 @@ export default function Passport({ data }: { data: PassportContent }) {
         </Reveal>
       </section>
 
-      <section className="px-6 py-12">
+      <section className={`px-6 ${SECTION.tight}`}>
         <Reveal>
           <div className="text-center">
             <Script style={titleSize}>Itinerario</Script>
@@ -449,7 +450,7 @@ export default function Passport({ data }: { data: PassportContent }) {
       </section>
 
       <Wave fill={C.sage} />
-      <section className="px-6 py-14 text-center" style={{ background: C.sage, color: C.creamText }}>
+      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.sage, color: C.creamText }}>
         <Reveal className="mx-auto flex max-w-md flex-col items-center">
           {data.icons?.gallery ? (
             <EventIcon name="" custom={data} sec="gallery" className="mb-5 h-12 w-12" stroke={C.creamText} />
@@ -477,7 +478,7 @@ export default function Passport({ data }: { data: PassportContent }) {
       </section>
       <Wave fill={C.cream} />
 
-      <section className="relative overflow-hidden px-6 py-14 text-center">
+      <section className={`relative overflow-hidden px-6 ${SECTION.base} text-center`}>
         <PlaneTrail className="absolute left-2 top-6 w-28 opacity-70" />
         <Reveal className="mx-auto max-w-xl">
           <Script style={titleSize}>Solo Adultos</Script>
@@ -486,7 +487,7 @@ export default function Passport({ data }: { data: PassportContent }) {
       </section>
 
       <Wave fill={C.sage} />
-      <section className="px-6 py-16 text-center" style={{ background: C.sage, color: C.creamText }}>
+      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.sage, color: C.creamText }}>
         <Reveal className="mx-auto flex max-w-md flex-col items-center">
           <p style={{ fontFamily: F.caps, fontSize: '12px', letterSpacing: '0.3em', color: C.creamDim }}>Confirmar Asistencia</p>
           <Script className="mt-3" style={{ color: C.creamText, fontSize: 'clamp(38px,9vw,58px)' }}>Check-in</Script>

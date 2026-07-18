@@ -23,6 +23,7 @@ import {
   useReducedMotion,
   useScroll,
   useTransform,
+  type MotionValue,
   type Variants,
 } from 'framer-motion';
 import { ease } from './motion';
@@ -31,7 +32,7 @@ import type { ScrollPreset, PageMotion, PageMotionPreset } from './types';
 export type { ScrollPreset, PageMotion, PageMotionPreset };
 
 // ── Preset global → animación por sección por defecto ─────────────────────────
-const PRESET_TO_VARIANT: Record<PageMotionPreset, ScrollPreset> = {
+export const PRESET_TO_VARIANT: Record<PageMotionPreset, ScrollPreset> = {
   none: 'none',
   minimal: 'fade',
   elegant: 'fadeUp',
@@ -334,6 +335,291 @@ function ZoomScrollReveal({
     >
       {children}
     </motion.div>
+  );
+}
+
+// ── Primitivas "cinematográficas" v2 ──────────────────────────────────────────
+// Comparten la lógica armed+inView del motor: no arrancan hasta que el invitado
+// entra (portada) y el elemento está en pantalla.
+
+function useArmedInView(repeat = false) {
+  const m = usePageMotion();
+  const ref = useRef<HTMLDivElement & HTMLSpanElement & HTMLHeadingElement>(null);
+  const inView = useInView(ref, { once: !repeat, amount: 0.2, margin: '0px 0px -8% 0px', root: m.scrollRoot });
+  return { m, ref, show: m.armed && inView };
+}
+
+/**
+ * Texto que "se escribe": barrido de revelado (clip) + desenfoque que se disipa.
+ * Pensado para nombres en fuente manuscrita (per-letra rompería las ligaduras).
+ */
+export function WriteOn({
+  children,
+  className,
+  style,
+  delay = 0,
+  duration = 1.5,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  delay?: number;
+  duration?: number;
+}) {
+  const { m, ref, show } = useArmedInView();
+  if (m.reduced || m.variant === 'none') {
+    return <span className={className} style={style}>{children}</span>;
+  }
+  // Insets negativos: deja respirar trazos y florituras de la fuente script.
+  return (
+    <span ref={ref} className={className} style={{ display: 'inline-block', ...style }}>
+      <motion.span
+        style={{ display: 'inline-block' }}
+        initial={false}
+        animate={show
+          ? { clipPath: 'inset(-25% -12% -30% -6%)', opacity: 1, filter: 'blur(0px)' }
+          : { clipPath: 'inset(-25% 104% -30% -6%)', opacity: 0, filter: 'blur(5px)' }}
+        transition={{
+          duration,
+          ease: [0.55, 0.06, 0.28, 0.96],
+          delay: delay / 1000,
+          opacity: { duration: duration * 0.35, delay: delay / 1000 },
+        }}
+      >
+        {children}
+      </motion.span>
+    </span>
+  );
+}
+
+/**
+ * Texto en cascada: cada letra (o palabra) aparece con un pequeño retraso.
+ * Para títulos serif / mayúsculas espaciadas (NO para fuentes manuscritas).
+ */
+export function CascadeText({
+  text,
+  className,
+  style,
+  delay = 0,
+  step = 42,
+  by = 'letters',
+}: {
+  text: string;
+  className?: string;
+  style?: React.CSSProperties;
+  delay?: number;
+  /** ms entre cada unidad. */
+  step?: number;
+  by?: 'letters' | 'words';
+}) {
+  const { m, ref, show } = useArmedInView();
+  if (m.reduced || m.variant === 'none') {
+    return <span className={className} style={style}>{text}</span>;
+  }
+  const units = by === 'words' ? text.split(/(\s+)/) : Array.from(text);
+  return (
+    <span ref={ref} className={className} style={style} aria-label={text}>
+      {units.map((u, i) => (
+        <motion.span
+          key={i}
+          aria-hidden
+          style={{ display: 'inline-block', whiteSpace: 'pre' }}
+          initial={false}
+          animate={show
+            ? { opacity: 1, y: 0, filter: 'blur(0px)' }
+            : { opacity: 0, y: '0.32em', filter: 'blur(3px)' }}
+          transition={{ duration: 0.55, ease: ease.soft, delay: (delay + i * step) / 1000 }}
+        >
+          {u}
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Lista en cascada: envuelve cada hijo y lo revela con un retraso progresivo
+ * usando la animación del preset global (o `variant`). Para itinerarios,
+ * padrinos, tarjetas…
+ */
+export function Stagger({
+  children,
+  className,
+  style,
+  step = 110,
+  variant,
+  itemClassName,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  /** ms entre cada hijo. */
+  step?: number;
+  variant?: ScrollPreset;
+  itemClassName?: string;
+}) {
+  const { m, ref, show } = useArmedInView();
+  let v = variant ?? m.variant;
+  if (v === 'parallax' || v === 'zoomScroll') v = 'fadeUp';
+  const items = React.Children.toArray(children);
+  if (m.reduced || v === 'none') {
+    return <div className={className} style={style}>{children}</div>;
+  }
+  const variants = buildVariants(v, m.intensity, m.perspective);
+  return (
+    <div ref={ref} className={className} style={style}>
+      {items.map((c, i) => (
+        <motion.div
+          key={i}
+          className={itemClassName}
+          variants={variants}
+          initial="hidden"
+          animate={show ? 'show' : 'hidden'}
+          transition={{ duration: 0.7, ease: ease.soft, delay: (i * step) / 1000 }}
+        >
+          {c}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Revelado "dibujado" desde el centro (clip horizontal). Para separadores y
+ * ornamentos: la línea/flor "florece" al llegar a ella.
+ */
+export function RevealDraw({
+  children,
+  className,
+  style,
+  delay = 0,
+  duration = 1.1,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  delay?: number;
+  duration?: number;
+}) {
+  const { m, ref, show } = useArmedInView();
+  if (m.reduced || m.variant === 'none') {
+    return <div className={className} style={style}>{children}</div>;
+  }
+  return (
+    <div ref={ref} className={className} style={style}>
+      <motion.div
+        initial={false}
+        animate={show
+          ? { clipPath: 'inset(-10% 0% -10% 0%)', opacity: 1 }
+          : { clipPath: 'inset(-10% 50% -10% 50%)', opacity: 0 }}
+        transition={{ duration, ease: ease.soft, delay: delay / 1000 }}
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+}
+
+// ── Historia fija ("pinned storytelling") ─────────────────────────────────────
+// La foto queda anclada a pantalla completa mientras las frases entran y salen
+// ligadas al progreso de scroll (scrubbing), con un zoom lento de fondo.
+
+function StorySlide({
+  progress, i, n, text, color,
+}: {
+  progress: MotionValue<number>;
+  i: number;
+  n: number;
+  text: string;
+  color: string;
+}) {
+  const seg = 1 / n;
+  const start = i * seg;
+  const end = start + seg;
+  const fade = seg * 0.28;
+  // La primera frase ya está visible al llegar; la última no se despide.
+  const opacity = useTransform(
+    progress,
+    [start, start + fade, end - fade, end],
+    [i === 0 ? 1 : 0, 1, 1, i === n - 1 ? 1 : 0],
+  );
+  const y = useTransform(progress, [start, end], [26, -26]);
+  return (
+    <motion.p
+      className="font-cormorant absolute inset-0 flex items-center justify-center px-10 text-center"
+      style={{ opacity, y, color, fontSize: 'clamp(22px,4.5vw,34px)', lineHeight: 1.5, textShadow: '0 2px 18px rgba(0,0,0,0.45)' }}
+    >
+      {text}
+    </motion.p>
+  );
+}
+
+export function PinnedStory({
+  image,
+  focal = '50% 50%',
+  overlay = 0.4,
+  slides,
+  heightVh = 240,
+  textColor = '#ffffff',
+}: {
+  image?: string;
+  focal?: string;
+  /** Oscurecido de la foto (0–0.85). */
+  overlay?: number;
+  slides: string[];
+  /** Alto total del tramo de scroll (más alto = frases más lentas). */
+  heightVh?: number;
+  textColor?: string;
+}) {
+  const m = usePageMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    container: m.scrollRoot,
+    offset: ['start start', 'end end'],
+  });
+  const bgScale = useTransform(scrollYProgress, [0, 1], [1.05, 1.16]);
+  const texts = slides.filter(Boolean);
+
+  // Accesibilidad: sin movimiento, la historia se muestra como sección estática.
+  if (m.reduced || texts.length === 0) {
+    return (
+      <div className="relative overflow-hidden" style={{ minHeight: '60vh' }}>
+        {image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: focal }} />
+        )}
+        <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${overlay})` }} aria-hidden />
+        <div className="relative z-10 flex flex-col items-center justify-center gap-6 px-10 py-24 text-center">
+          {texts.map((t, i) => (
+            <p key={i} className="font-cormorant" style={{ color: textColor, fontSize: 'clamp(20px,4vw,30px)', lineHeight: 1.5 }}>{t}</p>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative" style={{ height: `${heightVh}vh` }}>
+      <div className="sticky top-0 h-screen w-full overflow-hidden" style={{ background: '#181512' }}>
+        {image && (
+          <motion.div
+            className="absolute inset-0"
+            style={{
+              scale: bgScale,
+              backgroundImage: `url(${image})`,
+              backgroundSize: 'cover',
+              backgroundPosition: focal,
+            }}
+            aria-hidden
+          />
+        )}
+        <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${overlay})` }} aria-hidden />
+        {texts.map((t, i) => (
+          <StorySlide key={i} progress={scrollYProgress} i={i} n={texts.length} text={t} color={textColor} />
+        ))}
+      </div>
+    </div>
   );
 }
 

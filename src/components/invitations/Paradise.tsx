@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { ParadiseContent, TemplateTheme } from './types';
-import { useCountdown, Reveal, EventIcon, PhotoGrid } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, PhotoGrid, Monogram } from './shared';
+import { WriteOn, CascadeText } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
 const DEFAULT_C = {
@@ -51,14 +52,14 @@ function MarbleBg() {
 }
 
 // ── Foto en marco de arco (parte superior redondeada) ────────────────────────────
-function ArchPhoto({ src, className = '', style }: { src?: string; className?: string; style?: React.CSSProperties }) {
+function ArchPhoto({ src, className = '', style, first, second }: { src?: string; className?: string; style?: React.CSSProperties; first?: string; second?: string }) {
   const C = useC();
   return (
     <div className={`overflow-hidden ${className}`} style={{ borderRadius: '999px 999px 14px 14px', background: C.greenDeep, ...style }}>
       {src
         ? // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt="" className="h-full w-full object-cover" />
-        : <div className="h-full w-full" style={{ background: `linear-gradient(160deg, ${C.green}, ${C.greenDeep})` }} />}
+        : <Monogram name={first} second={second} bg={`linear-gradient(160deg, ${C.green}, ${C.greenDeep})`} fg={C.gold} />}
     </div>
   );
 }
@@ -141,7 +142,6 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
     { v: days, l: 'Días' }, { v: hours, l: 'Hrs' }, { v: mins, l: 'Mins' }, { v: secs, l: 'Segs' },
   ];
 
-  const pad = (n: number) => String(n).padStart(2, '0');
 
   return (
     <ThemeCtx.Provider value={C}>
@@ -168,20 +168,20 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
           {/* Nombres */}
           <div className="order-2 text-center md:order-1 md:text-left md:pl-8" style={{ animation: 'paFade 1s ease' }}>
             <h1 style={{ fontFamily: F.caps, fontSize: 'clamp(44px,8vw,86px)', lineHeight: 0.92, letterSpacing: '0.04em' }}>
-              {data.bride}
+              <CascadeText text={data.bride} />
             </h1>
-            <p style={{ fontFamily: F.script, color: C.gold, fontSize: 'clamp(30px,5vw,52px)', marginTop: -6 }}>{data.brideLast}</p>
+            <p style={{ fontFamily: F.script, color: C.gold, fontSize: 'clamp(30px,5vw,52px)', marginTop: -6 }}><WriteOn delay={300}>{data.brideLast}</WriteOn></p>
             <p style={{ fontFamily: F.caps, fontSize: 'clamp(40px,7vw,72px)', lineHeight: 0.7 }}>&amp;</p>
             <h1 style={{ fontFamily: F.caps, fontSize: 'clamp(44px,8vw,86px)', lineHeight: 0.92, letterSpacing: '0.04em' }}>
-              {data.groom}
+              <CascadeText text={data.groom} delay={520} />
             </h1>
-            <p style={{ fontFamily: F.script, color: C.gold, fontSize: 'clamp(30px,5vw,52px)', marginTop: -6 }}>{data.groomLast}</p>
+            <p style={{ fontFamily: F.script, color: C.gold, fontSize: 'clamp(30px,5vw,52px)', marginTop: -6 }}><WriteOn delay={800}>{data.groomLast}</WriteOn></p>
           </div>
 
           {/* Foto + fecha/ciudad verticales */}
           <div className="order-1 flex items-center justify-center gap-4 md:order-2">
             <span className="hidden text-[13px] tracking-[0.35em] sm:block" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', color: C.creamText }}>{data.dateLabel}</span>
-            <ArchPhoto src={data.coverImage} className="w-[min(78vw,360px)]" style={{ aspectRatio: '3 / 4' }} />
+            <ArchPhoto src={data.coverImage} first={data.bride} second={data.groom} className="w-[min(78vw,360px)]" style={{ aspectRatio: '3 / 4' }} />
             <span className="hidden text-[13px] tracking-[0.35em] sm:block" style={{ writingMode: 'vertical-rl', color: C.creamText }}>{data.city}</span>
           </div>
         </div>
@@ -223,7 +223,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
               <div className="grid grid-cols-4 gap-2">
                 {cd.map(c => (
                   <div key={c.l}>
-                    <p style={{ fontFamily: F.serif, fontSize: 'clamp(26px,5vw,40px)', lineHeight: 1 }}>{pad(c.v)}</p>
+                    <p style={{ fontFamily: F.serif, fontSize: 'clamp(26px,5vw,40px)', lineHeight: 1 }}><Odometer value={c.v} /></p>
                     <p className="mt-1" style={{ fontSize: '12px', opacity: 0.85 }}>{c.l}</p>
                   </div>
                 ))}
@@ -236,7 +236,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
             </a>
           </Reveal>
           <Reveal delay={120} className="flex justify-center">
-            <ArchPhoto src={data.secondaryImage} className="w-[min(72vw,330px)]" style={{ aspectRatio: '4 / 5' }} />
+            <ArchPhoto src={data.secondaryImage} first={data.bride} second={data.groom} className="w-[min(72vw,330px)]" style={{ aspectRatio: '4 / 5' }} />
           </Reveal>
         </div>
       </section>

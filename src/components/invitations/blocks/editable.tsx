@@ -10,6 +10,7 @@
 // y solo se confirma en onBlur → no hay re-render por tecla → el cursor no salta.
 
 import React, { createContext, useContext } from 'react';
+import { WriteOn, CascadeText } from '@/lib/scroll-motion';
 
 interface BlockEdit {
   editing: boolean;
@@ -31,16 +32,21 @@ function esc(s: string) {
 }
 
 export function Editable({
-  k, value, as: Tag = 'span', className, style,
+  k, value, as: Tag = 'span', className, style, effect,
 }: {
   k: string;
   value: string;
   as?: any;
   className?: string;
   style?: React.CSSProperties;
+  /** Efecto de aparición en modo lectura: caligrafía (write) o letra a letra (cascade). */
+  effect?: 'write' | 'cascade' | 'cascadeWords';
 }) {
   const ed = useBlockEdit();
   if (!ed.editing) {
+    if (effect === 'write') return <Tag className={className} style={style}><WriteOn>{value}</WriteOn></Tag>;
+    if (effect === 'cascade') return <Tag className={className} style={style}><CascadeText text={value} /></Tag>;
+    if (effect === 'cascadeWords') return <Tag className={className} style={style}><CascadeText text={value} by="words" step={90} /></Tag>;
     return <Tag className={className} style={style}>{value}</Tag>;
   }
   return (

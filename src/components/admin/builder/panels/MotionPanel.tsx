@@ -1,7 +1,54 @@
 'use client';
 
-import { InvitationParsed, BuilderConfig, PageMotion } from '@/lib/types';
-import { PAGE_MOTION_PRESETS } from '@/lib/scroll-motion';
+import { InvitationParsed, BuilderConfig, PageMotion, PageMotionPreset } from '@/lib/types';
+import { PAGE_MOTION_PRESETS, PRESET_TO_VARIANT } from '@/lib/scroll-motion';
+
+// Mini-teléfono animado: tres "secciones" entran en loop con el efecto real del
+// preset, para elegir la transición viéndola (no leyéndola).
+function MiniPreview({ preset }: { preset: PageMotionPreset }) {
+  const v = PRESET_TO_VARIANT[preset];
+  return (
+    <span
+      className="ekmp flex-shrink-0"
+      data-v={v}
+      aria-hidden
+      style={{
+        width: 38, height: 54, borderRadius: 7, background: '#fff',
+        border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column',
+        gap: 4, padding: 6, overflow: 'hidden', perspective: 90,
+      }}
+    >
+      {[0, 1, 2].map(i => (
+        <span key={i} className="ekmp-bar" style={{ animationDelay: `${i * 0.22}s`, width: i === 1 ? '70%' : '100%' }} />
+      ))}
+    </span>
+  );
+}
+
+const MINI_CSS = `
+.ekmp-bar { display:block; height:11px; border-radius:3px; flex-shrink:0;
+  background:linear-gradient(90deg,#cdb680,#e6d8b2); opacity:1;
+  animation-duration:2.8s; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+.ekmp[data-v="none"] .ekmp-bar { animation:none; }
+.ekmp[data-v="fade"] .ekmp-bar { animation-name:ekmpFade; }
+.ekmp[data-v="fadeUp"] .ekmp-bar { animation-name:ekmpFadeUp; }
+.ekmp[data-v="fadeDown"] .ekmp-bar { animation-name:ekmpFadeDown; }
+.ekmp[data-v="pop"] .ekmp-bar { animation-name:ekmpPop; }
+.ekmp[data-v="tilt3d"] .ekmp-bar { animation-name:ekmpTilt; }
+.ekmp[data-v="flip3d"] .ekmp-bar { animation-name:ekmpFlip; }
+.ekmp[data-v="depth3d"] .ekmp-bar { animation-name:ekmpDepth; }
+.ekmp[data-v="swing3d"] .ekmp-bar { animation-name:ekmpSwing; transform-origin:left center; }
+.ekmp[data-v="unfold3d"] .ekmp-bar { animation-name:ekmpUnfold; }
+@keyframes ekmpFade { 0%{opacity:0} 30%,78%{opacity:1} 94%,100%{opacity:0} }
+@keyframes ekmpFadeUp { 0%{opacity:0;transform:translateY(7px)} 30%,78%{opacity:1;transform:none} 94%,100%{opacity:0;transform:translateY(7px)} }
+@keyframes ekmpFadeDown { 0%{opacity:0;transform:translateY(-7px)} 30%,78%{opacity:1;transform:none} 94%,100%{opacity:0;transform:translateY(-7px)} }
+@keyframes ekmpPop { 0%{opacity:0;transform:scale(.45)} 32%,78%{opacity:1;transform:scale(1)} 94%,100%{opacity:0;transform:scale(.45)} }
+@keyframes ekmpTilt { 0%{opacity:0;transform:translateY(5px) rotateX(38deg)} 32%,78%{opacity:1;transform:none} 94%,100%{opacity:0;transform:translateY(5px) rotateX(38deg)} }
+@keyframes ekmpFlip { 0%{opacity:0;transform:rotateX(82deg)} 34%,78%{opacity:1;transform:none} 94%,100%{opacity:0;transform:rotateX(82deg)} }
+@keyframes ekmpDepth { 0%{opacity:0;transform:scale(.7);filter:blur(2px)} 32%,78%{opacity:1;transform:scale(1);filter:blur(0)} 94%,100%{opacity:0;transform:scale(.7);filter:blur(2px)} }
+@keyframes ekmpSwing { 0%{opacity:0;transform:rotateY(-62deg)} 32%,78%{opacity:1;transform:none} 94%,100%{opacity:0;transform:rotateY(-62deg)} }
+@keyframes ekmpUnfold { 0%{opacity:0;transform:rotateY(84deg) scale(.94)} 34%,78%{opacity:1;transform:none} 94%,100%{opacity:0;transform:rotateY(84deg) scale(.94)} }
+`;
 
 interface Props {
   data: InvitationParsed;
@@ -60,6 +107,7 @@ export default function MotionPanel({ data, onChange }: Props) {
 
       {/* Preset global */}
       <Section title="Estilo de transición">
+        <style>{MINI_CSS}</style>
         <div className="grid grid-cols-1 gap-2">
           {PAGE_MOTION_PRESETS.map(p => (
             <button
@@ -70,7 +118,7 @@ export default function MotionPanel({ data, onChange }: Props) {
                 preset === p.value ? 'border-enkarta-gold bg-enkarta-gold/5' : 'border-gray-100 bg-gray-50'
               }`}
             >
-              <span className="text-xl flex-shrink-0">{p.emoji}</span>
+              <MiniPreview preset={p.value} />
               <span className="min-w-0">
                 <span className="block text-sm font-outfit text-gray-700">{p.label}</span>
                 <span className="block text-xs text-gray-400 font-outfit leading-tight">{p.desc}</span>
