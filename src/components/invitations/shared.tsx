@@ -597,16 +597,34 @@ export function ParticleShapeSvg({ shape, color, tip }: { shape: ParticleShape; 
       return <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill={color} /></svg>;
     case 'ring':
       return <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke={color} strokeWidth="2" /></svg>;
-    case 'butterfly':
+    case 'butterfly': {
+      // La misma mariposa de la landing: alas de dos lóbulos con degradado y
+      // aleteo continuo, tintada con la paleta (color = alas, tip = cuerpo).
+      const gid = `ekpbw-${color.replace(/[^a-zA-Z0-9]/g, '')}-${tip.replace(/[^a-zA-Z0-9]/g, '')}`;
       return (
-        <svg width="26" height="22" viewBox="-13 -11 26 22" fill={color}>
-          <ellipse cx="-6" cy="-4" rx="6" ry="5" transform="rotate(-18 -6 -4)" />
-          <ellipse cx="6" cy="-4" rx="6" ry="5" transform="rotate(18 6 -4)" />
-          <ellipse cx="-5" cy="5" rx="4.5" ry="4" transform="rotate(18 -5 5)" opacity="0.85" />
-          <ellipse cx="5" cy="5" rx="4.5" ry="4" transform="rotate(-18 5 5)" opacity="0.85" />
-          <rect x="-0.7" y="-6" width="1.4" height="13" rx="0.7" fill={tip} />
+        <svg width="30" height="24" viewBox="0 0 40 32" fill="none" style={{ overflow: 'visible' }}>
+          <defs>
+            <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity="0.5" />
+              <stop offset="55%" stopColor={color} />
+              <stop offset="100%" stopColor={tip} />
+            </linearGradient>
+          </defs>
+          <style>{`.ekpbw-wing { animation: ekpbwFlap .6s ease-in-out infinite alternate; } @keyframes ekpbwFlap { from { transform: scaleX(1); } to { transform: scaleX(0.32); } }`}</style>
+          <g className="ekpbw-wing" style={{ transformOrigin: '20px 16px' }}>
+            <path d="M20 15 C 12 2, 1 2, 1.6 9 C 2 14, 10 16.5, 20 16 Z" fill={`url(#${gid})`} opacity="0.92" />
+            <path d="M20 17 C 11 27, 2.5 26, 4 20.5 C 5 17, 12 16.5, 20 17 Z" fill={`url(#${gid})`} opacity="0.72" />
+          </g>
+          <g className="ekpbw-wing" style={{ transformOrigin: '20px 16px' }}>
+            <path d="M20 15 C 28 2, 39 2, 38.4 9 C 38 14, 30 16.5, 20 16 Z" fill={`url(#${gid})`} opacity="0.92" />
+            <path d="M20 17 C 29 27, 37.5 26, 36 20.5 C 35 17, 28 16.5, 20 17 Z" fill={`url(#${gid})`} opacity="0.72" />
+          </g>
+          <ellipse cx="20" cy="16" rx="1.4" ry="6.2" fill={tip} />
+          <path d="M19 10.5 C 17.5 7.5, 15.8 6.2, 14.4 5.8 M21 10.5 C 22.5 7.5, 24.2 6.2, 25.6 5.8"
+            stroke={tip} strokeWidth="0.9" strokeLinecap="round" />
         </svg>
       );
+    }
     case 'snow':
       return (
         <svg width="22" height="22" viewBox="-11 -11 22 22" fill="none" stroke={color} strokeWidth="1.1" strokeLinecap="round">
