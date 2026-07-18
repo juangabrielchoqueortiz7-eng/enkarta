@@ -262,10 +262,10 @@ export default function Azure({ data }: { data: InvitationContent }) {
       {showCorners && (
         <ThemeCtx.Provider value={cornerPalette}>
           <div className="pointer-events-none fixed inset-0 z-[1]" aria-hidden style={{ opacity: cornerOpacity }}>
-            <OrchidCluster className="absolute -top-8 -left-8 w-[44vw] max-w-[340px] min-w-[190px] opacity-90" />
-            <OrchidCluster className="absolute -bottom-8 -right-8 w-[44vw] max-w-[340px] min-w-[190px] opacity-90" style={{ transform: 'scaleX(-1) scaleY(-1)' }} />
-            <OrchidCluster className="absolute -bottom-10 -left-10 w-[30vw] max-w-[230px] min-w-[140px] opacity-65" style={{ transform: 'scaleY(-1)' }} />
-            <OrchidCluster className="absolute -top-10 -right-10 w-[30vw] max-w-[230px] min-w-[140px] opacity-55" style={{ transform: 'scaleX(-1)' }} />
+            <OrchidCluster className="absolute -top-8 -left-8 w-[44vw] max-w-[340px] min-w-[190px] opacity-90 ek-sway" style={{ '--sway-dur': '10s' } as React.CSSProperties} />
+            <OrchidCluster className="absolute -bottom-8 -right-8 w-[44vw] max-w-[340px] min-w-[190px] opacity-90 ek-sway" style={{ transform: 'scaleX(-1) scaleY(-1)', '--sway-dur': '12s', '--sway-delay': '-5s' } as React.CSSProperties} />
+            <OrchidCluster className="absolute -bottom-10 -left-10 w-[30vw] max-w-[230px] min-w-[140px] opacity-65 ek-sway" style={{ transform: 'scaleY(-1)', '--sway-dur': '14s', '--sway-delay': '-8s' } as React.CSSProperties} />
+            <OrchidCluster className="absolute -top-10 -right-10 w-[30vw] max-w-[230px] min-w-[140px] opacity-55 ek-sway" style={{ transform: 'scaleX(-1)', '--sway-dur': '11s', '--sway-delay': '-3s' } as React.CSSProperties} />
           </div>
         </ThemeCtx.Provider>
       )}

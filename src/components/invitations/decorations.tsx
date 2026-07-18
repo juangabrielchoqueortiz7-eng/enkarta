@@ -4,6 +4,7 @@
 // invitación por bloques pueda tener: orquídeas en las esquinas, fondo de hojas de
 // acuarela y plumas cayendo sutilmente. Todo parametrizado por color (tema).
 
+import type React from 'react';
 import { Particles } from './shared';
 import { CursorTrail } from './effects';
 import type { TemplateDecor } from '@/lib/types';
@@ -221,10 +222,12 @@ export function CornerCluster({ variant, color, className, style }: ClusterProps
 export function CornerDecor({ color, opacity = 1, variant = 'orchid' }: { color: string; opacity?: number; variant?: string }) {
   return (
     <div className="pointer-events-none fixed inset-0 z-[1]" aria-hidden style={{ opacity }}>
-      <CornerCluster variant={variant} color={color} className="absolute -top-8 -left-8 w-[44vw] max-w-[340px] min-w-[160px] opacity-90" />
-      <CornerCluster variant={variant} color={color} className="absolute -bottom-8 -right-8 w-[44vw] max-w-[340px] min-w-[160px] opacity-90" style={{ transform: 'scaleX(-1) scaleY(-1)' }} />
-      <CornerCluster variant={variant} color={color} className="absolute -bottom-10 -left-10 w-[30vw] max-w-[230px] min-w-[120px] opacity-65" style={{ transform: 'scaleY(-1)' }} />
-      <CornerCluster variant={variant} color={color} className="absolute -top-10 -right-10 w-[30vw] max-w-[230px] min-w-[120px] opacity-55" style={{ transform: 'scaleX(-1)' }} />
+      {/* ek-sway (globals.css): vaivén de brisa vía rotate/translate individuales,
+          que se componen con el transform del espejado sin pisarlo. */}
+      <CornerCluster variant={variant} color={color} className="absolute -top-8 -left-8 w-[44vw] max-w-[340px] min-w-[160px] opacity-90 ek-sway" style={{ '--sway-dur': '10s' } as React.CSSProperties} />
+      <CornerCluster variant={variant} color={color} className="absolute -bottom-8 -right-8 w-[44vw] max-w-[340px] min-w-[160px] opacity-90 ek-sway" style={{ transform: 'scaleX(-1) scaleY(-1)', '--sway-dur': '12s', '--sway-delay': '-5s' } as React.CSSProperties} />
+      <CornerCluster variant={variant} color={color} className="absolute -bottom-10 -left-10 w-[30vw] max-w-[230px] min-w-[120px] opacity-65 ek-sway" style={{ transform: 'scaleY(-1)', '--sway-dur': '14s', '--sway-delay': '-8s' } as React.CSSProperties} />
+      <CornerCluster variant={variant} color={color} className="absolute -top-10 -right-10 w-[30vw] max-w-[230px] min-w-[120px] opacity-55 ek-sway" style={{ transform: 'scaleX(-1)', '--sway-dur': '11s', '--sway-delay': '-3s' } as React.CSSProperties} />
     </div>
   );
 }

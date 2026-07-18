@@ -51,6 +51,22 @@ body {
   border-radius: 3px;
 }
 
+/* Vaivén sutil tipo brisa para los adornos de esquina de las invitaciones.
+   Anima las propiedades individuales `rotate`/`translate`, que el navegador
+   compone con el `transform` (espejado scaleX/scaleY) del adorno sin pisarlo.
+   --sway-dur/--sway-delay desincronizan cada esquina. Con
+   prefers-reduced-motion la animación se apaga (regla global de arriba). */
+.ek-sway {
+  animation: ekCornerSway var(--sway-dur, 9s) ease-in-out var(--sway-delay, 0s) infinite;
+  will-change: rotate, translate;
+}
+/* OJO: no llamarla "ekSway" — ese nombre ya lo usan los stickers del editor de
+   Elementos (más abajo) y la última definición ganaría la cascada. */
+@keyframes ekCornerSway {
+  0%, 100% { rotate: 0deg;   translate: 0 0; }
+  50%      { rotate: 1.8deg; translate: 0 -7px; }
+}
+
 /* Brillo que barre los botones CTA (micro-interacción). La variante -auto
    barre sola cada pocos segundos: en móvil no existe hover. */
 .ek-shine { position: relative; overflow: hidden; }

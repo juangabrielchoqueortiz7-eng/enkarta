@@ -1142,15 +1142,17 @@ export default function LandingPage() {
             </a>
           </div>
 
-          {/* Comparison table — horizontal scroll on mobile */}
-          <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
-            <div style={{ minWidth: '480px' }}>
+          {/* Comparison table — las 3 columnas siempre visibles (sin scroll
+              horizontal): la columna de la función es más ancha y el resto se
+              reparte, con paddings/tipografía compactos en móvil. */}
+          <div className="rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div>
               {/* Table header */}
-              <div className="grid grid-cols-4 text-center" style={{ backgroundColor: '#1e1b16' }}>
-                <div className="p-3 sm:p-4" />
+              <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] sm:grid-cols-4 text-center" style={{ backgroundColor: '#1e1b16' }}>
+                <div className="p-2 sm:p-4" />
                 {pkgs.map(pkg => (
-                  <div key={pkg.key} className="p-3 sm:p-4">
-                    <p className="font-outfit font-bold text-[10px] sm:text-xs tracking-widest text-white">{pkg.label}</p>
+                  <div key={pkg.key} className="p-2 sm:p-4 flex items-center justify-center">
+                    <p className="font-outfit font-bold text-[8.5px] sm:text-xs tracking-[0.08em] sm:tracking-widest text-white">{pkg.label}</p>
                   </div>
                 ))}
               </div>
@@ -1158,22 +1160,22 @@ export default function LandingPage() {
               {/* Rows — order: EXCLUSIVE | PREMIUM | PLUS */}
               {comparisonRows.map(([feature, desc, excl, prem, plus], i) => (
                 <div key={i}
-                  className="grid grid-cols-4 text-center items-start border-b border-gray-100"
+                  className="grid grid-cols-[1.6fr_1fr_1fr_1fr] sm:grid-cols-4 text-center items-stretch border-b border-gray-100"
                   style={{ backgroundColor: i % 2 === 0 ? '#ffffff' : '#faf8f5' }}>
-                  <div className={`p-3 sm:p-4 text-left ${i === 0 ? 'bg-enkarta-dark/5' : ''}`}>
-                    <p className={`font-outfit text-[11px] sm:text-xs font-medium ${i === 0 ? 'text-enkarta-dark font-semibold' : 'text-enkarta-dark/70'}`}>{feature}</p>
-                    {desc && <p className="font-outfit text-[9px] sm:text-[10px] text-enkarta-gold mt-0.5 italic">{desc}</p>}
+                  <div className={`p-2 sm:p-4 text-left flex flex-col justify-center ${i === 0 ? 'bg-enkarta-dark/5' : ''}`}>
+                    <p className={`font-outfit text-[10px] sm:text-xs font-medium ${i === 0 ? 'text-enkarta-dark font-semibold' : 'text-enkarta-dark/70'}`}>{feature}</p>
+                    {desc && <p className="font-outfit text-[8px] sm:text-[10px] text-enkarta-gold mt-0.5 italic">{desc}</p>}
                   </div>
                   {/* EXCLUSIVE column */}
-                  <div className="p-3 sm:p-4 flex items-center justify-center" style={{ backgroundColor: i === 0 ? 'rgba(68,51,19,0.06)' : '' }}>
+                  <div className="p-2 sm:p-4 flex items-center justify-center" style={{ backgroundColor: i === 0 ? 'rgba(68,51,19,0.06)' : '' }}>
                     {excl ? <Check dark={false} /> : <Cross />}
                   </div>
                   {/* PREMIUM column */}
-                  <div className="p-3 sm:p-4 flex items-center justify-center">
+                  <div className="p-2 sm:p-4 flex items-center justify-center">
                     {prem ? <Check /> : <Cross />}
                   </div>
                   {/* PLUS column */}
-                  <div className="p-3 sm:p-4 flex items-center justify-center">
+                  <div className="p-2 sm:p-4 flex items-center justify-center">
                     {plus ? <Check /> : <Cross />}
                   </div>
                 </div>
