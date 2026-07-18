@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, SECTION, TYPE } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, SECTION, TYPE, ENKARTA_WA_URL } from './shared';
 import { CascadeText } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto (salvia + blanco minimalista) ──────────────────────────────
@@ -293,7 +293,7 @@ export default function Allegria({ data }: { data: DolceVitaContent }) {
       <footer className="py-8 text-center" style={{ background: '#1a1a18', color: C.cream }}>
         <p style={{ fontFamily: F.caps, fontSize: '22px', letterSpacing: '0.2em', color: C.cream }}>ENKARTA</p>
         <p className="mt-1" style={{ fontFamily: F.serif, fontSize: '14px', opacity: 0.8 }}>
-          ¿Deseas una invitación para tu evento? <span style={{ fontWeight: 700 }}>Contáctanos</span>
+          ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>
       </footer>
     </div>

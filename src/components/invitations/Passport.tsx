@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import Image from 'next/image';
-import { EventIcon, Reveal, useCountdown, Odometer, PhotoGrid, SECTION } from './shared';
+import { EventIcon, Reveal, useCountdown, Odometer, PhotoGrid, SECTION, ENKARTA_WA_URL } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 import { PassportContent, TemplateTheme } from './types';
 
@@ -499,7 +499,7 @@ export default function Passport({ data }: { data: PassportContent }) {
       <footer className="py-8 text-center" style={{ background: C.sage, color: C.creamText, borderTop: '1px solid rgba(236,230,214,0.2)' }}>
         <Caps style={{ color: C.creamText, fontSize: '18px', letterSpacing: '0.2em' }}>Enkarta</Caps>
         <p className="mt-1" style={{ fontFamily: F.body, fontSize: '15px', color: C.creamDim }}>
-          Deseas una invitacion para tu evento? <span style={{ fontWeight: 700 }}>Contactanos</span>
+          Deseas una invitacion para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>
       </footer>
     </div>

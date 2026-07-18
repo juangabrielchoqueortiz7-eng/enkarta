@@ -899,7 +899,9 @@ export default function LandingPage() {
               Descubre diseños únicos creados por nuestro equipo de expertos para tus momentos más especiales.
             </p>
           </Reveal>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-24">
+          {/* 1 col en móvil: con 2 cols los mockups quedan flacos/alargados y
+              desbordan su alto fijo tapando el nombre de la plantilla. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-14 sm:gap-y-24">
             {templates.map((t, i) => {
               const isDemo = 'demoPath' in t;
               return (
@@ -908,7 +910,7 @@ export default function LandingPage() {
                   href={isDemo ? t.demoPath : WA}
                   target={isDemo ? undefined : '_blank'}
                   rel={isDemo ? undefined : 'noopener noreferrer'}
-                  className="group block"
+                  className="group block w-full max-w-[280px] mx-auto"
                 >
                   <Tilt3D max={6} scale={1.02}>
                     <DualPhoneCard t={t} />

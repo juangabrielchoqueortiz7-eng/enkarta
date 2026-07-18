@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import Image from 'next/image';
 import { InvitationContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartLoader, PhotoGrid, SECTION } from './shared';
+import { useCountdown, Odometer, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartLoader, PhotoGrid, SECTION, ENKARTA_WA_URL } from './shared';
 import { ParallaxLayer, WriteOn } from '@/lib/scroll-motion';
 
 // ── Palette por defecto ─────────────────────────────────────────────────────────
@@ -504,7 +504,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
       <footer className="relative z-10 py-8 text-center" style={{ background: C.navyDeep }}>
         <p className="font-great text-2xl" style={{ color: '#fff' }}>Enkarta</p>
         <p className="font-cormorant text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
-          ¿Deseas una invitación para tu evento? <span className="font-semibold">Contáctanos</span>
+          ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Contáctanos</a>
         </p>
       </footer>
     </div>

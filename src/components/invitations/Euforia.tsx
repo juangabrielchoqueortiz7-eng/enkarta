@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto (mocha cálido + dorado + crema) ────────────────────────────
@@ -376,7 +376,7 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
       <footer className="py-9 text-center" style={{ background: C.mochaDeep, color: C.cream }}>
         <Script style={{ fontSize: '34px', color: C.cream }}>Enkarta</Script>
         <p className="mt-1" style={{ fontFamily: F.serif, fontSize: '14px', opacity: 0.85 }}>
-          ¿Deseas una invitación para tu evento? <span style={{ fontWeight: 700 }}>Contáctanos</span>
+          ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>
       </footer>
     </div>

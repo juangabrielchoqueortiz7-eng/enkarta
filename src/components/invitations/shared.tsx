@@ -6,6 +6,11 @@ import type { IconCustomization } from './types';
 import type { ParticleShape } from '@/lib/types';
 import { ScrollReveal } from '@/lib/scroll-motion';
 
+// ── Contacto de Enkarta (footer de todas las plantillas) ─────────────────────
+// "Contáctanos" del pie de cada invitación → WhatsApp del negocio. El número
+// se inyecta en build desde NEXT_PUBLIC_WA_PHONE (mismo que usa la landing).
+export const ENKARTA_WA_URL = `https://wa.me/${process.env.NEXT_PUBLIC_WA_PHONE || '59162449491'}?text=${encodeURIComponent('Hola Enkarta, vi una invitación y quiero una para mi evento 🎉')}`;
+
 // ── Escala tipográfica compartida ─────────────────────────────────────────────
 // Roles, no valores sueltos: reemplaza los decenas de `clamp()` casi idénticos
 // que cada plantilla hardcodeaba, para que titulares, cuerpos y etiquetas

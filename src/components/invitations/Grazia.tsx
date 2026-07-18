@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { GraziaContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, Monogram, SECTION, TYPE } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, Monogram, SECTION, TYPE, ENKARTA_WA_URL } from './shared';
 import { WriteOn, CascadeText } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
@@ -293,7 +293,7 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       <footer className="py-9 text-center" style={{ background: C.black, color: C.cream }}>
         <Script style={{ fontSize: '34px', color: C.gold }}>Enkarta</Script>
         <p className="mt-1" style={{ fontFamily: F.body, fontSize: '14px', opacity: 0.85 }}>
-          ¿Deseas una invitación para tu evento? <span style={{ fontWeight: 700, color: C.gold }}>Contáctanos</span>
+          ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: C.gold, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>
       </footer>
     </div>

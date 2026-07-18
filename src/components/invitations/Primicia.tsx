@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
-import { Reveal, useCountdown, Odometer, PhotoGrid, EventIcon, SECTION } from './shared';
+import { Reveal, useCountdown, Odometer, PhotoGrid, EventIcon, SECTION, ENKARTA_WA_URL } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 import { PrimiciaContent, TemplateTheme } from './types';
 
@@ -628,7 +628,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
       <footer className="py-8 text-center" style={{ background: C.ink, color: C.paper }}>
         <p style={{ fontFamily: FONT.black, fontSize: '24px' }}>Enkarta</p>
         <p className="mt-1" style={{ fontFamily: FONT.body, fontSize: '14px', opacity: 0.7 }}>
-          Deseas una invitacion para tu evento? <span style={{ fontWeight: 700 }}>Contactanos</span>
+          Deseas una invitacion para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>
       </footer>
     </div>

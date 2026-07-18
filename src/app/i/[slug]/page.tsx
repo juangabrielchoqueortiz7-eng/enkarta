@@ -16,6 +16,7 @@ import FontScope from '@/components/invitations/FontScope';
 import SmartRsvp from '@/components/invitations/SmartRsvp';
 import { PageMotionProvider } from '@/lib/scroll-motion';
 import { gateInvitation, resolveFeatures } from '@/lib/packages';
+import { DEFAULT_MUSIC_URL } from '@/lib/music';
 import { resolveLayoutBindings } from '@/lib/block-bindings';
 import { findGuestByPublicId } from '@/lib/guests';
 import { headers } from 'next/headers';
@@ -129,6 +130,11 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const parsed = gateInvitation(parseInvitation(invitation));
   const config = parsed.config;
   const feats = resolveFeatures(config);
+
+  // Toda invitación con música activa suena al abrirse: si el cliente no
+  // eligió canción en el builder, se usa la pista por defecto. (Después del
+  // gating: si el paquete apaga la música, no se re-añade.)
+  if (feats.music && !config.musicUrl) config.musicUrl = DEFAULT_MUSIC_URL;
 
   // ── Link único por invitado (?g=): su nombre, pases y reglas viajan a la plantilla ──
   let guest = null;

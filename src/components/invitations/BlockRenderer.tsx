@@ -16,6 +16,7 @@ import { BLOCKS } from './blocks/registry';
 import { BlockThemeProvider, resolveBlockTheme, useBlockTheme } from './blocks/theme';
 import { BlockEditProvider, BlockDataProvider } from './blocks/editable';
 import MusicPlayer from './MusicPlayer';
+import { ENKARTA_WA_URL } from './shared';
 import { PageMotionProvider, ScrollReveal } from '@/lib/scroll-motion';
 
 interface Props {
@@ -370,7 +371,7 @@ function FooterBar() {
     <footer className="py-8 text-center" style={{ background: t.primaryDeep }}>
       <p className="font-great text-2xl" style={{ color: '#fff' }}>Enkarta</p>
       <p className="font-cormorant text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
-        ¿Deseas una invitación para tu evento? <span className="font-semibold">Contáctanos</span>
+        ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Contáctanos</a>
       </p>
     </footer>
   );

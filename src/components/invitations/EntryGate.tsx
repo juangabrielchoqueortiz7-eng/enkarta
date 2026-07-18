@@ -63,11 +63,15 @@ export default function EntryGate({
       if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
       else el.webkitRequestFullscreen?.();
     } catch { /* sin soporte de fullscreen */ }
-    // Inicia la música (si existe) tras el gesto del usuario.
-    setTimeout(() => {
+    // Inicia la música de forma SÍNCRONA dentro del gesto: iOS/Safari rechazan
+    // play() diferido con setTimeout. Reintento corto por si el elemento aún
+    // no estaba montado en el primer frame.
+    const playAudio = () => {
       const audio = document.querySelector('audio') as HTMLAudioElement | null;
       audio?.play().catch(() => {});
-    }, 60);
+      return !!audio;
+    };
+    if (!playAudio()) setTimeout(playAudio, 250);
     // "Arma" las transiciones de scroll/3D justo cuando el sobre empieza a
     // desvanecerse, para que las secciones se revelen al levantarse la portada
     // (y no antes, ocultas detrás de ella).

@@ -7,6 +7,7 @@ import { contentToLayout } from '@/lib/layout-presets';
 import { themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import type { PageMotionPreset, TemplateDecor, ParticleShape, CornerStyle } from '@/lib/types';
 import { entryPropsFor } from '@/components/invitations/entry/config';
+import { DEFAULT_MUSIC_URL } from '@/lib/music';
 import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample } from '@/components/invitations/sampleData';
 
 interface Props {
@@ -42,7 +43,13 @@ export default async function MuestraPage({ params, searchParams }: Props) {
   if (!sample || !registryEntry) notFound();
 
   const { Comp } = registryEntry;
-  const data = { ...sample, guestName: m ?? sample.guestName, guestPasses: n ?? sample.guestPasses };
+  const data = {
+    ...sample,
+    guestName: m ?? sample.guestName,
+    guestPasses: n ?? sample.guestPasses,
+    // Las muestras siempre suenan: pista por defecto si el sample no trae una.
+    musicUrl: sample.musicUrl ?? DEFAULT_MUSIC_URL,
+  };
 
   // ?mo=cinematic3d|parallaxBook|elegant|minimal|none → previsualizar un preset.
   const motionVal = mo ? { preset: mo as PageMotionPreset } : undefined;
