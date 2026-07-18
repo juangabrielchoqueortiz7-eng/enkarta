@@ -106,6 +106,84 @@ function GoldParticles({ count = 14 }: { count?: number }) {
   );
 }
 
+// ── Mariposas doradas (adorno vivo del hero y secciones) ─────────────────────
+// Alas que aletean (scaleX hacia el eje del cuerpo, CSS puro) montadas sobre
+// vuelos largos en curvas (framer-motion). Rutas que entran y salen de pantalla
+// para que el loop reinicie sin saltos visibles. pointer-events-none siempre.
+const FLAP_CSS = `
+.ek-wing { animation: ekFlap .58s ease-in-out infinite alternate; }
+@keyframes ekFlap { from { transform: scaleX(1); } to { transform: scaleX(0.3); } }
+`;
+
+function ButterflySvg({ size = 26, tone = '#c9a35f', idx }: { size?: number; tone?: string; idx: string }) {
+  const g = `ekbw-${idx}`;
+  return (
+    <svg width={size} height={size * 0.8} viewBox="0 0 40 32" fill="none" aria-hidden
+      style={{ overflow: 'visible', filter: 'drop-shadow(0 3px 4px rgba(90,78,52,0.22))' }}>
+      <defs>
+        <linearGradient id={g} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#f0dcab" />
+          <stop offset="55%" stopColor={tone} />
+          <stop offset="100%" stopColor="#8B7D5F" />
+        </linearGradient>
+      </defs>
+      {/* ala izquierda (lóbulo superior + inferior) */}
+      <g className="ek-wing" style={{ transformOrigin: '20px 16px' }}>
+        <path d="M20 15 C 12 2, 1 2, 1.6 9 C 2 14, 10 16.5, 20 16 Z" fill={`url(#${g})`} opacity="0.92" />
+        <path d="M20 17 C 11 27, 2.5 26, 4 20.5 C 5 17, 12 16.5, 20 17 Z" fill={`url(#${g})`} opacity="0.72" />
+      </g>
+      {/* ala derecha */}
+      <g className="ek-wing" style={{ transformOrigin: '20px 16px' }}>
+        <path d="M20 15 C 28 2, 39 2, 38.4 9 C 38 14, 30 16.5, 20 16 Z" fill={`url(#${g})`} opacity="0.92" />
+        <path d="M20 17 C 29 27, 37.5 26, 36 20.5 C 35 17, 28 16.5, 20 17 Z" fill={`url(#${g})`} opacity="0.72" />
+      </g>
+      {/* cuerpo + antenas */}
+      <ellipse cx="20" cy="16" rx="1.4" ry="6.2" fill="#6f6046" />
+      <path d="M19 10.5 C 17.5 7.5, 15.8 6.2, 14.4 5.8 M21 10.5 C 22.5 7.5, 24.2 6.2, 25.6 5.8"
+        stroke="#6f6046" strokeWidth="0.9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+interface Flight {
+  size: number; tone: string; delay: number; dur: number; op: number;
+  x: string[]; y: number[]; r: number[];
+}
+
+function Butterflies({ zone = 'hero' }: { zone?: 'hero' | 'section' }) {
+  const reduced = useReducedMotion();
+  if (reduced) return null;
+  const flights: Flight[] =
+    zone === 'hero'
+      ? [
+          { size: 30, tone: '#c9a35f', delay: 0,  dur: 26, op: 0.85, x: ['-6vw', '18vw', '42vw', '68vw', '106vw'],  y: [210, 90, 200, 60, 150],   r: [14, -8, 10, -14, 8] },
+          { size: 20, tone: '#b98a86', delay: 5,  dur: 31, op: 0.7,  x: ['104vw', '76vw', '50vw', '22vw', '-8vw'],  y: [120, 230, 100, 260, 170], r: [-12, 10, -8, 12, -10] },
+          { size: 16, tone: '#c9a35f', delay: 11, dur: 35, op: 0.6,  x: ['-5vw', '30vw', '60vw', '85vw', '108vw'],  y: [430, 330, 440, 300, 390], r: [10, -12, 8, -8, 12] },
+          { size: 24, tone: '#8B7D5F', delay: 16, dur: 29, op: 0.72, x: ['108vw', '70vw', '44vw', '16vw', '-8vw'],  y: [530, 430, 545, 420, 490], r: [-10, 12, -14, 8, -12] },
+        ]
+      : [
+          { size: 20, tone: '#c9a35f', delay: 2,  dur: 34, op: 0.5,  x: ['-6vw', '28vw', '58vw', '84vw', '106vw'],  y: [140, 60, 150, 50, 110],   r: [12, -8, 10, -10, 8] },
+          { size: 14, tone: '#b98a86', delay: 14, dur: 38, op: 0.42, x: ['105vw', '72vw', '46vw', '20vw', '-7vw'],  y: [230, 320, 210, 330, 260], r: [-10, 8, -12, 8, -8] },
+        ];
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
+      <style>{FLAP_CSS}</style>
+      {flights.map((f, i) => (
+        <motion.div
+          key={i}
+          className="absolute left-0 top-0"
+          style={{ opacity: f.op }}
+          initial={{ x: f.x[0], y: f.y[0], rotate: f.r[0] }}
+          animate={{ x: f.x, y: f.y, rotate: f.r }}
+          transition={{ duration: f.dur, delay: f.delay, repeat: Infinity, repeatType: 'loop', ease: 'easeInOut' }}
+        >
+          <ButterflySvg size={f.size} tone={f.tone} idx={`${zone}-${i}`} />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 // ── Phone frame (dark — hero section) ───────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function PhoneFrame({ bg, accent: _accent, textColor, children, className = '' }: {
@@ -782,6 +860,7 @@ export default function LandingPage() {
           <div className="absolute bottom-[5%] right-[8%] w-[420px] h-[420px] rounded-full blur-3xl" style={{ background: 'radial-gradient(circle, rgba(139,125,95,0.14) 0%, transparent 70%)' }} />
         </motion.div>
         <GoldParticles />
+        <Butterflies zone="hero" />
 
         {/* Centered brand emblem + tagline */}
         <motion.div
@@ -897,8 +976,9 @@ export default function LandingPage() {
       </section>
 
       {/* ── Catalog ── */}
-      <section id="catalogo" className="py-28 px-4 bg-white">
-        <div className="max-w-6xl mx-auto">
+      <section id="catalogo" className="relative overflow-hidden py-28 px-4 bg-white">
+        <Butterflies zone="section" />
+        <div className="relative max-w-6xl mx-auto">
           <Reveal className="text-center mb-20">
             <p className="font-great text-4xl mb-2" style={{ color: '#B8975A' }}>Catálogo</p>
             <h3 className="font-cinzel text-3xl sm:text-4xl tracking-[0.08em]" style={{ color: '#5a4e34' }}>INVITACIONES ÚNICAS</h3>
