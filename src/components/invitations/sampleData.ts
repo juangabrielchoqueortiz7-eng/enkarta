@@ -67,7 +67,7 @@ export const azureSample: InvitationContent = {
 
   rsvp: {
     message: 'Es muy importante que nos confirmes tu asistencia',
-    whatsappUrl: 'https://wa.me/0000000000?text=Confirmo%20mi%20asistencia%20a%20la%20boda',
+    whatsappUrl: 'https://wa.me/59162449491?text=Hola%20Enkarta%2C%20vi%20la%20invitaci%C3%B3n%20de%20muestra%20y%20quiero%20una%20para%20mi%20evento%20%F0%9F%8E%89',
   },
 };
 
@@ -129,7 +129,7 @@ export const primiciaSample: PrimiciaContent = {
     no: '191-0848715-0-50',
     cci: '002-1911084087157',
   },
-  whatsapp: 'https://wa.me/0000000000?text=Confirmo%20mi%20asistencia',
+  whatsapp: 'https://wa.me/59162449491?text=Hola%20Enkarta%2C%20vi%20la%20invitaci%C3%B3n%20de%20muestra%20y%20quiero%20una%20para%20mi%20evento%20%F0%9F%8E%89',
   photoUrl: '/catalog/primicia.jpg',
 };
 
@@ -172,7 +172,7 @@ export const passportSample: PassportContent = {
   galleryMsg:
     'Te invitamos a compartir los momentos especiales de nuestro evento a traves de tus fotografias. Apreciamos que capturen y compartan sus recuerdos para que todos podamos revivir esta ocasion tan especial.',
   galleryUrl: 'https://photos.google.com',
-  whatsapp: 'https://wa.me/0000000000?text=Confirmo%20mi%20asistencia',
+  whatsapp: 'https://wa.me/59162449491?text=Hola%20Enkarta%2C%20vi%20la%20invitaci%C3%B3n%20de%20muestra%20y%20quiero%20una%20para%20mi%20evento%20%F0%9F%8E%89',
 };
 
 const PARADISE_PHOTO = 'https://images.unsplash.com/photo-1519741497674-611481863552?w=900&q=80';
@@ -237,7 +237,7 @@ export const paradiseSample: ParadiseContent = {
     'Es muy importante para nosotros confirmar tu asistencia. Por favor, confirma tu presencia antes del 01 de Marzo para poder organizar todo adecuadamente.',
   rsvpDeadline: '01 de Marzo',
   rsvpClosing: 'Creemos que mereces una noche alegre y divertida es por eso que esperamos contar con tu presencia',
-  whatsapp: 'https://wa.me/0000000000?text=Confirmo%20mi%20asistencia',
+  whatsapp: 'https://wa.me/59162449491?text=Hola%20Enkarta%2C%20vi%20la%20invitaci%C3%B3n%20de%20muestra%20y%20quiero%20una%20para%20mi%20evento%20%F0%9F%8E%89',
 };
 
 const OBS_PHOTO = 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=1000&q=80';
@@ -299,7 +299,7 @@ export const obsidianaSample: ObsidianaContent = {
 
   rsvpClosing: 'Creemos que mereces una noche alegre y divertida es por eso que esperamos contar con tu presencia',
   rsvpMessage: 'Es muy importante que nos confirmes tu asistencia.',
-  whatsapp: 'https://wa.me/0000000000?text=Confirmo%20mi%20asistencia',
+  whatsapp: 'https://wa.me/59162449491?text=Hola%20Enkarta%2C%20vi%20la%20invitaci%C3%B3n%20de%20muestra%20y%20quiero%20una%20para%20mi%20evento%20%F0%9F%8E%89',
   galleryImages: [
     'https://images.unsplash.com/photo-1519741497674-611481863552?w=500&q=80',
     'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=500&q=80',
@@ -377,7 +377,7 @@ export const dolceVitaSample: DolceVitaContent = {
   giftOther: 'Obsequios tradicionales (Escríbenos)',
 
   rsvpClosing: 'No olvides confirmar tu asistencia',
-  whatsapp: 'https://wa.me/0000000000?text=Confirmo%20mi%20asistencia',
+  whatsapp: 'https://wa.me/59162449491?text=Hola%20Enkarta%2C%20vi%20la%20invitaci%C3%B3n%20de%20muestra%20y%20quiero%20una%20para%20mi%20evento%20%F0%9F%8E%89',
 };
 
 const GZ_COVER = 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=1200&q=80';
@@ -450,8 +450,8 @@ export const graziaSample: GraziaContent = {
 
   galleryMsg: 'Te invitamos a compartir los momentos especiales de nuestro evento a través de tus fotografías. Apreciamos que capturen y compartan sus recuerdos para que todos podamos revivir esta ocasión tan especial.',
   galleryUrl: 'https://photos.google.com',
-  rsvpMessage: 'Es muy importante para nosotros confirmar tu asistencia. Por favor, confirma tu presencia antes del [fecha límite] para poder organizar todo adecuadamente.',
-  whatsapp: 'https://wa.me/0000000000?text=Confirmo%20mi%20asistencia',
+  rsvpMessage: 'Es muy importante para nosotros confirmar tu asistencia. Por favor, confirma tu presencia antes del 05 de Julio para poder organizar todo adecuadamente.',
+  whatsapp: 'https://wa.me/59162449491?text=Hola%20Enkarta%2C%20vi%20la%20invitaci%C3%B3n%20de%20muestra%20y%20quiero%20una%20para%20mi%20evento%20%F0%9F%8E%89',
 };
 
 // Napoly reutiliza el tipo DolceVitaContent (misma estructura)

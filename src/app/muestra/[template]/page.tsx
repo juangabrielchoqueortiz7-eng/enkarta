@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PREMIUM_REGISTRY, PREMIUM_KEYS } from '@/lib/template-registry';
 import EntryGate from '@/components/invitations/EntryGate';
@@ -31,6 +32,39 @@ const SAMPLES: Record<string, any> = {
   rosegold: roseGoldSample,
   allegria: allegriaSample,
 };
+
+// Nombre público + foto de catálogo por plantilla: alimentan el título y la
+// tarjeta Open Graph al compartir la demo con un cliente (WhatsApp/redes).
+const TEMPLATE_META: Record<string, { name: string; img: string; desc: string }> = {
+  azure:     { name: 'Azure',      img: '/catalog/azure.jpg',     desc: 'Azul elegante y clásico' },
+  primicia:  { name: 'Primicia',   img: '/catalog/primicia.jpg',  desc: 'Oscuro con drama y oro' },
+  passport:  { name: 'Passport',   img: '/catalog/passport.jpg',  desc: 'Aventura estilo pasaporte de viaje' },
+  paradise:  { name: 'Paradise',   img: '/catalog/paradise.jpg',  desc: 'Boho natural en verde salvia' },
+  obsidiana: { name: 'Obsidiana',  img: '/catalog/obsidiana.jpg', desc: 'Negro nocturno con oro y mármol' },
+  dolcevita: { name: 'Dolce Vita', img: '/catalog/dolcevita.jpg', desc: 'Marfil botánico romántico' },
+  grazia:    { name: 'Grazia',     img: '/catalog/grazia.jpg',    desc: 'Champagne fino y chic' },
+  carmesi:   { name: 'Carmesí',    img: '/catalog/carmesi.jpg',   desc: 'Vino dramático con rosas' },
+  napoly:    { name: 'Napoly',     img: '/catalog/perla.jpg',     desc: 'Taupe con rosa empolvado' },
+  euforia:   { name: 'Euforia',    img: '/catalog/euforia.jpg',   desc: 'Mocha cálido en acuarela' },
+  rosegold:  { name: 'Rose Gold',  img: '/catalog/rosegold.jpg',  desc: 'Blush suave y floral' },
+  allegria:  { name: 'Allegria',   img: '/catalog/allegria.jpg',  desc: 'Salvia minimalista y fresca' },
+};
+
+export async function generateMetadata({ params }: { params: Promise<{ template: string }> }): Promise<Metadata> {
+  const { template } = await params;
+  let key = template.toLowerCase();
+  if (key === 'carmesi_v2') key = 'carmesi';
+  const m = TEMPLATE_META[key];
+  if (!m) return {};
+  const title = `Plantilla ${m.name} · Invitación digital — Enkarta`;
+  const description = `${m.desc}. Ábrela con su sobre animado, música de fondo y confirmación de asistencia: así la vivirán tus invitados.`;
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: 'website', siteName: 'Enkarta', images: [{ url: m.img }] },
+    twitter: { card: 'summary_large_image' },
+  };
+}
 
 export default async function MuestraPage({ params, searchParams }: Props) {
   const { template } = await params;
