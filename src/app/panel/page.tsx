@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { parseInvitation, Invitation } from '@/lib/types';
 import { getHostSession } from '@/lib/host-session';
 import { readGuests } from '@/lib/guests';
+import { readRsvps } from '@/lib/rsvps';
 import HostLogin from '@/components/admin/host/HostLogin';
 import HostDashboard, { HostMetrics } from '@/components/admin/host/HostDashboard';
 
@@ -18,6 +19,7 @@ export default async function PanelPage() {
 
   const invitation = parseInvitation(data as Invitation);
   const guests = await readGuests(invitationId);
+  const rsvps = await readRsvps(invitationId);
 
   // Ingresos reales: asientos marcados "dentro" entre los invitados del evento.
   let checkedIn = 0;
@@ -40,5 +42,5 @@ export default async function PanelPage() {
     checkedIn,
   };
 
-  return <HostDashboard invitation={invitation} metrics={metrics} />;
+  return <HostDashboard invitation={invitation} metrics={metrics} rsvps={rsvps} />;
 }

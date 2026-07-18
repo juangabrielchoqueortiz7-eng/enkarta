@@ -1,38 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { canManageInvitation } from '@/lib/host-session';
+import { insertRsvp, readRsvps } from '@/lib/rsvps';
 import type { RsvpEntry } from '@/lib/types';
 
-// Confirmaciones de asistencia (RSVP). Se guardan como JSON por invitación en
-// Storage (rsvps/<id>.json), separado de builder_config para que el guardado del
-// editor NO pise las respuestas de los invitados. POST es público (lo usan los
-// invitados); GET ?id= lo usa el panel del admin.
+// Confirmaciones de asistencia abiertas (RSVP). Datos en la tabla `rsvps`
+// (migración 003, INSERT atómico — ver src/lib/rsvps.ts, que también cubre el
+// fallback e importación del JSON legacy). POST es público (lo usan los
+// invitados); GET ?id= es de los paneles: admin o el anfitrión dueño.
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const BUCKET = 'invitations';
-const filePath = (id: string) => `rsvps/${id}.json`;
-
-async function ensureBucket() {
-  const { data } = await supabaseAdmin.storage.getBucket(BUCKET);
-  if (!data) await supabaseAdmin.storage.createBucket(BUCKET, { public: true });
-}
-
-async function readList(id: string): Promise<RsvpEntry[]> {
-  const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(filePath(id));
-  if (error || !data) return [];
-  try {
-    const arr = JSON.parse(await data.text());
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
 export async function GET(request: NextRequest) {
   const id = new URL(request.url).searchParams.get('id');
   if (!id) return NextResponse.json([]);
-  return NextResponse.json(await readList(id));
+  if (!(await canManageInvitation(id))) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+  return NextResponse.json(await readRsvps(id));
 }
 
 export async function POST(request: NextRequest) {
@@ -53,14 +39,8 @@ export async function POST(request: NextRequest) {
       at: new Date().toISOString(),
     };
 
-    await ensureBucket();
-    const list = await readList(inv.id);
-    list.push(entry);
-    const buffer = Buffer.from(JSON.stringify(list));
-    const { error } = await supabaseAdmin.storage
-      .from(BUCKET)
-      .upload(filePath(inv.id), buffer, { contentType: 'application/json', upsert: true });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const error = await insertRsvp(inv.id, entry);
+    if (error) return NextResponse.json({ error }, { status: 500 });
 
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -5,7 +5,7 @@
 // No edita el contenido ni el diseño de la invitación.
 
 import { useRouter } from 'next/navigation';
-import type { InvitationParsed } from '@/lib/types';
+import type { InvitationParsed, RsvpEntry } from '@/lib/types';
 import GuestsPanel from '@/components/admin/builder/panels/GuestsPanel';
 
 export interface HostMetrics {
@@ -20,9 +20,11 @@ export interface HostMetrics {
 interface Props {
   invitation: InvitationParsed;
   metrics: HostMetrics;
+  /** Confirmaciones abiertas (formulario de la invitación, sin link personalizado). */
+  rsvps?: RsvpEntry[];
 }
 
-export default function HostDashboard({ invitation, metrics }: Props) {
+export default function HostDashboard({ invitation, metrics, rsvps = [] }: Props) {
   const router = useRouter();
 
   const logout = async () => {
@@ -88,6 +90,46 @@ export default function HostDashboard({ invitation, metrics }: Props) {
           <Metric n={metrics.confirmedPasses} label="Cupos confirmados" color="#b8975a" />
           <Metric n={metrics.checkedIn} label="Ingresos reales" color="#7a5a9a" />
           <Metric n={metrics.total} label="Invitados" color="#5a4e34" />
+        </section>
+
+        {/* Planilla de confirmaciones abiertas (formulario de la invitación) */}
+        <section className="rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="flex items-baseline justify-between gap-3 mb-1">
+            <h2 className="font-playfair text-xl text-gray-900">Planilla de confirmaciones</h2>
+            {rsvps.length > 0 && (
+              <p className="font-outfit text-xs text-gray-400 whitespace-nowrap">
+                {rsvps.filter(r => r.attending === 'yes').length} sí · {rsvps.filter(r => r.attending === 'no').length} no · {rsvps.filter(r => r.attending === 'yes').reduce((s, r) => s + (r.passes ?? 1), 0)} pases
+              </p>
+            )}
+          </div>
+          <p className="font-outfit text-xs text-gray-400 mb-4">Respuestas del formulario de tu invitación (sin link personalizado).</p>
+          {rsvps.length === 0 ? (
+            <p className="font-outfit text-sm text-gray-400 py-4 text-center">Aún no hay confirmaciones por formulario.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {[...rsvps].reverse().map(r => (
+                <li key={r.id} className="py-3 flex items-start gap-3">
+                  <span
+                    className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                    style={{ background: r.attending === 'yes' ? '#3d6b4f' : '#b0a9a0' }}
+                    title={r.attending === 'yes' ? 'Asistirá' : 'No asistirá'}
+                  >
+                    {r.attending === 'yes' ? '✓' : '✕'}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-outfit text-sm text-gray-800 font-medium">
+                      {r.name}
+                      {r.attending === 'yes' && <span className="ml-2 text-xs font-normal text-gray-400">{r.passes ?? 1} {(r.passes ?? 1) === 1 ? 'pase' : 'pases'}</span>}
+                    </p>
+                    {r.message && <p className="font-outfit text-xs text-gray-500 mt-0.5 break-words">“{r.message}”</p>}
+                  </div>
+                  <p className="font-outfit text-[11px] text-gray-300 whitespace-nowrap">
+                    {new Date(r.at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {/* Gestión de invitados (reusa el panel del editor) */}
