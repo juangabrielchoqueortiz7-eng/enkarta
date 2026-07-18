@@ -244,7 +244,8 @@ export type ScrollPreset =
 /** Preset global de transiciones de la invitación ("página 3D"). */
 export type PageMotionPreset =
   | 'none' | 'minimal' | 'elegant' | 'editorial' | 'cinematic3d' | 'parallaxBook' | 'playful'
-  | 'luxury3d' | 'gallery3d' | 'unfold';
+  | 'luxury3d' | 'gallery3d' | 'unfold'
+  | 'softlux' | 'curtain' | 'focus';
 
 /**
  * Configuración global de las transiciones de scroll/3D de una invitación.

@@ -66,6 +66,25 @@ export async function generateMetadata({ params }: { params: Promise<{ template:
   };
 }
 
+// Preset de scroll por plantilla en las DEMOS: cada muestra entra con la
+// transición que mejor le sienta a su personalidad (?mo= sigue teniendo
+// prioridad para previsualizar otro). Las invitaciones reales usan lo que el
+// admin elija en el panel Animación.
+const DEMO_MOTION: Record<string, PageMotionPreset> = {
+  azure:     'elegant',
+  primicia:  'editorial',
+  passport:  'unfold',
+  paradise:  'softlux',
+  obsidiana: 'luxury3d',
+  dolcevita: 'elegant',
+  grazia:    'focus',
+  carmesi:   'cinematic3d',
+  napoly:    'softlux',
+  euforia:   'curtain',
+  rosegold:  'softlux',
+  allegria:  'focus',
+};
+
 export default async function MuestraPage({ params, searchParams }: Props) {
   const { template } = await params;
   const { n, m, full, mo, blocks, fp, cs } = await searchParams;
@@ -86,7 +105,7 @@ export default async function MuestraPage({ params, searchParams }: Props) {
   };
 
   // ?mo=cinematic3d|parallaxBook|elegant|minimal|none → previsualizar un preset.
-  const motionVal = mo ? { preset: mo as PageMotionPreset } : undefined;
+  const motionVal = { preset: (mo as PageMotionPreset) || data.motion?.preset || DEMO_MOTION[key] || 'elegant' };
   // ?blocks=1 → previsualizar la versión por bloques (constructor) de la plantilla.
   // ?fp=<forma>&cs=<estilo esquina> → previsualizar partículas/adornos concretos.
   const previewDecor: TemplateDecor | undefined = (fp || cs)

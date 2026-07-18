@@ -43,6 +43,9 @@ export const PRESET_TO_VARIANT: Record<PageMotionPreset, ScrollPreset> = {
   luxury3d: 'depth3d',
   gallery3d: 'swing3d',
   unfold: 'unfold3d',
+  softlux: 'riseSoft',
+  curtain: 'curtain',
+  focus: 'blur',
 };
 
 // Fuerza del parallax de fondo por preset (0 = apagado).
@@ -57,12 +60,18 @@ const PRESET_TO_PARALLAX: Record<PageMotionPreset, number> = {
   luxury3d: 0.16,
   gallery3d: 0.12,
   unfold: 0.1,
+  softlux: 0.09,
+  curtain: 0.06,
+  focus: 0.08,
 };
 
 /** Metadatos para el panel "Animación". */
 export const PAGE_MOTION_PRESETS: { value: PageMotionPreset; label: string; desc: string; emoji: string }[] = [
   { value: 'elegant',      label: 'Elegante',        desc: 'Fundido + leve subida (clásico)', emoji: '🌿' },
+  { value: 'softlux',      label: 'Ascenso de lujo', desc: 'Lento y majestuoso, con escala sutil', emoji: '🕊️' },
   { value: 'luxury3d',     label: 'Lujo 3D',         desc: 'Emerge desde la profundidad con parallax', emoji: '💎' },
+  { value: 'focus',        label: 'Enfoque',         desc: 'Aparece desde el desenfoque, muy chic', emoji: '📷' },
+  { value: 'curtain',      label: 'Cortina',         desc: 'Cada sección se descubre como un telón', emoji: '🎭' },
   { value: 'cinematic3d',  label: 'Cinemático 3D',   desc: 'Secciones inclinadas con profundidad', emoji: '🎬' },
   { value: 'gallery3d',    label: 'Galería 3D',      desc: 'Cada sección gira como una puerta', emoji: '🚪' },
   { value: 'unfold',       label: 'Despliegue 3D',   desc: 'Las secciones se despliegan desde el plano', emoji: '📐' },

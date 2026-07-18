@@ -39,6 +39,9 @@ const MINI_CSS = `
 .ekmp[data-v="depth3d"] .ekmp-bar { animation-name:ekmpDepth; }
 .ekmp[data-v="swing3d"] .ekmp-bar { animation-name:ekmpSwing; transform-origin:left center; }
 .ekmp[data-v="unfold3d"] .ekmp-bar { animation-name:ekmpUnfold; }
+.ekmp[data-v="riseSoft"] .ekmp-bar { animation-name:ekmpRise; }
+.ekmp[data-v="curtain"] .ekmp-bar { animation-name:ekmpCurtain; }
+.ekmp[data-v="blur"] .ekmp-bar { animation-name:ekmpBlur; }
 @keyframes ekmpFade { 0%{opacity:0} 30%,78%{opacity:1} 94%,100%{opacity:0} }
 @keyframes ekmpFadeUp { 0%{opacity:0;transform:translateY(7px)} 30%,78%{opacity:1;transform:none} 94%,100%{opacity:0;transform:translateY(7px)} }
 @keyframes ekmpFadeDown { 0%{opacity:0;transform:translateY(-7px)} 30%,78%{opacity:1;transform:none} 94%,100%{opacity:0;transform:translateY(-7px)} }
@@ -48,6 +51,9 @@ const MINI_CSS = `
 @keyframes ekmpDepth { 0%{opacity:0;transform:scale(.7);filter:blur(2px)} 32%,78%{opacity:1;transform:scale(1);filter:blur(0)} 94%,100%{opacity:0;transform:scale(.7);filter:blur(2px)} }
 @keyframes ekmpSwing { 0%{opacity:0;transform:rotateY(-62deg)} 32%,78%{opacity:1;transform:none} 94%,100%{opacity:0;transform:rotateY(-62deg)} }
 @keyframes ekmpUnfold { 0%{opacity:0;transform:rotateY(84deg) scale(.94)} 34%,78%{opacity:1;transform:none} 94%,100%{opacity:0;transform:rotateY(84deg) scale(.94)} }
+@keyframes ekmpRise { 0%{opacity:0;transform:translateY(9px) scale(.96)} 42%,80%{opacity:1;transform:none} 96%,100%{opacity:0;transform:translateY(9px) scale(.96)} }
+@keyframes ekmpCurtain { 0%{opacity:0;clip-path:inset(0 0 100% 0)} 34%,78%{opacity:1;clip-path:inset(0 0 0% 0)} 94%,100%{opacity:0;clip-path:inset(0 0 100% 0)} }
+@keyframes ekmpBlur { 0%{opacity:0;filter:blur(3px)} 32%,78%{opacity:1;filter:blur(0)} 94%,100%{opacity:0;filter:blur(3px)} }
 `;
 
 interface Props {
@@ -182,8 +188,9 @@ export default function MotionPanel({ data, onChange }: Props) {
 
       <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
         <p className="text-xs text-amber-700 font-outfit">
-          💡 El ajuste fino por sección (animar cada bloque distinto) llegará con el
-          editor de bloques. Por ahora el preset se aplica a toda la invitación.
+          💡 ¿Quieres animar un elemento distinto del resto? En el editor de
+          <strong> Estructura</strong>, selecciona el bloque y usa
+          &ldquo;Animación de este bloque&rdquo;: 18 efectos + retraso, por elemento.
         </p>
       </div>
 
