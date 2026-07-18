@@ -258,10 +258,12 @@ export default function Azure({ data }: { data: InvitationContent }) {
           style={{ background: `linear-gradient(160deg, ${C.bg} 0%, ${C.navy}1f 100%)` }} />
       )}
 
-      {/* ── Marco de adornos de esquina (orquídeas) ── */}
+      {/* ── Marco de adornos de esquina (orquídeas) ──
+          absolute (no fixed): quedan ancladas a las esquinas del documento —
+          arriba al inicio y abajo al final — en vez de acompañar el scroll. */}
       {showCorners && (
         <ThemeCtx.Provider value={cornerPalette}>
-          <div className="pointer-events-none fixed inset-0 z-[1]" aria-hidden style={{ opacity: cornerOpacity }}>
+          <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden style={{ opacity: cornerOpacity }}>
             <OrchidCluster className="absolute -top-8 -left-8 w-[44vw] max-w-[340px] min-w-[190px] opacity-90 ek-sway" style={{ '--sway-dur': '10s' } as React.CSSProperties} />
             <OrchidCluster className="absolute -bottom-8 -right-8 w-[44vw] max-w-[340px] min-w-[190px] opacity-90 ek-sway" style={{ transform: 'scaleX(-1) scaleY(-1)', '--sway-dur': '12s', '--sway-delay': '-5s' } as React.CSSProperties} />
             <OrchidCluster className="absolute -bottom-10 -left-10 w-[30vw] max-w-[230px] min-w-[140px] opacity-65 ek-sway" style={{ transform: 'scaleY(-1)', '--sway-dur': '14s', '--sway-delay': '-8s' } as React.CSSProperties} />

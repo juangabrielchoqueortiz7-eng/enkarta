@@ -1,20 +1,44 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "categories": [
     {
       "id": "boda",
       "label": "Boda",
       "emoji": "💍",
       "icons": [
-        { "id": "church",   "label": "Iglesia",    "path": "/lottie/boda/church.json",   "tags": ["ceremonia", "iglesia", "boda"] },
-        { "id": "rings",    "label": "Anillos",    "path": "/lottie/boda/rings.json",    "tags": ["anillos", "boda"] },
-        { "id": "cheers",   "label": "Brindis",    "path": "/lottie/boda/cheers.json",   "tags": ["brindis", "copas", "recepcion"] },
-        { "id": "dance",    "label": "Baile",      "path": "/lottie/boda/dance.json",    "tags": ["baile", "pista", "fiesta"] },
-        { "id": "dinner",   "label": "Cena",       "path": "/lottie/boda/dinner.json",   "tags": ["cena", "comida"] },
-        { "id": "party",    "label": "Fiesta",     "path": "/lottie/boda/party.json",    "tags": ["fiesta", "celebracion"] },
-        { "id": "dove",     "label": "Paloma",     "path": "/lottie/boda/dove.json",     "tags": ["paloma", "paz"] },
-        { "id": "flowers",  "label": "Flores",     "path": "/lottie/boda/flowers.json",  "tags": ["flores", "ramo"] },
-        { "id": "couple",   "label": "Pareja",     "path": "/lottie/boda/couple.json",   "tags": ["pareja", "novios"] }
+        { "id": "iglesia",       "label": "Iglesia",          "path": "/lottie/boda/iglesia.json",            "tags": ["ceremonia", "iglesia", "boda", "church"] },
+        { "id": "anillos",       "label": "Anillos",          "path": "/lottie/boda/anillos.json",            "tags": ["anillos", "boda", "rings"] },
+        { "id": "salud",         "label": "Brindis",          "path": "/lottie/boda/salud.json",              "tags": ["brindis", "copas", "recepcion", "cheers"] },
+        { "id": "champan",       "label": "Champán",          "path": "/lottie/boda/champan.json",            "tags": ["champan", "botella", "brindis"] },
+        { "id": "tango",         "label": "Baile de novios",  "path": "/lottie/boda/tango.json",              "tags": ["baile", "vals", "tango", "dance"] },
+        { "id": "baile",         "label": "Baile",            "path": "/lottie/boda/baile.json",              "tags": ["baile", "fiesta", "dance"] },
+        { "id": "pista",         "label": "Pista de baile",   "path": "/lottie/boda/pista-de-baile.json",     "tags": ["pista", "baile", "fiesta"] },
+        { "id": "cena",          "label": "Cena",             "path": "/lottie/boda/cena.json",               "tags": ["cena", "comida", "banquete", "dinner"] },
+        { "id": "pastel_boda",   "label": "Torta de boda",    "path": "/lottie/boda/pastel-de-boda.json",     "tags": ["pastel", "torta", "cake"] },
+        { "id": "marriage",      "label": "Novios",           "path": "/lottie/boda/marriage.json",           "tags": ["pareja", "novios", "couple"] },
+        { "id": "novia",         "label": "Novia",            "path": "/lottie/boda/novia.json",              "tags": ["novia", "bride"] },
+        { "id": "wedding_dress", "label": "Vestido",          "path": "/lottie/boda/wedding-dress.json",      "tags": ["vestido", "novia", "dress"] },
+        { "id": "smoking",       "label": "Smoking",          "path": "/lottie/boda/smoking.json",            "tags": ["traje", "novio", "smoking"] },
+        { "id": "blazer",        "label": "Traje",            "path": "/lottie/boda/blazer.json",             "tags": ["traje", "blazer", "dress code"] },
+        { "id": "bow_tie",       "label": "Corbatín",         "path": "/lottie/boda/bow-tie.json",            "tags": ["corbata", "dress code"] },
+        { "id": "altar",         "label": "Altar",            "path": "/lottie/boda/altar.json",              "tags": ["altar", "ceremonia"] },
+        { "id": "arco",          "label": "Arco de boda",     "path": "/lottie/boda/arco-de-boda.json",       "tags": ["arco", "ceremonia", "jardin"] },
+        { "id": "ramo",          "label": "Ramo",             "path": "/lottie/boda/ramo.json",               "tags": ["ramo", "flores", "bouquet", "flowers"] },
+        { "id": "paloma",        "label": "Paloma",           "path": "/lottie/boda/paloma.json",             "tags": ["paloma", "paz", "dove"] },
+        { "id": "pajaros",       "label": "Pájaros del amor", "path": "/lottie/boda/pajaros-del-amor.json",   "tags": ["pajaros", "amor"] },
+        { "id": "carta",         "label": "Carta",            "path": "/lottie/boda/carta.json",              "tags": ["carta", "sobre", "letter"] },
+        { "id": "letter",        "label": "Sobre",            "path": "/lottie/boda/letter.json",             "tags": ["sobre", "invitacion", "letter"] },
+        { "id": "invitacion",    "label": "Invitación",       "path": "/lottie/boda/invitacion.json",         "tags": ["invitacion", "tarjeta"] },
+        { "id": "fecha",         "label": "Fecha de boda",    "path": "/lottie/boda/fecha-de-boda.json",      "tags": ["fecha", "calendario", "save the date"] },
+        { "id": "boda",          "label": "Boda",             "path": "/lottie/boda/boda.json",               "tags": ["boda", "celebracion"] },
+        { "id": "fuegos",        "label": "Fuegos artificiales", "path": "/lottie/boda/fuegos-artificiales.json", "tags": ["fuegos", "fiesta", "party"] },
+        { "id": "photo",         "label": "Fotos",            "path": "/lottie/boda/photo.json",              "tags": ["foto", "camara", "galeria", "camera"] },
+        { "id": "honeymoon",     "label": "Luna de miel",     "path": "/lottie/boda/honeymoon.json",          "tags": ["luna de miel", "viaje"] },
+        { "id": "luna_miel",     "label": "Viaje",            "path": "/lottie/boda/luna-de-miel.json",       "tags": ["viaje", "avion", "luna de miel"] },
+        { "id": "tickets",       "label": "Tickets",          "path": "/lottie/boda/tickets.json",            "tags": ["tickets", "pases"] },
+        { "id": "regalo",        "label": "Regalo",           "path": "/lottie/boda/regalo-abierto.json",     "tags": ["regalo", "obsequio", "gift"] },
+        { "id": "tarjeta_regalo","label": "Tarjeta de regalo","path": "/lottie/boda/tarjeta-de-regalo.json",  "tags": ["tarjeta", "regalo", "banco"] },
+        { "id": "balloons",      "label": "Globos",           "path": "/lottie/boda/balloons.json",           "tags": ["globos", "fiesta"] }
       ]
     },
     {
@@ -22,12 +46,11 @@
       "label": "XV Años",
       "emoji": "👑",
       "icons": [
-        { "id": "crown",    "label": "Corona",     "path": "/lottie/xv/crown.json",      "tags": ["corona", "princesa", "xv"] },
-        { "id": "rose",     "label": "Rosa",       "path": "/lottie/xv/rose.json",       "tags": ["rosa", "flor"] },
-        { "id": "cake",     "label": "Pastel",     "path": "/lottie/xv/cake.json",       "tags": ["pastel", "torta", "cumpleanos"] },
-        { "id": "dress",    "label": "Vestido",    "path": "/lottie/xv/dress.json",      "tags": ["vestido", "xv"] },
-        { "id": "tiara",    "label": "Tiara",      "path": "/lottie/xv/tiara.json",      "tags": ["tiara", "corona"] },
-        { "id": "dance_xv", "label": "Vals",       "path": "/lottie/xv/dance_xv.json",   "tags": ["vals", "baile", "xv"] }
+        { "id": "vals_xv",    "label": "Vals",     "path": "/lottie/boda/tango.json",             "tags": ["vals", "baile", "xv"] },
+        { "id": "pastel_xv",  "label": "Pastel",   "path": "/lottie/cumpleanos/pastel.json",      "tags": ["pastel", "torta", "xv"] },
+        { "id": "globos_xv",  "label": "Globos",   "path": "/lottie/cumpleanos/globos.json",      "tags": ["globos", "fiesta"] },
+        { "id": "fuegos_xv",  "label": "Fuegos",   "path": "/lottie/boda/fuegos-artificiales.json", "tags": ["fuegos", "fiesta"] },
+        { "id": "fotos_xv",   "label": "Fotos",    "path": "/lottie/boda/photo.json",             "tags": ["fotos", "camara"] }
       ]
     },
     {
@@ -35,10 +58,10 @@
       "label": "Cumpleaños",
       "emoji": "🎂",
       "icons": [
-        { "id": "cake_bday","label": "Pastel",     "path": "/lottie/cumpleanos/cake_bday.json", "tags": ["pastel", "velas"] },
-        { "id": "balloon",  "label": "Globo",      "path": "/lottie/cumpleanos/balloon.json",   "tags": ["globo", "celebracion"] },
-        { "id": "confetti", "label": "Confeti",    "path": "/lottie/cumpleanos/confetti.json",  "tags": ["confeti", "fiesta"] },
-        { "id": "gift_bday","label": "Regalo",     "path": "/lottie/cumpleanos/gift_bday.json", "tags": ["regalo", "caja"] }
+        { "id": "pastel",      "label": "Pastel",   "path": "/lottie/cumpleanos/pastel.json",       "tags": ["pastel", "velas", "cake"] },
+        { "id": "globos",      "label": "Globos",   "path": "/lottie/cumpleanos/globos.json",       "tags": ["globo", "celebracion"] },
+        { "id": "papel_picado","label": "Confeti",  "path": "/lottie/cumpleanos/papel-picado.json", "tags": ["confeti", "fiesta", "papel picado"] },
+        { "id": "regalo_cumple","label": "Regalo",  "path": "/lottie/boda/regalo-abierto.json",     "tags": ["regalo", "caja"] }
       ]
     },
     {
@@ -46,10 +69,9 @@
       "label": "Baby Shower",
       "emoji": "🍼",
       "icons": [
-        { "id": "baby",     "label": "Bebé",       "path": "/lottie/baby_shower/baby.json",    "tags": ["bebe", "recien nacido"] },
-        { "id": "bottle",   "label": "Biberón",    "path": "/lottie/baby_shower/bottle.json",  "tags": ["biberon", "bebe"] },
-        { "id": "stroller", "label": "Cochecito",  "path": "/lottie/baby_shower/stroller.json","tags": ["cochecito", "bebe"] },
-        { "id": "star_baby","label": "Estrella",   "path": "/lottie/baby_shower/star_baby.json","tags": ["estrella", "bebe"] }
+        { "id": "bebe",        "label": "Bebé",     "path": "/lottie/baby_shower/bebe.json",        "tags": ["bebe", "recien nacido", "baby"] },
+        { "id": "globos_baby", "label": "Globos",   "path": "/lottie/cumpleanos/globos.json",       "tags": ["globos", "celebracion"] },
+        { "id": "regalo_baby", "label": "Regalo",   "path": "/lottie/boda/regalo-abierto.json",     "tags": ["regalo"] }
       ]
     },
     {
@@ -57,10 +79,20 @@
       "label": "Bautizo",
       "emoji": "✝️",
       "icons": [
-        { "id": "cross",    "label": "Cruz",       "path": "/lottie/bautizo/cross.json",       "tags": ["cruz", "bautizo"] },
-        { "id": "dove_bap", "label": "Paloma",     "path": "/lottie/bautizo/dove_bap.json",    "tags": ["paloma", "paz"] },
-        { "id": "water",    "label": "Agua",       "path": "/lottie/bautizo/water.json",       "tags": ["agua", "bautizo"] },
-        { "id": "candle",   "label": "Vela",       "path": "/lottie/bautizo/candle.json",      "tags": ["vela", "luz"] }
+        { "id": "paloma_bap",  "label": "Paloma",   "path": "/lottie/boda/paloma.json",             "tags": ["paloma", "paz", "espiritu"] },
+        { "id": "iglesia_bap", "label": "Iglesia",  "path": "/lottie/boda/iglesia.json",            "tags": ["iglesia", "ceremonia"] },
+        { "id": "carta_bap",   "label": "Invitación", "path": "/lottie/boda/invitacion.json",       "tags": ["invitacion"] }
+      ]
+    },
+    {
+      "id": "graduacion",
+      "label": "Graduación",
+      "emoji": "🎓",
+      "icons": [
+        { "id": "birrete",     "label": "Birrete",    "path": "/lottie/graduacion/birrete.json",    "tags": ["birrete", "graduacion"] },
+        { "id": "graduado",    "label": "Graduado",   "path": "/lottie/graduacion/graduado.json",   "tags": ["graduado", "estudiante"] },
+        { "id": "graduacion",  "label": "Graduación", "path": "/lottie/graduacion/graduacion.json", "tags": ["graduacion", "ceremonia"] },
+        { "id": "diploma",     "label": "Diploma",    "path": "/lottie/graduacion/diploma.json",    "tags": ["diploma", "titulo"] }
       ]
     },
     {
@@ -68,15 +100,14 @@
       "label": "General",
       "emoji": "✨",
       "icons": [
-        { "id": "calendar", "label": "Calendario", "path": "/lottie/general/calendar.json",   "tags": ["fecha", "calendario"] },
-        { "id": "location", "label": "Ubicación",  "path": "/lottie/general/location.json",   "tags": ["mapa", "lugar", "pin"] },
-        { "id": "music",    "label": "Música",     "path": "/lottie/general/music.json",      "tags": ["musica", "nota"] },
-        { "id": "gift",     "label": "Regalo",     "path": "/lottie/general/gift.json",       "tags": ["regalo", "obsequio"] },
-        { "id": "heart",    "label": "Corazón",    "path": "/lottie/general/heart.json",      "tags": ["corazon", "amor"] },
-        { "id": "star",     "label": "Estrella",   "path": "/lottie/general/star.json",       "tags": ["estrella", "favorito"] },
-        { "id": "clock",    "label": "Reloj",      "path": "/lottie/general/clock.json",      "tags": ["reloj", "hora"] },
-        { "id": "camera",   "label": "Cámara",     "path": "/lottie/general/camera.json",     "tags": ["camara", "foto", "galeria"] },
-        { "id": "whatsapp", "label": "WhatsApp",   "path": "/lottie/general/whatsapp.json",   "tags": ["whatsapp", "mensaje"] }
+        { "id": "calendario",  "label": "Calendario", "path": "/lottie/general/calendario.json",    "tags": ["fecha", "calendario", "calendar"] },
+        { "id": "ubicacion",   "label": "Ubicación",  "path": "/lottie/general/ubicacion.json",     "tags": ["mapa", "lugar", "pin", "location"] },
+        { "id": "musica",      "label": "Música",     "path": "/lottie/general/musica.json",        "tags": ["musica", "nota", "music"] },
+        { "id": "camara",      "label": "Cámara",     "path": "/lottie/general/camara.json",        "tags": ["camara", "foto", "galeria", "camera"] },
+        { "id": "correo",      "label": "Correo",     "path": "/lottie/general/correo.json",        "tags": ["correo", "mensaje", "mail"] },
+        { "id": "llamar",      "label": "Llamar",     "path": "/lottie/general/llamar.json",        "tags": ["telefono", "llamada", "contacto"] },
+        { "id": "mensaje",     "label": "Mensaje",    "path": "/lottie/general/burbuja-de-dialogo.json", "tags": ["mensaje", "whatsapp", "chat"] },
+        { "id": "ruta",        "label": "Ruta",       "path": "/lottie/general/ruta.json",          "tags": ["ruta", "camino", "mapa"] }
       ]
     }
   ]

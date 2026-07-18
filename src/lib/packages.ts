@@ -20,10 +20,12 @@ export interface ResolvedFeatures {
   smartRsvp: boolean;
 }
 
+// 2026-07-18: música y apertura tipo sobre en TODOS los paquetes (la entrada
+// además es el gesto que permite el autoplay de la música en móvil).
 export const PACKAGE_PRESETS: Record<InvitationPackage, ResolvedFeatures> = {
-  exclusive: { music: true,  guestNames: true,  passes: true,  galleryMax: 20, lodging: true,  entry: true,  calendar: true,  smartRsvp: true  },
-  premium:   { music: true,  guestNames: true,  passes: true,  galleryMax: 8,  lodging: false, entry: false, calendar: false, smartRsvp: true  },
-  plus:      { music: false, guestNames: false, passes: false, galleryMax: 0,  lodging: false, entry: false, calendar: false, smartRsvp: false },
+  exclusive: { music: true, guestNames: true,  passes: true,  galleryMax: 20, lodging: true,  entry: true, calendar: true,  smartRsvp: true  },
+  premium:   { music: true, guestNames: true,  passes: true,  galleryMax: 8,  lodging: false, entry: true, calendar: false, smartRsvp: true  },
+  plus:      { music: true, guestNames: false, passes: false, galleryMax: 0,  lodging: false, entry: true, calendar: false, smartRsvp: false },
 };
 
 export const PACKAGE_LABELS: Record<InvitationPackage, string> = {

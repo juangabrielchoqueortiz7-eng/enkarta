@@ -706,6 +706,26 @@ export function CopyBtn({ value, color = 'currentColor' }: { value: string; colo
 // ── Shared line-art icon set — soporta Lottie JSON y SVG de respaldo ─────────
 //    Si `name` es una ruta Lottie ("/lottie/...") renderiza la animación.
 //    Si no, usa el SVG clásico como fallback.
+/** Nombre clásico de icono → Lottie animado por defecto (public/lottie/…). */
+const DEFAULT_LOTTIE: Record<string, string> = {
+  church:   '/lottie/boda/iglesia.json',
+  rings:    '/lottie/boda/anillos.json',
+  cheers:   '/lottie/boda/salud.json',
+  dinner:   '/lottie/boda/cena.json',
+  dance:    '/lottie/boda/tango.json',
+  gift:     '/lottie/boda/regalo-abierto.json',
+  camera:   '/lottie/boda/photo.json',
+  dress:    '/lottie/boda/wedding-dress.json',
+  music:    '/lottie/general/musica.json',
+  calendar: '/lottie/general/calendario.json',
+  location: '/lottie/general/ubicacion.json',
+  party:    '/lottie/boda/fuegos-artificiales.json',
+  cake:     '/lottie/boda/pastel-de-boda.json',
+  couple:   '/lottie/boda/marriage.json',
+  dove:     '/lottie/boda/paloma.json',
+  flowers:  '/lottie/boda/ramo.json',
+};
+
 export function EventIcon({ name, className = '', stroke = 'currentColor', lottieColors, tint, speed, custom, sec }: {
   name: string;
   className?: string;
@@ -736,6 +756,23 @@ export function EventIcon({ name, className = '', stroke = 'currentColor', lotti
   if (name && (/\.(png|jpe?g|svg|webp|gif)(\?|$)/i.test(name) || (/^https?:\/\//.test(name) && !name.endsWith('.json')))) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={name} alt="" className={className} style={{ objectFit: 'contain' }} draggable={false} />;
+  }
+
+  // Nombres clásicos (church, cheers, dinner…) → icono Lottie ANIMADO por
+  // defecto, tintado con el color de la plantilla para conservar su paleta.
+  // Antes caían al SVG estático de abajo y los Lottie nunca se veían.
+  if (name && DEFAULT_LOTTIE[name]) {
+    const isColor = /^#|^rgb|^hsl/.test(stroke);
+    return (
+      <EventIcon
+        name={DEFAULT_LOTTIE[name]}
+        className={className}
+        stroke={stroke}
+        lottieColors={lottieColors}
+        tint={tint ?? (isColor ? stroke : undefined)}
+        speed={speed}
+      />
+    );
   }
 
   // Si es ruta Lottie → renderizar animación

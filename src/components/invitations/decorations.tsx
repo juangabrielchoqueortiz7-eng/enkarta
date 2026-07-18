@@ -218,10 +218,11 @@ export function CornerCluster({ variant, color, className, style }: ClusterProps
   return <OrchidCluster color={color} className={className} style={style} />;
 }
 
-/** Marco de adornos en las cuatro esquinas (fijo); elige el diseño con `variant`. */
+/** Marco de adornos en las cuatro esquinas del DOCUMENTO (absolute, no fixed:
+ *  no acompañan el scroll); elige el diseño con `variant`. */
 export function CornerDecor({ color, opacity = 1, variant = 'orchid' }: { color: string; opacity?: number; variant?: string }) {
   return (
-    <div className="pointer-events-none fixed inset-0 z-[1]" aria-hidden style={{ opacity }}>
+    <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden style={{ opacity }}>
       {/* ek-sway (globals.css): vaivén de brisa vía rotate/translate individuales,
           que se componen con el transform del espejado sin pisarlo. */}
       <CornerCluster variant={variant} color={color} className="absolute -top-8 -left-8 w-[44vw] max-w-[340px] min-w-[160px] opacity-90 ek-sway" style={{ '--sway-dur': '10s' } as React.CSSProperties} />
