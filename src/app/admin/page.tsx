@@ -5,13 +5,13 @@ import { motion } from 'framer-motion';
 import { Invitation } from '@/lib/types';
 import ConfirmationsDashboard from '@/components/admin/ConfirmationsDashboard';
 
-const BUILDER_TEMPLATES = ['azure','primicia','passport','paradise','obsidiana','dolcevita','grazia','carmesi_v2','napoly','euforia','rosegold','allegria'];
+const BUILDER_TEMPLATES = ['azure','primicia','passport','paradise','obsidiana','dolcevita','grazia','carmesi_v2','napoly','euforia','rosegold','allegria','provenza'];
 
 // Color de acento por plantilla (punto identificador en la tabla)
 const TEMPLATE_COLORS: Record<string, string> = {
   azure: '#3a7ab5', primicia: '#c89828', passport: '#6a8a45', paradise: '#5f6b47',
   obsidiana: '#100f0c', dolcevita: '#4f7a52', grazia: '#bca478', carmesi_v2: '#871a2f',
-  napoly: '#b98a86', euforia: '#8a7257', rosegold: '#b97f86', allegria: '#8c9a86',
+  napoly: '#b98a86', euforia: '#8a7257', rosegold: '#b97f86', allegria: '#8c9a86', provenza: '#68693f',
 };
 
 type StatusFilter = 'all' | 'ready' | 'draft';

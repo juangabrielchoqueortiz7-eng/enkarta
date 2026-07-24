@@ -24,6 +24,7 @@ import Napoly from '@/components/invitations/Napoly';
 import Euforia from '@/components/invitations/Euforia';
 import RoseGold from '@/components/invitations/RoseGold';
 import Allegria from '@/components/invitations/Allegria';
+import Provenza from '@/components/invitations/Provenza';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface PremiumEntry {
@@ -46,6 +47,7 @@ export const PREMIUM_REGISTRY: Record<string, PremiumEntry> = {
   euforia:    { Comp: Euforia,   map: mapToDolceVita },
   rosegold:   { Comp: RoseGold,  map: mapToDolceVita },
   allegria:   { Comp: Allegria,  map: mapToDolceVita },
+  provenza:   { Comp: Provenza,  map: mapToDolceVita },
 };
 
 /** Keys de las plantillas premium (con builder visual). */

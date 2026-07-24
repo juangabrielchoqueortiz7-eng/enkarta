@@ -459,6 +459,7 @@ const templates = [
   { name: 'Euforia',    tag: 'Floral',    desc: 'Mocha · Cálido & Acuarela',      bg: '#f7f1e5', card: '#efe3cd', text: '#5d5040', accent: '#8a7257', coverStart: '#6b563f', coverEnd: '#a08458',    n1: 'Andrea',  n2: 'Marget',    dateStr: '03 · Sep · 2025', floral: true,  img: '/catalog/euforia.jpg', demoPath: '/muestra/euforia?m=Daniel%20Martinez&n=2%20pases' },
   { name: 'Rose Gold',  tag: 'Romántico', desc: 'Blush · Suave & Floral',         bg: '#fdf6f1', card: '#f8e3da', text: '#7a6157', accent: '#b97f86', coverStart: '#b97f86', coverEnd: '#d8a8a0',    n1: 'Lucía',   n2: 'Pablo',     dateStr: '28 · Sep · 2025', floral: true,  img: '/catalog/rosegold.jpg', demoPath: '/muestra/rosegold?m=Daniel%20Martinez&n=2%20pases' },
   { name: 'Allegria',   tag: 'Minimal',   desc: 'Salvia · Limpio & Fresco',       bg: '#fbfbf8', card: '#e9ede5', text: '#3a3a34', accent: '#8c9a86', coverStart: '#6f7d69', coverEnd: '#8c9a86',    n1: 'María',   n2: 'Vincent',   dateStr: '15 · Oct · 2025', floral: false, img: '/catalog/allegria.jpg', demoPath: '/muestra/allegria?m=Daniel%20Martinez&n=2%20pases' },
+  { name: 'Provenza',   tag: 'Editorial', desc: 'Olivo · Jardín & Serenidad',       bg: '#fbf6ee', card: '#f7ebdf', text: '#544e39', accent: '#68693f', coverStart: '#68693f', coverEnd: '#7a7c57',    n1: 'Annie',   n2: 'Miguel',    dateStr: '19 · Sep · 2026', floral: true,  img: '', demoPath: '/muestra/provenza?m=Daniel%20Martinez&n=2%20pases' },
 ];
 
 const features = [

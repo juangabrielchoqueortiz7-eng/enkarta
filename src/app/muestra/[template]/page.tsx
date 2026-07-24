@@ -9,7 +9,7 @@ import { themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import type { PageMotionPreset, TemplateDecor, ParticleShape, CornerStyle } from '@/lib/types';
 import { entryPropsFor } from '@/components/invitations/entry/config';
 import { DEFAULT_MUSIC_URL } from '@/lib/music';
-import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample } from '@/components/invitations/sampleData';
+import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample, provenzaSample } from '@/components/invitations/sampleData';
 
 interface Props {
   params: Promise<{ template: string }>;
@@ -31,6 +31,7 @@ const SAMPLES: Record<string, any> = {
   euforia: euforiaSample,
   rosegold: roseGoldSample,
   allegria: allegriaSample,
+  provenza: provenzaSample,
 };
 
 // Nombre público + foto de catálogo por plantilla: alimentan el título y la
@@ -83,6 +84,7 @@ const DEMO_MOTION: Record<string, PageMotionPreset> = {
   euforia:   'curtain',
   rosegold:  'softlux',
   allegria:  'focus',
+  provenza:  'softlux',
 };
 
 export default async function MuestraPage({ params, searchParams }: Props) {

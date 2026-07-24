@@ -8,5 +8,5 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://enkarta.ver
 /** Keys públicas de /muestra/* (carmesi_v2 se publica como "carmesi"). */
 export const MUESTRA_KEYS = [
   'azure', 'primicia', 'passport', 'paradise', 'obsidiana', 'dolcevita',
-  'grazia', 'carmesi', 'napoly', 'euforia', 'rosegold', 'allegria',
+  'grazia', 'carmesi', 'napoly', 'euforia', 'rosegold', 'allegria', 'provenza',
 ] as const;

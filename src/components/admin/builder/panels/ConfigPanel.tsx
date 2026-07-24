@@ -26,6 +26,7 @@ const PREMIUM_TEMPLATES: { value: InvitationTemplate; label: string; available: 
   { value: 'euforia',   label: 'Euforia',    available: true  },
   { value: 'rosegold',  label: 'Rose Gold',  available: true  },
   { value: 'allegria',  label: 'Allegria',   available: true  },
+  { value: 'provenza',  label: 'Provenza',   available: true  },
 ];
 
 function LinkRow({ label, url }: { label: string; url: string }) {

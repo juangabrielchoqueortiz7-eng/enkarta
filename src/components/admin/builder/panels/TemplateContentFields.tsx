@@ -191,7 +191,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
     );
   }
 
-  if (t === 'dolcevita' || t === 'carmesi_v2' || t === 'napoly' || t === 'euforia' || t === 'rosegold' || t === 'allegria') {
+  if (t === 'dolcevita' || t === 'carmesi_v2' || t === 'napoly' || t === 'euforia' || t === 'rosegold' || t === 'allegria' || t === 'provenza') {
     const sponsors = data.sponsors ?? [];
     const setSponsor = (i: number, patch: { role?: string; names?: string }) =>
       onChange({ sponsors: sponsors.map((s, j) => (j === i ? { ...s, ...patch } : s)) });

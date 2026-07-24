@@ -7,7 +7,7 @@ interface Props {
   onChange: (patch: Partial<InvitationParsed>) => void;
 }
 
-const PREMIUM = ['azure', 'primicia', 'passport', 'paradise', 'obsidiana', 'dolcevita', 'grazia', 'carmesi_v2', 'napoly', 'euforia', 'rosegold', 'allegria'];
+const PREMIUM = ['azure', 'primicia', 'passport', 'paradise', 'obsidiana', 'dolcevita', 'grazia', 'carmesi_v2', 'napoly', 'euforia', 'rosegold', 'allegria', 'provenza'];
 
 // Colores por defecto de cada plantilla, para que los selectores arranquen en el valor real.
 const THEME_DEFAULTS: Record<string, Required<Pick<TemplateTheme, 'primary' | 'primaryDeep' | 'text' | 'muted' | 'line' | 'bg'>>> = {
@@ -23,6 +23,7 @@ const THEME_DEFAULTS: Record<string, Required<Pick<TemplateTheme, 'primary' | 'p
   euforia:   { primary: '#8a7257', primaryDeep: '#6b563f', text: '#5d5040', muted: '#b89a6a', line: '#b89a6a', bg: '#f7f1e5' },
   rosegold:  { primary: '#b97f86', primaryDeep: '#f8ddcf', text: '#7a6157', muted: '#c2a06a', line: '#b97f86', bg: '#fdf6f1' },
   allegria:  { primary: '#8c9a86', primaryDeep: '#6f7d69', text: '#3a3a34', muted: '#7a7a72', line: '#d3d3cb', bg: '#fbfbf8' },
+  provenza:  { primary: '#68693f', primaryDeep: '#7a7c57', text: '#544e39', muted: '#8a8267', line: '#c3b391', bg: '#fbf6ee' },
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

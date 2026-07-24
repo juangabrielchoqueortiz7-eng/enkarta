@@ -61,7 +61,7 @@ interface Props {
   onChange: (patch: Partial<InvitationParsed>) => void;
 }
 
-const PREMIUM = ['azure', 'primicia', 'passport', 'paradise', 'obsidiana', 'dolcevita', 'grazia', 'carmesi_v2', 'napoly', 'euforia', 'rosegold', 'allegria'];
+const PREMIUM = ['azure', 'primicia', 'passport', 'paradise', 'obsidiana', 'dolcevita', 'grazia', 'carmesi_v2', 'napoly', 'euforia', 'rosegold', 'allegria', 'provenza'];
 
 // Presets con efecto 3D → mostramos el control de profundidad.
 const PRESETS_3D = ['cinematic3d', 'parallaxBook'];
