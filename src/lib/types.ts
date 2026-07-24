@@ -7,7 +7,7 @@ export type InvitationTemplate =
   | 'azure' | 'primicia' | 'passport'
   // Próximamente
   | 'paradise' | 'obsidiana' | 'dolcevita' | 'grazia' | 'carmesi_v2' | 'napoly'
-  | 'perla_v2' | 'euforia' | 'rosegold' | 'allegria'
+  | 'perla_v2' | 'euforia' | 'rosegold' | 'allegria' | 'provenza'
   // Clásicas (legacy)
   | 'perla' | 'marmol' | 'terra' | 'sobre' | 'carmesi' | 'gerbera';
 
@@ -594,6 +594,7 @@ export const TEMPLATE_OPTIONS: { value: InvitationTemplate; label: string; descr
   { value: 'euforia', label: 'Euforia', description: 'Mocha cálido y pastel', premium: true },
   { value: 'rosegold', label: 'Rose Gold', description: 'Durazno y rosa dorado', premium: true },
   { value: 'allegria', label: 'Allegría', description: 'Salvia minimalista', premium: true },
+  { value: 'provenza', label: 'Provenza', description: 'Olivo y crema, editorial', premium: true },
   // ── Clásicas (legacy) ──
   { value: 'perla', label: 'Perla', description: 'Elegante con hojas verdes y dorado' },
   { value: 'marmol', label: 'Mármol', description: 'Sofisticado con texturas de mármol' },

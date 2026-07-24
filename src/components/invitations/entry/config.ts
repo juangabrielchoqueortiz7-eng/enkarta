@@ -79,6 +79,16 @@ export const ENTRY_THEMES: Record<string, EntryTheme> = {
     accent: '#8c9a86', accentText: '#f2f4ee', script: '#6f7d69',
     ornament: 'sage',
   },
+  provenza: {
+    ...ENVELOPE_BASE,
+    scene: 'curtain',
+    veil: '#f3ece0', veil2: '#e7dbc8',
+    // Los cortinajes son de olivo profundo: el texto va en crema/dorado para que
+    // el monograma y los nombres se lean sobre la tela.
+    panel: '#fbf6ee', ink: '#f7ebdf', soft: 'rgba(247,235,223,0.75)',
+    accent: '#4b4c2d', accentText: '#f7ebdf', script: '#e0d3ae',
+    ornament: 'leaf', tagline: 'Nuestra boda',
+  },
   rosegold: {
     ...ENVELOPE_BASE,
     scene: 'petals',
@@ -197,7 +207,7 @@ export function entryPropsFor(template: string, data: unknown): EntryProps {
     case 'grazia':
       dateLine = d.dateText || '';
       break;
-    default: // dolcevita + clones (napoly, allegria, rosegold, euforia, carmesi)
+    default: // dolcevita + clones (napoly, allegria, rosegold, euforia, carmesi, provenza)
       dateLine = [d.dateMonth, d.dateDay].filter(Boolean).join(' ') + (d.dateYear ? ` · ${d.dateYear}` : '');
   }
 

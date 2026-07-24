@@ -49,6 +49,16 @@ const SECTIONS: Record<string, SectionDef[]> = {
     { key: 'dress', label: 'Dress Code', def: 'dress' },
     { key: 'gift', label: 'Regalo', def: 'gift' },
   ],
+  provenza: [
+    { key: 'couple', label: 'Encabezado (el honor)', def: 'couple' },
+    { key: 'ceremony', label: 'Ceremonia Religiosa', def: 'church' },
+    { key: 'reception', label: 'Recepción', def: 'cheers' },
+    { key: 'dress', label: 'Dress Code', def: 'dress' },
+    { key: 'punctual', label: 'Puntualidad', def: 'calendar' },
+    { key: 'gift', label: 'Regalo', def: 'gift' },
+    { key: 'gallery', label: 'Captura y comparte', def: 'camera' },
+    { key: 'thanks', label: 'Cierre', def: 'rings' },
+  ],
   paradise: [
     { key: 'ceremony', label: 'Ceremonia Religiosa', def: 'church' },
     { key: 'reception', label: 'Ceremonia Civil', def: 'rings' },

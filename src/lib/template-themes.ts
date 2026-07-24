@@ -17,6 +17,7 @@ export const TEMPLATE_THEME_DEFAULTS: Record<string, TemplateTheme> = {
   euforia:   { primary: '#8a7257', primaryDeep: '#6b563f', text: '#5d5040', muted: '#b89a6a', line: '#b89a6a', bg: '#f7f1e5', onPrimary: '#ffffff' },
   rosegold:  { primary: '#b97f86', primaryDeep: '#7a5550', text: '#7a6157', muted: '#c2a06a', line: 'rgba(185,127,134,0.5)', bg: '#fdf6f1', onPrimary: '#ffffff' },
   allegria:  { primary: '#8c9a86', primaryDeep: '#6f7d69', text: '#3a3a34', muted: '#7a7a72', line: '#d3d3cb', bg: '#fbfbf8', onPrimary: '#ffffff' },
+  provenza:  { primary: '#68693f', primaryDeep: '#7a7c57', text: '#544e39', muted: '#8a8267', line: '#c3b391', bg: '#fbf6ee', onPrimary: '#fbf6ee' },
 };
 
 /** Paleta por defecto de una plantilla (o la de Azure como respaldo). */
@@ -30,6 +31,7 @@ export const TEMPLATE_MOTION_DEFAULTS: Record<string, PageMotionPreset> = {
   paradise: 'elegant', obsidiana: 'cinematic3d', dolcevita: 'elegant',
   grazia: 'cinematic3d', carmesi_v2: 'cinematic3d', napoly: 'elegant',
   euforia: 'elegant', rosegold: 'playful', allegria: 'minimal',
+  provenza: 'softlux',
 };
 
 export function motionForTemplate(template: string): PageMotionPreset {
@@ -49,6 +51,7 @@ export const TEMPLATE_DECOR_DEFAULTS: Record<string, TemplateDecor> = {
   euforia:    { background: 'gradient', corners: { on: true, style: 'berries', opacity: 0.75 }, floating: { on: true, shape: 'confetti', count: 5 }, dividers: 'art', loader: 'heart', texture: 'paper' },
   rosegold:   { background: 'solid', corners: { on: true, style: 'rose', opacity: 0.75 }, floating: { on: true, shape: 'sparkle', count: 4 }, dividers: 'art', loader: 'ring', texture: 'paper' },
   allegria:   { background: 'solid', corners: { on: false }, floating: { on: false }, dividers: 'line', loader: 'none', texture: 'linen' },
+  provenza:   { background: 'solid', corners: { on: true, style: 'vine', opacity: 0.7 }, floating: { on: true, shape: 'sparkle', count: 5 }, dividers: 'line', loader: 'heart', texture: 'paper' },
 };
 
 export const TEMPLATE_TOKEN_DEFAULTS: Record<string, TemplateTokens> = {
@@ -64,6 +67,7 @@ export const TEMPLATE_TOKEN_DEFAULTS: Record<string, TemplateTokens> = {
   euforia:    { contentWidth: 720, sectionInset: 24, sectionRadius: 24, spacing: 'normal', surface: 'soft' },
   rosegold:   { contentWidth: 700, sectionInset: 24, sectionRadius: 28, spacing: 'airy', surface: 'soft' },
   allegria:   { contentWidth: 760, sectionInset: 22, sectionRadius: 14, spacing: 'compact', surface: 'flat' },
+  provenza:   { contentWidth: 720, sectionInset: 24, sectionRadius: 26, spacing: 'airy', surface: 'soft' },
 };
 
 export function decorForTemplate(template: string): TemplateDecor | undefined {
