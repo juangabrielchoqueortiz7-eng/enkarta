@@ -379,3 +379,68 @@ export interface PassportContent extends IconCustomization {
   theme?: TemplateTheme;
   decor?: TemplateDecor;
 }
+
+export interface ProvenceContent extends IconCustomization {
+  groom: string;
+  bride: string;
+  initials: [string, string];
+  guestName?: string;
+  guestPasses?: string;
+  isoDate: string;
+  dateWeekday: string;  // "SÁBADO"
+  dateDay: string;      // "19"
+  dateMonth: string;    // "SEPTIEMBRE"
+  dateYear: string;     // "2026"
+  locationBadge: string; // "CIENEGUILLA"
+
+  coverImage?: string;       // Foto del novio/novia paseando con perros
+  middleImage?: string;      // Foto central grande de la pareja en la playa
+  footerImage?: string;
+
+  headerSub: string;        // "TENEMOS EL HONOR DE INVITARTE A NUESTRA BODA"
+  headerMessage: string;    // "Nuestro gran día se aproxima y nos encantaría..."
+  dateIntro: string;        // "QUEREMOS QUE NOS ACOMPAÑES EN NUESTRO DÍA:"
+
+  blessingTitle: string;    // "CON LA BENDICIÓN DE DIOS Y DE NUESTRAS MADRES"
+  parentsBride: string[];   // ["Ana Montaño Pofil"]
+  parentsGroom: string[];   // ["Violeta Urrelo Garcia de Montoya"]
+  padrinos?: string[];      // ["Tania Montoya Zamora", "Loreto Hermitaño Rosales"]
+
+  ceremony: {
+    title?: string;
+    place: string;         // '"La Provenza"'
+    city: string;          // "Cieneguilla"
+    time: string;          // "12:00 h"
+    maps: string;          // link a maps
+  };
+
+  dressCode: {
+    title?: string;        // "DRESS CODE"
+    style: string;         // "Formal"
+    women: string;         // "Mujeres: Agradecemos evitar los tonos..."
+    men: string;           // "Caballeros: Agradecemos evitar los tonos..."
+    note: string;          // "Nota: La celebración se realizará..."
+  };
+
+  itineraryTitle?: string;
+  itinerary: ItineraryStep[];
+
+  quoteMessage?: string;   // "La vida está llena de momentos..."
+
+  giftMessage: string;
+  giftCash?: string;       // "Efectivo en sobres (Habrá un buzón)"
+  giftBank?: { bank: string; account: string; holder: string; ci?: string };
+  giftQrUrl?: string;
+
+  galleryMsg?: string;
+  galleryUrl?: string;
+  galleryImages?: string[];
+
+  rsvpMessage: string;
+  whatsapp: string;
+
+  musicUrl?: string;
+  theme?: TemplateTheme;
+  decor?: TemplateDecor;
+}
+

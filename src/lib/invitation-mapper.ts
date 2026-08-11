@@ -13,6 +13,7 @@ import {
   ObsidianaContent,
   DolceVitaContent,
   GraziaContent,
+  ProvenceContent,
   ItineraryStep,
 } from '@/components/invitations/types';
 
@@ -568,6 +569,83 @@ export function mapToGrazia(inv: InvitationParsed): GraziaContent {
 
     galleryMsg: config?.galleryMessage ?? 'Comparte los momentos especiales de nuestro evento.',
     galleryUrl: inv.gallery_url ?? '#',
+    rsvpMessage: config?.rsvpMessage ?? 'Es muy importante para nosotros confirmar tu asistencia.',
+    whatsapp: confirmHref(inv),
+
+    musicUrl: config?.musicUrl,
+    icons: config?.sectionIcons,
+    iconColorsMap: config?.sectionIconColors,
+    iconSpeedsMap: config?.sectionIconSpeeds,
+    iconColor: config?.iconColor,
+    iconScale: config?.iconScale,
+    theme: config?.theme,
+    decor: config?.decor,
+  };
+}
+
+export function mapToProvence(inv: InvitationParsed): ProvenceContent {
+  const [groom, bride] = splitNames(inv.names);
+  const initials: [string, string] = [groom[0] || 'A', bride[0] || 'M'];
+  const { config } = inv;
+  const parts = parseDateParts(inv.event_date);
+  const bank = parseBank(inv.bank_account);
+
+  return {
+    groom,
+    bride,
+    initials,
+    guestName: inv.guest_name ?? undefined,
+    guestPasses: inv.guest_passes ? `${inv.guest_passes} pases` : undefined,
+
+    isoDate: buildIso(inv.event_date, inv.ceremony_time),
+    dateWeekday: parts.weekday.toUpperCase(),
+    dateDay: parts.day,
+    dateMonth: parts.month.toUpperCase(),
+    dateYear: parts.year,
+    locationBadge: config?.city?.toUpperCase() ?? (inv.ceremony_address ? inv.ceremony_address.toUpperCase() : 'CIENEGUILLA'),
+
+    coverImage: inv.cover_image_url ?? (config?.sectionImages?.hero as string | undefined) ?? 'https://invitali.com/wp-content/uploads/2026/07/Novios-annie-y-Micky.webp',
+    middleImage: config?.secondaryImage ?? (config?.sectionImages?.couple as string | undefined) ?? 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1200&q=80',
+
+    headerSub: config?.welcomeTitle ?? 'TENEMOS EL HONOR DE INVITARTE A NUESTRA BODA',
+    headerMessage: inv.message ?? 'Nuestro gran día se aproxima y nos encantaría que formaras parte de él.',
+    dateIntro: 'QUEREMOS QUE NOS ACOMPAÑES EN NUESTRO DÍA:',
+
+    blessingTitle: config?.blessing ?? 'CON LA BENDICIÓN DE DIOS Y DE NUESTRAS MADRES',
+    parentsBride: inv.parents_bride.length ? inv.parents_bride : ['Ana Montaño Pofil'],
+    parentsGroom: inv.parents_groom.length ? inv.parents_groom : ['Violeta Urrelo Garcia de Montoya'],
+    padrinos: (config?.padrinos as string[] | undefined) ?? ['Tania Montoya Zamora', 'Loreto Hermitaño Rosales'],
+
+    ceremony: {
+      title: 'CEREMONIA Y RECEPCIÓN',
+      place: inv.ceremony_place ?? '"La Provenza"',
+      city: inv.ceremony_address ?? 'Cieneguilla',
+      time: fmtTime(inv.ceremony_time),
+      maps: toMapsUrl(inv.ceremony_address),
+    },
+
+    dressCode: {
+      title: 'DRESS CODE',
+      style: inv.dress_code ?? 'Formal',
+      women: 'Mujeres: Agradecemos evitar los tonos blanco, ivory y perla; reservados para la novia.',
+      men: 'Caballeros: Agradecemos evitar los tonos beige y arena; reservados para el novio.',
+      note: 'Nota: La celebración se realizará en un jardín; para mayor comodidad, sugerimos evitar el uso de tacones de punta.',
+    },
+
+    itineraryTitle: 'ITINERARIO',
+    itinerary: mapItinerary(inv.itinerary),
+
+    quoteMessage: (config?.quoteMessage as string | undefined) ?? 'La vida está llena de momentos que no se pueden recuperar! Así que llega puntual y comparte este momento especial con nosotros.',
+
+    giftMessage: inv.gift_message ?? 'Tu presencia en nuestra boda es nuestro mejor regalo. Si deseas hacernos un presente adicional, puedes hacerlo mediante nuestra mesa de regalos.',
+    giftCash: (config?.giftCash as string | undefined) ?? 'Lluvia de sobres (Habrá un buzón disponible en la recepción)',
+    giftBank: inv.bank_account ? { bank: bank.bank, account: bank.account, holder: bank.holder || `${groom} & ${bride}` } : undefined,
+    giftQrUrl: config?.giftQrUrl,
+
+    galleryMsg: config?.galleryMessage ?? 'Comparte los momentos especiales de nuestro evento.',
+    galleryUrl: inv.gallery_url ?? '#',
+    galleryImages: config?.galleryImages ?? [],
+
     rsvpMessage: config?.rsvpMessage ?? 'Es muy importante para nosotros confirmar tu asistencia.',
     whatsapp: confirmHref(inv),
 

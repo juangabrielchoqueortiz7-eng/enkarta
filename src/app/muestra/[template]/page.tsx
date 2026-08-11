@@ -8,8 +8,8 @@ import { contentToLayout } from '@/lib/layout-presets';
 import { themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import type { PageMotionPreset, TemplateDecor, ParticleShape, CornerStyle } from '@/lib/types';
 import { entryPropsFor } from '@/components/invitations/entry/config';
-import { DEFAULT_MUSIC_URL } from '@/lib/music';
-import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample } from '@/components/invitations/sampleData';
+import { DEFAULT_MUSIC_URL, TRACK } from '@/lib/music';
+import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample, provenceSample } from '@/components/invitations/sampleData';
 
 interface Props {
   params: Promise<{ template: string }>;
@@ -31,6 +31,7 @@ const SAMPLES: Record<string, any> = {
   euforia: euforiaSample,
   rosegold: roseGoldSample,
   allegria: allegriaSample,
+  provence: provenceSample,
 };
 
 // Nombre público + foto de catálogo por plantilla: alimentan el título y la
@@ -48,6 +49,7 @@ const TEMPLATE_META: Record<string, { name: string; img: string; desc: string }>
   euforia:   { name: 'Euforia',    img: '/catalog/euforia.jpg',   desc: 'Mocha cálido en acuarela' },
   rosegold:  { name: 'Rose Gold',  img: '/catalog/rosegold.jpg',  desc: 'Blush suave y floral' },
   allegria:  { name: 'Allegria',   img: '/catalog/allegria.jpg',  desc: 'Salvia minimalista y fresca' },
+  provence:  { name: 'Provence',   img: 'https://invitali.com/wp-content/uploads/2026/07/Novios-annie-y-Micky.webp', desc: 'Elegante marfil y dorado inspirado en Cieneguilla' },
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ template: string }> }): Promise<Metadata> {
@@ -83,6 +85,26 @@ const DEMO_MOTION: Record<string, PageMotionPreset> = {
   euforia:   'curtain',
   rosegold:  'softlux',
   allegria:  'focus',
+  provence:  'softlux',
+};
+
+// Canción de la colección (public/musica) que suena en cada demo. Se reparten
+// las 6 pistas para que dos plantillas seguidas del catálogo nunca suenen igual;
+// como hay más plantillas que canciones, algunas se repiten.
+const DEMO_MUSIC: Record<string, string> = {
+  azure:     TRACK.pista1,
+  primicia:  TRACK.pista2,
+  passport:  TRACK.pista3,
+  paradise:  TRACK.pista4,
+  obsidiana: TRACK.pista5,
+  dolcevita: TRACK.pista6,
+  grazia:    TRACK.pista1,
+  carmesi:   TRACK.pista2,
+  napoly:    TRACK.pista3,
+  euforia:   TRACK.pista4,
+  rosegold:  TRACK.pista5,
+  allegria:  TRACK.pista6,
+  provence:  TRACK.pista1,
 };
 
 export default async function MuestraPage({ params, searchParams }: Props) {
@@ -100,8 +122,9 @@ export default async function MuestraPage({ params, searchParams }: Props) {
     ...sample,
     guestName: m ?? sample.guestName,
     guestPasses: n ?? sample.guestPasses,
-    // Las muestras siempre suenan: pista por defecto si el sample no trae una.
-    musicUrl: sample.musicUrl ?? DEFAULT_MUSIC_URL,
+    // Las muestras siempre suenan: la canción de la plantilla (o la de por
+    // defecto si aún no tiene una asignada).
+    musicUrl: sample.musicUrl ?? DEMO_MUSIC[key] ?? DEFAULT_MUSIC_URL,
   };
 
   // ?mo=cinematic3d|parallaxBook|elegant|minimal|none → previsualizar un preset.

@@ -10,7 +10,7 @@ import type React from 'react';
 import type { InvitationParsed } from '@/lib/types';
 import {
   mapToAzure, mapToPrimicia, mapToPassport, mapToParadise,
-  mapToObsidiana, mapToDolceVita, mapToGrazia,
+  mapToObsidiana, mapToDolceVita, mapToGrazia, mapToProvence,
 } from '@/lib/invitation-mapper';
 import Azure from '@/components/invitations/Azure';
 import Primicia from '@/components/invitations/Primicia';
@@ -24,6 +24,7 @@ import Napoly from '@/components/invitations/Napoly';
 import Euforia from '@/components/invitations/Euforia';
 import RoseGold from '@/components/invitations/RoseGold';
 import Allegria from '@/components/invitations/Allegria';
+import Provence from '@/components/invitations/Provence';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface PremiumEntry {
@@ -40,6 +41,7 @@ export const PREMIUM_REGISTRY: Record<string, PremiumEntry> = {
   obsidiana:  { Comp: Obsidiana, map: mapToObsidiana },
   dolcevita:  { Comp: DolceVita, map: mapToDolceVita },
   grazia:     { Comp: Grazia,    map: mapToGrazia },
+  provence:   { Comp: Provence,  map: mapToProvence },
   // Variantes que comparten la estructura de DolceVita (solo cambia el estilo).
   carmesi_v2: { Comp: CarmesiV2, map: mapToDolceVita },
   napoly:     { Comp: Napoly,    map: mapToDolceVita },

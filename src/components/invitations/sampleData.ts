@@ -1,4 +1,4 @@
-import { InvitationContent, PassportContent, PrimiciaContent, ParadiseContent, ObsidianaContent, DolceVitaContent, GraziaContent } from './types';
+import { InvitationContent, PassportContent, PrimiciaContent, ParadiseContent, ObsidianaContent, DolceVitaContent, GraziaContent, ProvenceContent } from './types';
 
 // Sample content used by the preview route. Mirrors the Invitali demo data
 // so we can match the reference designs 1:1 while building.
@@ -619,3 +619,71 @@ export const carmesiSample: DolceVitaContent = {
   giftBank: { bank: 'Cuenta bancaria BCP', account: '2015151233123330', holder: 'Jose Mattiel' },
   giftOther: 'Obsequios tradicionales (Escríbenos)',
 };
+
+export const provenceSample: ProvenceContent = {
+  groom: 'Annie',
+  bride: 'Miguel',
+  initials: ['A', 'M'],
+  guestName: 'Familia Invitada',
+  guestPasses: '2 pases',
+  isoDate: '2026-09-19T12:00:00',
+  dateWeekday: 'SÁBADO',
+  dateDay: '19',
+  dateMonth: 'SEPTIEMBRE',
+  dateYear: '2026',
+  locationBadge: 'CIENEGUILLA',
+
+  coverImage: 'https://invitali.com/wp-content/uploads/2026/07/Novios-annie-y-Micky.webp',
+  middleImage: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1200&q=80',
+
+  headerSub: 'TENEMOS EL HONOR DE INVITARTE A NUESTRA BODA',
+  headerMessage: 'Nuestro gran día se aproxima y nos encantaría que formaras parte de él.',
+  dateIntro: 'QUEREMOS QUE NOS ACOMPAÑES EN NUESTRO DÍA:',
+
+  blessingTitle: 'CON LA BENDICIÓN DE DIOS Y DE NUESTRAS MADRES',
+  parentsBride: ['Ana Montaño Pofil'],
+  parentsGroom: ['Violeta Urrelo Garcia de Montoya'],
+  padrinos: ['Tania Montoya Zamora', 'Loreto Hermitaño Rosales'],
+
+  ceremony: {
+    title: 'CEREMONIA Y RECEPCIÓN',
+    place: '"La Provenza"',
+    city: 'Cieneguilla',
+    time: '12:00 h',
+    maps: 'https://maps.google.com/?q=La+Provenza+Cieneguilla',
+  },
+
+  dressCode: {
+    title: 'DRESS CODE',
+    style: 'Formal',
+    women: 'Mujeres: Agradecemos evitar los tonos blanco, ivory y perla; reservados para la novia.',
+    men: 'Caballeros: Agradecemos evitar los tonos beige y arena; reservados para el novio.',
+    note: 'Nota: La celebración se realizará en un jardín; para mayor comodidad, sugerimos evitar el uso de tacones de punta.',
+  },
+
+  itineraryTitle: 'ITINERARIO',
+  itinerary: [
+    { icon: 'church', label: 'Ingreso de invitados', time: '12:00 h' },
+    { icon: 'church', label: 'Ceremonia religiosa', time: '13:00 h' },
+    { icon: 'rings', label: 'Ceremonia civil', time: '14:00 h' },
+    { icon: 'cheers', label: 'Recepción', time: '14:45 h' },
+    { icon: 'dance', label: 'Vals y brindis', time: '15:00 h' },
+    { icon: 'dance', label: 'Fiesta', time: '15:20 h' },
+    { icon: 'car', label: 'Despedida', time: '21:00 h' },
+  ],
+
+  quoteMessage: 'La vida está llena de momentos que no se pueden recuperar! Así que llega puntual y comparte este momento especial con nosotros.',
+
+  giftMessage: 'Tu presencia en nuestra boda es nuestro mejor regalo. Si deseas hacernos un presente adicional, puedes hacerlo mediante nuestra mesa de regalos.',
+  giftCash: 'Lluvia de sobres (Habrá un buzón disponible en la recepción)',
+  giftBank: {
+    bank: 'BCP',
+    account: '193-987654321-0-12',
+    holder: 'Annie & Miguel',
+  },
+
+  rsvpMessage: 'Es muy importante para nosotros contar con tu confirmación antes del 1 de Septiembre.',
+  whatsapp: 'https://wa.me/59162449491?text=Hola%20Annie%20y%20Miguel%2C%20confirmo%20mi%20asistencia%20a%20su%20boda%F0%9F%A4%B5%F0%9F%91%B0',
+  // La canción la pone /muestra (DEMO_MUSIC) desde la colección de public/musica.
+};
+

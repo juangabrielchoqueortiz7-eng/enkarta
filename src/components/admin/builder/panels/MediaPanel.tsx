@@ -2,6 +2,7 @@
 
 import { InvitationParsed, BuilderConfig } from '@/lib/types';
 import { resolveFeatures, PACKAGE_LABELS } from '@/lib/packages';
+import { MUSIC_LIBRARY } from '@/lib/music';
 import ImageUploader from '../ImageUploader';
 import MultiImageUploader from '../MultiImageUploader';
 
@@ -41,6 +42,28 @@ export default function MediaPanel({ data, onChange }: Props) {
             un archivo. Actívala en Configuración → Paquete si el cliente la pagó.
           </p>
         )}
+        {/* Colección Enkarta: un clic asigna una de nuestras pistas. */}
+        <p className="text-xs text-gray-400 font-outfit mb-2">Elige una de nuestras canciones o sube la tuya.</p>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {MUSIC_LIBRARY.map(track => {
+            const active = cfg.musicUrl === track.url;
+            return (
+              <button
+                key={track.id}
+                type="button"
+                onClick={() => setCfg({ musicUrl: active ? undefined : track.url })}
+                className={`px-3 py-1.5 text-xs font-outfit rounded-full border transition-colors ${
+                  active
+                    ? 'bg-enkarta-gold/10 border-enkarta-gold text-enkarta-gold'
+                    : 'bg-white border-gray-200 text-gray-500 hover:border-enkarta-gold/50'
+                }`}
+              >
+                {active ? '♪ ' : ''}{track.label}
+              </button>
+            );
+          })}
+        </div>
+
         <ImageUploader
           kind="audio"
           value={cfg.musicUrl ?? ''}

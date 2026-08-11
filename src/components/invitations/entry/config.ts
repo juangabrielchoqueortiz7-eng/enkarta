@@ -128,6 +128,14 @@ export const ENTRY_THEMES: Record<string, EntryTheme> = {
     accent: '#c6a86a', accentText: '#100f0c', script: '#e7d39b',
     tagline: 'Nos casamos',
   },
+  provence: {
+    ...ENVELOPE_BASE,
+    scene: 'envelope',
+    veil: '#f7efe4', veil2: '#eae0d2',
+    panel: '#faf6ee', ink: '#68693f', soft: '#7a7c57',
+    accent: '#a88144', accentText: '#ffffff', script: '#a88144',
+    ornament: 'leaf', tagline: 'Nuestra Boda',
+  },
 };
 
 export const DEFAULT_THEME: EntryTheme = {
@@ -196,6 +204,9 @@ export function entryPropsFor(template: string, data: unknown): EntryProps {
       break;
     case 'grazia':
       dateLine = d.dateText || '';
+      break;
+    case 'provence':
+      dateLine = [d.dateDay, d.dateMonth, d.dateYear].filter(Boolean).join(' ') || fmtIso(d.isoDate);
       break;
     default: // dolcevita + clones (napoly, allegria, rosegold, euforia, carmesi)
       dateLine = [d.dateMonth, d.dateDay].filter(Boolean).join(' ') + (d.dateYear ? ` · ${d.dateYear}` : '');
