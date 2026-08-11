@@ -4,6 +4,10 @@ import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ease } from '@/lib/motion';
 import type { EntryTheme, Ornament } from './config';
+import {
+  Grain, LinerPattern, BreakingSeal, GoldRule, OpenCue,
+  EnterButton, Monogram,
+} from './materials';
 
 export interface SceneProps {
   theme: EntryTheme;
@@ -32,37 +36,6 @@ function Tagline({ theme }: { theme: EntryTheme }) {
   );
 }
 
-function Chevron({ color }: { color: string }) {
-  return (
-    <motion.svg
-      width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.4"
-      animate={{ y: [0, 7, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-      aria-hidden
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-    </motion.svg>
-  );
-}
-
-function EnterButton({ theme, label, onEnter }: { theme: EntryTheme; label: string; onEnter: () => void }) {
-  return (
-    <motion.button
-      onClick={onEnter}
-      whileHover={{ scale: 1.035 }}
-      whileTap={{ scale: 0.97 }}
-      className="font-cinzel uppercase"
-      style={{
-        color: theme.accentText, background: theme.accent,
-        letterSpacing: '0.2em', fontSize: 12, padding: '14px 36px',
-        borderRadius: '22px 7px 22px 7px',
-        boxShadow: '0 12px 26px -10px rgba(0,0,0,0.5)',
-      }}
-    >
-      {label}
-    </motion.button>
-  );
-}
-
 /** Couple names (script) + date caps — shared block below most motifs. */
 function NamesBlock({ theme, names, dateLine, serif }: { theme: EntryTheme; names: string; dateLine?: string; serif?: boolean }) {
   return (
@@ -76,49 +49,6 @@ function NamesBlock({ theme, names, dateLine, serif }: { theme: EntryTheme; name
           {dateLine}
         </p>
       )}
-    </div>
-  );
-}
-
-function WaxSeal({ theme, size = 84, initials }: { theme: EntryTheme; size?: number; initials: string }) {
-  return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-      <div className="absolute inset-0 rounded-full" style={{
-        background: theme.accent,
-        boxShadow: '0 12px 26px rgba(0,0,0,0.32), inset 0 2px 5px rgba(255,255,255,0.22), inset 0 -4px 8px rgba(0,0,0,0.2)',
-      }} />
-      <div className="absolute inset-0 rounded-full" style={{
-        background: 'radial-gradient(circle at 36% 30%, rgba(255,255,255,0.4), transparent 58%)',
-      }} />
-      <div className="absolute rounded-full" style={{ inset: size * 0.1, border: `1px solid ${theme.accentText}66` }} />
-      <span className="relative font-cinzel" style={{ color: theme.accentText, fontSize: size * 0.24, letterSpacing: '0.04em' }}>
-        {initials}
-      </span>
-    </div>
-  );
-}
-
-// Sello de lacre que se parte en dos al abrir: cada mitad (recorte con grieta
-// en zigzag) cae hacia su lado con un giro, como si el invitado lo rompiera.
-function BreakingSeal({ theme, initials, opening }: { theme: EntryTheme; initials: string; opening: boolean }) {
-  const CRACK_L = 'polygon(0 0, 55% 0, 45% 28%, 56% 55%, 44% 78%, 52% 100%, 0 100%)';
-  const CRACK_R = 'polygon(55% 0, 100% 0, 100% 100%, 52% 100%, 44% 78%, 56% 55%, 45% 28%)';
-  const half = (side: -1 | 1) => (
-    <motion.div
-      className="absolute inset-0"
-      style={{ clipPath: side === -1 ? CRACK_L : CRACK_R }}
-      animate={opening
-        ? { x: side * 30, y: side === 1 ? 46 : 32, rotate: side * 24, opacity: 0 }
-        : { x: 0, y: 0, rotate: 0, opacity: 1 }}
-      transition={{ duration: 0.6, ease: ease.soft }}
-    >
-      <WaxSeal theme={theme} initials={initials} />
-    </motion.div>
-  );
-  return (
-    <div className="relative" style={{ width: 84, height: 84 }}>
-      {half(-1)}
-      {half(1)}
     </div>
   );
 }
@@ -164,6 +94,21 @@ function Sprig({ kind, color, className, style }: { kind: Ornament; color: strin
           ))}
         </g>
       )}
+      {kind === 'lavender' && (
+        <g opacity="0.9">
+          {[[34, 34, -22], [56, 52, -8], [76, 76, -30]].map(([x, y, rot], i) => (
+            <g key={i} transform={`rotate(${rot} ${x} ${y})`}>
+              <line x1={x} y1={y + 22} x2={x} y2={y - 22} strokeWidth="0.8" />
+              {[-16, -8, 0, 8, 16].map(dy => (
+                <g key={dy}>
+                  <ellipse cx={x - 3} cy={y + dy} rx="3" ry="1.7" transform={`rotate(-28 ${x - 3} ${y + dy})`} />
+                  <ellipse cx={x + 3} cy={y + dy + 3} rx="3" ry="1.7" transform={`rotate(28 ${x + 3} ${y + dy + 3})`} />
+                </g>
+              ))}
+            </g>
+          ))}
+        </g>
+      )}
     </svg>
   );
 }
@@ -180,10 +125,57 @@ function CornerSprigs({ theme }: { theme: EntryTheme }) {
 
 const reveal = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0 } };
 
-// ══════════════════════ ENVELOPE (Azure & most templates) ══════════════════════
+// ══════════════════════ ENVELOPE (Dolce Vita, Grazia, Napoly, Allegria…) ═══════
+// Sobre de papelería fina: cartulina con grano, solapa con forro estampado
+// (el motivo cambia por plantilla, así dos sobres nunca se ven iguales) y una
+// tarjeta que sale de dentro al romperse el lacre.
+/** Puntos de una cúpula (semielipse) de altura `amp`, de izquierda a derecha. */
+function dome(amp: number, steps = 16): string[] {
+  return Array.from({ length: steps + 1 }, (_, i) => {
+    const x = (i / steps) * 100;
+    const y = amp * Math.sqrt(Math.max(0, 1 - ((x - 50) / 50) ** 2));
+    return `${x.toFixed(1)}% ${y.toFixed(1)}%`;
+  });
+}
+
+/**
+ * Recorte de la solapa y de la boca del sobre según el corte de la plantilla.
+ * `sealTop` sitúa el lacre justo sobre el borde de la solapa, que cae a distinta
+ * altura en cada corte (la solapa recta termina mucho más arriba que la punta).
+ */
+function envelopeClips(flap: EntryTheme['flap']) {
+  if (flap === 'square') {
+    return {
+      flap: 'polygon(0 0, 100% 0, 100% 72%, 0 72%)',
+      // Boca recta: el frente es un rectángulo limpio.
+      pocket: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
+      sealTop: '24%',
+    };
+  }
+  if (flap === 'curve') {
+    return {
+      flap: `polygon(0% 0%, 100% 0%, ${dome(100).reverse().join(', ')})`,
+      pocket: `polygon(${dome(46).join(', ')}, 100% 100%, 0% 100%)`,
+      sealTop: '38%',
+    };
+  }
+  return {
+    flap: 'polygon(0 0, 100% 0, 50% 100%)',
+    pocket: 'polygon(0 0, 50% 44%, 100% 0, 100% 100%, 0 100%)',
+    sealTop: '36%',
+  };
+}
+
 function EnvelopeScene({ theme, names, initials, dateLine, label, phase, onEnter }: SceneProps) {
   const reduce = useReducedMotion();
   const opening = phase === 'opening' && !reduce;
+  // OJO: `panelEdge` es un color de superposición (rgba semitransparente), no
+  // un tono de papel. Va como CAPA sobre `panel` opaco; si se usa como parada
+  // final de un degradado el sobre se vuelve translúcido y se ve la tarjeta.
+  const paper = `linear-gradient(158deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 42%, ${theme.panelEdge} 100%), ${theme.panel}`;
+  const inner = `linear-gradient(180deg, rgba(0,0,0,0.16), rgba(0,0,0,0.07)), ${theme.panel}`;
+  const clip = envelopeClips(theme.flap);
+
   return (
     <>
       <CornerSprigs theme={theme} />
@@ -196,46 +188,97 @@ function EnvelopeScene({ theme, names, initials, dateLine, label, phase, onEnter
 
         <motion.div
           variants={reveal} transition={{ duration: 0.8, ease: ease.soft }}
-          className="relative" style={{ width: 'min(86vw, 360px)', aspectRatio: '3 / 2', perspective: 1400 }}
+          className="relative" style={{ width: 'min(82vw, 330px)', aspectRatio: '3 / 2', perspective: 1500 }}
         >
-          {/* Secuencia de apertura: lacre se rompe → solapa gira → carta sale →
-              el sobre entero se inclina hacia atrás en profundidad. */}
+          {/* Secuencia: lacre se parte → solapa gira y enseña el forro →
+              la tarjeta sale → el sobre se inclina hacia atrás. */}
           <motion.div
             className="absolute inset-0"
             style={{ transformStyle: 'preserve-3d' }}
-            animate={opening ? { rotateX: 18, y: 34, scale: 0.94 } : { rotateX: 0, y: 0, scale: 1 }}
-            transition={{ duration: 0.9, ease: ease.inOut, delay: opening ? 0.55 : 0 }}
+            animate={opening ? { rotateX: 16, y: 30, scale: 0.95 } : { rotateX: 0, y: 0, scale: 1 }}
+            transition={{ duration: 0.9, ease: ease.inOut, delay: opening ? 0.6 : 0 }}
           >
-            {/* body */}
-            <div className="absolute inset-0" style={{ background: theme.panel, borderRadius: 8, boxShadow: '0 34px 64px -22px rgba(0,0,0,0.4)' }} />
-            {/* letter (sale del sobre con las iniciales escritas) */}
-            <motion.div
-              className="absolute flex flex-col items-center pt-3"
-              style={{ left: '7%', right: '7%', top: '-4%', bottom: '20%', background: '#fffdfa', borderRadius: 4, zIndex: 2, boxShadow: '0 6px 16px rgba(0,0,0,0.12)' }}
-              animate={opening ? { y: '-84%', scale: 1.05 } : { y: 0, scale: 1 }}
-              transition={{ duration: 0.9, ease: ease.soft, delay: opening ? 0.5 : 0 }}
+            {/* Interior del sobre (se ve por la boca cuando sale la tarjeta).
+                Cada capa lleva su propio translateZ: dentro de un contexto
+                preserve-3d el navegador ordena por profundidad, no por z-index,
+                y sin esto la tarjeta se transparentaba a través del sobre. */}
+            <div
+              className="absolute inset-0 overflow-hidden"
+              style={{
+                background: inner, borderRadius: 7,
+                transform: 'translateZ(0px)',
+                boxShadow: '0 36px 70px -24px rgba(0,0,0,0.45)',
+              }}
             >
-              <span className="font-great" style={{ color: theme.script, fontSize: 26, lineHeight: 1.1 }}>{initials}</span>
-              <span className="mt-2 h-px w-1/2" style={{ background: `${theme.accent}55` }} />
-              <span className="mt-1.5 h-px w-1/3" style={{ background: `${theme.accent}33` }} />
+              <LinerPattern kind={theme.ornament} color={theme.accent} opacity={0.22} id={`${theme.scene}-in`} />
+            </div>
+
+            {/* Tarjeta dentro del sobre */}
+            <motion.div
+              className="absolute flex flex-col items-center justify-center gap-2"
+              style={{
+                left: '8%', right: '8%', top: '6%', bottom: '10%',
+                background: 'linear-gradient(170deg, #fffefb, #f7f2e9)',
+                borderRadius: 3, transform: 'translateZ(1px)',
+                boxShadow: '0 8px 20px -8px rgba(0,0,0,0.28)',
+              }}
+              animate={opening ? { y: '-88%', scale: 1.04, z: 1 } : { y: 0, scale: 1, z: 1 }}
+              transition={{ duration: 0.95, ease: ease.soft, delay: opening ? 0.5 : 0 }}
+            >
+              {/* Filete de oro del borde de la tarjeta */}
+              <span className="pointer-events-none absolute" style={{ inset: 5, border: `1px solid ${theme.accent}44` }} />
+              <span className="font-great" style={{ color: theme.script, fontSize: 30, lineHeight: 1 }}>{initials}</span>
+              <GoldRule color={theme.accent} width={82} />
+              {dateLine && (
+                <span className="font-cinzel uppercase" style={{ color: theme.soft, letterSpacing: '0.26em', fontSize: 8 }}>
+                  {dateLine}
+                </span>
+              )}
+              <Grain opacity={0.09} />
             </motion.div>
-            {/* side + bottom inner flaps */}
-            <div className="absolute inset-0" style={{ clipPath: 'polygon(0 0,50% 46%,0 100%)', background: theme.panelEdge, zIndex: 3 }} />
-            <div className="absolute inset-0" style={{ clipPath: 'polygon(100% 0,50% 46%,100% 100%)', background: theme.panelEdge, zIndex: 3 }} />
-            <div className="absolute inset-0" style={{ clipPath: 'polygon(0 100%,50% 46%,100% 100%)', background: theme.panelEdge, zIndex: 3 }} />
-            <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: 8, border: `1px solid ${theme.accent}33`, zIndex: 4 }} />
-            {/* top flap (gira en 3D tras romperse el lacre) */}
+
+            {/* Frente del sobre (tapa la tarjeta por delante) */}
+            <div className="absolute inset-0" style={{ clipPath: clip.pocket, transform: 'translateZ(2px)' }}>
+              <div className="absolute inset-0" style={{ background: paper, borderRadius: 7 }} />
+              {/* Sombra del pliegue en la boca */}
+              <div
+                className="absolute inset-0"
+                style={{ background: `linear-gradient(180deg, rgba(0,0,0,0.10), transparent 34%)` }}
+              />
+              <Grain opacity={0.14} />
+            </div>
+
+            {/* Solapa: cara exterior (papel) + cara interior (forro estampado) */}
             <motion.div
               className="absolute left-0 right-0 top-0"
-              style={{ height: '56%', transformOrigin: 'top center', transformStyle: 'preserve-3d', clipPath: 'polygon(0 0,100% 0,50% 100%)', background: theme.panel, zIndex: 6 }}
-              animate={opening ? { rotateX: -168 } : { rotateX: 0 }}
-              transition={{ duration: 0.9, ease: ease.inOut, delay: opening ? 0.22 : 0 }}
+              style={{ height: '58%', transformOrigin: 'top center', transformStyle: 'preserve-3d' }}
+              animate={opening ? { rotateX: -172, z: 3 } : { rotateX: 0, z: 3 }}
+              transition={{ duration: 0.95, ease: ease.inOut, delay: opening ? 0.24 : 0 }}
             >
-              <div className="absolute inset-0" style={{ clipPath: 'polygon(0 0,100% 0,50% 100%)', background: 'linear-gradient(180deg, rgba(0,0,0,0.03), rgba(0,0,0,0.12))' }} />
+              {/* Exterior */}
+              <div
+                className="absolute inset-0"
+                style={{ clipPath: clip.flap, background: paper, backfaceVisibility: 'hidden' }}
+              >
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.35), rgba(0,0,0,0.10))' }} />
+                <Grain opacity={0.14} />
+              </div>
+              {/* Interior con forro */}
+              <div
+                className="absolute inset-0 overflow-hidden"
+                style={{
+                  clipPath: clip.flap, background: inner,
+                  backfaceVisibility: 'hidden', transform: 'rotateX(180deg)',
+                }}
+              >
+                <LinerPattern kind={theme.ornament} color={theme.accent} opacity={0.55} id={`${theme.scene}-flap`} />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.14), transparent 45%)' }} />
+              </div>
             </motion.div>
-            {/* wax seal at flap tip (se parte en dos) */}
-            <div className="absolute left-1/2" style={{ top: '32%', transform: 'translateX(-50%)', zIndex: 7 }}>
-              <BreakingSeal theme={theme} initials={initials} opening={opening} />
+
+            {/* Lacre en la punta de la solapa */}
+            <div className="absolute left-1/2" style={{ top: clip.sealTop, transform: 'translateX(-50%) translateZ(6px)' }}>
+              <BreakingSeal theme={theme} initials={initials} opening={opening} size={80} />
             </div>
           </motion.div>
         </motion.div>
@@ -243,9 +286,9 @@ function EnvelopeScene({ theme, names, initials, dateLine, label, phase, onEnter
         <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}>
           <NamesBlock theme={theme} names={names} dateLine={dateLine} />
         </motion.div>
-        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Chevron color={theme.accent} /></motion.div>
+        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><OpenCue color={theme.soft} /></motion.div>
         <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}>
-          <EnterButton theme={theme} label={label} onEnter={onEnter} />
+          <EnterButton theme={theme} label={label} onEnter={onEnter} solid />
         </motion.div>
       </motion.div>
     </>
@@ -284,8 +327,8 @@ function PassportScene({ theme, names, initials, dateLine, label, phase, onEnter
           </div>
         </motion.div>
       </motion.div>
-      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Chevron color={theme.accent} /></motion.div>
-      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><EnterButton theme={theme} label={label} onEnter={onEnter} /></motion.div>
+      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><OpenCue color={theme.soft} /></motion.div>
+      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><EnterButton theme={theme} label={label} onEnter={onEnter} solid /></motion.div>
     </motion.div>
   );
 }
@@ -317,8 +360,8 @@ function NewspaperScene({ theme, names, dateLine, label, phase, onEnter }: Scene
           <p className="font-cormorant italic mt-2" style={{ color: theme.soft, fontSize: 16 }}>se dan el “sí, quiero”</p>
         </motion.div>
       </motion.div>
-      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Chevron color={theme.accent} /></motion.div>
-      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><EnterButton theme={theme} label={label} onEnter={onEnter} /></motion.div>
+      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><OpenCue color={theme.soft} /></motion.div>
+      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><EnterButton theme={theme} label={label} onEnter={onEnter} solid /></motion.div>
     </motion.div>
   );
 }
@@ -350,8 +393,8 @@ function ArchScene({ theme, names, dateLine, coverImage, label, phase, onEnter }
           {dateLine && <p className="font-cinzel uppercase mt-3" style={{ color: theme.ink, letterSpacing: '0.3em', fontSize: 12 }}>{dateLine}</p>}
         </motion.div>
       </motion.div>
-      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Chevron color={theme.accent} /></motion.div>
-      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><EnterButton theme={theme} label={label} onEnter={onEnter} /></motion.div>
+      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><OpenCue color={theme.soft} /></motion.div>
+      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><EnterButton theme={theme} label={label} onEnter={onEnter} solid /></motion.div>
     </motion.div>
   );
 }
@@ -385,8 +428,8 @@ function LuxeScene({ theme, names, initials, dateLine, label, phase, onEnter }: 
           {dateLine && <p className="font-cinzel uppercase mt-3" style={{ color: theme.soft, letterSpacing: '0.3em', fontSize: 12 }}>{dateLine}</p>}
         </motion.div>
       </motion.div>
-      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Chevron color={theme.accent} /></motion.div>
-      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><EnterButton theme={theme} label={label} onEnter={onEnter} /></motion.div>
+      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><OpenCue color={theme.soft} /></motion.div>
+      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><EnterButton theme={theme} label={label} onEnter={onEnter} solid /></motion.div>
     </motion.div>
   );
 }
@@ -455,15 +498,6 @@ function SoftLeaves({ color }: { color: string }) {
   );
 }
 
-function InterlockMonogram({ a, b, color, soft, size = 132 }: { a: string; b: string; color: string; soft: string; size?: number }) {
-  return (
-    <div className="relative flex items-end justify-center" style={{ height: size }}>
-      <span className="font-playfair" style={{ color: soft, fontSize: size, lineHeight: 0.78, marginRight: -size * 0.27, opacity: 0.9 }}>{a}</span>
-      <span className="font-playfair" style={{ color, fontSize: size * 1.16, lineHeight: 0.78, marginLeft: -size * 0.27 }}>{b}</span>
-    </div>
-  );
-}
-
 function DoubleChevron({ color }: { color: string }) {
   const ch = <path strokeLinecap="round" strokeLinejoin="round" d="M5 6l7 7 7-7" />;
   return (
@@ -490,7 +524,7 @@ function BotanicalScene({ theme, names, initials, dateLine, label, onEnter }: Sc
 
       <motion.div className="relative z-10 flex flex-col items-center gap-6 px-6"
         variants={{ show: { transition: { staggerChildren: 0.16 } } }} initial="hidden" animate="show">
-        <motion.div variants={reveal} transition={t}><InterlockMonogram a={a} b={b} color={theme.script} soft={theme.soft} /></motion.div>
+        <motion.div variants={reveal} transition={t}><Monogram a={a} b={b} color={theme.script} soft={theme.accent} /></motion.div>
         <motion.div variants={reveal} transition={t} className="text-center">
           <h1 className="font-cinzel" style={{ color: theme.ink, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: 'clamp(24px,6vw,40px)' }}>{names}</h1>
           {dateLine && <p className="font-cinzel mt-3 uppercase" style={{ color: theme.soft, letterSpacing: '0.34em', fontSize: 12 }}>{dateLine}</p>}
@@ -508,89 +542,200 @@ function BotanicalScene({ theme, names, initials, dateLine, label, onEnter }: Sc
   );
 }
 
-// ══════════════════════ CURTAIN (cortina de seda que se abre) ══════════════════════
+// ══════════════════════ CURTAIN (telón de teatro) ══════════════════════
+// Escenario completo: bambalina festoneada con fleco de oro arriba, dos paños
+// de seda con pliegues suaves y una cartela iluminada al centro donde vive el
+// texto. La cartela es clave: antes los nombres caían sobre la tela rayada y
+// no se leían.
+
+/**
+ * Bambalina festoneada. Devuelve dos paths: el relleno de la tela y sólo el
+ * borde ondulado, para que el fleco de oro siga las ondas en vez de cruzar
+ * recto por debajo.
+ */
+function scallop(n = 9): { fill: string; edge: string } {
+  const w = 100 / n;
+  let edge = 'M100 9';
+  for (let i = n; i > 0; i--) {
+    const x = (i - 1) * w;
+    edge += ` Q ${x + w / 2} 20 ${x} 9`;
+  }
+  return { fill: `M0 0 H100 V9 ${edge.replace('M100 9', '')} V0 Z`, edge };
+}
+
+/** Seda: pliegues con paradas suaves (nada de rayas duras). */
+function silk(base: string): string {
+  const dark = 'rgba(0,0,0,0.42)';
+  const lite = 'rgba(255,255,255,0.13)';
+  return [
+    `linear-gradient(90deg, ${dark} 0%, ${lite} 9%, ${dark} 19%, ${lite} 28%, ${dark} 38%,
+      ${lite} 47%, ${dark} 57%, ${lite} 66%, ${dark} 76%, ${lite} 85%, ${dark} 100%)`,
+    `linear-gradient(180deg, rgba(0,0,0,0.34) 0%, transparent 22%, transparent 74%, rgba(0,0,0,0.42) 100%)`,
+    `linear-gradient(0deg, ${base}, ${base})`,
+  ].join(', ');
+}
+
 function CurtainScene({ theme, names, initials, dateLine, label, phase, onEnter }: SceneProps) {
   const reduce = useReducedMotion();
   const opening = phase === 'opening' && !reduce;
   const letters = initials.match(/[A-Za-zÀ-ÿ]/g) ?? ['A'];
-  // Tela: degradado con pliegues verticales (repeating-linear-gradient).
-  const drape = `${theme.accent}`;
-  const folds = `repeating-linear-gradient(90deg, ${drape} 0px, ${drape} 6px, rgba(0,0,0,0.18) 22px, ${drape} 40px)`;
+  const fabric = silk(theme.accent);
+
   return (
     <>
-      {/* Paneles de cortina a ambos lados */}
+      {/* Fondo de escenario: la luz cae al centro, los bordes se apagan */}
+      <div
+        className="pointer-events-none absolute inset-0 z-0"
+        aria-hidden
+        style={{
+          background: `radial-gradient(ellipse 76% 54% at 50% 42%, ${theme.panel}22, transparent 72%),
+                       linear-gradient(180deg, ${theme.ink}, #000000)`,
+        }}
+      />
+
+      {/* Paños laterales */}
       {([-1, 1] as const).map(side => (
         <motion.div
           key={side}
           className="pointer-events-none absolute top-0 bottom-0 z-[5]"
           style={{
-            width: '52%',
+            width: '53%',
             [side === -1 ? 'left' : 'right']: 0,
-            background: folds,
-            boxShadow: side === -1 ? 'inset -40px 0 60px -20px rgba(0,0,0,0.5)' : 'inset 40px 0 60px -20px rgba(0,0,0,0.5)',
-            borderRadius: side === -1 ? '0 50% 0 0 / 0 8% 0 0' : '50% 0 0 0 / 8% 0 0 0',
+            background: fabric,
+            boxShadow: side === -1
+              ? 'inset -50px 0 70px -30px rgba(0,0,0,0.75)'
+              : 'inset 50px 0 70px -30px rgba(0,0,0,0.75)',
+            // Caída del paño: el borde interior cae en curva, no en recto.
+            borderRadius: side === -1 ? '0 14% 0 0 / 0 5% 0 0' : '14% 0 0 0 / 5% 0 0 0',
           }}
           initial={false}
-          animate={opening ? { x: `${side * 105}%` } : { x: 0 }}
-          transition={{ duration: 1.1, ease: ease.inOut }}
-        >
-          {/* Alzapaño dorado */}
-          <div className="absolute top-1/2 h-10 w-full" style={{ background: `linear-gradient(${theme.script}, transparent)`, opacity: 0.4 }} />
-        </motion.div>
+          animate={opening ? { x: `${side * 104}%` } : { x: 0 }}
+          transition={{ duration: 1.15, ease: ease.inOut }}
+        />
       ))}
 
+      {/* Bambalina + fleco de oro */}
       <motion.div
-        className="relative z-10 flex flex-col items-center gap-7 px-6"
-        variants={{ show: { transition: { staggerChildren: 0.16, delayChildren: 0.3 } } }}
-        initial="hidden" animate="show"
+        className="pointer-events-none absolute left-0 right-0 top-0 z-[6]"
+        style={{ height: '15vh' }}
+        initial={false}
+        animate={opening ? { y: '-100%' } : { y: 0 }}
+        transition={{ duration: 1, ease: ease.inOut }}
+        aria-hidden
       >
-        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Tagline theme={theme} /></motion.div>
-        <motion.div variants={reveal} transition={{ duration: 0.8, ease: ease.soft }}>
-          <InterlockMonogram a={letters[0]} b={letters[1] ?? letters[0]} color={theme.script} soft={theme.soft} />
-        </motion.div>
-        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}>
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 20" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="ek-valance" x1="0" x2="1">
+              <stop offset="0%" stopColor="rgba(0,0,0,0.45)" />
+              <stop offset="14%" stopColor="rgba(255,255,255,0.12)" />
+              <stop offset="32%" stopColor="rgba(0,0,0,0.4)" />
+              <stop offset="52%" stopColor="rgba(255,255,255,0.1)" />
+              <stop offset="72%" stopColor="rgba(0,0,0,0.4)" />
+              <stop offset="88%" stopColor="rgba(255,255,255,0.12)" />
+              <stop offset="100%" stopColor="rgba(0,0,0,0.45)" />
+            </linearGradient>
+          </defs>
+          <path d={scallop().fill} fill={theme.accent} />
+          <path d={scallop().fill} fill="url(#ek-valance)" />
+          {/* Fleco de oro siguiendo la onda del festón */}
+          <path
+            d={scallop().edge}
+            fill="none"
+            stroke={theme.script}
+            strokeWidth="0.8"
+            vectorEffect="non-scaling-stroke"
+            opacity="0.9"
+          />
+        </svg>
+      </motion.div>
+
+      {/* Cartela iluminada con el texto */}
+      <motion.div
+        className="relative z-10 flex flex-col items-center px-6"
+        initial={{ opacity: 0, y: 18 }}
+        animate={opening ? { opacity: 0, scale: 0.97, y: -8 } : { opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: opening ? 0.5 : 0.9, ease: ease.soft, delay: opening ? 0 : 0.25 }}
+      >
+        <div
+          className="relative flex flex-col items-center gap-4 text-center"
+          style={{
+            // El relleno superior es generoso a propósito: más arriba la
+            // arcada se estrecha y el texto se saldría por los lados.
+            width: 'min(82vw, 340px)',
+            padding: '58px 22px 30px',
+            background: `linear-gradient(170deg, ${theme.panel}, ${theme.panel}e6)`,
+            borderRadius: '150px 150px 6px 6px / 110px 110px 6px 6px',
+            border: `1px solid ${theme.script}66`,
+            boxShadow: `0 40px 90px -30px rgba(0,0,0,0.85), 0 0 60px -20px ${theme.script}44`,
+          }}
+        >
+          {/* Doble filete interior */}
+          <span
+            className="pointer-events-none absolute"
+            style={{
+              inset: 7,
+              border: `1px solid ${theme.script}44`,
+              borderRadius: '145px 145px 4px 4px / 105px 105px 4px 4px',
+            }}
+          />
+          <Grain opacity={0.1} />
+
+          <Tagline theme={theme} />
+          <Monogram a={letters[0]} b={letters[1] ?? letters[0]} color={theme.script} soft={theme.script} size={96} />
           <NamesBlock theme={theme} names={names} dateLine={dateLine} />
-        </motion.div>
-        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Chevron color={theme.accent} /></motion.div>
-        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}>
-          <EnterButton theme={theme} label={label} onEnter={onEnter} />
-        </motion.div>
+          <GoldRule color={theme.script} width={110} />
+          <EnterButton theme={theme} label={label} onEnter={onEnter} solid />
+        </div>
       </motion.div>
     </>
   );
 }
 
 // ══════════════════════ PETALS (lluvia de pétalos / polvo dorado) ══════════════════════
-function FallingPetals({ color, count = 18 }: { color: string; count?: number }) {
+// Pétalos: forma de pétalo real (no una coma), tamaño discreto y por DEBAJO
+// del contenido, para que nunca aterricen encima del botón ni de los nombres.
+function FallingPetals({ color, count = 14 }: { color: string; count?: number }) {
   const reduce = useReducedMotion();
   if (reduce) return null;
   const petals = Array.from({ length: count }, (_, i) => ({
     left: `${(i * 61.8) % 100}%`,
-    delay: (i % 9) * 0.7,
-    dur: 6 + (i % 5) * 1.6,
-    size: 7 + (i % 4) * 3,
-    drift: (i % 2 ? 1 : -1) * (20 + (i % 3) * 14),
+    delay: (i % 9) * 0.9,
+    dur: 9 + (i % 5) * 2.2,
+    size: 6 + (i % 4) * 2.5,
+    drift: (i % 2 ? 1 : -1) * (24 + (i % 3) * 16),
     rot: (i % 2 ? 1 : -1) * (180 + (i % 3) * 90),
+    tilt: (i * 37) % 180,
+    op: 0.3 + (i % 3) * 0.12,
   }));
   return (
-    <div className="pointer-events-none absolute inset-0 z-[3] overflow-hidden" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
       <style>{`@keyframes ekPetalFall {
         0% { transform: translateY(-12vh) translateX(0) rotate(0deg); opacity: 0; }
-        12% { opacity: .85; }
-        88% { opacity: .85; }
+        14% { opacity: var(--op); }
+        86% { opacity: var(--op); }
         100% { transform: translateY(112vh) translateX(var(--dx)) rotate(var(--rot)); opacity: 0; }
       }`}</style>
       {petals.map((p, i) => (
         <span key={i} style={{
-          position: 'absolute', left: p.left, top: 0, width: p.size, height: p.size * 1.3,
-          background: color, borderRadius: '50% 0 50% 50%',
-          ['--dx' as string]: `${p.drift}px`, ['--rot' as string]: `${p.rot}deg`,
-          animation: `ekPetalFall ${p.dur}s ${p.delay}s ease-in-out infinite`, opacity: 0,
-        }} />
+          position: 'absolute', left: p.left, top: 0,
+          animation: `ekPetalFall ${p.dur}s ${p.delay}s linear infinite`, opacity: 0,
+          ['--dx' as string]: `${p.drift}px`,
+          ['--rot' as string]: `${p.rot}deg`,
+          ['--op' as string]: String(p.op),
+        }}>
+          <span style={{
+            display: 'block', width: p.size, height: p.size * 1.45,
+            background: `linear-gradient(150deg, ${color}, ${color}77)`,
+            // Pétalo: ancho abajo, en punta arriba.
+            borderRadius: '52% 48% 46% 54% / 68% 66% 34% 32%',
+            transform: `rotate(${p.tilt}deg)`,
+          }} />
+        </span>
       ))}
     </div>
   );
 }
+
 function PetalsScene({ theme, names, initials, dateLine, label, onEnter }: SceneProps) {
   const letters = initials.match(/[A-Za-zÀ-ÿ]/g) ?? ['A'];
   return (
@@ -598,20 +743,22 @@ function PetalsScene({ theme, names, initials, dateLine, label, onEnter }: Scene
       <FallingPetals color={theme.accent} />
       <CornerSprigs theme={theme} />
       <motion.div
-        className="relative z-10 flex flex-col items-center gap-7 px-6"
+        className="relative z-10 flex flex-col items-center gap-6 px-6"
         variants={{ show: { transition: { staggerChildren: 0.16 } } }}
         initial="hidden" animate="show"
       >
         <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Tagline theme={theme} /></motion.div>
         <motion.div variants={reveal} transition={{ duration: 0.8, ease: ease.soft }}>
-          <InterlockMonogram a={letters[0]} b={letters[1] ?? letters[0]} color={theme.script} soft={theme.soft} />
+          <Monogram a={letters[0]} b={letters[1] ?? letters[0]} color={theme.script} soft={theme.accent} />
         </motion.div>
         <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}>
           <NamesBlock theme={theme} names={names} dateLine={dateLine} />
         </motion.div>
-        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Chevron color={theme.accent} /></motion.div>
         <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}>
-          <EnterButton theme={theme} label={label} onEnter={onEnter} />
+          <GoldRule color={theme.accent} />
+        </motion.div>
+        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}>
+          <EnterButton theme={theme} label={label} onEnter={onEnter} solid />
         </motion.div>
       </motion.div>
     </>
@@ -619,9 +766,40 @@ function PetalsScene({ theme, names, initials, dateLine, label, onEnter }: Scene
 }
 
 // ══════════════════════ GIFTBOX (caja de regalo que se destapa) ══════════════════════
+/** Lazo de raso: dos lazadas con brillo, nudo y dos cintas cayendo. */
+function SatinBow({ color, sheen, size = 96 }: { color: string; sheen: string; size?: number }) {
+  return (
+    <svg width={size} height={size * 0.72} viewBox="0 0 100 72" aria-hidden style={{ overflow: 'visible' }}>
+      <defs>
+        <linearGradient id="ek-satin" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={color} />
+          <stop offset="42%" stopColor={sheen} />
+          <stop offset="100%" stopColor={color} />
+        </linearGradient>
+      </defs>
+      {/* Cintas que caen */}
+      <path d="M48 30 C 40 44, 30 54, 20 70 L 33 66 L 36 72 C 42 56, 47 42, 50 32 Z" fill="url(#ek-satin)" opacity="0.92" />
+      <path d="M52 30 C 60 44, 70 54, 80 70 L 67 66 L 64 72 C 58 56, 53 42, 50 32 Z" fill="url(#ek-satin)" opacity="0.82" />
+      {/* Lazadas */}
+      <path d="M50 28 C 34 6, 4 10, 8 26 C 11 38, 34 36, 50 30 Z" fill="url(#ek-satin)" />
+      <path d="M50 28 C 66 6, 96 10, 92 26 C 89 38, 66 36, 50 30 Z" fill="url(#ek-satin)" />
+      {/* Sombra interior de las lazadas */}
+      <path d="M50 29 C 40 20, 26 18, 18 22" stroke="rgba(0,0,0,0.28)" strokeWidth="1.4" fill="none" />
+      <path d="M50 29 C 60 20, 74 18, 82 22" stroke="rgba(0,0,0,0.28)" strokeWidth="1.4" fill="none" />
+      {/* Nudo */}
+      <ellipse cx="50" cy="29" rx="9" ry="7.5" fill="url(#ek-satin)" />
+      <ellipse cx="50" cy="29" rx="9" ry="7.5" fill="none" stroke="rgba(0,0,0,0.22)" strokeWidth="0.8" />
+    </svg>
+  );
+}
+
 function GiftboxScene({ theme, names, initials, dateLine, label, phase, onEnter }: SceneProps) {
   const reduce = useReducedMotion();
   const opening = phase === 'opening' && !reduce;
+  const ribbon = `linear-gradient(90deg, ${theme.accent} 0%, ${theme.script} 38%, ${theme.accent} 72%, ${theme.accent} 100%)`;
+  // panelEdge es semitransparente: va como capa sobre `panel`, nunca como parada.
+  const carton = `linear-gradient(160deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 48%, ${theme.panelEdge} 100%), ${theme.panel}`;
+
   return (
     <motion.div
       className="relative z-10 flex flex-col items-center gap-7 px-6"
@@ -631,32 +809,67 @@ function GiftboxScene({ theme, names, initials, dateLine, label, phase, onEnter 
       <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Tagline theme={theme} /></motion.div>
 
       <motion.div variants={reveal} transition={{ duration: 0.8, ease: ease.soft }} style={{ perspective: 1200 }}>
-        <div className="relative" style={{ width: 'min(64vw, 230px)', aspectRatio: '1 / 0.92' }}>
+        <div className="relative" style={{ width: 'min(66vw, 240px)', aspectRatio: '1 / 1.02' }}>
           {/* Cuerpo de la caja */}
-          <div className="absolute left-0 right-0 bottom-0" style={{ top: '26%', background: theme.panel, borderRadius: 8, boxShadow: '0 30px 60px -24px rgba(0,0,0,0.5)' }}>
-            {/* Cinta vertical */}
-            <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2" style={{ width: '18%', background: theme.accent, opacity: 0.9 }} />
-          </div>
-          {/* Tapa (se levanta y gira al abrir) */}
-          <motion.div
-            className="absolute left-[-4%] right-[-4%]"
-            style={{ top: '8%', height: '30%', background: theme.accent, borderRadius: 8, transformOrigin: 'center bottom', zIndex: 3, boxShadow: '0 8px 18px -6px rgba(0,0,0,0.4)' }}
-            animate={opening ? { y: '-120%', rotate: -12, opacity: 0 } : { y: 0, rotate: 0, opacity: 1 }}
-            transition={{ duration: 0.8, ease: ease.inOut }}
+          <div
+            className="absolute left-0 right-0 bottom-0 overflow-hidden"
+            style={{
+              top: '30%',
+              background: carton,
+              borderRadius: 6,
+              boxShadow: '0 34px 64px -26px rgba(0,0,0,0.55)',
+            }}
           >
-            {/* Lazo */}
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ width: 26, height: 26 }}>
-              <span className="absolute inset-0 rounded-full" style={{ border: `3px solid ${theme.accentText}`, opacity: 0.85 }} />
-            </div>
-          </motion.div>
-          {/* Iniciales que asoman al abrir */}
+            {/* Cinta vertical con brillo de raso */}
+            <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2" style={{ width: '14%', background: ribbon }} />
+            {/* Arista lateral: da volumen sin dibujar la caja en 3D */}
+            <div className="absolute inset-y-0 right-0" style={{ width: '13%', background: 'linear-gradient(90deg, transparent, rgba(0,0,0,0.16))' }} />
+            <Grain opacity={0.12} />
+          </div>
+
+          {/* Resplandor que sale de la caja al destaparse */}
           <motion.div
-            className="absolute left-1/2 top-[34%] -translate-x-1/2 font-great"
-            style={{ color: theme.script, fontSize: 40, zIndex: 2 }}
-            animate={opening ? { y: '-40%', opacity: 1 } : { y: 0, opacity: 0 }}
-            transition={{ duration: 0.7, delay: 0.2, ease: ease.soft }}
+            className="pointer-events-none absolute left-1/2 -translate-x-1/2"
+            style={{
+              top: '22%', width: '86%', height: '34%', zIndex: 1,
+              background: `radial-gradient(ellipse at 50% 100%, ${theme.script}88, transparent 70%)`,
+            }}
+            animate={{ opacity: opening ? 1 : 0 }}
+            transition={{ duration: 0.6, delay: opening ? 0.25 : 0, ease: ease.soft }}
+          />
+
+          {/* Iniciales que asoman al destapar */}
+          <motion.div
+            className="absolute left-1/2 top-[30%] -translate-x-1/2 font-great whitespace-nowrap"
+            style={{ color: theme.script, fontSize: 42, zIndex: 2, textShadow: '0 2px 10px rgba(0,0,0,0.25)' }}
+            animate={opening ? { y: '-46%', opacity: 1 } : { y: '10%', opacity: 0 }}
+            transition={{ duration: 0.75, delay: opening ? 0.3 : 0, ease: ease.soft }}
           >
             {initials}
+          </motion.div>
+
+          {/* Tapa: se levanta, gira y se va */}
+          <motion.div
+            className="absolute left-[-5%] right-[-5%]"
+            style={{ top: '14%', height: '22%', zIndex: 3, transformOrigin: 'center bottom' }}
+            animate={opening ? { y: '-135%', rotate: -13, opacity: 0 } : { y: 0, rotate: 0, opacity: 1 }}
+            transition={{ duration: 0.85, ease: ease.inOut }}
+          >
+            <div
+              className="absolute inset-0 overflow-hidden"
+              style={{
+                background: carton,
+                borderRadius: 6,
+                boxShadow: '0 10px 22px -8px rgba(0,0,0,0.45)',
+              }}
+            >
+              <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2" style={{ width: '14%', background: ribbon }} />
+              <Grain opacity={0.12} />
+            </div>
+            {/* Lazo montado sobre la tapa (apoyado en ella, no flotando) */}
+            <div className="absolute left-1/2 -translate-x-1/2" style={{ bottom: '26%' }}>
+              <SatinBow color={theme.accent} sheen={theme.script} size={132} />
+            </div>
           </motion.div>
         </div>
       </motion.div>
@@ -664,9 +877,9 @@ function GiftboxScene({ theme, names, initials, dateLine, label, phase, onEnter 
       <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}>
         <NamesBlock theme={theme} names={names} dateLine={dateLine} />
       </motion.div>
-      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Chevron color={theme.accent} /></motion.div>
+      <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><OpenCue color={theme.soft} /></motion.div>
       <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}>
-        <EnterButton theme={theme} label={label} onEnter={onEnter} />
+        <EnterButton theme={theme} label={label} onEnter={onEnter} solid />
       </motion.div>
     </motion.div>
   );

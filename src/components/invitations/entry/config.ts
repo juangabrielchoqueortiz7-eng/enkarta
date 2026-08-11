@@ -8,7 +8,7 @@
 // to pull the couple/date out of each template's data shape.
 
 export type SceneKind = 'envelope' | 'passport' | 'newspaper' | 'arch' | 'luxe' | 'botanical' | 'curtain' | 'petals' | 'giftbox';
-export type Ornament = 'orchid' | 'rose' | 'pampas' | 'leaf' | 'sage' | 'palm' | 'none';
+export type Ornament = 'orchid' | 'rose' | 'pampas' | 'leaf' | 'sage' | 'palm' | 'lavender' | 'none';
 
 export interface EntryTheme {
   scene: SceneKind;
@@ -23,6 +23,12 @@ export interface EntryTheme {
   script: string;      // couple names (script) color
   ornament: Ornament;
   tagline?: string;    // small word above the names
+  /**
+   * Corte de la solapa del sobre. Junto con el forro (`ornament`) es lo que
+   * evita que las plantillas que comparten escena `envelope` se vean calcadas:
+   * punta clásica, solapa redonda romántica o recta minimalista.
+   */
+  flap?: 'point' | 'curve' | 'square';
 }
 
 // Shared defaults keep every theme complete without repeating every field.
@@ -48,14 +54,14 @@ export const ENTRY_THEMES: Record<string, EntryTheme> = {
     veil: '#e9ece1', veil2: '#dfe4d6',
     panel: '#f6f4ea', ink: '#33563a', soft: '#4f7a52',
     accent: '#33563a', accentText: '#f1eedf', script: '#33563a',
-    ornament: 'leaf',
+    ornament: 'leaf', flap: 'point',
   },
   grazia: {
     ...ENVELOPE_BASE,
     veil: '#f0e9da', veil2: '#e7dcc6',
     panel: '#fdfcf8', ink: '#2c2c27', soft: '#7c715a',
     accent: '#b6985f', accentText: '#f7f2e7', script: '#b6985f',
-    ornament: 'pampas', tagline: 'La boda de',
+    ornament: 'pampas', tagline: 'La boda de', flap: 'square',
   },
   euforia: {
     ...ENVELOPE_BASE,
@@ -70,14 +76,14 @@ export const ENTRY_THEMES: Record<string, EntryTheme> = {
     veil: '#ece0d6', veil2: '#e1d1c4',
     panel: '#fbf8f3', ink: '#5a4d44', soft: '#8a766a',
     accent: '#6f6052', accentText: '#f3ece1', script: '#b98a86',
-    ornament: 'rose',
+    ornament: 'rose', flap: 'curve',
   },
   allegria: {
     ...ENVELOPE_BASE,
     veil: '#e9ece5', veil2: '#dde2d6',
     panel: '#fbfbf8', ink: '#3a3a34', soft: '#7a7a72',
     accent: '#8c9a86', accentText: '#f2f4ee', script: '#6f7d69',
-    ornament: 'sage',
+    ornament: 'sage', flap: 'curve',
   },
   rosegold: {
     ...ENVELOPE_BASE,
@@ -134,7 +140,7 @@ export const ENTRY_THEMES: Record<string, EntryTheme> = {
     veil: '#f7efe4', veil2: '#eae0d2',
     panel: '#faf6ee', ink: '#68693f', soft: '#7a7c57',
     accent: '#a88144', accentText: '#ffffff', script: '#a88144',
-    ornament: 'leaf', tagline: 'Nuestra Boda',
+    ornament: 'lavender', tagline: 'Nuestra Boda', flap: 'point',
   },
 };
 
