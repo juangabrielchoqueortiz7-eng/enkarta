@@ -732,7 +732,10 @@ const DEFAULT_LOTTIE: Record<string, string> = {
   dinner:   '/lottie/boda/cena.json',
   dance:    '/lottie/boda/tango.json',
   gift:     '/lottie/boda/regalo-abierto.json',
-  camera:   '/lottie/boda/photo.json',
+  // OJO: `camera` NO va aquí. photo.json está construido a base de rellenos
+  // (28 fills / 15 strokes) y al tintarlo a un solo color se convierte en una
+  // mancha sólida. Los Lottie que funcionan tintados son los de trazo (iglesia:
+  // 42 strokes / 2 fills). Sin entrada aquí cae al SVG estático, que sí se ve.
   dress:    '/lottie/boda/wedding-dress.json',
   music:    '/lottie/general/musica.json',
   calendar: '/lottie/general/calendario.json',
@@ -816,6 +819,24 @@ export function EventIcon({ name, className = '', stroke = 'currentColor', lotti
   // Fallback: SVG hardcodeado clásico
   const common = { fill: 'none', stroke, strokeWidth: 1.25, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   switch (name) {
+    case 'car': // coche de los novios — traslados y despedida
+      return (
+        <svg viewBox="0 0 48 52" className={className} {...common}>
+          {/* Carrocería: ocupa la caja igual que el resto de iconos, si no se
+              ve raquítico al lado de la iglesia o las copas. */}
+          <path d="M7 34h34" />
+          <path d="M9.5 34v-6.6l4.8-9.2c.6-1.2 1.9-2 3.3-2h12.8c1.4 0 2.7.8 3.3 2l4.8 9.2V34" />
+          <path d="M9.5 27.4h29" />
+          <path d="M18.5 16.4v11M29.5 16.4v11" />
+          <path d="M15.6 38.6a3.4 3.4 0 1 0 0-.01Z" />
+          <path d="M32.4 38.6a3.4 3.4 0 1 0 0-.01Z" />
+          {/* Lazo sobre el capó y latas arrastrando: "recién casados" */}
+          <path d="M24 8.4c-2 -2.4 -5.2 -1.4 -4.6 1 .4 1.8 3 1.8 4.6 .6 1.6 1.2 4.2 1.2 4.6 -.6 .6 -2.4 -2.6 -3.4 -4.6 -1Z" />
+          <path d="M24 10v4.4" />
+          <path d="M7.6 41.4c-1.8 .8 -3.2 2 -4.4 3.6" />
+          <path d="M3.2 46.6a1.8 1.8 0 1 0 0-.01Z" />
+        </svg>
+      );
     case 'church': // refined chapel badge
       return (
         <svg viewBox="0 0 48 52" className={className} {...common}>

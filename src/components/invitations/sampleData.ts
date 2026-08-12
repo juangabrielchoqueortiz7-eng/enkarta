@@ -620,6 +620,57 @@ export const carmesiSample: DolceVitaContent = {
   giftOther: 'Obsequios tradicionales (Escríbenos)',
 };
 
+// Esmeralda reutiliza el tipo DolceVitaContent (misma estructura)
+export const esmeraldaSample: DolceVitaContent = {
+  ...dolceVitaSample,
+  groom: 'Valeria',
+  bride: 'Emilio',
+  dateCity: 'Bogotá',
+  dateWeekday: 'Sábado',
+  dateDay: '15',
+  dateMonth: 'Agosto',
+  dateYear: '2026',
+  isoDate: '2026-08-15T14:00:00',
+  guestName: 'Familia Segovia Sabogal',
+  guestPasses: '2 pases',
+  coverImage: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=1100&q=80',
+  introMessage: 'Con mucha ilusión y la alegría de compartir nuestras vidas, tenemos el placer de invitarlos a celebrar con nosotros el día en que decimos «sí» para siempre.',
+  blessing: 'Con la bendición de Dios y de nuestros padres',
+  parentsBride: ['José Segovia', 'María Helena Sabogal'],
+  parentsGroom: ['José María Fuentes', 'Clara Saavedra'],
+  padrinos: [],
+  ceremonyReligious: { time: '14:00 h', place: 'Capilla del Gimnasio Moderno', maps: 'https://maps.google.com' },
+  ceremonyCivil: undefined,
+  reception: { time: '16:30 h', place: 'Serrezuela Country Club', maps: 'https://maps.google.com' },
+  dressCode: 'Formal',
+  itinerary: [
+    { icon: 'church', label: 'Ceremonia', time: '14:00 h' },
+    { icon: 'car', label: 'Desplazamiento', time: '15:30 h' },
+    { icon: 'cheers', label: 'Brindis y cóctel', time: '17:00 h' },
+    { icon: 'rings', label: 'Recepción', time: '18:30 h' },
+    { icon: 'dinner', label: 'Cena', time: '19:00 h' },
+    { icon: 'dance', label: 'Fiesta', time: '20:30 h' },
+  ],
+  // Selección propia para que la muestra no se vea calcada a Dolce Vita.
+  // La armonía de color con el verde la resuelve la plantilla bajando la
+  // saturación de la galería, no el reparto de fotos.
+  galleryImages: [
+    'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=500&q=80',
+    'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=500&q=80',
+    'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=500&q=80',
+    'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=500&q=80',
+    'https://images.unsplash.com/photo-1606800052052-a08af7148866?w=500&q=80',
+    'https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=500&q=80',
+  ],
+  giftMessage: 'Su compañía es nuestro regalo más apreciado. Si desean tener un detalle con nosotros, cualquiera de estas opciones será recibida con enorme cariño.',
+  giftCash: 'Lluvia de sobres',
+  giftBank: { bank: 'Bancolombia', account: '4571 0093 2210', holder: 'Valeria Segovia' },
+  giftOther: undefined,
+  giftThanks: 'Gracias por acompañarnos',
+  noKids: 'Amamos a sus niños, y queremos que ustedes disfruten y bailen sin parar; es por ello que la invitación es solo para adultos.',
+  thanksMessage: 'Gracias por ser parte de nuestra historia. Creemos que el amor se fortalece con la presencia de quienes caminan a nuestro lado.',
+};
+
 export const provenceSample: ProvenceContent = {
   groom: 'Annie',
   bride: 'Miguel',

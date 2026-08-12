@@ -134,6 +134,15 @@ export const ENTRY_THEMES: Record<string, EntryTheme> = {
     accent: '#c6a86a', accentText: '#100f0c', script: '#e7d39b',
     tagline: 'Nos casamos',
   },
+  esmeralda: {
+    ...ENVELOPE_BASE,
+    scene: 'envelope',
+    veil: '#e7eadd', veil2: '#dbe0cf',
+    panel: '#f3f4ec', ink: '#26301f', soft: '#5a7444',
+    accent: '#2f4a33', accentText: '#eef0e4', script: '#2f4a33',
+    // Solapa recta + forro de olivo: formal y sobrio, a juego con la tipografía.
+    ornament: 'leaf', flap: 'square', tagline: 'Nuestra boda',
+  },
   provence: {
     ...ENVELOPE_BASE,
     scene: 'envelope',

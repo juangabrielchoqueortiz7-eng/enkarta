@@ -9,7 +9,7 @@ import { themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import type { PageMotionPreset, TemplateDecor, ParticleShape, CornerStyle } from '@/lib/types';
 import { entryPropsFor } from '@/components/invitations/entry/config';
 import { DEFAULT_MUSIC_URL, TRACK } from '@/lib/music';
-import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample, provenceSample } from '@/components/invitations/sampleData';
+import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample, provenceSample, esmeraldaSample } from '@/components/invitations/sampleData';
 
 interface Props {
   params: Promise<{ template: string }>;
@@ -32,6 +32,7 @@ const SAMPLES: Record<string, any> = {
   rosegold: roseGoldSample,
   allegria: allegriaSample,
   provence: provenceSample,
+  esmeralda: esmeraldaSample,
 };
 
 // Nombre público + foto de catálogo por plantilla: alimentan el título y la
@@ -49,6 +50,8 @@ const TEMPLATE_META: Record<string, { name: string; img: string; desc: string }>
   euforia:   { name: 'Euforia',    img: '/catalog/euforia.jpg',   desc: 'Mocha cálido en acuarela' },
   rosegold:  { name: 'Rose Gold',  img: '/catalog/rosegold.jpg',  desc: 'Blush suave y floral' },
   allegria:  { name: 'Allegria',   img: '/catalog/allegria.jpg',  desc: 'Salvia minimalista y fresca' },
+  // TODO: falta foto propia en /catalog; de momento usa su portada de muestra.
+  esmeralda: { name: 'Esmeralda',  img: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=1100&q=80', desc: 'Verde bosque, formal y muy aireado' },
   provence:  { name: 'Provence',   img: 'https://invitali.com/wp-content/uploads/2026/07/Novios-annie-y-Micky.webp', desc: 'Elegante marfil y dorado inspirado en Cieneguilla' },
 };
 
@@ -86,6 +89,7 @@ const DEMO_MOTION: Record<string, PageMotionPreset> = {
   rosegold:  'softlux',
   allegria:  'focus',
   provence:  'softlux',
+  esmeralda: 'elegant',
 };
 
 // Canción de la colección (public/musica) que suena en cada demo. Se reparten
@@ -105,6 +109,7 @@ const DEMO_MUSIC: Record<string, string> = {
   rosegold:  TRACK.pista5,
   allegria:  TRACK.pista6,
   provence:  TRACK.pista1,
+  esmeralda: TRACK.pista2,
 };
 
 export default async function MuestraPage({ params, searchParams }: Props) {
