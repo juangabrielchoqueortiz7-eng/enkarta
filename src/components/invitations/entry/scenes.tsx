@@ -20,6 +20,15 @@ export interface SceneProps {
   onEnter: () => void;
 }
 
+/**
+ * Separación entre las piezas apiladas de una escena (etiqueta, visual grande,
+ * pista, botón). Va en `vh` y no fija, porque la portada NO hace scroll: en un
+ * Android corto con la barra de direcciones puesta, un `gap-7` fijo empujaba el
+ * botón de entrar por debajo del corte. A 812px de alto sale ~28px, o sea lo
+ * mismo de siempre; solo aprieta cuando la pantalla es baja de verdad.
+ */
+const SCENE_GAP = 'clamp(16px, 3.4vh, 28px)';
+
 // ── Small shared primitives ───────────────────────────────────────────────────
 function Tagline({ theme }: { theme: EntryTheme }) {
   if (!theme.tagline) return null;
@@ -261,14 +270,16 @@ function PassportScene({ theme, names, initials, dateLine, label, phase, onEnter
   const reduce = useReducedMotion();
   const opening = phase === 'opening' && !reduce;
   return (
-    <motion.div className="relative z-10 flex flex-col items-center gap-7 px-6"
+    <motion.div className="relative z-10 flex flex-col items-center px-6" style={{ gap: SCENE_GAP }}
       variants={{ show: { transition: { staggerChildren: 0.14 } } }} initial="hidden" animate="show">
       <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Tagline theme={theme} /></motion.div>
       <motion.div variants={reveal} transition={{ duration: 0.8, ease: ease.soft }} style={{ perspective: 1500 }}>
         <motion.div
           className="relative flex flex-col items-center justify-between text-center"
           style={{
-            width: 'min(78vw, 300px)', aspectRatio: '2 / 2.7', background: theme.panel,
+            // El término en vh solo entra en pantallas cortas: a 812px de alto
+            // 42vh son 341px y gana el tope de 300px de siempre.
+            width: 'min(78vw, 300px, 42vh)', aspectRatio: '2 / 2.7', background: theme.panel,
             transformOrigin: 'left center', transformStyle: 'preserve-3d', borderRadius: 12,
             border: `2px solid ${theme.accent}`, boxShadow: '0 30px 60px -20px rgba(0,0,0,0.6)', padding: '26px 22px',
           }}
@@ -332,14 +343,15 @@ function ArchScene({ theme, names, dateLine, coverImage, label, phase, onEnter }
   const reduce = useReducedMotion();
   const opening = phase === 'opening' && !reduce;
   return (
-    <motion.div className="relative z-10 flex flex-col items-center gap-7 px-6"
+    <motion.div className="relative z-10 flex flex-col items-center px-6" style={{ gap: SCENE_GAP }}
       variants={{ show: { transition: { staggerChildren: 0.14 } } }} initial="hidden" animate="show">
       <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Tagline theme={theme} /></motion.div>
       <motion.div
         variants={reveal} transition={{ duration: 0.85, ease: ease.soft }}
         className="relative flex flex-col items-center justify-end text-center overflow-hidden"
         style={{
-          width: 'min(80vw, 320px)', aspectRatio: '3 / 4.2',
+          // Ver PassportScene: el término en vh solo manda en pantallas cortas.
+          width: 'min(80vw, 320px, 41vh)', aspectRatio: '3 / 4.2',
           borderRadius: '50% 50% 10px 10px / 32% 32% 4px 4px',
           border: `1.5px solid ${theme.accent}`, boxShadow: '0 30px 60px -22px rgba(0,0,0,0.55)',
           backgroundColor: '#2c3a1c',
@@ -763,14 +775,17 @@ function GiftboxScene({ theme, names, initials, dateLine, label, phase, onEnter 
 
   return (
     <motion.div
-      className="relative z-10 flex flex-col items-center gap-7 px-6"
+      className="relative z-10 flex flex-col items-center px-6"
+      style={{ gap: SCENE_GAP }}
       variants={{ show: { transition: { staggerChildren: 0.14 } } }}
       initial="hidden" animate="show"
     >
       <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Tagline theme={theme} /></motion.div>
 
       <motion.div variants={reveal} transition={{ duration: 0.8, ease: ease.soft }} style={{ perspective: 1200 }}>
-        <div className="relative" style={{ width: 'min(66vw, 240px)', aspectRatio: '1 / 1.02' }}>
+        {/* Esta escena lleva un bloque de nombres extra bajo la caja, así que es
+            la que más apila: el tope en vh entra antes que en las otras dos. */}
+        <div className="relative" style={{ width: 'min(66vw, 240px, 34vh)', aspectRatio: '1 / 1.02' }}>
           {/* Cuerpo de la caja */}
           <div
             className="absolute left-0 right-0 bottom-0 overflow-hidden"
