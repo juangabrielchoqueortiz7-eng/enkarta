@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { ease } from '@/lib/motion';
 import type { EntryTheme, Ornament } from './config';
 import {
-  Grain, LinerPattern, BreakingSeal, GoldRule, OpenCue,
+  Grain, Linen, SealPressed, darken, GoldRule, OpenCue,
   EnterButton, Monogram,
 } from './materials';
 
@@ -126,9 +126,10 @@ function CornerSprigs({ theme }: { theme: EntryTheme }) {
 const reveal = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0 } };
 
 // ══════════════════════ ENVELOPE (Dolce Vita, Grazia, Napoly, Allegria…) ═══════
-// Sobre de papelería fina: cartulina con grano, solapa con forro estampado
-// (el motivo cambia por plantilla, así dos sobres nunca se ven iguales) y una
-// tarjeta que sale de dentro al romperse el lacre.
+// El sobre NO es un dibujo dentro de la página: es la página. Ocupa el viewport
+// entero, las dos solapas convergen en el centro y ahí va el lacre, único punto
+// de color y único elemento interactivo. Nombres, fecha y botón salen de aquí a
+// propósito: el impacto viene de la escala y de un solo objeto, no de acumular.
 /** Puntos de una cúpula (semielipse) de altura `amp`, de izquierda a derecha. */
 function dome(amp: number, steps = 16): string[] {
   return Array.from({ length: steps + 1 }, (_, i) => {
@@ -139,161 +140,121 @@ function dome(amp: number, steps = 16): string[] {
 }
 
 /**
- * Recorte de la solapa y de la boca del sobre según el corte de la plantilla.
- * `sealTop` sitúa el lacre justo sobre el borde de la solapa, que cae a distinta
- * altura en cada corte (la solapa recta termina mucho más arriba que la punta).
+ * Cómo convergen las dos solapas en el centro. Es lo que diferencia un sobre de
+ * otro ahora que la portada es monocroma: punta clásica, curva romántica o
+ * corte recto minimalista.
  */
-function envelopeClips(flap: EntryTheme['flap']) {
+function flapClips(flap: EntryTheme['flap']) {
   if (flap === 'square') {
-    return {
-      flap: 'polygon(0 0, 100% 0, 100% 72%, 0 72%)',
-      // Boca recta: el frente es un rectángulo limpio.
-      pocket: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
-      sealTop: '24%',
-    };
+    return { arriba: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)', abajo: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)' };
   }
   if (flap === 'curve') {
     return {
-      flap: `polygon(0% 0%, 100% 0%, ${dome(100).reverse().join(', ')})`,
-      pocket: `polygon(${dome(46).join(', ')}, 100% 100%, 0% 100%)`,
-      sealTop: '38%',
+      arriba: `polygon(0% 0%, 100% 0%, ${dome(100).reverse().join(', ')})`,
+      abajo: `polygon(${dome(100).map(pt => { const [x, y] = pt.split(' '); return `${x} ${(100 - parseFloat(y)).toFixed(1)}%`; }).join(', ')}, 100% 100%, 0% 100%)`,
     };
   }
-  return {
-    flap: 'polygon(0 0, 100% 0, 50% 100%)',
-    pocket: 'polygon(0 0, 50% 44%, 100% 0, 100% 100%, 0 100%)',
-    sealTop: '36%',
-  };
+  return { arriba: 'polygon(0 0, 100% 0, 50% 100%)', abajo: 'polygon(50% 0, 100% 100%, 0 100%)' };
 }
 
-function EnvelopeScene({ theme, names, initials, dateLine, label, phase, onEnter }: SceneProps) {
+function EnvelopeScene({ theme, initials, label, phase, onEnter }: SceneProps) {
   const reduce = useReducedMotion();
   const opening = phase === 'opening' && !reduce;
-  // OJO: `panelEdge` es un color de superposición (rgba semitransparente), no
-  // un tono de papel. Va como CAPA sobre `panel` opaco; si se usa como parada
-  // final de un degradado el sobre se vuelve translúcido y se ve la tarjeta.
-  const paper = `linear-gradient(158deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 42%, ${theme.panelEdge} 100%), ${theme.panel}`;
-  const inner = `linear-gradient(180deg, rgba(0,0,0,0.16), rgba(0,0,0,0.07)), ${theme.panel}`;
-  const clip = envelopeClips(theme.flap);
+
+  // Monocromo a propósito: el papel es un solo tono y la ÚNICA nota de color es
+  // el lacre. Un objeto grande + un punto focal es lo que da impacto; llenar la
+  // portada de nombres, fechas, botones y ramitas es lo que se lo quitaba.
+  const cuerpo = `linear-gradient(150deg, rgba(255,255,255,0.5), rgba(0,0,0,0.03)), ${theme.panel}`;
+  const solapa = `linear-gradient(180deg, rgba(255,255,255,0.28), rgba(0,0,0,0.07)), ${theme.panel}`;
+  const clip = flapClips(theme.flap);
+
+  const flap = (lado: 'arriba' | 'abajo') => {
+    const arriba = lado === 'arriba';
+    return (
+      <motion.div
+        className="absolute left-0 right-0"
+        style={{
+          height: '50%',
+          [arriba ? 'top' : 'bottom']: 0,
+          background: solapa,
+          clipPath: arriba ? clip.arriba : clip.abajo,
+          transformOrigin: arriba ? 'top center' : 'bottom center',
+          // La sombra del pliegue cae hacia el centro, donde se juntan las puntas.
+          filter: `drop-shadow(0 ${arriba ? 6 : -6}px 14px rgba(0,0,0,0.16))`,
+        }}
+        initial={false}
+        animate={opening ? { rotateX: arriba ? -96 : 96, opacity: 0 } : { rotateX: 0, opacity: 1 }}
+        transition={{ duration: 1, ease: ease.inOut, delay: opening ? 0.35 : 0 }}
+      >
+        <Linen opacity={0.6} />
+      </motion.div>
+    );
+  };
 
   return (
-    <>
-      <CornerSprigs theme={theme} />
+    <div className="absolute inset-0" style={{ perspective: 1800 }}>
+      {/* Interior del sobre: se ve por los lados y al abrirse las solapas */}
+      {/* Sin estampado: a pantalla completa el motivo repetido se lee como papel
+          pintado y rompe la calma. El lino solo ya da la sensación de papel. */}
+      <div className="absolute inset-0" style={{ background: cuerpo }}>
+        <Linen opacity={0.45} />
+      </div>
+
+      {flap('arriba')}
+      {flap('abajo')}
+
+      {/* Único elemento interactivo: el lacre. Es un botón de verdad para que
+          funcione con teclado y lectores de pantalla aunque no parezca uno. */}
       <motion.div
-        className="relative z-10 flex flex-col items-center gap-7 px-6"
-        variants={{ show: { transition: { staggerChildren: 0.14 } } }}
-        initial="hidden" animate="show"
+        className="absolute left-1/2 top-1/2 z-10 flex flex-col items-center"
+        style={{ transform: 'translate(-50%, -50%)' }}
+        // initial={false}: el lacre es el ÚNICO elemento interactivo de la
+        // portada, así que nunca puede depender de que la animación llegue a
+        // correr. Con initial opacity 0 se quedaba invisible en cualquier
+        // situación que congele el bucle de animación (pestaña en segundo
+        // plano, por ejemplo) y la invitación no se podía abrir.
+        initial={false}
+        animate={opening ? { opacity: 0, scale: 1.06 } : { opacity: 1, scale: 1 }}
+        transition={{ duration: opening ? 0.45 : 1.1, ease: ease.soft }}
       >
-        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Tagline theme={theme} /></motion.div>
-
-        <motion.div
-          variants={reveal} transition={{ duration: 0.8, ease: ease.soft }}
-          className="relative" style={{ width: 'min(82vw, 330px)', aspectRatio: '3 / 2', perspective: 1500 }}
-        >
-          {/* Secuencia: lacre se parte → solapa gira y enseña el forro →
-              la tarjeta sale → el sobre se inclina hacia atrás. */}
-          <motion.div
-            className="absolute inset-0"
-            style={{ transformStyle: 'preserve-3d' }}
-            animate={opening ? { rotateX: 16, y: 30, scale: 0.95 } : { rotateX: 0, y: 0, scale: 1 }}
-            transition={{ duration: 0.9, ease: ease.inOut, delay: opening ? 0.6 : 0 }}
+        {theme.tagline && (
+          <p
+            className="font-cinzel uppercase"
+            style={{ color: theme.soft, letterSpacing: '0.34em', fontSize: 10, marginBottom: 18 }}
           >
-            {/* Interior del sobre (se ve por la boca cuando sale la tarjeta).
-                Cada capa lleva su propio translateZ: dentro de un contexto
-                preserve-3d el navegador ordena por profundidad, no por z-index,
-                y sin esto la tarjeta se transparentaba a través del sobre. */}
-            <div
-              className="absolute inset-0 overflow-hidden"
-              style={{
-                background: inner, borderRadius: 7,
-                transform: 'translateZ(0px)',
-                boxShadow: '0 36px 70px -24px rgba(0,0,0,0.45)',
-              }}
-            >
-              <LinerPattern kind={theme.ornament} color={theme.accent} opacity={0.22} id={`${theme.scene}-in`} />
-            </div>
-
-            {/* Tarjeta dentro del sobre */}
-            <motion.div
-              className="absolute flex flex-col items-center justify-center gap-2"
-              style={{
-                left: '8%', right: '8%', top: '6%', bottom: '10%',
-                background: 'linear-gradient(170deg, #fffefb, #f7f2e9)',
-                borderRadius: 3, transform: 'translateZ(1px)',
-                boxShadow: '0 8px 20px -8px rgba(0,0,0,0.28)',
-              }}
-              animate={opening ? { y: '-88%', scale: 1.04, z: 1 } : { y: 0, scale: 1, z: 1 }}
-              transition={{ duration: 0.95, ease: ease.soft, delay: opening ? 0.5 : 0 }}
-            >
-              {/* Filete de oro del borde de la tarjeta */}
-              <span className="pointer-events-none absolute" style={{ inset: 5, border: `1px solid ${theme.accent}44` }} />
-              <span className="font-great" style={{ color: theme.script, fontSize: 30, lineHeight: 1 }}>{initials}</span>
-              <GoldRule color={theme.accent} width={82} />
-              {dateLine && (
-                <span className="font-cinzel uppercase" style={{ color: theme.soft, letterSpacing: '0.26em', fontSize: 8 }}>
-                  {dateLine}
-                </span>
-              )}
-              <Grain opacity={0.09} />
-            </motion.div>
-
-            {/* Frente del sobre (tapa la tarjeta por delante) */}
-            <div className="absolute inset-0" style={{ clipPath: clip.pocket, transform: 'translateZ(2px)' }}>
-              <div className="absolute inset-0" style={{ background: paper, borderRadius: 7 }} />
-              {/* Sombra del pliegue en la boca */}
-              <div
-                className="absolute inset-0"
-                style={{ background: `linear-gradient(180deg, rgba(0,0,0,0.10), transparent 34%)` }}
-              />
-              <Grain opacity={0.14} />
-            </div>
-
-            {/* Solapa: cara exterior (papel) + cara interior (forro estampado) */}
-            <motion.div
-              className="absolute left-0 right-0 top-0"
-              style={{ height: '58%', transformOrigin: 'top center', transformStyle: 'preserve-3d' }}
-              animate={opening ? { rotateX: -172, z: 3 } : { rotateX: 0, z: 3 }}
-              transition={{ duration: 0.95, ease: ease.inOut, delay: opening ? 0.24 : 0 }}
-            >
-              {/* Exterior */}
-              <div
-                className="absolute inset-0"
-                style={{ clipPath: clip.flap, background: paper, backfaceVisibility: 'hidden' }}
-              >
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.35), rgba(0,0,0,0.10))' }} />
-                <Grain opacity={0.14} />
-              </div>
-              {/* Interior con forro */}
-              <div
-                className="absolute inset-0 overflow-hidden"
-                style={{
-                  clipPath: clip.flap, background: inner,
-                  backfaceVisibility: 'hidden', transform: 'rotateX(180deg)',
-                }}
-              >
-                <LinerPattern kind={theme.ornament} color={theme.accent} opacity={0.55} id={`${theme.scene}-flap`} />
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.14), transparent 45%)' }} />
-              </div>
-            </motion.div>
-
-            {/* Lacre en la punta de la solapa */}
-            <div className="absolute left-1/2" style={{ top: clip.sealTop, transform: 'translateX(-50%) translateZ(6px)' }}>
-              <BreakingSeal theme={theme} initials={initials} opening={opening} size={80} />
-            </div>
-          </motion.div>
-        </motion.div>
-
-        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}>
-          <NamesBlock theme={theme} names={names} dateLine={dateLine} />
-        </motion.div>
-        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><OpenCue color={theme.soft} /></motion.div>
-        <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}>
-          <EnterButton theme={theme} label={label} onEnter={onEnter} solid />
-        </motion.div>
+            {theme.tagline}
+          </p>
+        )}
+        <motion.button
+          onClick={onEnter}
+          aria-label={label}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.97 }}
+          className="cursor-pointer"
+          style={{ background: 'none', border: 0, padding: 0, lineHeight: 0 }}
+        >
+          <SealPressed
+            initials={initials}
+            wax={theme.accent}
+            waxDeep={darken(theme.accent, 0.45)}
+            ink={darken(theme.accent, 0.68)}
+            size={132}
+          />
+        </motion.button>
+        <motion.svg
+          width="20" height="12" viewBox="0 0 24 14" fill="none"
+          stroke={theme.soft} strokeWidth="1.3" style={{ marginTop: 20 }}
+          animate={reduce ? {} : { y: [0, 5, 0] }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4l8 7 8-7" />
+        </motion.svg>
       </motion.div>
-    </>
+    </div>
   );
 }
+
 
 // ══════════════════════ PASSPORT (Passport) ══════════════════════
 function PassportScene({ theme, names, initials, dateLine, label, phase, onEnter }: SceneProps) {

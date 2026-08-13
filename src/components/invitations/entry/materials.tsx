@@ -32,6 +32,88 @@ export function Grain({ opacity = 0.16, radius }: { opacity?: number; radius?: n
   );
 }
 
+/**
+ * Lino: grano fino + trama cruzada muy tenue. A pantalla completa el ruido
+ * suelto no basta — se necesita ver fibra para que el papel parezca papel.
+ */
+export function Linen({ opacity = 0.5 }: { opacity?: number }) {
+  return (
+    <div className="pointer-events-none absolute inset-0" aria-hidden style={{ opacity }}>
+      <div className="absolute inset-0" style={{ backgroundImage: GRAIN, opacity: 0.28, mixBlendMode: 'multiply' }} />
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `repeating-linear-gradient(0deg, rgba(0,0,0,0.035) 0 1px, transparent 1px 3px),
+                            repeating-linear-gradient(90deg, rgba(0,0,0,0.035) 0 1px, transparent 1px 3px)`,
+          mixBlendMode: 'multiply',
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * Lacre con el monograma GRABADO EN HUECO (no impreso encima).
+ *
+ * El truco del relieve son dos sombras de texto opuestas: una clara abajo y una
+ * oscura arriba hacen que la letra parezca hundida en la cera. El borde es
+ * irregular y la sombra proyectada va fuera del recorte, para que no se vea el
+ * parche rectangular de siempre.
+ */
+export function SealPressed({
+  initials, wax, waxDeep, ink, size = 128,
+}: { initials: string; wax: string; waxDeep: string; ink: string; size?: number }) {
+  const blob = '47% 53% 48% 52% / 51% 47% 53% 49%';
+  return (
+    <div className="relative" style={{ width: size, height: size }} aria-hidden>
+      {/* Sombra proyectada sobre el papel */}
+      <div
+        className="absolute"
+        style={{ inset: size * 0.06, borderRadius: blob, boxShadow: `0 ${size * 0.09}px ${size * 0.16}px -${size * 0.05}px rgba(0,0,0,0.34)` }}
+      />
+      {/* Cuerpo de cera */}
+      <div
+        className="absolute inset-0"
+        style={{
+          borderRadius: blob,
+          background: `radial-gradient(circle at 36% 30%, ${wax} 0%, ${wax} 46%, ${waxDeep} 100%)`,
+          boxShadow: `inset 0 ${size * 0.02}px ${size * 0.04}px rgba(255,255,255,0.5),
+                      inset 0 -${size * 0.035}px ${size * 0.07}px rgba(0,0,0,0.22)`,
+        }}
+      />
+      {/* Reborde exterior de la cera, un poco más alto que el centro */}
+      <div
+        className="absolute"
+        style={{
+          inset: size * 0.07, borderRadius: blob,
+          boxShadow: `inset 0 ${size * 0.025}px ${size * 0.05}px rgba(0,0,0,0.16),
+                      inset 0 -${size * 0.02}px ${size * 0.03}px rgba(255,255,255,0.42)`,
+        }}
+      />
+      {/* Monograma hundido */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span
+          className="font-great"
+          style={{
+            color: ink,
+            fontSize: size * 0.3,
+            lineHeight: 1,
+            // Sin esto "R & N" partía en dos líneas dentro del lacre.
+            whiteSpace: 'nowrap',
+            // El grabado necesita contraste real: con poca opacidad el
+            // monograma no se leía sobre una cera oscura.
+            textShadow: `0 ${size * 0.012}px 0 rgba(255,255,255,0.42),
+                         0 -1px ${size * 0.012}px rgba(0,0,0,0.55)`,
+          }}
+        >
+          {initials}
+        </span>
+      </div>
+      <Grain opacity={0.14} radius={blob} />
+    </div>
+  );
+}
+
 // ── Forro del sobre ───────────────────────────────────────────────────────────
 // El estampado del interior de la solapa: el detalle de papelería fina que
 // distingue una plantilla de otra cuando el sobre se abre.
@@ -195,6 +277,20 @@ export function BreakingSeal({
       {half(1)}
     </div>
   );
+}
+
+/**
+ * Oscurece un color hex un `f` (0-1). Sirve para la sombra de la cera sin
+ * depender de `color-mix`, que no es seguro en navegadores viejos. Si el color
+ * no es hex (el cliente puede meter cualquier cosa en la paleta), lo devuelve
+ * tal cual: peor sombra, pero nunca un color roto.
+ */
+export function darken(c: string, f = 0.42): string {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c.trim());
+  if (!m) return c;
+  const h = m[1].length === 3 ? m[1].split('').map(x => x + x).join('') : m[1];
+  const v = [0, 2, 4].map(i => Math.round(parseInt(h.slice(i, i + 2), 16) * (1 - f)));
+  return `#${v.map(x => x.toString(16).padStart(2, '0')).join('')}`;
 }
 
 // ── Oro y filetes ─────────────────────────────────────────────────────────────
