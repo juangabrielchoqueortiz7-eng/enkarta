@@ -80,6 +80,39 @@ function Caps({ children, className = '', style }: { children: React.ReactNode; 
   return <h3 className={className} style={{ fontFamily: F.serif, letterSpacing: '0.14em', textTransform: 'uppercase', lineHeight: 1.45, ...style }}>{children}</h3>;
 }
 
+/**
+ * Banda de sección.
+ *
+ * A NIVEL DE MÓDULO a propósito, igual que `SecIcon` en Azure. Definida dentro
+ * de `Obsidiana()` se creaba una función nueva en cada render, React la veía
+ * como otro tipo de componente y DESMONTABA Y VOLVÍA A MONTAR la sección
+ * entera; como la cuenta regresiva re-renderiza cada segundo, las 12 bandas se
+ * reconstruían una vez por segundo y los iconos Lottie arrancaban de cero:
+ * eso era el parpadeo.
+ *
+ * La paleta la lee del contexto y la costura entra ya montada como prop, para
+ * no depender de nada del cuerpo del componente.
+ */
+function Band({ tone = 'black', seam, children, className = '' }: {
+  tone?: 'black' | 'olive';
+  seam?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const C = useC();
+  return (
+    <section className={`relative overflow-hidden px-6 ${SECTION.base} ${className}`} style={{ background: tone === 'olive' ? C.olive : C.black, color: C.cream }}>
+      {seam}
+      {tone === 'black' && <MarbleVeins />}
+      {tone === 'black' && <>
+        <Frond className="pointer-events-none absolute -right-6 top-10 w-20 opacity-70" style={{ transform: 'rotate(18deg)' }} />
+        <Frond className="pointer-events-none absolute -left-8 bottom-12 w-20 opacity-60" style={{ transform: 'rotate(-152deg)' }} />
+      </>}
+      <div className="relative z-10 mx-auto max-w-3xl">{children}</div>
+    </section>
+  );
+}
+
 // ── Botones ────────────────────────────────────────────────────────────────────
 function OliveBtn({ children, href }: { children: React.ReactNode; href: string }) {
   const C = useC();
@@ -165,19 +198,6 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
     { k: 'pie',        c: C.panel },
   ], { shape: 'bevel', hairline: C.gold });
 
-  // Banda de sección
-  const Band = ({ tone = 'black', k, children, className = '' }: { tone?: 'black' | 'olive'; k?: string; children: React.ReactNode; className?: string }) => (
-    <section className={`relative overflow-hidden px-6 ${SECTION.base} ${className}`} style={{ background: tone === 'olive' ? C.olive : C.black, color: C.cream }}>
-      {k && sew(k)}
-      {tone === 'black' && <MarbleVeins />}
-      {tone === 'black' && <>
-        <Frond className="pointer-events-none absolute -right-6 top-10 w-20 opacity-70" style={{ transform: 'rotate(18deg)' }} />
-        <Frond className="pointer-events-none absolute -left-8 bottom-12 w-20 opacity-60" style={{ transform: 'rotate(-152deg)' }} />
-      </>}
-      <div className="relative z-10 mx-auto max-w-3xl">{children}</div>
-    </section>
-  );
-
   const timelineItem = (it: { icon?: string; label: string; time: string; iconColors?: Record<string, string>; iconSpeed?: number }) => (
     <div className="flex flex-col items-center px-2 text-center">
       <EventIcon name={it.icon ?? 'rings'} className="h-11 w-11" stroke={C.gold} custom={data} lottieColors={it.iconColors} speed={it.iconSpeed} />
@@ -231,7 +251,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       </section>
 
       {/* ════════ INTRO + INVITADO (oliva) ════════ */}
-      <Band tone="olive" k="invitado">
+      <Band tone="olive" seam={sew('invitado')}>
         <Reveal className="text-center">
           <p style={{ fontSize: TYPE.body, color: C.creamDim }}>Bienvenidos a la invitación de nuestra boda</p>
           <div className="mx-auto my-3 flex max-w-xs items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.line }} /><span className="h-1 w-1 rounded-full" style={{ background: C.gold }} /><span className="h-px flex-1" style={{ background: C.line }} /></div>
@@ -247,7 +267,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       </Band>
 
       {/* ════════ CUENTA REGRESIVA ════════ */}
-      <Band k="cuenta">
+      <Band seam={sew('cuenta')}>
         <Reveal className="text-center">
           <Script style={{ fontSize: '42px' }}>Faltan</Script>
           <div className="mx-auto mt-4 grid max-w-md grid-cols-4 gap-2 rounded-2xl px-3 py-5" style={{ border: `1px solid ${C.line}` }}>
@@ -344,7 +364,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       )}
 
       {/* ════════ REGALO (oliva) ════════ */}
-      <Band tone="olive" k="regalo">
+      <Band tone="olive" seam={sew('regalo')}>
         <Reveal className="text-center">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.gold} custom={data} sec="gift" />
           <Script style={{ fontSize: '40px' }}>Sugerencia de Regalo</Script>
@@ -371,7 +391,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
 
       {/* ════════ NOSOTROS ════════ */}
       {data.aboutImage && (
-        <Band k="nosotros">
+        <Band seam={sew('nosotros')}>
           <Reveal className="text-center">
             <Script style={{ fontSize: '46px' }}>Nosotros</Script>
             <div className="mx-auto mt-5 max-w-sm overflow-hidden rounded-3xl" style={{ border: `1px solid ${C.line}` }}>
@@ -384,7 +404,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
 
       {/* ════════ GALERÍA (cuadrícula vertical) ════════ */}
       {data.galleryImages && data.galleryImages.length > 0 && (
-        <Band k="galeria">
+        <Band seam={sew('galeria')}>
           <Reveal>
             <MasonryGallery images={data.galleryImages} variant="grid" aspect="3 / 5" />
           </Reveal>
@@ -392,7 +412,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       )}
 
       {/* ════════ AGRADECIMIENTO + PADRINOS (oliva) ════════ */}
-      <Band tone="olive" k="gracias">
+      <Band tone="olive" seam={sew('gracias')}>
         <Reveal className="text-center">
           <Script style={{ fontSize: '48px' }}>{data.thanksTitle ?? 'Agradecimiento'}</Script>
           <div className="mx-auto my-4 flex max-w-sm items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.line }} /><span className="h-1 w-1 rounded-full" style={{ background: C.gold }} /><span className="h-px flex-1" style={{ background: C.line }} /></div>
@@ -413,7 +433,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       </Band>
 
       {/* ════════ CIERRE + GALERÍA COMPARTIR ════════ */}
-      <Band k="cierre">
+      <Band seam={sew('cierre')}>
         <Reveal className="text-center">
           <Caps className="mx-auto max-w-xl" style={{ fontSize: 'clamp(16px,2.6vw,22px)', color: C.cream }}>{data.rsvpClosing}</Caps>
           <div className="mx-auto mt-8 max-w-md rounded-3xl px-6 py-8 text-center" style={{ border: `1px solid ${C.gold}`, background: C.olive }}>

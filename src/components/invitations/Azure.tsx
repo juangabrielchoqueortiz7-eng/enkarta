@@ -219,7 +219,11 @@ export default function Azure({ data }: { data: InvitationContent }) {
     { k: 'pie',     c: C.navyDeep },
   ], { shape: 'arch', hairline: C.line });
 
-  const SectionDivider = ({ className }: { className?: string }) =>
+  // Función, NO componente definido aquí dentro: un componente creado en cada
+  // render es un tipo nuevo para React y desmonta y vuelve a montar su árbol
+  // en cada tic de la cuenta regresiva. Devolviendo el elemento directamente,
+  // se reconcilia como un hijo más de la sección.
+  const sectionDivider = (className?: string) =>
     dividers === 'none'
       ? null
       : dividers === 'line'
@@ -408,7 +412,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
 
         {/* Blessing + parents */}
         <Reveal delay={120} className="mt-16">
-          <SectionDivider className="w-24 mx-auto mb-6 opacity-70" />
+          {sectionDivider('w-24 mx-auto mb-6 opacity-70')}
           <CapsTitle className="text-[12px] sm:text-[15px]">{data.blessing}</CapsTitle>
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto font-cormorant" style={{ color: C.ink, fontSize: '17px' }}>
             <div>{data.parentsGroom.map((p) => <p key={p}>{p}</p>)}</div>
@@ -419,7 +423,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
 
       {/* ════════ CEREMONY + RECEPTION ════════ */}
       <section className={`relative z-10 ${SECTION.tight} px-6`}>
-        <SectionDivider className="w-24 mx-auto mb-12 opacity-70" />
+        {sectionDivider('w-24 mx-auto mb-12 opacity-70')}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-12 max-w-3xl mx-auto">
           {[
             { icon: iconOf('ceremony', 'church'), sec: 'ceremony', title: 'Ceremonia Religiosa', d: data.ceremony },
@@ -455,7 +459,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
 
       {/* ════════ ITINERARIO ════════ */}
       <section className={`relative z-10 ${SECTION.tight} px-6 text-center`}>
-        <SectionDivider className="w-24 mx-auto mb-4 opacity-70" />
+        {sectionDivider('w-24 mx-auto mb-4 opacity-70')}
         <Reveal>
           <h2 className="font-great" style={{ color: C.navy, fontSize: 'clamp(34px,6vw,52px)' }}>Itinerario</h2>
         </Reveal>
@@ -469,7 +473,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
             </Reveal>
           ))}
         </div>
-        <SectionDivider className="w-24 mx-auto mt-10 opacity-70" />
+        {sectionDivider('w-24 mx-auto mt-10 opacity-70')}
       </section>
 
       {/* ════════ GIFT (navy) ════════ */}
@@ -509,7 +513,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
           <PhotoGrid images={data.galleryImages} className="mt-7 max-w-lg mx-auto" />
           <div className="mt-5"><OutlineBtn href={data.gallery.shareUrl}>Compartir fotografías</OutlineBtn></div>
         </Reveal>
-        <SectionDivider className="w-24 mx-auto my-12 opacity-70" />
+        {sectionDivider('w-24 mx-auto my-12 opacity-70')}
         <Reveal className="flex flex-col items-center">
           <CapsTitle className="text-[13px] sm:text-[15px] max-w-md mx-auto leading-relaxed">{data.rsvp.message}</CapsTitle>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.soft} strokeWidth="1.5" className="my-4" style={{ animation: 'azBounce 1.8s ease-in-out infinite' }}>
