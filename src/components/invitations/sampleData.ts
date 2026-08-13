@@ -10,11 +10,11 @@ export const azureSample: InvitationContent = {
   guestPasses: '2 pases',
   coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=900&q=80',
 
-  isoDate: '2026-07-04T16:00:00',
+  isoDate: '2027-07-03T16:00:00',
   weekday: 'Sábado',
-  day: '04',
+  day: '03',
   month: 'Julio',
-  year: '2026',
+  year: '2027',
   city: 'Bogotá',
 
   introMessage:
@@ -42,9 +42,9 @@ export const azureSample: InvitationContent = {
   dressCode: { men: 'Smoking', women: 'Traje de noche' },
 
   itinerary: [
-    { icon: 'church', label: 'Ceremonia Religiosa', time: '16:00 H' },
     { icon: 'cheers', label: 'Cóctel de Bienvenida', time: '18:00 H' },
     { icon: 'dance', label: 'Ingreso al salón principal', time: '19:00 H' },
+    { icon: 'dinner', label: 'Cena', time: '20:00 H' },
   ],
 
   gift: {
@@ -90,12 +90,10 @@ export const primiciaSample: PrimiciaContent = {
   parentsBride: ['Mateo Martinez Paz', 'Santiago Lopez Saenz'],
   parentsGroom: ['Isabela Vargas', 'Catalina Mamani'],
   itinerary: [
-    { label: 'Ceremonia Civil y Religiosa', time: '16:00 h', icon: 'church' },
-    { label: 'Recepcion Social', time: '18:00 h', icon: 'rings' },
-    { label: 'Vals y Brindis', time: '18:30 h', icon: 'cheers' },
-    { label: 'Cena', time: '20:00 h', icon: 'dinner' },
-    { label: 'A bailar', time: '20:30 h', icon: 'dance' },
-    { label: 'Fin de la fiesta', time: '00:00 h', icon: 'cheers' },
+    { label: 'Vals y Brindis', time: '19:30 h', icon: 'cheers' },
+    { label: 'Cena', time: '20:30 h', icon: 'dinner' },
+    { label: 'A bailar', time: '21:30 h', icon: 'dance' },
+    { label: 'Fin de la fiesta', time: '00:00 h', icon: 'car' },
   ],
   dressCode: 'Formal',
   locations: [
@@ -186,7 +184,7 @@ export const paradiseSample: ParadiseContent = {
   guestName: 'Daniel Martinez',
   guestPasses: '2 pases',
 
-  isoDate: '2026-03-29T16:00:00',
+  isoDate: '2027-03-27T16:00:00',
   dateLabel: '29 / 03 / 26',
   city: 'SANTA CRUZ',
 
@@ -208,12 +206,11 @@ export const paradiseSample: ParadiseContent = {
   dressCode: 'Formal',
 
   itinerary: [
-    { icon: 'church', label: 'Ceremonia Religiosa', time: '16:00 h' },
-    { icon: 'gift', label: 'Recepción Social', time: '18:00 h' },
-    { icon: 'cheers', label: 'Vals y Brindis', time: '18:30 h' },
-    { icon: 'dinner', label: 'Cena', time: '20:00 h' },
-    { icon: 'dance', label: 'A bailar', time: '20:30 h' },
-    { icon: 'rings', label: 'Fin de la fiesta', time: '00:00 h' },
+    { icon: 'cheers', label: 'Recepción Social', time: '20:30 h' },
+    { icon: 'rings', label: 'Vals y Brindis', time: '21:00 h' },
+    { icon: 'dinner', label: 'Cena', time: '21:30 h' },
+    { icon: 'dance', label: 'A bailar', time: '22:30 h' },
+    { icon: 'cake', label: 'Fin de la fiesta', time: '00:00 h' },
   ],
 
   giftMessage:
@@ -249,9 +246,9 @@ export const obsidianaSample: ObsidianaContent = {
   guestName: 'Daniel Marth',
   guestPasses: '2 pases',
 
-  isoDate: '2025-08-30T20:00:00',
+  isoDate: '2027-08-28T20:00:00',
   dateWeekday: 'Sábado',
-  dateDay: '30',
+  dateDay: '28',
   dateMonth: 'Agosto',
   datePlace: 'Italacume · 2025',
 
@@ -264,17 +261,16 @@ export const obsidianaSample: ObsidianaContent = {
   parentsBride: ['Mateo Emiliano Rojas Velasco', 'Camila Isabela Fernández Rivas'],
   parentsGroom: ['Lucas Adrián Méndez Arce', 'Valeria Sofía Escobar León'],
 
-  ceremonyReligious: { time: '10:00 am', place: 'Catedral Metropolitana', maps: 'https://maps.google.com' },
-  reception: { time: '15:00 pm', place: 'Salón de eventos Los Jardines', maps: 'https://maps.google.com' },
+  ceremonyReligious: { time: '16:00 h', place: 'Catedral Metropolitana', maps: 'https://maps.google.com' },
+  reception: { time: '18:00 h', place: 'Salón de eventos Los Jardines', maps: 'https://maps.google.com' },
   dressCode: 'Formal',
 
   itinerary: [
-    { icon: 'church', label: 'Ceremonia Religiosa', time: '20:00 h' },
-    { icon: 'cheers', label: 'Recepción Social', time: '21:30 h' },
-    { icon: 'dinner', label: 'Cena', time: '22:00 h' },
-    { icon: 'gift', label: 'Torta', time: '23:00 h' },
-    { icon: 'dance', label: 'Lanzamiento del ramo', time: '23:30 h' },
-    { icon: 'rings', label: 'Fin de la fiesta', time: '00:00 h' },
+    { icon: 'cheers', label: 'Brindis y Vals', time: '19:00 h' },
+    { icon: 'dinner', label: 'Cena', time: '20:00 h' },
+    { icon: 'cake', label: 'Torta', time: '22:00 h' },
+    { icon: 'flowers', label: 'Lanzamiento del ramo', time: '22:30 h' },
+    { icon: 'dance', label: 'Fin de la fiesta', time: '00:00 h' },
   ],
 
   lodgingTitle: 'Sugerencia de hospedaje',
@@ -348,12 +344,11 @@ export const dolceVitaSample: DolceVitaContent = {
   dressCode: 'Traje Formal',
 
   itinerary: [
-    { icon: 'church', label: 'Ceremonia Religiosa', time: '16:00 h' },
-    { icon: 'rings', label: 'Ceremonia Civil', time: '14:00 h' },
-    { icon: 'cheers', label: 'Fiesta', time: '15:00 h' },
+    { icon: 'cheers', label: 'Brindis', time: '15:00 h' },
     { icon: 'dinner', label: 'Cena', time: '16:30 h' },
     { icon: 'dance', label: 'Baile de Novios', time: '17:00 h' },
-    { icon: 'gift', label: 'Torta', time: '20:30 h' },
+    { icon: 'party', label: 'Fiesta', time: '18:00 h' },
+    { icon: 'cake', label: 'Torta', time: '20:30 h' },
   ],
   galleryImages: dvGallery,
 
@@ -398,8 +393,8 @@ export const graziaSample: GraziaContent = {
   guestName: 'José Martinelli',
   guestPasses: '2 pases',
 
-  isoDate: '2025-10-19T16:00:00',
-  dateText: '19 de Octubre 2025',
+  isoDate: '2027-10-16T16:00:00',
+  dateText: '16 de Octubre 2027',
   timeText: '16:00 hrs.',
   coverLabel: 'La boda de',
 
@@ -411,18 +406,17 @@ export const graziaSample: GraziaContent = {
   parentsGroom: ['Alessandro Bianchi', 'Vittoria Rossi'],
   parentsBride: ['Giovanni Moretti', 'Eleonora Ricci'],
 
-  ceremonyReligious: { date: '19 abril 2025', time: '16:00 pm', place: 'Salón de Eventos Notre Dame', maps: 'https://maps.google.com' },
-  reception: { date: '19 abril 2025', time: '16:00 pm', place: 'Salón de Eventos Notre Dame', maps: 'https://maps.google.com' },
+  ceremonyReligious: { date: '16 de octubre', time: '16:00 h', place: 'Salón de Eventos Notre Dame', maps: 'https://maps.google.com' },
+  reception: { date: '16 de octubre', time: '16:00 h', place: 'Salón de Eventos Notre Dame', maps: 'https://maps.google.com' },
 
   itinerary: [
-    { icon: 'rings', label: 'Concentración', time: '10:00 h' },
-    { icon: 'church', label: 'Discurso Bíblico', time: '10:30 h' },
-    { icon: 'camera', label: 'Recepción Finca San Lorenzo', time: '16:00 h' },
+    { icon: 'rings', label: 'Concentración', time: '15:00 h' },
+    { icon: 'church', label: 'Discurso Bíblico', time: '15:30 h' },
     { icon: 'dance', label: 'Ingreso de los Novios', time: '17:00 h' },
     { icon: 'dinner', label: 'Banquete', time: '18:00 h' },
     { icon: 'cheers', label: 'Fiesta', time: '19:30 h' },
-    { icon: 'gift', label: 'Corte de Torta', time: '11:30 h' },
-    { icon: 'rings', label: 'Fin de la Fiesta', time: '00:00 h' },
+    { icon: 'cake', label: 'Corte de Torta', time: '23:00 h' },
+    { icon: 'car', label: 'Fin de la Fiesta', time: '00:00 h' },
   ],
 
   lodgingTitle: 'Sugerencia de hospedaje',
@@ -477,12 +471,10 @@ export const napolySample: DolceVitaContent = {
   reception: { time: '17:00 h', place: 'Centro de eventos Notre Dame', maps: 'https://maps.google.com' },
   dressCode: 'Formal',
   itinerary: [
-    { icon: 'church', label: 'Ceremonia Religiosa', time: '04:40 PM' },
-    { icon: 'camera', label: 'Recepción Social', time: '06:30 PM' },
-    { icon: 'cheers', label: 'Brindis y Vals', time: '07:30 PM' },
-    { icon: 'dinner', label: 'Cena', time: '20:30 PM' },
-    { icon: 'dance', label: 'Fiesta', time: '21:15 PM' },
-    { icon: 'gift', label: 'Bouquet', time: '12:15 AM' },
+    { icon: 'cheers', label: 'Brindis y Vals', time: '18:00 h' },
+    { icon: 'dinner', label: 'Cena', time: '19:30 h' },
+    { icon: 'dance', label: 'Fiesta', time: '21:00 h' },
+    { icon: 'flowers', label: 'Bouquet', time: '23:30 h' },
   ],
 };
 
@@ -493,10 +485,10 @@ export const allegriaSample: DolceVitaContent = {
   bride: 'Maria',
   dateCity: 'TRJ',
   dateWeekday: 'Sábado',
-  dateDay: '17',
+  dateDay: '16',
   dateMonth: 'Enero',
-  dateYear: '2026',
-  isoDate: '2026-01-17T16:30:00',
+  dateYear: '2027',
+  isoDate: '2027-01-16T16:30:00',
   guestName: 'José Martinelli',
   guestPasses: '2 pases',
   coverImage: 'https://images.unsplash.com/photo-1529634806980-85c3dd6d34ac?w=1100&q=80',
@@ -509,7 +501,6 @@ export const allegriaSample: DolceVitaContent = {
   reception: { time: '16:30 h', place: 'Hacienda Casa Magna', maps: 'https://maps.google.com' },
   dressCode: 'Elegante, inspirado en el viñedo. Piensa en algo sencillo, fresco y con lo que te sientas tú mismo. No hace falta estrenar: tu mejor look está en tu clóset o en el de un buen amigo. Lo más importante es que vengas cómodo, elegante y feliz.',
   itinerary: [
-    { icon: 'rings', label: 'Ceremonia Civil', time: '16:30 h' },
     { icon: 'cheers', label: 'Brindis', time: '17:30 h' },
     { icon: 'dinner', label: 'Cena', time: '19:00 h' },
     { icon: 'dance', label: 'Fiesta', time: '20:30 h' },
@@ -542,12 +533,11 @@ export const roseGoldSample: DolceVitaContent = {
   reception: { time: '16:30 h', place: 'La Terraza', maps: 'https://maps.google.com' },
   dressCode: 'Formal',
   itinerary: [
-    { icon: 'church', label: 'Ceremonia Religiosa', time: '15:00 h' },
-    { icon: 'cheers', label: 'Recepción y mesa de Charcutería', time: '16:30 h' },
     { icon: 'dance', label: 'Entrada de los recién casados', time: '17:10 h' },
-    { icon: 'dinner', label: 'Brindis y Música', time: '17:30 h' },
-    { icon: 'gift', label: 'Cena', time: '19:30 h' },
-    { icon: 'rings', label: 'Despedida de los recién casados', time: '01:15 h' },
+    { icon: 'cheers', label: 'Brindis y Música', time: '17:30 h' },
+    { icon: 'dinner', label: 'Cena', time: '19:30 h' },
+    { icon: 'cake', label: 'Corte de Torta', time: '22:00 h' },
+    { icon: 'car', label: 'Despedida de los recién casados', time: '01:15 h' },
   ],
   giftMessage: 'Tu presencia es el mejor regalo para compartir este momento único. Ya tenemos nuestra casita completa, nuestro ferrari y el yate! solo nos falta pagarlo. Como sugerencia de regalo te dejamos el siguiente QR.',
   thanksMessage: 'A Dios por ser pilar fundamental en nuestras vidas, a nuestros padres y hermanos por ser nuestro apoyo y soporte, a nuestros padrinos, testigos, amigos y familia por su apoyo incondicional.',
@@ -560,10 +550,10 @@ export const euforiaSample: DolceVitaContent = {
   bride: 'Margot',
   dateCity: 'La Paz',
   dateWeekday: 'Sábado',
-  dateDay: '09',
+  dateDay: '06',
   dateMonth: 'Noviembre',
-  dateYear: '2024',
-  isoDate: '2024-11-09T13:30:00',
+  dateYear: '2027',
+  isoDate: '2027-11-06T13:30:00',
   guestName: 'Eduardo Villalba',
   guestPasses: '2 pases',
   coverImage: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=1100&q=80',
@@ -573,16 +563,15 @@ export const euforiaSample: DolceVitaContent = {
   padrinos: [],
   ceremonyReligious: { time: '14:30 h', place: 'Centro de Eventos Notre Dame', maps: 'https://maps.google.com' },
   ceremonyCivil: undefined,
-  reception: { time: '14:30 h', place: 'Centro de Eventos Notre Dame', maps: 'https://maps.google.com' },
+  reception: { time: '16:30 h', place: 'Centro de Eventos Notre Dame', maps: 'https://maps.google.com' },
   dressCode: 'Formal',
   itinerary: [
-    { icon: 'church', label: 'Ceremonia', time: '15:00 h' },
     { icon: 'dance', label: 'Baile de los Novios', time: '17:30 h' },
     { icon: 'cheers', label: 'Brindis', time: '18:30 h' },
     { icon: 'dinner', label: 'Cena', time: '19:30 h' },
-    { icon: 'camera', label: 'Fiesta', time: '20:30 h' },
-    { icon: 'gift', label: 'Torta', time: '22:00 h' },
-    { icon: 'rings', label: 'Despedida de los Novios', time: '23:30 h' },
+    { icon: 'party', label: 'Fiesta', time: '20:30 h' },
+    { icon: 'cake', label: 'Torta', time: '22:00 h' },
+    { icon: 'car', label: 'Despedida de los Novios', time: '23:30 h' },
   ],
 };
 
@@ -593,10 +582,10 @@ export const carmesiSample: DolceVitaContent = {
   bride: 'Nikol',
   dateCity: 'CBBA',
   dateWeekday: 'Sábado',
-  dateDay: '06',
+  dateDay: '07',
   dateMonth: 'Agosto',
-  dateYear: '2025',
-  isoDate: '2025-08-06T14:30:00',
+  dateYear: '2027',
+  isoDate: '2027-08-07T14:30:00',
   guestName: 'Eduardo Villalba',
   coverImage: 'https://images.unsplash.com/photo-1606490194859-07c18c9f0968?w=1100&q=80',
   introMessage: 'Más valen dos que uno, porque obtienen más fruto de su esfuerzo. Si caen, el uno levanta al otro. ¡Ay del que cae y no tiene quien lo levante! — Eclesiastés 4:9-10',
@@ -608,12 +597,11 @@ export const carmesiSample: DolceVitaContent = {
   reception: { time: '16:45 h', place: 'Centro de Eventos Notre Dame', maps: 'https://maps.google.com' },
   dressCode: 'Formal',
   itinerary: [
-    { icon: 'church', label: 'Ceremonia Religiosa', time: '14:30 h' },
-    { icon: 'rings', label: 'Ceremonia Civil', time: '16:30 h' },
-    { icon: 'camera', label: 'Recepción Social', time: '16:45 h' },
     { icon: 'dance', label: 'Entrada de Novios', time: '17:00 h' },
     { icon: 'cheers', label: 'Baile de Novios', time: '17:40 h' },
     { icon: 'dinner', label: 'Cena', time: '18:00 h' },
+    { icon: 'party', label: 'Fiesta', time: '20:00 h' },
+    { icon: 'cake', label: 'Torta', time: '22:00 h' },
   ],
   giftCash: 'Lluvia de sobres',
   giftBank: { bank: 'Cuenta bancaria BCP', account: '2015151233123330', holder: 'Jose Mattiel' },
@@ -644,10 +632,8 @@ export const esmeraldaSample: DolceVitaContent = {
   reception: { time: '16:30 h', place: 'Serrezuela Country Club', maps: 'https://maps.google.com' },
   dressCode: 'Formal',
   itinerary: [
-    { icon: 'church', label: 'Ceremonia', time: '14:00 h' },
     { icon: 'car', label: 'Desplazamiento', time: '15:30 h' },
     { icon: 'cheers', label: 'Brindis y cóctel', time: '17:00 h' },
-    { icon: 'rings', label: 'Recepción', time: '18:30 h' },
     { icon: 'dinner', label: 'Cena', time: '19:00 h' },
     { icon: 'dance', label: 'Fiesta', time: '20:30 h' },
   ],
@@ -700,7 +686,9 @@ export const provenceSample: ProvenceContent = {
     title: 'CEREMONIA Y RECEPCIÓN',
     place: '"La Provenza"',
     city: 'Cieneguilla',
-    time: '12:00 h',
+    // La tarjeta marca la hora de la CEREMONIA; el ingreso de invitados (12:00)
+    // lo detalla el itinerario, que es el que desglosa el día.
+    time: '13:00 h',
     maps: 'https://maps.google.com/?q=La+Provenza+Cieneguilla',
   },
 
