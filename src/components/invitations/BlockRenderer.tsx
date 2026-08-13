@@ -9,14 +9,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type {
   Block, BlockLayout, BlockViewportLayout, PageLayout, TemplateTheme,
-  PageMotion, TemplateDecor, TemplateTokens,
+  PageMotion, TemplateDecor, TemplateTokens, SeamShape,
 } from '@/lib/types';
 import PageDecor from './decorations';
 import { BLOCKS } from './blocks/registry';
 import { BlockThemeProvider, resolveBlockTheme, useBlockTheme } from './blocks/theme';
 import { BlockEditProvider, BlockDataProvider } from './blocks/editable';
 import MusicPlayer from './MusicPlayer';
-import { ENKARTA_WA_URL } from './shared';
+import { ENKARTA_WA_URL, Seam } from './shared';
+import type { BlockTheme } from './blocks/theme';
 import { PageMotionProvider, ScrollReveal } from '@/lib/scroll-motion';
 
 interface Props {
@@ -132,6 +133,31 @@ function hideClass(L?: BlockLayout) {
   return '';
 }
 
+// ── Costuras entre bloques ────────────────────────────────────────────────────
+// La forma la fija el token de la plantilla de la que partió la invitación
+// (`tokens.seam`), no un control por bloque: en el constructor el cliente elige
+// colores libremente y no hay "personalidad" de la que deducir la forma, así que
+// se hereda la de su plantilla y el documento sale coherente sin que él decida
+// nada. Ver TEMPLATE_TOKEN_DEFAULTS en src/lib/template-themes.ts.
+
+/** Datos que necesita una sección para dibujar su costura superior. */
+type SeamInfo = { from: string; shape: SeamShape; hairline: string };
+
+/**
+ * Color de fondo SÓLIDO de un bloque, o `null` si no se puede nombrar uno
+ * (degradado, imagen de fondo, historia a sangre). La costura solo se dibuja
+ * cuando el bloque ANTERIOR tiene un color sólido: pintar el arranque de un
+ * degradado como si fuera plano se nota, y es peor que no poner costura.
+ */
+function blockBg(b: Block, t: BlockTheme): string | null {
+  if (b.type === 'story') return null;
+  const s = b.style ?? {};
+  if (s.bgKind === 'solid') return s.bg || null;
+  if (s.bgKind === 'primary') return t.primaryDeep;
+  if (!s.bgKind || s.bgKind === 'none') return t.bg; // transparente = fondo de página
+  return null; // gradient | image
+}
+
 /** Elemento flotante en modo lectura: anclado y por encima del contenido. */
 function FloatingLiveBlock({ block, layout }: { block: Block; layout?: BlockViewportLayout }) {
   if (block.enabled === false) return null;
@@ -142,7 +168,7 @@ function FloatingLiveBlock({ block, layout }: { block: Block; layout?: BlockView
   );
 }
 
-function BlockView({ block }: { block: Block; tokens?: TemplateTokens }) {
+function BlockView({ block, seam }: { block: Block; tokens?: TemplateTokens; seam?: SeamInfo }) {
   const t = useBlockTheme();
   const def = BLOCKS[block.type];
   const s = block.style ?? {};
@@ -177,9 +203,19 @@ function BlockView({ block }: { block: Block; tokens?: TemplateTokens }) {
       : s.minHeight ? { minHeight: s.minHeight } : {}),
   };
 
+  // La costura vive dentro del espacio superior del bloque, así que solo cabe
+  // si ese espacio da de sí. Con el `padTop` por defecto (44) salen 36px, el
+  // mismo alto que usan las plantillas en móvil.
+  const seamH = seam && padTop >= 28 ? Math.min(padTop - 8, 64) : 0;
+
   return (
     <section className="px-6" style={sectionStyle}>
       {isImg && s.overlay ? <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${s.overlay})` }} aria-hidden /> : null}
+      {/* zIndex 1 (y no el z-[2] por defecto de Seam): así queda por encima del
+          velo de la imagen de fondo pero nunca por delante del contenido. */}
+      {seamH > 0 && seam && (
+        <Seam from={seam.from} shape={seam.shape} hairline={seam.hairline} height={seamH} style={{ zIndex: 1 }} />
+      )}
       <div style={{ position: 'relative', zIndex: 1, maxWidth: maxW || undefined, marginLeft: 'auto', marginRight: 'auto', width: '100%' }}>
         <Comp block={block} />
       </div>
@@ -188,7 +224,7 @@ function BlockView({ block }: { block: Block; tokens?: TemplateTokens }) {
 }
 
 // Bloque en modo lectura: envoltorio de transform libre + animación.
-function LiveBlock({ block, layout, tokens }: { block: Block; layout?: BlockViewportLayout; tokens?: TemplateTokens }) {
+function LiveBlock({ block, layout, tokens, seam }: { block: Block; layout?: BlockViewportLayout; tokens?: TemplateTokens; seam?: SeamInfo }) {
   if (block.enabled === false) return null;
   // La historia fija NO se envuelve en ScrollReveal ni transform: un ancestro
   // con transform rompería el `position: sticky` del efecto anclado.
@@ -202,7 +238,7 @@ function LiveBlock({ block, layout, tokens }: { block: Block; layout?: BlockView
   return (
     <div className={hideClass(block.layout)} style={freeStyle(layout)}>
       <ScrollReveal variant={block.animation?.preset} delay={block.animation?.delay ?? 0}>
-        <BlockView block={block} tokens={tokens} />
+        <BlockView block={block} tokens={tokens} seam={seam} />
       </ScrollReveal>
     </div>
   );
@@ -211,7 +247,7 @@ function LiveBlock({ block, layout, tokens }: { block: Block; layout?: BlockView
 const SNAP = 8;
 
 function EditorBlock({
-  block, selected, onSelect, onTransform, onEditProp, scale, floating,
+  block, selected, onSelect, onTransform, onEditProp, scale, floating, seam,
 }: {
   block: Block;
   selected: boolean;
@@ -220,6 +256,7 @@ function EditorBlock({
   onEditProp?: (id: string, key: string, value: string) => void;
   scale: number;
   floating?: boolean;
+  seam?: SeamInfo;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{ sx: number; sy: number; lx: number; ly: number } | null>(null);
@@ -330,7 +367,7 @@ function EditorBlock({
       </span>
 
       <BlockEditProvider value={{ editing: !locked, onEdit: (k, v) => onEditProp?.(block.id, k, v) }}>
-        {floating ? <RawBlock block={block} /> : <BlockView block={block} />}
+        {floating ? <RawBlock block={block} /> : <BlockView block={block} seam={seam} />}
       </BlockEditProvider>
 
       {hint?.gv && <span className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-pink-500/80 z-40" />}
@@ -365,10 +402,11 @@ function EditorBlock({
   );
 }
 
-function FooterBar() {
+function FooterBar({ seam }: { seam?: SeamInfo }) {
   const t = useBlockTheme();
   return (
-    <footer className="py-8 text-center" style={{ background: t.primaryDeep }}>
+    <footer className="relative pb-8 pt-14 text-center" style={{ background: t.primaryDeep }}>
+      {seam && <Seam from={seam.from} shape={seam.shape} hairline={seam.hairline} height={44} />}
       <p className="font-great text-2xl" style={{ color: '#fff' }}>Enkarta</p>
       <p className="font-cormorant text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
         ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Contáctanos</a>
@@ -397,8 +435,36 @@ export default function BlockRenderer({
 
   const bt = resolveBlockTheme(night && hasNight ? nightTheme : theme);
   const allBlocks = layout?.blocks ?? [];
-  const blocks = allBlocks.filter(b => !isFloating(b));
+  // Los bloques apagados no pintan nada en lectura: fuera también de la cadena
+  // de costuras, o el color "anterior" sería el de una sección invisible.
+  const blocks = allBlocks.filter(b => !isFloating(b) && (editor || b.enabled !== false));
   const floating = allBlocks.filter(isFloating);
+
+  // ── Cadena de costuras ──
+  // Fondo resuelto de cada bloque en orden de pintado; 'hidden' = oculto en
+  // este viewport (se salta al buscar hacia atrás), null = color no nombrable.
+  const seamShape = tokens?.seam ?? 'none';
+  const chain = blocks.map(b => (b.layout?.hideOn === viewport ? 'hidden' as const : blockBg(b, bt)));
+  const prevBg = (i: number): string | null => {
+    for (let j = i - 1; j >= 0; j--) {
+      if (chain[j] === 'hidden') continue;
+      return chain[j] as string | null;
+    }
+    return null;
+  };
+  const seamAt = (i: number): SeamInfo | undefined => {
+    if (seamShape === 'none') return undefined;
+    const from = prevBg(i);
+    // Sin color anterior, o mismo color: no hay salto que coser.
+    if (!from || from === chain[i]) return undefined;
+    return { from, shape: seamShape, hairline: bt.primary };
+  };
+  // El pie cose contra el último bloque visible (su fondo es `primaryDeep`).
+  const lastBg = prevBg(blocks.length);
+  const footerSeam: SeamInfo | undefined =
+    seamShape !== 'none' && lastBg && lastBg !== bt.primaryDeep
+      ? { from: lastBg, shape: seamShape, hairline: bt.primary }
+      : undefined;
 
   return (
     <BlockThemeProvider value={bt}>
@@ -413,13 +479,14 @@ export default function BlockRenderer({
           >
             <PageDecor decor={decor} color={bt.primary} />
             <div className="relative" style={{ zIndex: 10 }}>
-              {blocks.map((b) => {
+              {blocks.map((b, i) => {
                 const currentLayout = resolvedLayout(b.layout, viewport);
+                const seam = seamAt(i);
                 return editor
-                  ? <EditorBlock key={b.id} block={{ ...b, layout: currentLayout ? { ...(b.layout ?? {}), ...currentLayout } : b.layout }} selected={selectedId === b.id} onSelect={onSelectBlock} onTransform={onTransform} onEditProp={onEditProp} scale={previewScale} />
-                  : <LiveBlock key={b.id} block={b} layout={currentLayout} tokens={tokens} />;
+                  ? <EditorBlock key={b.id} block={{ ...b, layout: currentLayout ? { ...(b.layout ?? {}), ...currentLayout } : b.layout }} selected={selectedId === b.id} onSelect={onSelectBlock} onTransform={onTransform} onEditProp={onEditProp} scale={previewScale} seam={seam} />
+                  : <LiveBlock key={b.id} block={b} layout={currentLayout} tokens={tokens} seam={seam} />;
               })}
-              <FooterBar />
+              <FooterBar seam={footerSeam} />
             </div>
             {floating.length > 0 && (
               <div className="absolute inset-0" style={{ zIndex: 20, pointerEvents: 'none' }}>

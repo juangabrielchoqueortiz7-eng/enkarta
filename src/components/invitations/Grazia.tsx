@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { GraziaContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, Monogram, SECTION, TYPE, ENKARTA_WA_URL } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, Monogram, SECTION, TYPE, ENKARTA_WA_URL, Seam, seamsFor } from './shared';
 import { WriteOn, CascadeText } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
@@ -84,6 +84,22 @@ export default function Grazia({ data }: { data: GraziaContent }) {
   })();
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Hrs' }, { v: mins, l: 'Mins' }, { v: secs, l: 'Segs' }];
 
+  // Costuras: chaflán geométrico con filete dorado — Grazia es la plantilla más
+  // editorial de la colección y el bisel le va mejor que una curva romántica.
+  // Solo se declara la sección que ABRE cada tirada de color; las siguientes
+  // con el mismo fondo son la misma hoja y no llevan costura.
+  const sew = seamsFor([
+    { k: 'saveDate',   c: C.paper },
+    { k: 'invitado',   c: C.tan },
+    { k: 'fecha',      c: C.paper },
+    { k: 'regalo',     c: C.gray },
+    !!data.galleryImages.length && { k: 'historia', c: C.paper },
+    { k: 'ninos',      c: C.gray },
+    { k: 'vestimenta', c: C.black },
+    { k: 'rsvp',       c: C.paper },
+    { k: 'pie',        c: C.black },
+  ], { shape: 'bevel', hairline: C.gold });
+
   return (
     <ThemeCtx.Provider value={C}>
     <div className="relative w-full overflow-x-hidden" style={{ background: C.paper, color: C.ink, fontFamily: F.body }}>
@@ -111,10 +127,11 @@ export default function Grazia({ data }: { data: GraziaContent }) {
           <Caps style={{ fontSize: TYPE.subtitle, color: C.ink }}><CascadeText text={data.bride} delay={700} /></Caps>
           <Caps className="mt-3" style={{ fontSize: '11px', color: C.ink }}>{data.dateText}</Caps>
         </div>
+        <Seam edge="bottom" shape="bevel" from={C.paper} hairline={C.gold} />
       </section>
 
       {/* ════════ SAVE THE DATE ════════ */}
-      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
         <Reveal className="mx-auto max-w-2xl">
           <Caps style={{ fontSize: TYPE.title, color: C.ink }}>Save the Date</Caps>
           <p className="mx-auto mt-5 max-w-lg" style={{ fontFamily: F.body, fontSize: TYPE.lead, color: C.ink, lineHeight: 1.6 }}>{data.saveDateMsg}</p>
@@ -152,7 +169,8 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       </section>
 
       {/* ════════ INVITADO (tan) ════════ */}
-      <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.tan, color: C.cream }}>
+      <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.tan, color: C.cream }}>
+        {sew('invitado')}
         <Reveal className="mx-auto max-w-xl">
           {data.guestName && <Script style={{ fontSize: '42px', color: C.cream }}>{data.guestName}</Script>}
           <p style={{ fontSize: '15px' }}>Hemos reservado:</p>
@@ -162,7 +180,8 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       </section>
 
       {/* ════════ PADRES + CEREMONIA ════════ */}
-      <section className={`px-6 ${SECTION.base}`} style={{ background: C.paper }}>
+      <section className={`relative px-6 ${SECTION.base}`} style={{ background: C.paper }}>
+        {sew('fecha')}
         <div className="mx-auto max-w-3xl">
           <Reveal className="grid gap-10 text-center sm:grid-cols-2">
             {[{ t: 'Padres del Novio', p: data.parentsGroom }, { t: 'Padres de la Novia', p: data.parentsBride }].map(col => (
@@ -223,7 +242,8 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       )}
 
       {/* ════════ REGALO (gris) ════════ */}
-      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.gray }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.gray }}>
+        {sew('regalo')}
         <Reveal className="mx-auto max-w-2xl">
           <Script style={{ fontSize: '46px' }}>Sugerencia de Regalo</Script>
           <p className="mx-auto mt-3 max-w-lg" style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>{data.giftMessage}</p>
@@ -246,7 +266,8 @@ export default function Grazia({ data }: { data: GraziaContent }) {
 
       {/* ════════ NUESTRA HISTORIA + GALERÍA ════════ */}
       {data.galleryImages.length > 0 && (
-        <section className={`px-6 ${SECTION.base}`} style={{ background: C.paper }}>
+        <section className={`relative px-6 ${SECTION.base}`} style={{ background: C.paper }}>
+          {sew('historia')}
           <Reveal className="mx-auto max-w-4xl text-center">
             <Script style={{ fontSize: '44px' }}>{data.storyTitle ?? 'Nuestra Historia'}</Script>
             <p className="mx-auto mt-4 max-w-xl" style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink, lineHeight: 1.6 }}>{data.storyMessage}</p>
@@ -256,7 +277,8 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       )}
 
       {/* ════════ SOLO ADULTOS (gris) ════════ */}
-      <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.gray }}>
+      <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.gray }}>
+        {sew('ninos')}
         <Reveal className="mx-auto max-w-xl">
           <Script style={{ fontSize: '44px' }}>Solo Adultos</Script>
           <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>{data.noKids}</p>
@@ -264,7 +286,8 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       </section>
 
       {/* ════════ CÓDIGO DE VESTIMENTA (negro) ════════ */}
-      <section className={`px-6 ${SECTION.roomy} text-center`} style={{ background: C.black, color: C.cream }}>
+      <section className={`relative px-6 ${SECTION.roomy} text-center`} style={{ background: C.black, color: C.cream }}>
+        {sew('vestimenta')}
         <Reveal>
           <Script style={{ fontSize: '40px', color: C.gold }}>{data.dressCodeTitle ?? 'Código de vestimenta'}</Script>
           <p className="mt-2" style={{ fontFamily: F.caps, fontSize: '24px', letterSpacing: '0.08em', color: C.cream }}>{data.dressCode}</p>
@@ -272,7 +295,8 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       </section>
 
       {/* ════════ GALERÍA SHARE + CONFIRMACIÓN ════════ */}
-      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+        {sew('rsvp')}
         <Reveal className="mx-auto max-w-md rounded-sm px-6 py-8 text-center" style={{ border: `1px solid ${C.line}` }}>
           <EventIcon name="camera" className="mx-auto mb-3 h-11 w-11" stroke={C.tan} custom={data} sec="gallery" />
           <p style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>{data.galleryMsg}</p>
@@ -290,7 +314,8 @@ export default function Grazia({ data }: { data: GraziaContent }) {
       </section>
 
       {/* ════════ FOOTER ════════ */}
-      <footer className="py-9 text-center" style={{ background: C.black, color: C.cream }}>
+      <footer className="relative pb-9 pt-14 text-center" style={{ background: C.black, color: C.cream }}>
+        {sew('pie')}
         <Script style={{ fontSize: '34px', color: C.gold }}>Enkarta</Script>
         <p className="mt-1" style={{ fontFamily: F.body, fontSize: '14px', opacity: 0.85 }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: C.gold, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>

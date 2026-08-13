@@ -185,6 +185,12 @@ export interface TemplateTokens {
   sectionRadius?: number;
   spacing?: 'compact' | 'normal' | 'airy';
   surface?: 'flat' | 'soft' | 'card';
+  /**
+   * Costura entre bloques de distinto fondo en el constructor. Se hereda de la
+   * plantilla de la que partió la invitación, para que un documento por bloques
+   * tenga el mismo borde entre bandas que su plantilla premium.
+   */
+  seam?: SeamShape;
 }
 
 /** Formas disponibles para las partículas que caen. */
@@ -197,6 +203,21 @@ export type ParticleShape =
 export type CornerStyle =
   | 'orchid' | 'rose' | 'leaves' | 'pampas' | 'palm' | 'geometric'
   | 'laurel' | 'vine' | 'berries' | 'fan';
+
+/**
+ * Forma del borde entre dos bandas de color ("costura"). La dibuja `<Seam>`
+ * (components/invitations/shared.tsx); cada plantilla usa UNA, elegida por
+ * personalidad — es lo que evita que todas las invitaciones se parezcan.
+ */
+export type SeamShape =
+  | 'arch'     // cúpula: la banda nueva sube en el centro (papelería clásica)
+  | 'curve'    // valle suave: la banda nueva baja en el centro
+  | 'wave'     // ola en S (tropical / boho / viaje)
+  | 'bevel'    // V muy abierta (geométrico, editorial, art-déco)
+  | 'scallop'  // festón tipo encaje (romántico)
+  | 'fade'     // degradado: la banda anterior se disuelve, sin borde
+  | 'line'     // filete recto + sombra (editorial estricto)
+  | 'none';
 
 /** Controles de los elementos decorativos de la plantilla. */
 export interface TemplateDecor {

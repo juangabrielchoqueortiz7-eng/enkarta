@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import Image from 'next/image';
 import { InvitationContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartLoader, PhotoGrid, SECTION, ENKARTA_WA_URL } from './shared';
+import { useCountdown, Odometer, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartLoader, PhotoGrid, SECTION, ENKARTA_WA_URL, seamsFor } from './shared';
 import { ParallaxLayer, WriteOn } from '@/lib/scroll-motion';
 
 // ── Palette por defecto ─────────────────────────────────────────────────────────
@@ -207,6 +207,17 @@ export default function Azure({ data }: { data: InvitationContent }) {
   const iconOf = (key: string, def: string) => data.icons?.[key] || def;
   const iconColorsOf = (key: string) => data.iconColorsMap?.[key];
   const iconSpeedOf = (key: string) => data.iconSpeedsMap?.[key];
+
+  // Costuras: arco con filete azul. Azure va casi toda sobre el mismo papel de
+  // acuarela, así que solo hay dos saltos de color reales —la banda de regalo y
+  // el pie— y son los que necesitan que la hoja nueva se apoye sobre la anterior
+  // en lugar de cortarla en recto.
+  const sew = seamsFor([
+    { k: 'papel',   c: C.bg },
+    { k: 'regalo',  c: C.navy },
+    { k: 'galeria', c: C.bg },
+    { k: 'pie',     c: C.navyDeep },
+  ], { shape: 'arch', hairline: C.line });
 
   const SectionDivider = ({ className }: { className?: string }) =>
     dividers === 'none'
@@ -462,7 +473,10 @@ export default function Azure({ data }: { data: InvitationContent }) {
       </section>
 
       {/* ════════ GIFT (navy) ════════ */}
-      <section className="relative z-10 mt-6 pb-20 px-6 text-center" style={{ background: C.navy, color: '#fff', clipPath: 'polygon(0 0, 50% 26px, 100% 0, 100% 100%, 0 100%)', paddingTop: '70px' }}>
+      {/* El corte en pico lo hacía antes un clip-path a mano; ahora la costura
+          compartida dibuja el arco, la sombra y el filete de una sola pieza. */}
+      <section className="relative z-10 mt-6 px-6 pb-20 pt-[70px] text-center" style={{ background: C.navy, color: '#fff' }}>
+        {sew('regalo')}
         <Reveal>
           <h2 className="font-great" style={{ color: '#fff', fontSize: 'clamp(34px,6vw,52px)' }}>Sugerencia de Regalo</h2>
           <p className="font-cormorant mt-4 max-w-xl mx-auto" style={{ color: 'rgba(255,255,255,0.85)', fontSize: '17px' }}>{data.gift.message}</p>
@@ -485,7 +499,10 @@ export default function Azure({ data }: { data: InvitationContent }) {
       </section>
 
       {/* ════════ GALLERY ════════ */}
+      {/* Sin fondo propio a propósito: por debajo del arco sigue viéndose la
+          acuarela en parallax de la página. */}
       <section className={`relative z-10 ${SECTION.roomy} px-6 text-center`}>
+        {sew('galeria')}
         <Reveal className="flex flex-col items-center">
           <SecIcon name={iconOf('gallery', 'camera')} className="w-12 h-12 mb-4" scale={iconScale} color={iconColor} colors={iconColorsOf('gallery')} speed={iconSpeedOf('gallery')} />
           <p className="font-cormorant max-w-md mx-auto" style={{ color: C.soft, fontSize: '16px' }}>{data.gallery.message}</p>
@@ -503,7 +520,8 @@ export default function Azure({ data }: { data: InvitationContent }) {
       </section>
 
       {/* ════════ FOOTER ════════ */}
-      <footer className="relative z-10 py-8 text-center" style={{ background: C.navyDeep }}>
+      <footer className="relative z-10 pb-8 pt-14 text-center" style={{ background: C.navyDeep }}>
+        {sew('pie')}
         <p className="font-great text-2xl" style={{ color: '#fff' }}>Enkarta</p>
         <p className="font-cormorant text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Contáctanos</a>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { ParadiseContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, PhotoGrid, Monogram, ENKARTA_WA_URL } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, PhotoGrid, Monogram, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn, CascadeText } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
@@ -60,17 +60,6 @@ function ArchPhoto({ src, className = '', style, first, second }: { src?: string
         ? // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt="" className="h-full w-full object-cover" />
         : <Monogram name={first} second={second} bg={`linear-gradient(160deg, ${C.green}, ${C.greenDeep})`} fg={C.gold} />}
-    </div>
-  );
-}
-
-// ── Ola divisoria ────────────────────────────────────────────────────────────────
-function Wave({ fill, flip = false }: { fill: string; flip?: boolean }) {
-  return (
-    <div className={`relative w-full leading-[0] ${flip ? '-mt-px rotate-180' : '-mb-px'}`} aria-hidden>
-      <svg viewBox="0 0 1440 70" preserveAspectRatio="none" className="block w-full" style={{ height: '48px' }}>
-        <path d="M0,40 C 240,70 480,12 740,32 C 1000,52 1230,18 1440,42 L1440,70 L0,70 Z" fill={fill} />
-      </svg>
     </div>
   );
 }
@@ -138,6 +127,23 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Boda ${data.bride} & ${data.groom}`)}&dates=${start}/${start}`;
   })();
 
+  // Costuras: ola en S con filete dorado. Paradise alterna banda oscura y
+  // marfil casi en cada sección, así que la ola es la que le da continuidad de
+  // hoja a hoja en vez de una sucesión de rectángulos.
+  const sew = seamsFor([
+    { k: 'portada',    c: C.green },
+    { k: 'intro',      c: C.greenDeep },
+    { k: 'versiculo',  c: C.cream },
+    { k: 'cuenta',     c: C.green },
+    { k: 'padres',     c: C.cream },
+    { k: 'ceremonia',  c: C.greenDeep },
+    { k: 'cronograma', c: C.greenDeep },
+    { k: 'regalos',    c: C.cream },
+    { k: 'hospedaje',  c: C.green },
+    { k: 'rsvp',       c: C.cream },
+    { k: 'final',      c: C.greenDeep },
+  ], { shape: 'wave', hairline: C.gold });
+
   const cd = [
     { v: days, l: 'Días' }, { v: hours, l: 'Hrs' }, { v: mins, l: 'Mins' }, { v: secs, l: 'Segs' },
   ];
@@ -189,6 +195,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
 
       {/* ════════ INTRO + INVITADO ════════ */}
       <section className="relative px-6 py-16 text-center" style={{ background: C.greenDeep, color: C.creamText }}>
+        {sew('intro')}
         <MarbleBg />
         <Reveal className="relative z-10 mx-auto max-w-2xl">
           <p style={{ fontSize: '18px', lineHeight: 1.7 }}>{data.introMessage}</p>
@@ -204,7 +211,8 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
       </section>
 
       {/* ════════ VERSÍCULO ════════ */}
-      <section className="px-6 py-16 text-center" style={{ background: C.cream, color: C.greenText }}>
+      <section className="relative px-6 py-16 text-center" style={{ background: C.cream, color: C.greenText }}>
+        {sew('versiculo')}
         <Reveal className="mx-auto flex max-w-2xl flex-col items-center">
           <BookCross color={C.greenText} className="mb-6 h-12 w-14" />
           <p style={{ fontSize: '17px', lineHeight: 1.7 }}>
@@ -215,6 +223,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
 
       {/* ════════ CUENTA REGRESIVA ════════ */}
       <section className="relative px-6 py-16" style={{ background: C.green, color: C.creamText }}>
+        {sew('cuenta')}
         <MarbleBg />
         <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
           <Reveal className="text-center">
@@ -242,7 +251,8 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
       </section>
 
       {/* ════════ PADRES ════════ */}
-      <section className="px-6 py-16 text-center" style={{ background: C.cream, color: C.greenText }}>
+      <section className="relative px-6 py-16 text-center" style={{ background: C.cream, color: C.greenText }}>
+        {sew('padres')}
         <Reveal>
           <CapsTitle style={{ fontSize: 'clamp(16px,2.4vw,22px)', color: C.greenText }}>{data.blessing}</CapsTitle>
           <div className="mx-auto mt-10 grid max-w-3xl gap-10 sm:grid-cols-2">
@@ -260,6 +270,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
 
       {/* ════════ CEREMONIA + VESTIMENTA ════════ */}
       <section className="relative px-6 py-16" style={{ background: C.greenDeep, color: C.creamText }}>
+        {sew('ceremonia')}
         <MarbleBg />
         <div className="relative z-10 mx-auto grid max-w-4xl gap-12 sm:grid-cols-2">
           {[
@@ -291,6 +302,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
 
       {/* ════════ CRONOGRAMA (TIMELINE) ════════ */}
       <section className="relative px-6 py-16" style={{ background: C.greenDeep, color: C.creamText }}>
+        {sew('cronograma')}
         <MarbleBg />
         <Reveal className="relative z-10">
           <Script className="text-center" style={{ fontSize: '44px' }}>Cronograma</Script>
@@ -316,7 +328,8 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
       </section>
 
       {/* ════════ REGALOS ════════ */}
-      <section className="px-6 py-16 text-center" style={{ background: C.cream, color: C.greenText }}>
+      <section className="relative px-6 py-16 text-center" style={{ background: C.cream, color: C.greenText }}>
+        {sew('regalos')}
         <Reveal className="mx-auto max-w-4xl">
           <EventIcon name="gift" className="mx-auto mb-4 h-12 w-12" stroke={C.greenText} custom={data} sec="gift" />
           <Script style={{ fontSize: '38px', color: C.greenText }}>Sugerencia de Regalo</Script>
@@ -343,6 +356,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
 
       {/* ════════ HOSPEDAJE + SOLO ADULTOS + GALERÍA ════════ */}
       <section className="relative px-6 py-16" style={{ background: C.green, color: C.creamText }}>
+        {sew('hospedaje')}
         <MarbleBg />
         <div className="relative z-10 mx-auto max-w-4xl">
           {data.lodging.length > 0 && (
@@ -378,7 +392,8 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
       </section>
 
       {/* ════════ CONFIRMACIÓN ════════ */}
-      <section className="px-6 py-16 text-center" style={{ background: C.cream, color: C.greenText }}>
+      <section className="relative px-6 py-16 text-center" style={{ background: C.cream, color: C.greenText }}>
+        {sew('rsvp')}
         <Reveal className="mx-auto max-w-2xl">
           <p style={{ fontSize: '17px', lineHeight: 1.7 }}>{data.rsvpMessage}</p>
           <a href={data.whatsapp} target="_blank" rel="noopener noreferrer"
@@ -389,8 +404,8 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
       </section>
 
       {/* ════════ FOTO FINAL + PIE ════════ */}
-      <Wave fill={C.cream} flip />
       <section className="relative" style={{ background: C.greenDeep }}>
+        {sew('final')}
         {data.footerImage && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={data.footerImage} alt="" className="h-[60vh] w-full object-cover object-top" />

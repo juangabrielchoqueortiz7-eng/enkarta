@@ -25,6 +25,65 @@ Cada plantilla vive en `src/components/invitations/<Nombre>.tsx` y recibe `{ dat
    dress code → itinerario → regalo → galería → RSVP → footer.
    La **portada/entrada NO va dentro de la plantilla**: la pone `EntryGate`.
 
+## Costuras entre secciones ("capas")
+
+Una invitación es una pila de bandas de color. El salto de una a otra NUNCA va
+en recto: lo resuelve `<Seam>` (`shared.tsx`), que pinta el color de la banda
+anterior sobre la franja superior de la siguiente, recortado con una forma, más
+sombra suave y un filete fino opcional. Va DENTRO de la sección (`relative`), así
+que ningún `overflow-hidden` lo recorta.
+
+Formas (`SeamShape`): `arch` (cúpula), `curve` (valle), `wave` (ola en S),
+`bevel` (V muy abierta), `scallop` (festón de encaje), `fade` (degradado),
+`line` (filete recto + sombra), `none`.
+
+Se declaran con `seamsFor`, que recibe la pila de bandas EN ORDEN DE PINTADO —
+solo la sección que ABRE cada tirada de color, y las opcionales como
+`cond && {...}` — y devuelve `sew(clave)`:
+
+```tsx
+const sew = seamsFor([
+  { k: 'portada', c: C.paper },
+  { k: 'invitado', c: C.accent },
+  !!data.noKids && { k: 'ninos', c: C.paper },
+  { k: 'pie', c: C.accentDeep },
+], { shape: 'arch', hairline: C.gold });
+
+<section className={`relative px-6 ${SECTION.base}`} style={{ background: C.accent }}>
+  {sew('invitado')}
+  …
+</section>
+```
+
+Si dos bandas seguidas comparten color no dibuja nada. Para portadas con FOTO a
+sangre (no hay color anterior que traer) se usa directamente
+`<Seam edge="bottom" from={C.paper} … />`: es el papel de la sección siguiente
+el que sube sobre la foto.
+
+### En el constructor por bloques
+
+`BlockRenderer` dibuja la costura **solo cuando un bloque cambia de fondo
+respecto al anterior**, y la forma la fija el token `seam` de la plantilla de la
+que partió la invitación (`TEMPLATE_TOKEN_DEFAULTS` en `src/lib/template-themes.ts`)
+— no hay control por bloque: en el constructor el cliente elige colores libres y
+no hay "personalidad" de la que deducir la forma, así que se hereda la de su
+plantilla y sale coherente sin que él decida nada.
+
+Al añadir una plantilla nueva, dale su fila en `TEMPLATE_TOKEN_DEFAULTS` con
+`seam` (si falta, cae al preset de azure). La costura se salta sola cuando:
+el bloque anterior es degradado o imagen (no hay un color sólido que nombrar),
+los dos bloques comparten fondo, o el `padTop` del bloque es < 28px (no cabe).
+
+Reglas:
+- **Una forma por plantilla**, elegida por personalidad, no al azar: arco para
+  lo formal/arquitectónico, festón para lo romántico, ola para boho/viaje,
+  chaflán para lo editorial y art-déco, filete recto para lo tipográfico.
+- El `padding-top` de una sección con costura debe ser ≥ 56px (`SECTION.tight`
+  ya cumple con 40px frente a los 36px de la costura en móvil; los pies y las
+  secciones con padding a medida se suben a `pt-14`).
+- El filete (`hairline`) es opcional: en plantillas minimalistas (Allegria) la
+  capa se nota por la forma y la sombra, sin línea decorativa encima.
+
 ## Tipografías (clases globales)
 
 - `font-great` — Great Vibes (script, nombres grandes)
@@ -62,6 +121,8 @@ Respeta `useReducedMotion()` para accesibilidad.
 ## Checklist al crear/editar una plantilla
 
 - [ ] Colores leídos de la paleta resuelta, nada hardcodeado.
+- [ ] Costuras declaradas con `seamsFor` y una forma propia (nunca copiar la
+      ola genérica de otra plantilla: era lo que las hacía parecer la misma).
 - [ ] Registrada en `entry/config.ts` (tema + extractor si hace falta).
 - [ ] Registrada en `PREMIUM_REGISTRY` (`src/lib/template-registry.tsx`,
       `{ key → { Comp, map } }`) — eso la activa en `/i/[slug]`, `/muestra`

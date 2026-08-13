@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto (carmesí / vino + dorado + crema) ──────────────────────────
@@ -113,15 +113,6 @@ function CrimsonBtn({ children, href }: { children: React.ReactNode; href: strin
     </a>
   );
 }
-function Wave({ fill, flip = false }: { fill: string; flip?: boolean }) {
-  return (
-    <div className="relative w-full leading-[0]" style={{ marginTop: flip ? -1 : 0, marginBottom: flip ? 0 : -1 }} aria-hidden>
-      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="block w-full" style={{ height: 44, transform: flip ? 'rotate(180deg)' : 'none' }}>
-        <path d="M0,28 C 320,58 560,6 760,28 C 980,52 1220,12 1440,34 L1440,60 L0,60 Z" fill={fill} />
-      </svg>
-    </div>
-  );
-}
 function BabyNo({ color, className = '' }: { color: string; className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -159,6 +150,18 @@ export default function Carmesi({ data }: { data: DolceVitaContent }) {
   })();
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Horas' }, { v: mins, l: 'Min.' }, { v: secs, l: 'Seg.' }];
 
+  // Costuras: valle suave con filete dorado, para que el salto crema→vino no
+  // sea un corte recto. Solo se declara la sección que ABRE cada tirada de
+  // color; las siguientes con el mismo fondo son la misma hoja.
+  const sew = seamsFor([
+    { k: 'portada',  c: C.paper },
+    { k: 'invitado', c: C.crimson },
+    { k: 'fecha',    c: C.paper },
+    { k: 'regalo',   c: C.crimson },
+    { k: 'rsvp',     c: C.paper },
+    { k: 'pie',      c: C.crimsonDeep },
+  ], { shape: 'curve', hairline: C.goldSoft });
+
   return (
     <ThemeCtx.Provider value={C}>
     <div className="relative w-full overflow-x-hidden" style={{ background: C.paper, color: C.ink, fontFamily: F.body }}>
@@ -194,8 +197,8 @@ export default function Carmesi({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ INVITADO (vino) ════════ */}
-      <Wave fill={C.crimson} />
       <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.crimson, color: C.cream }}>
+        {sew('invitado')}
         <Reveal className="mx-auto max-w-xl">
           <Caps style={{ fontSize: 'clamp(14px,2.4vw,18px)', color: C.cream }}>Bienvenidos a la invitación<br />de nuestra boda</Caps>
           {data.guestName && <Script className="mt-6" style={{ fontSize: '42px', color: C.gold }}>{data.guestName}</Script>}
@@ -204,10 +207,10 @@ export default function Carmesi({ data }: { data: DolceVitaContent }) {
           <p style={{ fontSize: '14px' }}>en su honor</p>
         </Reveal>
       </section>
-      <Wave fill={C.crimson} flip />
 
       {/* ════════ FECHA + COUNTDOWN ════════ */}
-      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+        {sew('fecha')}
         <Reveal className="mx-auto max-w-2xl">
           <div className="flex items-center justify-center gap-2">
             <span className="hidden h-px flex-1 sm:block" style={{ background: C.crimson, maxWidth: 90 }} />
@@ -345,8 +348,8 @@ export default function Carmesi({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ REGALO (vino) ════════ */}
-      <Wave fill={C.crimson} />
       <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.crimson, color: C.cream }}>
+        {sew('regalo')}
         <Reveal className="mx-auto max-w-3xl">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.gold} custom={data} sec="gift" />
           <Script style={{ fontSize: '42px', color: C.gold }}>Sugerencia de Regalo</Script>
@@ -377,10 +380,10 @@ export default function Carmesi({ data }: { data: DolceVitaContent }) {
           </div>
         </Reveal>
       </section>
-      <Wave fill={C.crimson} flip />
 
       {/* ════════ CONFIRMACIÓN ════════ */}
-      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+        {sew('rsvp')}
         <Reveal className="mx-auto max-w-xl">
           <Script style={{ fontSize: '44px', color: C.crimson }}>{data.rsvpClosing ?? 'Confirmar asistencia'}</Script>
           <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>Es muy importante para nosotros confirmar tu asistencia.</p>
@@ -392,7 +395,8 @@ export default function Carmesi({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ FOOTER ════════ */}
-      <footer className="py-9 text-center" style={{ background: C.crimsonDeep, color: C.cream }}>
+      <footer className="relative pb-9 pt-14 text-center" style={{ background: C.crimsonDeep, color: C.cream }}>
+        {sew('pie')}
         <Script style={{ fontSize: '34px', color: C.gold }}>Enkarta</Script>
         <p className="mt-1" style={{ fontFamily: F.serif, fontSize: '14px', opacity: 0.85 }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: C.gold, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>

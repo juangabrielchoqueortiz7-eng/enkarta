@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { ObsidianaContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
@@ -114,17 +114,6 @@ function GoldFrame({ children, className = '' }: { children: React.ReactNode; cl
   );
 }
 
-// ── Ola divisoria (para bandas oliva) ─────────────────────────────────────────────
-function Wave({ fill, flip = false }: { fill: string; flip?: boolean }) {
-  return (
-    <div className="relative w-full leading-[0]" style={{ marginTop: flip ? -1 : 0, marginBottom: flip ? 0 : -1 }} aria-hidden>
-      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="block w-full" style={{ height: 42, transform: flip ? 'rotate(180deg)' : 'none' }}>
-        <path d="M0,30 C 360,60 1080,4 1440,30 L1440,60 L0,60 Z" fill={fill} />
-      </svg>
-    </div>
-  );
-}
-
 // ── Ícono sobre con $ (lluvia de sobres) ──────────────────────────────────────────
 function EnvelopeMoney({ color, className = '' }: { color: string; className?: string }) {
   return (
@@ -160,9 +149,26 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
   })();
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Hrs' }, { v: mins, l: 'Mins' }, { v: secs, l: 'Segs' }];
 
+  // Costuras: chaflán art-déco con filete dorado — la geometría del oro sobre
+  // negro es la firma de la plantilla, así que el borde entre bandas es una V
+  // muy abierta y no una curva. Solo se declaran las bandas reales: las
+  // opcionales entran solo si hay datos, para que la cadena no se rompa.
+  const sew = seamsFor([
+    { k: 'portada',    c: C.black },
+    { k: 'invitado',   c: C.olive },
+    { k: 'cuenta',     c: C.black },
+    { k: 'regalo',     c: C.olive },
+    !!data.aboutImage && { k: 'nosotros', c: C.black },
+    !!data.galleryImages?.length && { k: 'galeria', c: C.black },
+    { k: 'gracias',    c: C.olive },
+    { k: 'cierre',     c: C.black },
+    { k: 'pie',        c: C.panel },
+  ], { shape: 'bevel', hairline: C.gold });
+
   // Banda de sección
-  const Band = ({ tone = 'black', children, className = '' }: { tone?: 'black' | 'olive'; children: React.ReactNode; className?: string }) => (
+  const Band = ({ tone = 'black', k, children, className = '' }: { tone?: 'black' | 'olive'; k?: string; children: React.ReactNode; className?: string }) => (
     <section className={`relative overflow-hidden px-6 ${SECTION.base} ${className}`} style={{ background: tone === 'olive' ? C.olive : C.black, color: C.cream }}>
+      {k && sew(k)}
       {tone === 'black' && <MarbleVeins />}
       {tone === 'black' && <>
         <Frond className="pointer-events-none absolute -right-6 top-10 w-20 opacity-70" style={{ transform: 'rotate(18deg)' }} />
@@ -225,8 +231,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       </section>
 
       {/* ════════ INTRO + INVITADO (oliva) ════════ */}
-      <Wave fill={C.olive} />
-      <Band tone="olive">
+      <Band tone="olive" k="invitado">
         <Reveal className="text-center">
           <p style={{ fontSize: TYPE.body, color: C.creamDim }}>Bienvenidos a la invitación de nuestra boda</p>
           <div className="mx-auto my-3 flex max-w-xs items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.line }} /><span className="h-1 w-1 rounded-full" style={{ background: C.gold }} /><span className="h-px flex-1" style={{ background: C.line }} /></div>
@@ -240,10 +245,9 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
           )}
         </Reveal>
       </Band>
-      <Wave fill={C.olive} flip />
 
       {/* ════════ CUENTA REGRESIVA ════════ */}
-      <Band>
+      <Band k="cuenta">
         <Reveal className="text-center">
           <Script style={{ fontSize: '42px' }}>Faltan</Script>
           <div className="mx-auto mt-4 grid max-w-md grid-cols-4 gap-2 rounded-2xl px-3 py-5" style={{ border: `1px solid ${C.line}` }}>
@@ -340,8 +344,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       )}
 
       {/* ════════ REGALO (oliva) ════════ */}
-      <Wave fill={C.olive} />
-      <Band tone="olive">
+      <Band tone="olive" k="regalo">
         <Reveal className="text-center">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.gold} custom={data} sec="gift" />
           <Script style={{ fontSize: '40px' }}>Sugerencia de Regalo</Script>
@@ -365,11 +368,10 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
           <p className="mt-7" style={{ fontSize: '15px', color: C.goldSoft }}>Gracias por tu muestra de cariño</p>
         </Reveal>
       </Band>
-      <Wave fill={C.olive} flip />
 
       {/* ════════ NOSOTROS ════════ */}
       {data.aboutImage && (
-        <Band>
+        <Band k="nosotros">
           <Reveal className="text-center">
             <Script style={{ fontSize: '46px' }}>Nosotros</Script>
             <div className="mx-auto mt-5 max-w-sm overflow-hidden rounded-3xl" style={{ border: `1px solid ${C.line}` }}>
@@ -382,7 +384,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
 
       {/* ════════ GALERÍA (cuadrícula vertical) ════════ */}
       {data.galleryImages && data.galleryImages.length > 0 && (
-        <Band>
+        <Band k="galeria">
           <Reveal>
             <MasonryGallery images={data.galleryImages} variant="grid" aspect="3 / 5" />
           </Reveal>
@@ -390,8 +392,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       )}
 
       {/* ════════ AGRADECIMIENTO + PADRINOS (oliva) ════════ */}
-      <Wave fill={C.olive} />
-      <Band tone="olive">
+      <Band tone="olive" k="gracias">
         <Reveal className="text-center">
           <Script style={{ fontSize: '48px' }}>{data.thanksTitle ?? 'Agradecimiento'}</Script>
           <div className="mx-auto my-4 flex max-w-sm items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.line }} /><span className="h-1 w-1 rounded-full" style={{ background: C.gold }} /><span className="h-px flex-1" style={{ background: C.line }} /></div>
@@ -410,10 +411,9 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
           )}
         </Reveal>
       </Band>
-      <Wave fill={C.olive} flip />
 
       {/* ════════ CIERRE + GALERÍA COMPARTIR ════════ */}
-      <Band>
+      <Band k="cierre">
         <Reveal className="text-center">
           <Caps className="mx-auto max-w-xl" style={{ fontSize: 'clamp(16px,2.6vw,22px)', color: C.cream }}>{data.rsvpClosing}</Caps>
           <div className="mx-auto mt-8 max-w-md rounded-3xl px-6 py-8 text-center" style={{ border: `1px solid ${C.gold}`, background: C.olive }}>
@@ -433,7 +433,8 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       </Band>
 
       {/* ════════ FOOTER ════════ */}
-      <footer className="py-8 text-center" style={{ background: C.panel, color: C.cream }}>
+      <footer className="relative pb-8 pt-14 text-center" style={{ background: C.panel, color: C.cream }}>
+        {sew('pie')}
         <Script style={{ fontSize: '34px' }}>Enkarta</Script>
         <p className="mt-1" style={{ fontSize: '13px', color: C.creamDim }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: C.gold, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>

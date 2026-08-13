@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto (blush/durazno + rosa-dorado + crema) ──────────────────────
@@ -95,15 +95,6 @@ function PeachBtn({ children, href }: { children: React.ReactNode; href: string 
     </a>
   );
 }
-function Wave({ fill, flip = false }: { fill: string; flip?: boolean }) {
-  return (
-    <div className="relative w-full leading-[0]" style={{ marginTop: flip ? -1 : 0, marginBottom: flip ? 0 : -1 }} aria-hidden>
-      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="block w-full" style={{ height: 42, transform: flip ? 'rotate(180deg)' : 'none' }}>
-        <path d="M0,30 C 280,54 520,10 760,30 C 1000,50 1220,14 1440,32 L1440,60 L0,60 Z" fill={fill} />
-      </svg>
-    </div>
-  );
-}
 function Heart({ color }: { color: string }) {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill={color} aria-hidden><path d="M12 21C6 17 2 13.5 2 8.8 2 5.4 4.7 3 7.7 3 9.5 3 11 3.9 12 5.3 13 3.9 14.5 3 16.3 3 19.3 3 22 5.4 22 8.8 22 13.5 18 17 12 21z" /></svg>;
 }
@@ -136,6 +127,18 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Boda ${data.groom} & ${data.bride}`)}&dates=${s}/${s}`;
   })();
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Horas' }, { v: mins, l: 'Mins.' }, { v: secs, l: 'Segs.' }];
+
+  // Costuras: puntilla de encaje con filete dorado. Solo se declara la sección
+  // que ABRE cada tirada de color; las siguientes con el mismo fondo son la
+  // misma hoja y no llevan costura.
+  const sew = seamsFor([
+    { k: 'portada',  c: C.paper },
+    { k: 'invitado', c: C.peach },
+    { k: 'padres',   c: C.paper },
+    { k: 'regalo',   c: C.peach },
+    { k: 'ninos',    c: C.paper },
+    { k: 'pie',      c: C.peachDeep },
+  ], { shape: 'scallop', hairline: C.gold });
 
   return (
     <ThemeCtx.Provider value={C}>
@@ -171,8 +174,8 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ INVITADO (durazno) ════════ */}
-      <Wave fill={C.peach} />
       <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.peach, color: C.bandText }}>
+        {sew('invitado')}
         <Reveal className="mx-auto max-w-xl">
           <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>Su presencia es el regalo más valioso que podemos recibir</p>
           <div className="mx-auto my-3 flex max-w-xs items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.rose, opacity: 0.5 }} /><Heart color={C.rose} /><span className="h-px flex-1" style={{ background: C.rose, opacity: 0.5 }} /></div>
@@ -182,10 +185,10 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
           <p style={{ fontSize: '13px' }}>en su honor</p>
         </Reveal>
       </section>
-      <Wave fill={C.peach} flip />
 
       {/* ════════ PADRES ════════ */}
-      <section className="relative overflow-hidden px-6 pt-10 pb-4 text-center" style={{ background: C.paper }}>
+      <section className="relative overflow-hidden px-6 pb-4 pt-14 text-center" style={{ background: C.paper }}>
+        {sew('padres')}
         <BlushFloral className="pointer-events-none absolute -left-6 top-1/3 w-32 opacity-50" style={{ transform: 'scaleX(-1)' }} />
         <Reveal className="relative z-10">
           <Script style={{ fontSize: '32px' }}>Con la bendición de Dios y de nuestros padres</Script>
@@ -301,8 +304,8 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ REGALO (durazno) ════════ */}
-      <Wave fill={C.peach} />
       <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.peach, color: C.bandText }}>
+        {sew('regalo')}
         <Reveal className="mx-auto max-w-2xl">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.rose} custom={data} sec="gift" />
           <Script style={{ fontSize: '42px' }}>Sugerencia de Regalo</Script>
@@ -317,10 +320,10 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
           )}
         </Reveal>
       </section>
-      <Wave fill={C.peach} flip />
 
       {/* ════════ SOLO ADULTOS + GALERÍA ════════ */}
-      <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
+      <section className={`relative px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
+        {sew('ninos')}
         <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-2">
           <Reveal className="rounded-2xl px-6 py-8 text-center" style={{ border: `1px solid ${C.line}` }}>
             <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full" style={{ border: `1px solid ${C.rose}` }}>
@@ -347,7 +350,8 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ FOOTER ════════ */}
-      <footer className="py-9 text-center" style={{ background: C.peachDeep, color: C.bandText }}>
+      <footer className="relative pb-9 pt-14 text-center" style={{ background: C.peachDeep, color: C.bandText }}>
+        {sew('pie')}
         <Script style={{ fontSize: '34px', color: C.rose }}>Enkarta</Script>
         <p className="mt-1" style={{ fontFamily: F.serif, fontSize: '14px' }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: C.rose, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>

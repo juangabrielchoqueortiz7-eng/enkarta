@@ -52,18 +52,25 @@ export const TEMPLATE_DECOR_DEFAULTS: Record<string, TemplateDecor> = {
 };
 
 export const TEMPLATE_TOKEN_DEFAULTS: Record<string, TemplateTokens> = {
-  azure:      { contentWidth: 700, sectionInset: 24, sectionRadius: 28, spacing: 'airy', surface: 'soft' },
-  primicia:   { contentWidth: 760, sectionInset: 26, sectionRadius: 12, spacing: 'normal', surface: 'flat' },
-  passport:   { contentWidth: 720, sectionInset: 24, sectionRadius: 18, spacing: 'normal', surface: 'card' },
-  paradise:   { contentWidth: 720, sectionInset: 24, sectionRadius: 26, spacing: 'airy', surface: 'soft' },
-  obsidiana:  { contentWidth: 700, sectionInset: 28, sectionRadius: 22, spacing: 'normal', surface: 'card' },
-  dolcevita:  { contentWidth: 710, sectionInset: 24, sectionRadius: 24, spacing: 'normal', surface: 'soft' },
-  grazia:     { contentWidth: 700, sectionInset: 26, sectionRadius: 18, spacing: 'airy', surface: 'soft' },
-  carmesi_v2: { contentWidth: 700, sectionInset: 24, sectionRadius: 24, spacing: 'normal', surface: 'card' },
-  napoly:     { contentWidth: 700, sectionInset: 24, sectionRadius: 22, spacing: 'normal', surface: 'soft' },
-  euforia:    { contentWidth: 720, sectionInset: 24, sectionRadius: 24, spacing: 'normal', surface: 'soft' },
-  rosegold:   { contentWidth: 700, sectionInset: 24, sectionRadius: 28, spacing: 'airy', surface: 'soft' },
-  allegria:   { contentWidth: 760, sectionInset: 22, sectionRadius: 14, spacing: 'compact', surface: 'flat' },
+  // `seam` = borde entre bloques de distinto fondo en el constructor. Es el
+  // MISMO reparto de formas que usan las plantillas premium en sus secciones
+  // (ver el skill enkarta-invitations), para que una invitación por bloques
+  // herede el acabado de la plantilla de la que partió.
+  azure:      { contentWidth: 700, sectionInset: 24, sectionRadius: 28, spacing: 'airy', surface: 'soft', seam: 'arch' },
+  primicia:   { contentWidth: 760, sectionInset: 26, sectionRadius: 12, spacing: 'normal', surface: 'flat', seam: 'bevel' },
+  passport:   { contentWidth: 720, sectionInset: 24, sectionRadius: 18, spacing: 'normal', surface: 'card', seam: 'wave' },
+  paradise:   { contentWidth: 720, sectionInset: 24, sectionRadius: 26, spacing: 'airy', surface: 'soft', seam: 'wave' },
+  obsidiana:  { contentWidth: 700, sectionInset: 28, sectionRadius: 22, spacing: 'normal', surface: 'card', seam: 'bevel' },
+  dolcevita:  { contentWidth: 710, sectionInset: 24, sectionRadius: 24, spacing: 'normal', surface: 'soft', seam: 'scallop' },
+  grazia:     { contentWidth: 700, sectionInset: 26, sectionRadius: 18, spacing: 'airy', surface: 'soft', seam: 'bevel' },
+  carmesi_v2: { contentWidth: 700, sectionInset: 24, sectionRadius: 24, spacing: 'normal', surface: 'card', seam: 'curve' },
+  napoly:     { contentWidth: 700, sectionInset: 24, sectionRadius: 22, spacing: 'normal', surface: 'soft', seam: 'curve' },
+  euforia:    { contentWidth: 720, sectionInset: 24, sectionRadius: 24, spacing: 'normal', surface: 'soft', seam: 'wave' },
+  rosegold:   { contentWidth: 700, sectionInset: 24, sectionRadius: 28, spacing: 'airy', surface: 'soft', seam: 'scallop' },
+  allegria:   { contentWidth: 760, sectionInset: 22, sectionRadius: 14, spacing: 'compact', surface: 'flat', seam: 'arch' },
+  // Faltaban: caían al preset de azure. Ahora traen el suyo.
+  esmeralda:  { contentWidth: 700, sectionInset: 24, sectionRadius: 12, spacing: 'airy', surface: 'flat', seam: 'arch' },
+  provence:   { contentWidth: 720, sectionInset: 24, sectionRadius: 22, spacing: 'airy', surface: 'card', seam: 'arch' },
 };
 
 export function decorForTemplate(template: string): TemplateDecor | undefined {

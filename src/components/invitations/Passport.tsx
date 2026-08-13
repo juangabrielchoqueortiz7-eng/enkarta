@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import Image from 'next/image';
-import { EventIcon, Reveal, useCountdown, Odometer, PhotoGrid, SECTION, ENKARTA_WA_URL } from './shared';
+import { EventIcon, Reveal, useCountdown, Odometer, PhotoGrid, SECTION, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 import { PassportContent, TemplateTheme } from './types';
 
@@ -40,16 +40,6 @@ const F = {
   caps: "'Cinzel', serif",
   body: "'Cormorant Garamond', serif",
 };
-
-function Wave({ fill }: { fill: string }) {
-  return (
-    <div className="relative -mb-px w-full leading-[0]" aria-hidden>
-      <svg viewBox="0 0 1440 70" preserveAspectRatio="none" className="block w-full" style={{ height: '52px' }}>
-        <path d="M0,38 C 260,72 520,8 760,30 C 1000,52 1230,16 1440,40 L1440,70 L0,70 Z" fill={fill} />
-      </svg>
-    </div>
-  );
-}
 
 function Compass({ size = 96 }: { size?: number }) {
   const C = useC();
@@ -178,6 +168,19 @@ export default function Passport({ data }: { data: PassportContent }) {
   const enter = () => document.getElementById('pp-intro')?.scrollIntoView({ behavior: 'smooth' });
   const titleSize = { fontSize: 'clamp(36px,8vw,58px)' };
 
+  // Costuras: ola en S — la plantilla va de viajes, así que el borde entre
+  // bandas es el mismo trazo de una ruta sobre el mapa. Solo se declara la
+  // sección que ABRE cada tirada de color.
+  const sew = seamsFor([
+    { k: 'portada',  c: C.sage },
+    { k: 'intro',    c: C.cream },
+    { k: 'invitado', c: C.sage },
+    { k: 'padres',   c: C.cream },
+    { k: 'galeria',  c: C.sage },
+    { k: 'ninos',    c: C.cream },
+    { k: 'rsvp',     c: C.sage },
+  ], { shape: 'wave', hairline: C.line });
+
   return (
     <ThemeCtx.Provider value={C}>
     <div className="relative min-h-screen w-full overflow-x-hidden" style={{ background: C.cream, color: C.dark, fontFamily: F.body }}>
@@ -250,10 +253,10 @@ export default function Passport({ data }: { data: PassportContent }) {
             </button>
           </div>
         </div>
-        <Wave fill={C.cream} />
       </section>
 
-      <section id="pp-intro" className="px-6 pb-4 pt-10 text-center">
+      <section id="pp-intro" className="relative px-6 pb-4 pt-14 text-center">
+        {sew('intro')}
         <Reveal className="mx-auto flex max-w-xl flex-col items-center">
           <Script style={{ fontSize: 'clamp(40px,9vw,64px)' }}><WriteOn duration={1.9}>{data.groom} &amp; {data.bride}</WriteOn></Script>
           <Caps className="mt-5" style={{ color: C.dark, fontSize: 'clamp(18px,4.5vw,28px)', letterSpacing: '0.12em' }}>{data.announce}</Caps>
@@ -295,8 +298,8 @@ export default function Passport({ data }: { data: PassportContent }) {
         </section>
       )}
 
-      <Wave fill={C.sage} />
-      <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.sage, color: C.creamText }}>
+      <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.sage, color: C.creamText }}>
+        {sew('invitado')}
         <Reveal className="mx-auto flex max-w-xl flex-col items-center">
           <p style={{ fontFamily: F.body, fontSize: '20px', color: C.creamText }}>{data.callout}</p>
           <p style={{ fontFamily: F.script, fontSize: '34px', marginTop: 4 }}>{data.callout2}</p>
@@ -315,9 +318,9 @@ export default function Passport({ data }: { data: PassportContent }) {
           </>)}
         </Reveal>
       </section>
-      <Wave fill={C.cream} />
 
-      <section className={`px-6 ${SECTION.tight} text-center`}>
+      <section className={`relative px-6 ${SECTION.tight} text-center`}>
+        {sew('padres')}
         <Reveal className="mx-auto max-w-2xl">
           <Caps style={{ fontSize: 'clamp(13px,3.2vw,18px)', letterSpacing: '0.16em' }}>Con la bendicion de Dios y de nuestros padres</Caps>
           <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2">
@@ -449,8 +452,8 @@ export default function Passport({ data }: { data: PassportContent }) {
         </Reveal>
       </section>
 
-      <Wave fill={C.sage} />
-      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.sage, color: C.creamText }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.sage, color: C.creamText }}>
+        {sew('galeria')}
         <Reveal className="mx-auto flex max-w-md flex-col items-center">
           {data.icons?.gallery ? (
             <EventIcon name="" custom={data} sec="gallery" className="mb-5 h-12 w-12" stroke={C.creamText} />
@@ -476,9 +479,9 @@ export default function Passport({ data }: { data: PassportContent }) {
           </div>
         </Reveal>
       </section>
-      <Wave fill={C.cream} />
 
       <section className={`relative overflow-hidden px-6 ${SECTION.base} text-center`}>
+        {sew('ninos')}
         <PlaneTrail className="absolute left-2 top-6 w-28 opacity-70" />
         <Reveal className="mx-auto max-w-xl">
           <Script style={titleSize}>Solo Adultos</Script>
@@ -486,8 +489,8 @@ export default function Passport({ data }: { data: PassportContent }) {
         </Reveal>
       </section>
 
-      <Wave fill={C.sage} />
-      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.sage, color: C.creamText }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.sage, color: C.creamText }}>
+        {sew('rsvp')}
         <Reveal className="mx-auto flex max-w-md flex-col items-center">
           <p style={{ fontFamily: F.caps, fontSize: '12px', letterSpacing: '0.3em', color: C.creamDim }}>Confirmar Asistencia</p>
           <Script className="mt-3" style={{ color: C.creamText, fontSize: 'clamp(38px,9vw,58px)' }}>Check-in</Script>

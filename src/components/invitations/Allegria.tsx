@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, SECTION, TYPE, ENKARTA_WA_URL } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, SECTION, TYPE, ENKARTA_WA_URL, seamsFor } from './shared';
 import { CascadeText } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto (salvia + blanco minimalista) ──────────────────────────────
@@ -16,6 +16,9 @@ const DEFAULT_C = {
   line: '#d3d3cb',
 };
 type ALPalette = typeof DEFAULT_C;
+
+/** Negro cálido del pie: el único color fuera de la paleta editable. */
+const FOOTER_BG = '#1a1a18';
 
 const ThemeCtx = createContext<ALPalette>(DEFAULT_C);
 const useC = () => useContext(ThemeCtx);
@@ -84,6 +87,18 @@ export default function Allegria({ data }: { data: DolceVitaContent }) {
     if (playing) { a.pause(); setPlaying(false); } else a.play().then(() => setPlaying(true)).catch(() => {});
   };
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Hrs.' }, { v: mins, l: 'Mins.' }, { v: secs, l: 'Segs.' }];
+
+  // Costuras: arco limpio y SIN filete. Allegria es la plantilla minimalista de
+  // la colección: la capa se nota por la forma y la sombra, no por una línea
+  // decorativa encima. Solo se declara la sección que ABRE cada tirada de color.
+  const sew = seamsFor([
+    { k: 'portada',  c: C.paper },
+    { k: 'invitado', c: C.sage },
+    { k: 'fecha',    c: C.paper },
+    { k: 'regalo',   c: C.sage },
+    { k: 'galeria',  c: C.paper },
+    { k: 'pie',      c: FOOTER_BG },
+  ], { shape: 'arch', shadow: 'rgba(30,32,26,0.09)' });
   const polaroidImg = data.galleryImages[0] || data.coverImage;
 
   return (
@@ -119,7 +134,8 @@ export default function Allegria({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ INVITADO (salvia) ════════ */}
-      <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.sage, color: C.cream }}>
+      <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.sage, color: C.cream }}>
+        {sew('invitado')}
         <Reveal className="mx-auto max-w-2xl">
           <Caps style={{ fontSize: 'clamp(12px,2vw,14px)', color: C.cream }}>{data.introMessage}</Caps>
           {data.guestName && <Script className="mt-6" style={{ fontSize: '40px', color: C.cream }}>{data.guestName}</Script>}
@@ -130,7 +146,8 @@ export default function Allegria({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ FECHA (en línea) + ¡NOS CASAMOS! ════════ */}
-      <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.paper }}>
+      <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.paper }}>
+        {sew('fecha')}
         <Reveal className="mx-auto max-w-2xl">
           <div className="flex items-stretch justify-center gap-4">
             <div className="flex flex-1 items-center justify-end" style={{ maxWidth: 150 }}>
@@ -238,7 +255,8 @@ export default function Allegria({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ REGALO (salvia) — Zelle + QR ════════ */}
-      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.sage, color: C.cream }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.sage, color: C.cream }}>
+        {sew('regalo')}
         <Reveal className="mx-auto max-w-3xl">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.cream} custom={data} sec="gift" />
           <Caps style={{ fontSize: '16px', color: C.cream }}>Sugerencia de Regalo</Caps>
@@ -269,7 +287,8 @@ export default function Allegria({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ GALERÍA + SOLO ADULTOS (2 tarjetas) ════════ */}
-      <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
+      <section className={`relative px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
+        {sew('galeria')}
         <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-2">
           <Reveal className="flex flex-col items-center rounded-sm px-6 py-8 text-center" style={{ border: `1px solid ${C.line}` }}>
             <span className="mb-3 block h-px w-10" style={{ background: C.line }} />
@@ -290,7 +309,8 @@ export default function Allegria({ data }: { data: DolceVitaContent }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={data.coverImage} alt="" className="h-[55vh] w-full object-cover object-top" />
       )}
-      <footer className="py-8 text-center" style={{ background: '#1a1a18', color: C.cream }}>
+      <footer className="relative pb-8 pt-14 text-center" style={{ background: FOOTER_BG, color: C.cream }}>
+        {sew('pie')}
         <p style={{ fontFamily: F.caps, fontSize: '22px', letterSpacing: '0.2em', color: C.cream }}>ENKARTA</p>
         <p className="mt-1" style={{ fontFamily: F.serif, fontSize: '14px', opacity: 0.8 }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { IconCustomization } from './types';
-import type { ParticleShape } from '@/lib/types';
+import type { ParticleShape, SeamShape } from '@/lib/types';
 import { ScrollReveal } from '@/lib/scroll-motion';
 
 // ── Contacto de Enkarta (footer de todas las plantillas) ─────────────────────
@@ -34,6 +34,166 @@ export const SECTION = {
   base:  'py-14 sm:py-16',
   roomy: 'py-16 sm:py-20',
 } as const;
+
+// ── Costuras entre secciones ("capas") ────────────────────────────────────────
+// Una invitación es una pila de bandas de color. Sin nada en medio, el salto de
+// una banda a la siguiente es un corte recto y duro: se ve el "borde de div".
+// Con una costura, cada banda parece una hoja de papel apoyada sobre la
+// anterior — sombra suave, borde con forma y filete fino — y eso es lo que da
+// el acabado de papelería cara.
+//
+// `<Seam>` va como PRIMER hijo de una sección `relative`: pinta el color de la
+// banda ANTERIOR (`from`) sobre su franja superior, recortado con la forma
+// elegida. Al vivir DENTRO de la sección, ningún `overflow-hidden` lo recorta y
+// no hace falta tocar el z-index de nada.
+// La lista de formas vive en `@/lib/types` (junto a ParticleShape/CornerStyle)
+// porque también la usa el token de plantilla del constructor.
+export type { SeamShape };
+
+/**
+ * Festón: N arcos seguidos. `ctrl` va muy por debajo de la caja a propósito —
+ * es el punto de control de la cuadrática, no el fondo del arco: con top=24 y
+ * ctrl=166 el arco baja hasta y≈95, o sea usa casi todo el alto de la costura.
+ * Se genera en los dos sentidos: `edge` de izquierda a derecha para el filete,
+ * y la vuelta de derecha a izquierda para cerrar el relleno.
+ */
+function scallopPaths(count = 14) {
+  const w = 1200 / count, top = 24, ctrl = 166;
+  let edge = `M0 ${top}`;
+  for (let i = 0; i < count; i++) edge += ` Q${(i + 0.5) * w} ${ctrl} ${(i + 1) * w} ${top}`;
+  let back = '';
+  for (let i = count; i > 0; i--) back += ` Q${(i - 0.5) * w} ${ctrl} ${(i - 1) * w} ${top}`;
+  return { edge, fill: `M0 0H1200V${top}${back}Z` };
+}
+
+// Geometría de cada forma en un lienzo 1200×100 que se estira al ancho real
+// (preserveAspectRatio="none"). `fill` es la banda anterior; `edge` es el mismo
+// borde como trazo abierto, para el filete. Las formas ocupan ~60-75 de los 100
+// de alto: por debajo de eso la curva se aplana tanto que en móvil no se lee.
+const SEAM_PATHS: Record<'arch' | 'curve' | 'wave' | 'bevel' | 'scallop', { fill: string; edge: string }> = {
+  arch:    { fill: 'M0 0H1200V92Q600 -32 0 92Z',       edge: 'M0 92Q600 -32 1200 92' },
+  curve:   { fill: 'M0 0H1200V14Q600 142 0 14Z',       edge: 'M0 14Q600 142 1200 14' },
+  wave:    { fill: 'M0 0H1200V26C912 104 288 -6 0 66Z', edge: 'M0 66C288 -6 912 104 1200 26' },
+  bevel:   { fill: 'M0 0H1200V16L600 94 0 16Z',        edge: 'M0 16L600 94 1200 16' },
+  scallop: scallopPaths(),
+};
+
+/** Alto por defecto: generoso en escritorio, discreto en móvil (siempre por
+ *  debajo del padding superior de `SECTION.tight`, para no pisar el contenido). */
+export const SEAM_H = 'clamp(36px,7vw,60px)';
+
+export function Seam({
+  shape = 'curve',
+  from,
+  edge = 'top',
+  height = SEAM_H,
+  hairline,
+  shadow = 'rgba(24,18,12,0.10)',
+  flip = false,
+  className = '',
+  style,
+}: {
+  shape?: SeamShape;
+  /** Color de la banda VECINA: el papel que queda por encima de esta. */
+  from: string;
+  /**
+   * Borde de la sección donde va la costura. `top` (por defecto) es lo normal:
+   * la banda anterior cae sobre esta. `bottom` sirve para las portadas con
+   * FOTO a sangre, donde no hay color anterior que traer: ahí es el papel de
+   * la sección siguiente el que sube sobre la foto (`from` = ese papel).
+   */
+  edge?: 'top' | 'bottom';
+  /** Alto de la costura (px o cualquier medida CSS). */
+  height?: number | string;
+  /** Filete fino que sigue el borde (dorado, cobre, crema…). */
+  hairline?: string;
+  /** Sombra bajo el borde; `false` la quita. */
+  shadow?: string | false;
+  /** Espeja la forma horizontalmente (para alternar entre costuras seguidas). */
+  flip?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  if (shape === 'none') return null;
+
+  const wrap = (children: React.ReactNode) => (
+    <span
+      className={`pointer-events-none absolute inset-x-0 z-[2] ${edge === 'bottom' ? 'bottom-0' : 'top-0'} ${className}`}
+      // scaleY(-1): la misma geometría vale para los dos bordes. Como el
+      // volteo es sobre el centro de la franja, no la descoloca; y la sombra,
+      // que se pinta antes del transform, acaba cayendo hacia arriba, que es
+      // justo lo que necesita una hoja que sube sobre la foto.
+      style={{ height, transform: edge === 'bottom' ? 'scaleY(-1)' : undefined, ...style }}
+      aria-hidden
+    >
+      {children}
+    </span>
+  );
+
+  // Degradado: la banda anterior se disuelve. La costura más silenciosa.
+  if (shape === 'fade') {
+    return wrap(
+      <span className="block h-full w-full"
+        style={{ background: `linear-gradient(180deg, ${from} 0%, transparent 100%)` }} />,
+    );
+  }
+
+  // Filete recto: sin forma, solo línea y sombra (para diseños estrictos).
+  if (shape === 'line') {
+    return wrap(
+      <>
+        {shadow && <span className="block h-full w-full" style={{ background: `linear-gradient(180deg, ${shadow}, transparent 72%)` }} />}
+        {hairline && <span className="absolute inset-x-0 top-0" style={{ height: 1, background: hairline, opacity: 0.85 }} />}
+      </>,
+    );
+  }
+
+  const p = SEAM_PATHS[shape];
+  return wrap(
+    <svg viewBox="0 0 1200 100" preserveAspectRatio="none" className="block h-full w-full"
+      style={{ transform: flip ? 'scaleX(-1)' : undefined, filter: shadow ? `drop-shadow(0 4px 7px ${shadow})` : undefined }}>
+      <path d={p.fill} fill={from} />
+      {/* vector-effect: el lienzo se estira mucho en horizontal; sin esto el
+          filete saldría grueso y deformado. */}
+      {hairline && (
+        <path d={p.edge} fill="none" stroke={hairline} strokeWidth="1.25"
+          vectorEffect="non-scaling-stroke" opacity="0.85" strokeLinejoin="round" />
+      )}
+    </svg>,
+  );
+}
+
+/**
+ * Costurero de una plantilla. Se le declara la PILA DE BANDAS en el orden en
+ * que se pintan (las opcionales como `cond && {...}`, que se descartan solas) y
+ * devuelve `sew(clave)`: la costura de esa banda respecto a la anterior.
+ *
+ *   const sew = seamsFor([
+ *     { k: 'portada', c: C.dark },
+ *     { k: 'intro',   c: C.paper },
+ *     data.guestName && { k: 'invitado', c: C.green },
+ *   ], { shape: 'arch', hairline: C.gold });
+ *
+ *   <section className="relative …">{sew('intro')}…</section>
+ *
+ * Si dos bandas seguidas comparten color no dibuja nada: las secciones que
+ * deben leerse como una sola hoja siguen siendo una sola hoja.
+ */
+type SeamBand = { k: string; c: string };
+type SeamOpts = { shape?: SeamShape; hairline?: string; shadow?: string | false; height?: number | string; flip?: boolean; edge?: 'top' | 'bottom' };
+
+export function seamsFor(bands: (SeamBand | false | null | undefined)[], base: SeamOpts = {}) {
+  const list = bands.filter(Boolean) as SeamBand[];
+  // No es un componente sino una función que devuelve el elemento ya montado:
+  // así `{sew('x')}` se reconcilia como un <Seam> más del árbol de la sección y
+  // no se remonta en cada tic de la cuenta regresiva.
+  return function sew(k: string, over: SeamOpts = {}) {
+    const i = list.findIndex(b => b.k === k);
+    const from = i > 0 ? list[i - 1].c : undefined;
+    if (!from || from === list[i].c) return null;
+    return <Seam from={from} {...base} {...over} />;
+  };
+}
 
 // ── Live countdown hook ───────────────────────────────────────────────────────
 export function useCountdown(isoDate: string) {

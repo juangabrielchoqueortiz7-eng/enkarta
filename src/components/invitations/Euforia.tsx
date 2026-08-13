@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto (mocha cálido + dorado + crema) ────────────────────────────
@@ -110,15 +110,6 @@ function MochaBtn({ children, href }: { children: React.ReactNode; href: string 
     </a>
   );
 }
-function Wave({ fill, flip = false }: { fill: string; flip?: boolean }) {
-  return (
-    <div className="relative w-full leading-[0]" style={{ marginTop: flip ? -1 : 0, marginBottom: flip ? 0 : -1 }} aria-hidden>
-      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="block w-full" style={{ height: 42, transform: flip ? 'rotate(180deg)' : 'none' }}>
-        <path d="M0,30 C 280,54 520,10 760,30 C 1000,50 1220,14 1440,32 L1440,60 L0,60 Z" fill={fill} />
-      </svg>
-    </div>
-  );
-}
 function BabyNo({ color, className = '' }: { color: string; className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -155,6 +146,18 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Boda ${data.groom} & ${data.bride}`)}&dates=${s}/${s}`;
   })();
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Hrs' }, { v: mins, l: 'Mins' }, { v: secs, l: 'Segs.' }];
+
+  // Costuras: ola en S con filete dorado — el gesto de acuarela de la plantilla
+  // llevado al borde entre bandas. Solo se declara la sección que ABRE cada
+  // tirada de color.
+  const sew = seamsFor([
+    { k: 'portada',  c: C.paper },
+    { k: 'invitado', c: C.mocha },
+    { k: 'fecha',    c: C.paper },
+    { k: 'regalo',   c: C.mocha },
+    { k: 'rsvp',     c: C.paper },
+    { k: 'pie',      c: C.mochaDeep },
+  ], { shape: 'wave', hairline: C.gold });
 
   return (
     <ThemeCtx.Provider value={C}>
@@ -194,8 +197,8 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
       <section className={`px-6 ${SECTION.tight} text-center`} style={{ background: C.paper }}>
         <Caps style={{ fontSize: 'clamp(28px,6vw,42px)', color: C.mochaDeep }}>¡Nos casamos!</Caps>
       </section>
-      <Wave fill={C.mocha} />
       <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.mocha, color: C.cream }}>
+        {sew('invitado')}
         <Reveal className="mx-auto max-w-xl">
           <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>Su presencia es el regalo más valioso que podemos recibir</p>
           {data.guestName && <Script className="mt-4" style={{ fontSize: '40px', color: C.cream }}>{data.guestName}</Script>}
@@ -204,10 +207,10 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
           <p style={{ fontSize: '13px' }}>en su honor</p>
         </Reveal>
       </section>
-      <Wave fill={C.mocha} flip />
 
       {/* ════════ FECHA (en línea) + COUNTDOWN ════════ */}
       <section className={`relative overflow-hidden px-6 ${SECTION.tight} text-center`} style={{ background: C.paper }}>
+        {sew('fecha')}
         <PastelLeaves className="pointer-events-none absolute right-0 bottom-6 w-40 opacity-40" />
         <Reveal className="relative z-10 mx-auto max-w-2xl">
           <div className="mb-5 flex justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill={C.mocha}><path d="M12 21C6 17 2 13.5 2 8.8 2 5.4 4.7 3 7.7 3 9.5 3 11 3.9 12 5.3 13 3.9 14.5 3 16.3 3 19.3 3 22 5.4 22 8.8 22 13.5 18 17 12 21z" /></svg></div>
@@ -329,8 +332,8 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
       )}
 
       {/* ════════ REGALO (mocha) ════════ */}
-      <Wave fill={C.mocha} />
       <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.mocha, color: C.cream }}>
+        {sew('regalo')}
         <Reveal className="mx-auto max-w-3xl">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.cream} custom={data} sec="gift" />
           <Script style={{ fontSize: '42px', color: C.cream }}>Sugerencia de Regalo</Script>
@@ -361,10 +364,10 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
           </div>
         </Reveal>
       </section>
-      <Wave fill={C.mocha} flip />
 
       {/* ════════ CONFIRMACIÓN ════════ */}
-      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+        {sew('rsvp')}
         <Reveal className="mx-auto max-w-xl">
           <Script style={{ fontSize: '44px' }}>{data.rsvpClosing ?? 'Confirmar asistencia'}</Script>
           <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>Es muy importante para nosotros confirmar tu asistencia.</p>
@@ -373,7 +376,8 @@ export default function Euforia({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ FOOTER ════════ */}
-      <footer className="py-9 text-center" style={{ background: C.mochaDeep, color: C.cream }}>
+      <footer className="relative pb-9 pt-14 text-center" style={{ background: C.mochaDeep, color: C.cream }}>
+        {sew('pie')}
         <Script style={{ fontSize: '34px', color: C.cream }}>Enkarta</Script>
         <p className="mt-1" style={{ fontFamily: F.serif, fontSize: '14px', opacity: 0.85 }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>

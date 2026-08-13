@@ -10,6 +10,7 @@ import {
   MasonryGallery,
   CalIcon,
   SECTION,
+  Seam,
 } from './shared';
 import { WriteOn, CascadeText } from '@/lib/scroll-motion';
 
@@ -203,10 +204,7 @@ export default function Provence({ data }: { data: ProvenceContent }) {
                 Foto Principal
               </div>
             )}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{ background: `linear-gradient(180deg, rgba(255,255,255,0) 65%, ${C.bg} 100%)` }}
-            />
+            <Seam edge="bottom" shape="arch" from={C.bg} hairline={C.gold} height="clamp(56px,12vw,110px)" />
           </div>
 
           {/* Lado Derecho: Nombres y tipografía script */}
@@ -411,10 +409,8 @@ export default function Provence({ data }: { data: ProvenceContent }) {
               Foto Pareja Central
             </div>
           )}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: `linear-gradient(180deg, ${C.bg} 0%, rgba(255,255,255,0) 25%, rgba(255,255,255,0) 75%, ${C.bg} 100%)` }}
-          />
+          <Seam shape="arch" from={C.bg} hairline={C.gold} height="clamp(48px,10vw,96px)" />
+          <Seam edge="bottom" shape="arch" from={C.bg} hairline={C.gold} height="clamp(48px,10vw,96px)" />
         </section>
 
         {/* ════════ 7. ITINERARIO PASO A PASO HORIZONTAL ════════ */}

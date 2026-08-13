@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto (taupe/mocha + rosa empolvado/malva + dorado) ──────────────
@@ -117,15 +117,6 @@ function OutBtn({ children, href }: { children: React.ReactNode; href: string })
     </a>
   );
 }
-function Wave({ fill, flip = false }: { fill: string; flip?: boolean }) {
-  return (
-    <div className="relative w-full leading-[0]" style={{ marginTop: flip ? -1 : 0, marginBottom: flip ? 0 : -1 }} aria-hidden>
-      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="block w-full" style={{ height: 44, transform: flip ? 'rotate(180deg)' : 'none' }}>
-        <path d="M0,28 C 320,58 560,6 760,28 C 980,52 1220,12 1440,34 L1440,60 L0,60 Z" fill={fill} />
-      </svg>
-    </div>
-  );
-}
 function BabyNo({ color, className = '' }: { color: string; className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -162,6 +153,18 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Boda ${data.groom} & ${data.bride}`)}&dates=${s}/${s}`;
   })();
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Horas' }, { v: mins, l: 'Mins.' }, { v: secs, l: 'Segs.' }];
+
+  // Costuras: un valle muy suave con filete dorado. Solo se declara la sección
+  // que ABRE cada tirada de color; las que van detrás con el mismo fondo se
+  // leen como una sola hoja y no necesitan costura.
+  const sew = seamsFor([
+    { k: 'portada',  c: C.paper },
+    { k: 'invitado', c: C.taupe },
+    { k: 'padres',   c: C.paper },
+    { k: 'regalo',   c: C.taupe },
+    { k: 'rsvp',     c: C.paper },
+    { k: 'pie',      c: C.taupeDeep },
+  ], { shape: 'curve', hairline: C.gold });
   const ceremonies = [
     { icon: 'church', title: 'Ceremonia Religiosa', c: data.ceremonyReligious, img: data.galleryImages[0] },
     ...(data.ceremonyCivil ? [{ icon: 'rings', title: 'Ceremonia Civil', c: data.ceremonyCivil, img: data.galleryImages[2] }] : []),
@@ -202,8 +205,8 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ INVITADO (taupe) ════════ */}
-      <Wave fill={C.taupe} />
       <section className={`relative px-6 ${SECTION.tight} text-center`} style={{ background: C.taupe, color: C.cream }}>
+        {sew('invitado')}
         <Reveal className="mx-auto max-w-xl">
           <p style={{ fontFamily: F.serif, fontSize: TYPE.body }}>Su presencia es el regalo más valioso que podemos recibir:</p>
           <div className="mx-auto my-3 flex max-w-xs items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.gold }} /><Heart color={C.gold} /><span className="h-px flex-1" style={{ background: C.gold }} /></div>
@@ -213,10 +216,10 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
           <p style={{ fontSize: '13px' }}>en su honor</p>
         </Reveal>
       </section>
-      <Wave fill={C.taupe} flip />
 
       {/* ════════ PADRES ════════ */}
-      <section className="px-6 pt-10 pb-4 text-center" style={{ background: C.paper }}>
+      <section className="relative px-6 pb-4 pt-14 text-center" style={{ background: C.paper }}>
+        {sew('padres')}
         <Reveal>
           <Script style={{ fontSize: '32px' }}>Con la bendición de Dios y de nuestros padres</Script>
           <div className="mx-auto mt-8 grid max-w-3xl gap-8 sm:grid-cols-2">
@@ -357,8 +360,8 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ REGALO (taupe) ════════ */}
-      <Wave fill={C.taupe} />
       <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.taupe, color: C.cream }}>
+        {sew('regalo')}
         <Reveal className="mx-auto max-w-3xl">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.gold} custom={data} sec="gift" />
           <Script style={{ fontSize: '42px', color: C.gold }}>Sugerencia de Regalo</Script>
@@ -389,10 +392,10 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
           </div>
         </Reveal>
       </section>
-      <Wave fill={C.taupe} flip />
 
       {/* ════════ CONFIRMACIÓN ════════ */}
-      <section className={`px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+      <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+        {sew('rsvp')}
         <Reveal className="mx-auto max-w-xl">
           <Script style={{ fontSize: '44px' }}>{data.rsvpClosing ?? 'Confirmar asistencia'}</Script>
           <p className="mx-auto mt-3 max-w-md" style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.ink, lineHeight: 1.5 }}>Es muy importante para nosotros confirmar tu asistencia.</p>
@@ -401,7 +404,8 @@ export default function Napoly({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ FOOTER ════════ */}
-      <footer className="py-9 text-center" style={{ background: C.taupeDeep, color: C.cream }}>
+      <footer className="relative pb-9 pt-14 text-center" style={{ background: C.taupeDeep, color: C.cream }}>
+        {sew('pie')}
         <Script style={{ fontSize: '34px', color: C.gold }}>Enkarta</Script>
         <p className="mt-1" style={{ fontFamily: F.serif, fontSize: '14px', opacity: 0.85 }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: C.gold, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>

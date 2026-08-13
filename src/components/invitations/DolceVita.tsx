@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
-import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL } from './shared';
+import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
@@ -96,19 +96,11 @@ function Script({ children, className = '', style }: { children: React.ReactNode
   const C = useC();
   return <p className={className} style={{ fontFamily: F.script, color: C.greenSoft, lineHeight: 1, ...style }}>{children}</p>;
 }
+/** Negro cálido del pie: el único color fuera de la paleta editable. */
+const FOOTER_BG = '#141512';
+
 function Caps({ children, className = '', style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return <h3 className={className} style={{ fontFamily: F.serif, letterSpacing: '0.16em', textTransform: 'uppercase', lineHeight: 1.5, fontWeight: 500, ...style }}>{children}</h3>;
-}
-
-// ── Ola divisoria ──────────────────────────────────────────────────────────────────
-function Wave({ fill, flip = false }: { fill: string; flip?: boolean }) {
-  return (
-    <div className="relative w-full leading-[0]" style={{ marginTop: flip ? -1 : 0, marginBottom: flip ? 0 : -1 }} aria-hidden>
-      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="block w-full" style={{ height: 44, transform: flip ? 'rotate(180deg)' : 'none' }}>
-        <path d="M0,28 C 320,58 560,6 760,28 C 980,52 1220,12 1440,34 L1440,60 L0,60 Z" fill={fill} />
-      </svg>
-    </div>
-  );
 }
 
 // ── Iconos de línea propios ─────────────────────────────────────────────────────────
@@ -150,6 +142,23 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Boda ${data.bride} & ${data.groom}`)}&dates=${s}/${s}`;
   })();
   const cd = [{ v: days, l: 'Días' }, { v: hours, l: 'Hrs' }, { v: mins, l: 'Mins' }, { v: secs, l: 'Segs' }];
+
+  // Costuras: festón de encaje con filete dorado. Es la plantilla más romántica
+  // de la colección, así que el borde entre bandas se comporta como la puntilla
+  // de una servilleta de papel, no como un corte recto.
+  const sew = seamsFor([
+    { k: 'portada', c: C.paper },
+    { k: 'fecha',   c: C.paper },
+    { k: 'intro',   c: C.green },
+    { k: 'padres',  c: C.paper },
+    { k: 'lugares', c: C.paper },
+    !!data.galleryImages.length && { k: 'galeria', c: C.paper },
+    { k: 'hospedaje', c: C.paper },
+    { k: 'ninos',   c: C.paper },
+    { k: 'regalo',  c: C.green },
+    { k: 'rsvp',    c: C.paper },
+    { k: 'pie',     c: FOOTER_BG },
+  ], { shape: 'scallop', hairline: C.gold });
 
   return (
     <ThemeCtx.Provider value={C}>
@@ -222,8 +231,8 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ INTRO + INVITADO (verde) ════════ */}
-      <Wave fill={C.green} />
       <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.green, color: C.cream }}>
+        {sew('intro')}
         <Reveal className="mx-auto max-w-2xl">
           <p className="mx-auto max-w-xl italic" style={{ fontFamily: F.serif, fontSize: TYPE.lead, lineHeight: 1.7 }}>{data.introMessage}</p>
           <div className="mx-auto my-6 flex max-w-xs items-center justify-center gap-3"><span className="h-px flex-1" style={{ background: C.gold }} /><span style={{ color: C.gold }}>♥</span><span className="h-px flex-1" style={{ background: C.gold }} /></div>
@@ -237,10 +246,10 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
           )}
         </Reveal>
       </section>
-      <Wave fill={C.green} flip />
 
       {/* ════════ PADRES + PADRINOS ════════ */}
       <section className={`relative overflow-hidden px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+        {sew('padres')}
         <LeafSprig className="pointer-events-none absolute right-0 top-1/3 w-40 opacity-25" />
         <Reveal className="relative z-10">
           <Caps style={{ fontSize: 'clamp(15px,2.4vw,20px)', color: C.greenSoft }}>{data.blessing}</Caps>
@@ -358,8 +367,8 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ REGALO (verde) ════════ */}
-      <Wave fill={C.green} />
       <section className={`relative px-6 ${SECTION.base} text-center`} style={{ background: C.green, color: C.cream }}>
+        {sew('regalo')}
         <Reveal className="mx-auto max-w-3xl">
           <EventIcon name="gift" className="mx-auto mb-3 h-12 w-12" stroke={C.gold} custom={data} sec="gift" />
           <Script style={{ fontSize: '40px', color: C.gold }}>Sugerencia de Regalo</Script>
@@ -391,10 +400,10 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
           </div>
         </Reveal>
       </section>
-      <Wave fill={C.green} flip />
 
       {/* ════════ CONFIRMACIÓN ════════ */}
       <section className={`relative overflow-hidden px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+        {sew('rsvp')}
         <LeafSprig className="pointer-events-none absolute -left-4 bottom-0 w-44" style={{ transform: 'scaleX(-1) rotate(10deg)' }} />
         <Reveal className="relative z-10 mx-auto max-w-xl">
           <Caps style={{ fontSize: 'clamp(18px,3vw,26px)', color: C.ink }}>{data.rsvpClosing}</Caps>
@@ -406,7 +415,8 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ FOOTER ════════ */}
-      <footer className="relative overflow-hidden py-9 text-center" style={{ background: '#141512', color: C.cream }}>
+      <footer className="relative overflow-hidden pb-9 pt-12 text-center" style={{ background: FOOTER_BG, color: C.cream }}>
+        {sew('pie')}
         <Script style={{ fontSize: '34px', color: C.gold }}>Enkarta</Script>
         <p className="mt-1" style={{ fontFamily: F.serif, fontSize: '14px', opacity: 0.8 }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: C.gold, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>

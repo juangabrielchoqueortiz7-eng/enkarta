@@ -18,7 +18,7 @@ import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
 import {
   useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon,
-  CopyBtn, SECTION, TYPE, ENKARTA_WA_URL,
+  CopyBtn, SECTION, TYPE, ENKARTA_WA_URL, seamsFor,
 } from './shared';
 
 // ── Paleta por defecto ────────────────────────────────────────────────────────
@@ -179,6 +179,27 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
     ...(data.reception ? [{ label: 'Recepción Social', c: data.reception, icon: 'cheers' as const }] : []),
   ];
 
+  // Costuras: la banda que entra sube en arco sobre la anterior, con el filete
+  // dorado siguiendo el borde. El arco es el único gesto "dibujado" que se
+  // permite la plantilla, y encaja porque es arquitectura, no ilustración.
+  const sew = seamsFor([
+    { k: 'portada',    c: C.forestDeep },
+    { k: 'intro',      c: C.paper },
+    { k: 'padres',     c: C.paperAlt },
+    !!data.guestName && { k: 'invitado', c: C.forest },
+    { k: 'fecha',      c: C.paper },
+    { k: 'lugares',    c: C.paperAlt },
+    { k: 'vestimenta', c: C.forestDeep },
+    !!data.itinerary?.length && { k: 'itinerario', c: C.paper },
+    !!data.galleryImages?.length && { k: 'galeria', c: C.paperAlt },
+    { k: 'regalo',     c: C.paper },
+    !!data.noKids && { k: 'ninos', c: C.paperAlt },
+    !!data.thanksMessage && { k: 'gracias', c: C.forest },
+    { k: 'rsvp',       c: C.paper },
+    !!data.galleryUrl && { k: 'compartir', c: C.paperAlt },
+    { k: 'pie',        c: C.forestDeep },
+  ], { shape: 'arch', hairline: C.gold });
+
   return (
     <ThemeCtx.Provider value={C}>
       <div className="relative w-full overflow-x-hidden" style={{ background: C.paper, color: C.ink }}>
@@ -233,14 +254,16 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
         </section>
 
         {/* ════════ INTRO ════════ */}
-        <section className={`px-8 ${SECTION.roomy} text-center`} style={{ background: C.paper }}>
+        <section className={`relative px-8 ${SECTION.roomy} text-center`} style={{ background: C.paper }}>
+          {sew('intro')}
           <Reveal className="mx-auto max-w-xl">
             <Body style={{ color: C.ink }}>{data.introMessage}</Body>
           </Reveal>
         </section>
 
         {/* ════════ BENDICIÓN + PADRES ════════ */}
-        <section className={`px-8 ${SECTION.base} text-center`} style={{ background: C.paperAlt }}>
+        <section className={`relative px-8 ${SECTION.base} text-center`} style={{ background: C.paperAlt }}>
+          {sew('padres')}
           <Reveal className="mx-auto max-w-2xl">
             <Over style={{ color: C.forest }}>{data.blessing}</Over>
             <span className="mt-6 block"><Rule /></span>
@@ -272,7 +295,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
 
         {/* ════════ INVITADO ════════ */}
         {data.guestName && (
-          <section className={`px-8 ${SECTION.base} text-center`} style={{ background: C.forest, color: C.cream }}>
+          <section className={`relative px-8 ${SECTION.base} text-center`} style={{ background: C.forest, color: C.cream }}>
+            {sew('invitado')}
             <Reveal className="mx-auto max-w-lg">
               <Over style={{ color: `${C.cream}cc` }}>Con especial cariño para</Over>
               <p className="font-great mt-4" style={{ color: C.cream, fontSize: 'clamp(36px,9vw,52px)', lineHeight: 1.1 }}>
@@ -289,7 +313,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
         )}
 
         {/* ════════ FECHA + CUENTA REGRESIVA ════════ */}
-        <section className={`px-8 ${SECTION.roomy} text-center`} style={{ background: C.paper }}>
+        <section className={`relative px-8 ${SECTION.roomy} text-center`} style={{ background: C.paper }}>
+          {sew('fecha')}
           <Reveal className="mx-auto max-w-lg">
             <Over style={{ color: C.forest }}>Queremos que nos acompañes en nuestro día</Over>
 
@@ -322,7 +347,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
         </section>
 
         {/* ════════ CEREMONIA / RECEPCIÓN ════════ */}
-        <section className={`px-8 ${SECTION.base}`} style={{ background: C.paperAlt }}>
+        <section className={`relative px-8 ${SECTION.base}`} style={{ background: C.paperAlt }}>
+          {sew('lugares')}
           <Reveal className="mx-auto max-w-3xl">
             <div className="grid gap-12 sm:grid-cols-2">
               {eventos.map(ev => (
@@ -340,7 +366,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
         </section>
 
         {/* ════════ CÓDIGO DE VESTIMENTA ════════ */}
-        <section className={`px-8 ${SECTION.roomy} text-center`} style={{ background: C.forestDeep, color: C.cream }}>
+        <section className={`relative px-8 ${SECTION.roomy} text-center`} style={{ background: C.forestDeep, color: C.cream }}>
+          {sew('vestimenta')}
           <Reveal className="mx-auto max-w-xl">
             <Over style={{ color: C.goldLight }}>Código de vestimenta</Over>
             <p className="font-cinzel mt-6 uppercase" style={{ color: C.cream, fontSize: 'clamp(22px,5vw,30px)', letterSpacing: '0.22em' }}>
@@ -355,7 +382,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
 
         {/* ════════ ITINERARIO ════════ */}
         {data.itinerary?.length > 0 && (
-          <section className={`px-8 ${SECTION.roomy}`} style={{ background: C.paper }}>
+          <section className={`relative px-8 ${SECTION.roomy}`} style={{ background: C.paper }}>
+            {sew('itinerario')}
             <Reveal className="mx-auto max-w-md">
               <Title className="text-center" style={{ color: C.forest }}>Itinerario</Title>
               <span className="mx-auto mt-5 block"><Rule /></span>
@@ -388,7 +416,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
 
         {/* ════════ GALERÍA / HISTORIA ════════ */}
         {data.galleryImages?.length > 0 && (
-          <section className={`px-8 ${SECTION.base}`} style={{ background: C.paperAlt }}>
+          <section className={`relative px-8 ${SECTION.base}`} style={{ background: C.paperAlt }}>
+            {sew('galeria')}
             <Reveal className="mx-auto max-w-4xl text-center">
               <Title style={{ color: C.forest }}>Nuestra historia</Title>
               <span className="mx-auto mt-5 block"><Rule /></span>
@@ -404,7 +433,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
         )}
 
         {/* ════════ REGALO ════════ */}
-        <section className={`px-8 ${SECTION.roomy} text-center`} style={{ background: C.paper }}>
+        <section className={`relative px-8 ${SECTION.roomy} text-center`} style={{ background: C.paper }}>
+          {sew('regalo')}
           <Reveal className="mx-auto max-w-xl">
             <Title style={{ color: C.forest }}>Sugerencia de regalo</Title>
             <span className="mx-auto mt-5 block"><Rule /></span>
@@ -437,7 +467,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
 
         {/* ════════ SOLO ADULTOS ════════ */}
         {data.noKids && (
-          <section className={`px-8 ${SECTION.base} text-center`} style={{ background: C.paperAlt }}>
+          <section className={`relative px-8 ${SECTION.base} text-center`} style={{ background: C.paperAlt }}>
+            {sew('ninos')}
             <Reveal className="mx-auto max-w-lg">
               <Over style={{ color: C.goldDeep }}>Solo adultos</Over>
               <Body className="mt-5" style={{ color: C.ink }}>{data.noKids}</Body>
@@ -447,7 +478,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
 
         {/* ════════ AGRADECIMIENTO ════════ */}
         {data.thanksMessage && (
-          <section className={`px-8 ${SECTION.roomy} text-center`} style={{ background: C.forest, color: C.cream }}>
+          <section className={`relative px-8 ${SECTION.roomy} text-center`} style={{ background: C.forest, color: C.cream }}>
+            {sew('gracias')}
             <Reveal className="mx-auto max-w-xl">
               <Body style={{ color: C.cream }}>{data.thanksMessage}</Body>
               <span className="mt-7 block"><Rule color={C.gold} width={80} /></span>
@@ -459,7 +491,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
         )}
 
         {/* ════════ CONFIRMACIÓN ════════ */}
-        <section className={`px-8 ${SECTION.roomy} text-center`} style={{ background: C.paper }}>
+        <section className={`relative px-8 ${SECTION.roomy} text-center`} style={{ background: C.paper }}>
+          {sew('rsvp')}
           <Reveal className="mx-auto max-w-lg">
             <Title style={{ color: C.forest }}>Confirma tu asistencia</Title>
             <span className="mx-auto mt-5 block"><Rule /></span>
@@ -470,7 +503,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
 
         {/* ════════ GALERÍA COMPARTIDA ════════ */}
         {data.galleryUrl && (
-          <section className={`px-8 ${SECTION.base} text-center`} style={{ background: C.paperAlt }}>
+          <section className={`relative px-8 ${SECTION.base} text-center`} style={{ background: C.paperAlt }}>
+            {sew('compartir')}
             <Reveal className="mx-auto max-w-md">
               <EventIcon name="camera" className="mx-auto h-9 w-9" stroke={C.olive} custom={data} sec="gallery" />
               <Body className="mt-5" style={{ color: C.ink }}>{data.galleryMsg}</Body>
@@ -480,7 +514,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
         )}
 
         {/* ════════ PIE ════════ */}
-        <footer className="py-12 text-center" style={{ background: C.forestDeep, color: C.cream }}>
+        <footer className="relative py-12 text-center" style={{ background: C.forestDeep, color: C.cream }}>
+          {sew('pie')}
           <Seal a={ini(data.groom)} b={ini(data.bride)} color={C.gold} ink={C.cream} size={64} />
           <div className="mx-auto mt-6 max-w-xs">
             <Over style={{ color: `${C.cream}cc` }}>

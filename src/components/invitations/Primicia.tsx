@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
-import { Reveal, useCountdown, Odometer, PhotoGrid, EventIcon, SECTION, ENKARTA_WA_URL } from './shared';
+import { Reveal, useCountdown, Odometer, PhotoGrid, EventIcon, SECTION, ENKARTA_WA_URL, Seam } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 import { PrimiciaContent, TemplateTheme } from './types';
 
@@ -300,9 +300,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
             <p style={{ fontFamily: FONT.script, fontSize: 'clamp(22px,5vw,40px)', margin: '2px 0' }}>&amp;</p>
             <p style={{ fontFamily: FONT.script, fontSize: 'clamp(46px,11vw,104px)', lineHeight: 0.9 }}><WriteOn delay={500}>{data.bride}</WriteOn></p>
           </div>
-          <svg viewBox="0 0 100 8" preserveAspectRatio="none" className="absolute bottom-0 left-0 w-full" style={{ height: '7vh' }} aria-hidden>
-            <path d="M0 8 L0 4 Q 50 -2 100 4 L100 8 Z" fill={C.paper} />
-          </svg>
+          <Seam edge="bottom" shape="arch" from={C.paper} height="7vh" />
         </div>
         <div className="flex items-center justify-center gap-4 py-7">
           <span style={{ fontFamily: FONT.head, fontWeight: 700, fontSize: '26px' }}>{data.initials[0]}</span>
@@ -625,7 +623,8 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         </section>
       )}
 
-      <footer className="py-8 text-center" style={{ background: C.ink, color: C.paper }}>
+      <footer className="relative pb-8 pt-14 text-center" style={{ background: C.ink, color: C.paper }}>
+        <Seam shape="bevel" from={C.paper} hairline={C.rule} />
         <p style={{ fontFamily: FONT.black, fontSize: '24px' }}>Enkarta</p>
         <p className="mt-1" style={{ fontFamily: FONT.body, fontSize: '14px', opacity: 0.7 }}>
           Deseas una invitacion para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
