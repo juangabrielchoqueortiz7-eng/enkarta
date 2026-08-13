@@ -111,6 +111,29 @@ Para una plantilla nueva: añade una entrada en `ENTRY_THEMES['<key>']` con
 Si la forma de datos es nueva, añade un `case` en `entryPropsFor` para extraer
 `names`, `initials`, `dateLine` y `coverImage`.
 
+## NUNCA definas un componente dentro del componente de plantilla
+
+Toda plantilla con cuenta regresiva re-renderiza **una vez por segundo**. Un
+componente declarado dentro del cuerpo (`const Band = (...) => ...`) es una
+función nueva en cada render, y para React eso es otro TIPO de componente: le
+desmonta y le vuelve a montar el árbol entero. Resultado: los iconos Lottie
+arrancan de cero y las animaciones de entrada se reinician — se ve como un
+parpadeo, y con presets 3D (`depth3d`, `unfold3d`) además deja zonas en blanco
+mientras se revuelven.
+
+Ya ha pasado dos veces: `SecIcon` en Azure y `Band` en Obsidiana (12 de 13
+secciones reconstruidas cada segundo). Las dos salidas válidas:
+
+1. **Sácalo a nivel de módulo** y pásale lo que necesite. La paleta la lee de
+   `useC()`; lo que dependa del cuerpo (una costura, un handler) entra por prop
+   ya montado: `<Band seam={sew('regalo')}>`.
+2. **Que no sea un componente**: una función que devuelve el elemento y se
+   invoca, no se instancia — `{sectionDivider('w-24')}` en vez de
+   `<SectionDivider className="w-24" />`. Es lo que hace `seamsFor`.
+
+Para detectarlo: `MutationObserver` sobre `document.body` unos segundos, o
+comprobar si las `<section>` conservan identidad (`before[i] === after[i]`).
+
 ## Animación
 
 Usa el toolkit en `src/lib/motion.ts` (framer-motion): `fadeUp`, `fadeIn`,
@@ -123,6 +146,8 @@ Respeta `useReducedMotion()` para accesibilidad.
 - [ ] Colores leídos de la paleta resuelta, nada hardcodeado.
 - [ ] Costuras declaradas con `seamsFor` y una forma propia (nunca copiar la
       ola genérica de otra plantilla: era lo que las hacía parecer la misma).
+- [ ] Ningún componente definido dentro del cuerpo de la plantilla (ver arriba:
+      con la cuenta regresiva se remonta todo cada segundo).
 - [ ] Registrada en `entry/config.ts` (tema + extractor si hace falta).
 - [ ] Registrada en `PREMIUM_REGISTRY` (`src/lib/template-registry.tsx`,
       `{ key → { Comp, map } }`) — eso la activa en `/i/[slug]`, `/muestra`
