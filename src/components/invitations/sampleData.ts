@@ -1,5 +1,107 @@
 import { InvitationContent, PassportContent, PrimiciaContent, ParadiseContent, ObsidianaContent, DolceVitaContent, GraziaContent, ProvenceContent } from './types';
 
+// ── Fecha de las muestras: se calcula, NO se escribe ─────────────────────────
+//
+// Escritas a mano envejecían solas. En agosto de 2026, siete de las catorce
+// muestras tenían la boda YA PASADA (euforia seguía en 2024) y su cuenta
+// regresiva salía en ceros justo cuando se le enseñaba la demo a un cliente.
+//
+// Ahora cada muestra declara solo su CARÁCTER —el mes, que es su estación; el
+// día de la semana; la hora; y qué sábado del mes— y la fecha concreta sale del
+// calendario real de la próxima vuelta. Se exige un mínimo de 8 meses de margen
+// para que ninguna invitación se vea "a la vuelta de la esquina".
+//
+// Se evalúa en el servidor —solo lo importa /muestra/[template], que se
+// renderiza en cada petición por leer `searchParams`—, así que la fecha se
+// recalcula sola en cada visita y no hace falta volver a desplegar. Y como no
+// llega a viajar al cliente, tampoco hay riesgo de desajuste de hidratación.
+
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] as const;
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as const;
+
+/** Meses de margen mínimo entre hoy y la boda de una muestra. */
+const MARGEN_MESES = 8;
+
+type MesDemo = typeof MESES[number];
+
+interface FechaDemo {
+  isoDate: string;
+  weekday: string;  // 'Sábado'
+  day: string;      // '14'
+  month: string;    // 'Agosto'
+  year: string;     // '2027'
+  /** 'Sábado, 14 de Agosto, 2027' */
+  line: string;
+  /** '14 de Agosto 2027' */
+  text: string;
+  /** Fecha límite para confirmar, un mes antes: '14 de Julio'. */
+  limite: string;
+}
+
+/**
+ * @param mes      mes de la boda (define la estación de la muestra)
+ * @param diaSem   0 domingo … 6 sábado (por defecto sábado)
+ * @param hora     'HH:MM' de la ceremonia
+ * @param semana   qué sábado del mes (1º, 2º…). Sirve para que dos muestras
+ *                 que comparten mes no caigan el mismo día, y para conservar
+ *                 si cada una era de principio o de final de mes.
+ */
+function fechaDemo(mes: MesDemo, diaSem = 6, hora = '16:00', semana = 3): FechaDemo {
+  const hoy = new Date();
+  const mi = MESES.indexOf(mes);
+
+  // Primer año en que ese mes queda a MARGEN_MESES vista o más.
+  let anio = hoy.getFullYear();
+  while ((anio - hoy.getFullYear()) * 12 + (mi - hoy.getMonth()) < MARGEN_MESES) anio += 1;
+
+  // Todas las veces que cae ese día de la semana dentro del mes.
+  const candidatos: number[] = [];
+  for (let d = 1; d <= 31; d++) {
+    const f = new Date(anio, mi, d);
+    if (f.getMonth() !== mi) break;
+    if (f.getDay() === diaSem) candidatos.push(d);
+  }
+  // Algunos meses solo tienen 4: el índice se recorta al último disponible.
+  const dia = candidatos[Math.min(semana, candidatos.length) - 1];
+
+  const dd = String(dia).padStart(2, '0');
+  const yy = String(anio);
+  const weekday = DIAS[diaSem];
+
+  // Un mes antes: si la boda se mueve sola, la fecha límite para confirmar
+  // tiene que moverse con ella o acabaría cayendo DESPUÉS de la boda.
+  const lim = new Date(anio, mi, dia);
+  lim.setMonth(lim.getMonth() - 1);
+
+  return {
+    isoDate: `${yy}-${String(mi + 1).padStart(2, '0')}-${dd}T${hora}:00`,
+    weekday, day: dd, month: mes, year: yy,
+    line: `${weekday}, ${dd} de ${mes}, ${yy}`,
+    text: `${dd} de ${mes} ${yy}`,
+    limite: `${String(lim.getDate()).padStart(2, '0')} de ${MESES[lim.getMonth()]}`,
+  };
+}
+
+/** Quita las tildes: Primicia escribe todo su texto sin ellas. */
+const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+//                            mes            díaSem  hora     semana del mes
+const F_AZURE     = fechaDemo('Julio',       6, '16:00', 1);
+const F_PRIMICIA  = fechaDemo('Marzo',       6, '16:00', 4);
+const F_PASSPORT  = fechaDemo('Mayo',        6, '16:00', 3);
+const F_PARADISE  = fechaDemo('Marzo',       6, '16:00', 2);
+const F_OBSIDIANA = fechaDemo('Agosto',      6, '20:00', 4);
+const F_DOLCEVITA = fechaDemo('Septiembre',  0, '13:00', 1);  // la única en domingo
+const F_GRAZIA    = fechaDemo('Octubre',     6, '16:00', 3);
+const F_NAPOLY    = fechaDemo('Septiembre',  6, '14:00', 1);
+const F_ALLEGRIA  = fechaDemo('Enero',       6, '16:30', 3);
+const F_ROSEGOLD  = fechaDemo('Noviembre',   6, '15:00', 4);
+const F_EUFORIA   = fechaDemo('Noviembre',   6, '13:30', 1);
+const F_CARMESI   = fechaDemo('Agosto',      6, '14:30', 1);
+const F_ESMERALDA = fechaDemo('Agosto',      6, '14:00', 2);
+const F_PROVENCE  = fechaDemo('Septiembre',  6, '12:00', 3);
+
 // Sample content used by the preview route. Mirrors the Invitali demo data
 // so we can match the reference designs 1:1 while building.
 export const azureSample: InvitationContent = {
@@ -10,11 +112,11 @@ export const azureSample: InvitationContent = {
   guestPasses: '2 pases',
   coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=900&q=80',
 
-  isoDate: '2027-07-03T16:00:00',
-  weekday: 'Sábado',
-  day: '03',
-  month: 'Julio',
-  year: '2027',
+  isoDate: F_AZURE.isoDate,
+  weekday: F_AZURE.weekday,
+  day: F_AZURE.day,
+  month: F_AZURE.month,
+  year: F_AZURE.year,
   city: 'Bogotá',
 
   introMessage:
@@ -77,12 +179,12 @@ export const primiciaSample: PrimiciaContent = {
   initials: ['J', 'N'],
   guestName: 'Nombre del Invitado',
   guestPasses: '2 pases',
-  isoDate: '2027-03-27T16:00:00',
-  dateWeekday: 'Sabado',
-  dateDay: '27',
-  dateMonth: 'Marzo',
-  dateYear: '2027',
-  dateLine: 'Sabado, 27 de Marzo, 2027',
+  isoDate: F_PRIMICIA.isoDate,
+  dateWeekday: sinTildes(F_PRIMICIA.weekday),
+  dateDay: F_PRIMICIA.day,
+  dateMonth: F_PRIMICIA.month,
+  dateYear: F_PRIMICIA.year,
+  dateLine: sinTildes(F_PRIMICIA.line),
   coupleMessage: [
     'Nos conocimos entre risas y miradas complices, sin percibir como la amistad se transformo en un amor profundo.',
     'Con la bendicion de nuestras familias y el corazon rebosante de gratitud, nos unimos ante Dios para celebrar este regalo de vida compartida. Gracias a todos por su apoyo y carino en este nuevo capitulo que apenas comienza.',
@@ -138,7 +240,7 @@ export const passportSample: PassportContent = {
   guestName: 'Invitado',
   guestPasses: '2 pases',
   coverImage: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=900&q=80',
-  isoDate: '2027-05-15T16:00:00',
+  isoDate: F_PASSPORT.isoDate,
   announce: 'Nos casamos',
   verse:
     'Uno solo puede ser vencido, pero dos pueden resistir. La cuerda de tres hilos no se rompe facilmente: Dios, esposo y esposa.',
@@ -184,7 +286,7 @@ export const paradiseSample: ParadiseContent = {
   guestName: 'Daniel Martinez',
   guestPasses: '2 pases',
 
-  isoDate: '2027-03-27T16:00:00',
+  isoDate: F_PARADISE.isoDate,
   dateLabel: '29 / 03 / 26',
   city: 'SANTA CRUZ',
 
@@ -231,7 +333,7 @@ export const paradiseSample: ParadiseContent = {
   galleryUrl: 'https://photos.google.com',
 
   rsvpMessage:
-    'Es muy importante para nosotros confirmar tu asistencia. Por favor, confirma tu presencia antes del 01 de Marzo para poder organizar todo adecuadamente.',
+    `Es muy importante para nosotros confirmar tu asistencia. Por favor, confirma tu presencia antes del ${F_PARADISE.limite} para poder organizar todo adecuadamente.`,
   rsvpDeadline: '01 de Marzo',
   rsvpClosing: 'Creemos que mereces una noche alegre y divertida es por eso que esperamos contar con tu presencia',
   whatsapp: 'https://wa.me/59162449491?text=Hola%20Enkarta%2C%20vi%20la%20invitaci%C3%B3n%20de%20muestra%20y%20quiero%20una%20para%20mi%20evento%20%F0%9F%8E%89',
@@ -246,11 +348,11 @@ export const obsidianaSample: ObsidianaContent = {
   guestName: 'Daniel Marth',
   guestPasses: '2 pases',
 
-  isoDate: '2027-08-28T20:00:00',
-  dateWeekday: 'Sábado',
-  dateDay: '28',
-  dateMonth: 'Agosto',
-  datePlace: 'Italacume · 2027',
+  isoDate: F_OBSIDIANA.isoDate,
+  dateWeekday: F_OBSIDIANA.weekday,
+  dateDay: F_OBSIDIANA.day,
+  dateMonth: F_OBSIDIANA.month,
+  datePlace: `Italacume · ${F_OBSIDIANA.year}`,
 
   coverImage: OBS_PHOTO,
   aboutImage: OBS_PHOTO2,
@@ -324,12 +426,12 @@ export const dolceVitaSample: DolceVitaContent = {
   guestName: 'José Martinelli',
   guestPasses: '2 pases',
 
-  isoDate: '2027-09-05T13:00:00',
+  isoDate: F_DOLCEVITA.isoDate,
   dateCity: 'La Paz',
-  dateWeekday: 'Domingo',
-  dateDay: '05',
-  dateMonth: 'Septiembre',
-  dateYear: '2027',
+  dateWeekday: F_DOLCEVITA.weekday,
+  dateDay: F_DOLCEVITA.day,
+  dateMonth: F_DOLCEVITA.month,
+  dateYear: F_DOLCEVITA.year,
 
   coverImage: DV_PHOTO,
   introMessage: 'Casarse es de locos, pero es que nos queremos con locura. Por eso, lo vamos a celebrar con una fiesta y queremos que nos acompañes.',
@@ -393,8 +495,8 @@ export const graziaSample: GraziaContent = {
   guestName: 'José Martinelli',
   guestPasses: '2 pases',
 
-  isoDate: '2027-10-16T16:00:00',
-  dateText: '16 de Octubre 2027',
+  isoDate: F_GRAZIA.isoDate,
+  dateText: F_GRAZIA.text,
   timeText: '16:00 hrs.',
   coverLabel: 'La boda de',
 
@@ -406,8 +508,8 @@ export const graziaSample: GraziaContent = {
   parentsGroom: ['Alessandro Bianchi', 'Vittoria Rossi'],
   parentsBride: ['Giovanni Moretti', 'Eleonora Ricci'],
 
-  ceremonyReligious: { date: '16 de octubre', time: '16:00 h', place: 'Salón de Eventos Notre Dame', maps: 'https://maps.google.com' },
-  reception: { date: '16 de octubre', time: '16:00 h', place: 'Salón de Eventos Notre Dame', maps: 'https://maps.google.com' },
+  ceremonyReligious: { date: `${F_GRAZIA.day} de ${F_GRAZIA.month.toLowerCase()}`, time: '16:00 h', place: 'Salón de Eventos Notre Dame', maps: 'https://maps.google.com' },
+  reception: { date: `${F_GRAZIA.day} de ${F_GRAZIA.month.toLowerCase()}`, time: '16:00 h', place: 'Salón de Eventos Notre Dame', maps: 'https://maps.google.com' },
 
   itinerary: [
     { icon: 'rings', label: 'Concentración', time: '15:00 h' },
@@ -444,7 +546,7 @@ export const graziaSample: GraziaContent = {
 
   galleryMsg: 'Te invitamos a compartir los momentos especiales de nuestro evento a través de tus fotografías. Apreciamos que capturen y compartan sus recuerdos para que todos podamos revivir esta ocasión tan especial.',
   galleryUrl: 'https://photos.google.com',
-  rsvpMessage: 'Es muy importante para nosotros confirmar tu asistencia. Por favor, confirma tu presencia antes del 05 de Julio para poder organizar todo adecuadamente.',
+  rsvpMessage: `Es muy importante para nosotros confirmar tu asistencia. Por favor, confirma tu presencia antes del ${F_GRAZIA.limite} para poder organizar todo adecuadamente.`,
   whatsapp: 'https://wa.me/59162449491?text=Hola%20Enkarta%2C%20vi%20la%20invitaci%C3%B3n%20de%20muestra%20y%20quiero%20una%20para%20mi%20evento%20%F0%9F%8E%89',
 };
 
@@ -454,11 +556,11 @@ export const napolySample: DolceVitaContent = {
   groom: 'Nestor',
   bride: 'Sandra',
   dateCity: 'SCZ',
-  dateWeekday: 'Sábado',
-  dateDay: '04',
-  dateMonth: 'Septiembre',
-  dateYear: '2027',
-  isoDate: '2027-09-04T14:00:00',
+  dateWeekday: F_NAPOLY.weekday,
+  dateDay: F_NAPOLY.day,
+  dateMonth: F_NAPOLY.month,
+  dateYear: F_NAPOLY.year,
+  isoDate: F_NAPOLY.isoDate,
   guestName: 'Jose y Maria',
   guestPasses: 'Sin pases',
   coverImage: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=1100&q=80',
@@ -484,11 +586,11 @@ export const allegriaSample: DolceVitaContent = {
   groom: 'Vincent',
   bride: 'Maria',
   dateCity: 'TRJ',
-  dateWeekday: 'Sábado',
-  dateDay: '16',
-  dateMonth: 'Enero',
-  dateYear: '2027',
-  isoDate: '2027-01-16T16:30:00',
+  dateWeekday: F_ALLEGRIA.weekday,
+  dateDay: F_ALLEGRIA.day,
+  dateMonth: F_ALLEGRIA.month,
+  dateYear: F_ALLEGRIA.year,
+  isoDate: F_ALLEGRIA.isoDate,
   guestName: 'José Martinelli',
   guestPasses: '2 pases',
   coverImage: 'https://images.unsplash.com/photo-1529634806980-85c3dd6d34ac?w=1100&q=80',
@@ -516,11 +618,11 @@ export const roseGoldSample: DolceVitaContent = {
   groom: 'Pablo',
   bride: 'Lucia',
   dateCity: 'CBBA',
-  dateWeekday: 'Sábado',
-  dateDay: '27',
-  dateMonth: 'Noviembre',
-  dateYear: '2027',
-  isoDate: '2027-11-27T15:00:00',
+  dateWeekday: F_ROSEGOLD.weekday,
+  dateDay: F_ROSEGOLD.day,
+  dateMonth: F_ROSEGOLD.month,
+  dateYear: F_ROSEGOLD.year,
+  isoDate: F_ROSEGOLD.isoDate,
   guestName: 'Jose y Maria',
   guestPasses: 'Sin pases',
   coverImage: 'https://images.unsplash.com/photo-1525258946800-98cfd641d0de?w=1100&q=80',
@@ -549,11 +651,11 @@ export const euforiaSample: DolceVitaContent = {
   groom: 'Andres',
   bride: 'Margot',
   dateCity: 'La Paz',
-  dateWeekday: 'Sábado',
-  dateDay: '06',
-  dateMonth: 'Noviembre',
-  dateYear: '2027',
-  isoDate: '2027-11-06T13:30:00',
+  dateWeekday: F_EUFORIA.weekday,
+  dateDay: F_EUFORIA.day,
+  dateMonth: F_EUFORIA.month,
+  dateYear: F_EUFORIA.year,
+  isoDate: F_EUFORIA.isoDate,
   guestName: 'Eduardo Villalba',
   guestPasses: '2 pases',
   coverImage: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=1100&q=80',
@@ -581,11 +683,11 @@ export const carmesiSample: DolceVitaContent = {
   groom: 'José',
   bride: 'Nikol',
   dateCity: 'CBBA',
-  dateWeekday: 'Sábado',
-  dateDay: '07',
-  dateMonth: 'Agosto',
-  dateYear: '2027',
-  isoDate: '2027-08-07T14:30:00',
+  dateWeekday: F_CARMESI.weekday,
+  dateDay: F_CARMESI.day,
+  dateMonth: F_CARMESI.month,
+  dateYear: F_CARMESI.year,
+  isoDate: F_CARMESI.isoDate,
   guestName: 'Eduardo Villalba',
   coverImage: 'https://images.unsplash.com/photo-1606490194859-07c18c9f0968?w=1100&q=80',
   introMessage: 'Más valen dos que uno, porque obtienen más fruto de su esfuerzo. Si caen, el uno levanta al otro. ¡Ay del que cae y no tiene quien lo levante! — Eclesiastés 4:9-10',
@@ -614,11 +716,11 @@ export const esmeraldaSample: DolceVitaContent = {
   groom: 'Valeria',
   bride: 'Emilio',
   dateCity: 'Bogotá',
-  dateWeekday: 'Sábado',
-  dateDay: '14',
-  dateMonth: 'Agosto',
-  dateYear: '2027',
-  isoDate: '2027-08-14T14:00:00',
+  dateWeekday: F_ESMERALDA.weekday,
+  dateDay: F_ESMERALDA.day,
+  dateMonth: F_ESMERALDA.month,
+  dateYear: F_ESMERALDA.year,
+  isoDate: F_ESMERALDA.isoDate,
   guestName: 'Familia Segovia Sabogal',
   guestPasses: '2 pases',
   coverImage: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=1100&q=80',
@@ -663,11 +765,11 @@ export const provenceSample: ProvenceContent = {
   initials: ['A', 'M'],
   guestName: 'Familia Invitada',
   guestPasses: '2 pases',
-  isoDate: '2027-09-18T12:00:00',
-  dateWeekday: 'SÁBADO',
-  dateDay: '18',
-  dateMonth: 'SEPTIEMBRE',
-  dateYear: '2027',
+  isoDate: F_PROVENCE.isoDate,
+  dateWeekday: F_PROVENCE.weekday.toUpperCase(),
+  dateDay: F_PROVENCE.day,
+  dateMonth: F_PROVENCE.month.toUpperCase(),
+  dateYear: F_PROVENCE.year,
   locationBadge: 'CIENEGUILLA',
 
   coverImage: 'https://invitali.com/wp-content/uploads/2026/07/Novios-annie-y-Micky.webp',
@@ -721,7 +823,7 @@ export const provenceSample: ProvenceContent = {
     holder: 'Annie & Miguel',
   },
 
-  rsvpMessage: 'Es muy importante para nosotros contar con tu confirmación antes del 1 de Septiembre.',
+  rsvpMessage: `Es muy importante para nosotros contar con tu confirmación antes del ${F_PROVENCE.limite}.`,
   whatsapp: 'https://wa.me/59162449491?text=Hola%20Annie%20y%20Miguel%2C%20confirmo%20mi%20asistencia%20a%20su%20boda%F0%9F%A4%B5%F0%9F%91%B0',
   // La canción la pone /muestra (DEMO_MUSIC) desde la colección de public/musica.
 };

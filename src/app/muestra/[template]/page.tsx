@@ -167,3 +167,17 @@ export default async function MuestraPage({ params, searchParams }: Props) {
 export function generateStaticParams() {
   return PREMIUM_KEYS.map(template => ({ template }));
 }
+
+/**
+ * Cinturón de seguridad para las fechas de las muestras, que se calculan a
+ * partir de HOY (ver `fechaDemo` en sampleData.ts).
+ *
+ * Hoy esta ruta ya se renderiza EN CADA PETICIÓN —lee `searchParams`, lo que
+ * la saca del prerenderizado pese al `generateStaticParams` de arriba—, así que
+ * la fecha siempre sale fresca y esto no llega a hacer nada. Está puesto por si
+ * algún día se deja de leer `searchParams`: entonces la página pasaría a HTML
+ * estático y, sin esto, las fechas se congelarían en el build y volverían a
+ * envejecer entre despliegue y despliegue. Que es justo lo que pasó: siete
+ * demos acabaron con la boda en el pasado y la cuenta regresiva en ceros.
+ */
+export const revalidate = 86400;
