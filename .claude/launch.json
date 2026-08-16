@@ -1,1 +1,0 @@
-{"version":"0.0.1","configurations":[{"name":"enkarta","runtimeExecutable":"npm","runtimeArgs":["run","dev"],"port":3000,"autoPort":true},{"name":"invitacion","runtimeExecutable":"python","runtimeArgs":["-m","http.server","8788","--directory","C:/Users/Usuario/Desktop/INVITACION"],"port":8788}]}

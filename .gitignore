@@ -29,6 +29,9 @@ next-start*.log
 
 # claude local settings
 .claude/settings.local.json
+# Config del entorno local: puertos y rutas absolutas de la maquina de cada uno.
+# El repo es PUBLICO, asi que esto no debe viajar a origin.
+.claude/launch.json
 
 # local env files
 .env*.local
