@@ -18,6 +18,7 @@ import ImageUploader from '../ImageUploader';
 import MultiImageUploader from '../MultiImageUploader';
 import IconPicker from '../IconPicker';
 import { detachBinding } from '@/lib/block-bindings';
+import { DIVIDER_VARIANTS, dividerVariant } from '@/components/invitations/dividers';
 
 interface Props {
   data: InvitationParsed;
@@ -71,10 +72,12 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
 const inputCls = 'w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit';
 
 // Renderiza un campo según su tipo (texto, color, imagen, icono, lista…).
-function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, eventType }: {
+function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, eventType, accent }: {
   field: FieldDef; value: any; set: (v: any) => void;
   setIcon?: (v: string, colors?: any, speed?: number) => void;
   colors?: any; speed?: number; ownerId?: string; eventType?: any;
+  /** Color con el que se dibujan las miniaturas de separador (el de la invitación). */
+  accent?: string;
 }) {
   switch (field.kind) {
     case 'textarea':
@@ -97,6 +100,27 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
       return <MultiImageUploader values={Array.isArray(value) ? value : []} onChange={set} ownerId={ownerId} />;
     case 'icon':
       return <IconPicker value={value} colors={colors} speed={speed} defaultIcon="rings" onChange={(v, c, s) => setIcon?.(v, c, s)} ownerId={ownerId} eventType={eventType} />;
+    case 'divider': {
+      // Se dibujan con el color real de la invitación: elegir un separador a
+      // ciegas por su nombre ("Floritura", "Art déco") no dice nada.
+      const cur = dividerVariant(value).key;
+      const ink = accent || '#8a7d6a';
+      return (
+        <div className="space-y-1">
+          {DIVIDER_VARIANTS.map(v => (
+            <button
+              key={v.key}
+              type="button"
+              onClick={() => set(v.key)}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl border transition-all ${cur === v.key ? 'border-enkarta-gold bg-enkarta-gold/5' : 'border-gray-100 bg-white hover:border-enkarta-gold/40'}`}
+            >
+              <span className={`w-14 shrink-0 text-left text-[10px] font-outfit leading-tight ${cur === v.key ? 'text-enkarta-gold' : 'text-gray-500'}`}>{v.label}</span>
+              <span className="flex-1 min-w-0 flex items-center">{v.render(ink)}</span>
+            </button>
+          ))}
+        </div>
+      );
+    }
     case 'focal': {
       const m = /(-?\d+)%\s+(-?\d+)%/.exec(String(value || '50% 50%'));
       const fx = m ? parseInt(m[1]) : 50;
@@ -314,7 +338,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, onSelect,
                   field={f} value={selected.props[f.key]} set={v => setProp(f.key, v)}
                   setIcon={(v, c, s) => setIcon(f.key, v, c, s)}
                   colors={selected.props[`${f.key}Colors`]} speed={selected.props[`${f.key}Speed`] as number | undefined}
-                  ownerId={data.id} eventType={data.type}
+                  ownerId={data.id} eventType={data.type} accent={cfg.theme?.primary}
                 />
               </Labeled>
             )

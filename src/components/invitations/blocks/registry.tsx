@@ -14,6 +14,7 @@ import { useCountdown, CopyBtn, PhotoGrid, EventIcon, OrchidSprig, Odometer, Til
 import { Stagger, RevealDraw, PinnedStory } from '@/lib/scroll-motion';
 import { PetalBurst } from '../effects';
 import { renderElement, getElement } from './elements-library';
+import { InvitationDivider, DEFAULT_DIVIDER } from '../dividers';
 import { sanitizeSvg } from '@/lib/sanitize-svg';
 
 // ── Lectura de props con defaults ─────────────────────────────────────────────
@@ -49,7 +50,7 @@ function typoStyle(b: Block): React.CSSProperties {
 // ── Field schema (para el editor genérico) ────────────────────────────────────
 export type FieldKind =
   | 'text' | 'textarea' | 'color' | 'image' | 'images' | 'icon'
-  | 'number' | 'switch' | 'select' | 'list' | 'focal';
+  | 'number' | 'switch' | 'select' | 'list' | 'focal' | 'divider';
 
 export interface FieldDef {
   key: string;
@@ -417,10 +418,15 @@ const ButtonBlock: React.FC<{ block: Block }> = ({ block }) => (
 
 const DividerBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
-  if (str(block, 'style', 'art') === 'line') {
-    return <RevealDraw><div className="mx-auto" style={{ height: 1, width: 120, background: t.line }} /></RevealDraw>;
-  }
-  return <RevealDraw duration={1.4}><OrchidSprig color={t.primary} className="w-28 mx-auto opacity-70" /></RevealDraw>;
+  return (
+    <RevealDraw duration={1.3}>
+      <InvitationDivider
+        variant={str(block, 'style', DEFAULT_DIVIDER)}
+        color={str(block, 'color') || t.primary}
+        width={num(block, 'width', 220) || 220}
+      />
+    </RevealDraw>
+  );
 };
 
 const SpacerBlock: React.FC<{ block: Block }> = ({ block }) => <div style={{ height: num(block, 'height', 40) }} aria-hidden />;
@@ -1234,9 +1240,11 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
   },
   divider: {
     label: 'Separador', icon: '➰', Component: DividerBlock,
-    defaultProps: { style: 'art' },
+    defaultProps: { style: DEFAULT_DIVIDER, width: 220, color: '' },
     fields: [
-      { key: 'style', label: 'Estilo', kind: 'select', options: [{ value: 'art', label: 'Ilustrado' }, { value: 'line', label: 'Línea' }] },
+      { key: 'style', label: 'Estilo', kind: 'divider' },
+      { key: 'width', label: 'Ancho (px)', kind: 'number', min: 80, max: 600 },
+      { key: 'color', label: 'Color', kind: 'color' },
     ],
   },
   spacer: {
@@ -1441,7 +1449,7 @@ export const SECTION_PRESETS: SectionPreset[] = [
     create: () => [
       block('heading', { text: '¡Nos casamos!', font: 'script' }),
       block('text', { text: 'Con la bendición de Dios y de nuestras familias, queremos compartir contigo el inicio de nuestra historia juntos.', italic: true }),
-      block('divider', { style: 'art' }),
+      block('divider', { style: 'flourish' }),
     ],
   },
   {
@@ -1450,7 +1458,7 @@ export const SECTION_PRESETS: SectionPreset[] = [
     create: () => [
       block('ornament', { motif: 'flourish', size: 140 }),
       block('quote', { text: 'El amor es paciente, el amor es bondadoso. Todo lo disculpa, todo lo cree, todo lo espera, todo lo soporta.', author: '1 Corintios 13:4-7' }),
-      block('divider', { style: 'art' }),
+      block('divider', { style: 'diamond' }),
     ],
   },
   {
@@ -1566,7 +1574,7 @@ export const SECTION_PRESETS: SectionPreset[] = [
     desc: 'Vestimenta + hospedaje + hashtag',
     create: () => [
       block('dressCode', {}),
-      block('divider', { style: 'line' }),
+      block('divider', { style: 'double' }),
       block('lodging', {}),
       block('hashtag', {}),
     ],
@@ -1584,7 +1592,7 @@ export const SECTION_PRESETS: SectionPreset[] = [
     desc: 'Los invitados dejan su saludo',
     create: () => [
       block('guestbook', {}),
-      block('divider', { style: 'line' }),
+      block('divider', { style: 'hairline' }),
     ],
   },
   {
@@ -1612,7 +1620,7 @@ export const SECTION_PRESETS: SectionPreset[] = [
     create: () => [
       block('heading', { text: 'Mis XV Años', font: 'script' }),
       block('text', { text: 'Hoy cumplo quince años y quiero celebrarlo con las personas que más quiero. Me haría muy feliz que me acompañes.', italic: true }),
-      block('divider', { style: 'art' }),
+      block('divider', { style: 'bloom' }),
     ],
   },
   {

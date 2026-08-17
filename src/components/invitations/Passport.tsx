@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import Image from 'next/image';
 import { EventIcon, Reveal, useCountdown, Odometer, PhotoGrid, SECTION, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
+import { InvitationDivider } from './dividers';
 import { PassportContent, TemplateTheme } from './types';
 
 const DEFAULT_C = {
@@ -303,13 +304,7 @@ export default function Passport({ data }: { data: PassportContent }) {
         <Reveal className="mx-auto flex max-w-xl flex-col items-center">
           <p style={{ fontFamily: F.body, fontSize: '20px', color: C.creamText }}>{data.callout}</p>
           <p style={{ fontFamily: F.script, fontSize: '34px', marginTop: 4 }}>{data.callout2}</p>
-          <div className="my-7 flex w-full max-w-sm items-center gap-3">
-            <div className="h-px flex-1" style={{ background: 'rgba(236,230,214,0.4)' }} />
-            <svg width="16" height="14" viewBox="0 0 16 14" fill={C.creamText}>
-              <path d="M8 13C2 9 0 5.5 0 3.2 0 1 2.2 0 4 1.4 5.5 .2 8 1 8 3.2 8 1 10.5 .2 12 1.4 13.8 0 16 1 16 3.2 16 5.5 14 9 8 13z" />
-            </svg>
-            <div className="h-px flex-1" style={{ background: 'rgba(236,230,214,0.4)' }} />
-          </div>
+          <InvitationDivider variant="diamond" color={C.creamText} width={340} className="my-7" />
           <p style={{ fontFamily: F.script, fontSize: '42px', color: C.creamText }}>{data.guestName || 'Invitado'}</p>
           {data.guestPasses && (<>
             <p className="mt-1 italic" style={{ fontFamily: F.body, fontSize: '17px', color: C.creamDim }}>Hemos reservado:</p>
