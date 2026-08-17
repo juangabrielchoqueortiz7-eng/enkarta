@@ -1417,12 +1417,26 @@ export interface SectionPreset {
   label: string;
   icon: string;
   desc: string;
+  /** Apartado del panel donde aparece (ver SECTION_GROUPS). */
+  group: string;
   create: () => Block[];
 }
 
+/** Orden de los apartados en el panel "Secciones listas". */
+export const SECTION_GROUPS = ['Inicio', 'El evento', 'Fotos y recuerdos', 'Invitados', 'XV Años', 'Otros eventos'] as const;
+
 export const SECTION_PRESETS: SectionPreset[] = [
+  // ── Inicio ──────────────────────────────────────────────────────────────────
   {
-    key: 'welcome', label: 'Bienvenida', icon: '💌',
+    key: 'cover-photo', label: 'Portada con foto', icon: '💍', group: 'Inicio',
+    desc: 'Foto de fondo con los nombres + la fecha',
+    create: () => [
+      block('cover', { tagline: 'Nos casamos' }),
+      block('dateBadge', {}),
+    ],
+  },
+  {
+    key: 'welcome', label: 'Bienvenida', icon: '💌', group: 'Inicio',
     desc: 'Título manuscrito + mensaje + separador',
     create: () => [
       block('heading', { text: '¡Nos casamos!', font: 'script' }),
@@ -1431,7 +1445,27 @@ export const SECTION_PRESETS: SectionPreset[] = [
     ],
   },
   {
-    key: 'events', label: 'Ceremonia y recepción', icon: '⛪',
+    key: 'verse', label: 'Versículo o frase', icon: '❝', group: 'Inicio',
+    desc: 'Cita centrada entre dos adornos',
+    create: () => [
+      block('ornament', { motif: 'flourish', size: 140 }),
+      block('quote', { text: 'El amor es paciente, el amor es bondadoso. Todo lo disculpa, todo lo cree, todo lo espera, todo lo soporta.', author: '1 Corintios 13:4-7' }),
+      block('divider', { style: 'art' }),
+    ],
+  },
+  {
+    key: 'save-date', label: 'Reserva la fecha', icon: '⏳', group: 'Inicio',
+    desc: 'Fecha + cuenta regresiva + botón de calendario',
+    create: () => [
+      block('dateBadge', {}),
+      block('countdown', { label: 'Solo faltan', display: 'flip' }),
+      block('calendar', { label: 'Agendar en mi calendario' }),
+    ],
+  },
+
+  // ── El evento ───────────────────────────────────────────────────────────────
+  {
+    key: 'events', label: 'Ceremonia y recepción', icon: '⛪', group: 'El evento',
     desc: 'Dos tarjetas de evento lado a lado',
     create: () => [
       block('heading', { text: '¿Cuándo y dónde?', font: 'script' }),
@@ -1442,7 +1476,45 @@ export const SECTION_PRESETS: SectionPreset[] = [
     ],
   },
   {
-    key: 'story', label: 'Nuestra historia', icon: '📖',
+    key: 'schedule', label: 'Itinerario del día', icon: '🗓️', group: 'El evento',
+    desc: 'Título + horario paso a paso',
+    create: () => [
+      block('heading', { text: 'El gran día', font: 'script' }),
+      block('itinerary', {
+        title: '', items: [
+          { time: '16:00', label: 'Ceremonia', icon: 'church' },
+          { time: '17:30', label: 'Cóctel de bienvenida', icon: 'cheers' },
+          { time: '19:00', label: 'Cena', icon: 'dinner' },
+          { time: '21:00', label: 'Primer baile', icon: 'dance' },
+          { time: '23:00', label: 'Fiesta', icon: 'party' },
+        ],
+      }),
+    ],
+  },
+  {
+    key: 'directions', label: 'Cómo llegar', icon: '📍', group: 'El evento',
+    desc: 'Mapa + dirección + botón de indicaciones',
+    create: () => [
+      block('heading', { text: 'Cómo llegar', font: 'script' }),
+      block('map', { title: '', query: '' }),
+      block('button', { label: 'Abrir en Google Maps', href: '', filled: true }),
+    ],
+  },
+  {
+    key: 'details', label: 'Detalles a tener en cuenta', icon: '📌', group: 'El evento',
+    desc: 'Vestimenta + dos avisos en columnas',
+    create: () => [
+      block('dressCode', {}),
+      block('group', { columns: 2, mode: 'columns' }, [
+        block('text', { text: 'Celebración solo para adultos. ¡Gracias por comprenderlo!', italic: true }),
+        block('text', { text: 'Habrá estacionamiento disponible en el mismo salón.', italic: true }),
+      ]),
+    ],
+  },
+
+  // ── Fotos y recuerdos ───────────────────────────────────────────────────────
+  {
+    key: 'story', label: 'Nuestra historia', icon: '📖', group: 'Fotos y recuerdos',
     desc: 'Monograma + línea de tiempo con fotos',
     create: () => [
       block('monogram', {}),
@@ -1450,12 +1522,47 @@ export const SECTION_PRESETS: SectionPreset[] = [
     ],
   },
   {
-    key: 'family', label: 'Familia', icon: '👨‍👩‍👧',
+    key: 'gallery', label: 'Galería de fotos', icon: '🖼️', group: 'Fotos y recuerdos',
+    desc: 'Mosaico de fotos + hashtag para compartir',
+    create: () => [
+      block('heading', { text: 'Nuestros momentos', font: 'script' }),
+      block('gallery', { layout: 'masonry', message: 'Un pequeño recorrido por los momentos que nos trajeron hasta aquí.' }),
+      block('hashtag', {}),
+    ],
+  },
+  {
+    key: 'cinema', label: 'Momento cinematográfico', icon: '🎬', group: 'Fotos y recuerdos',
+    desc: 'Foto a pantalla completa con frases al hacer scroll',
+    create: () => [
+      block('story', { overlay: 45, height: 260 }),
+    ],
+  },
+  {
+    key: 'video', label: 'Video', icon: '🎥', group: 'Fotos y recuerdos',
+    desc: 'Título + video de YouTube o Vimeo',
+    create: () => [
+      block('heading', { text: 'Un mensaje para ti', font: 'script' }),
+      block('video', { url: '', title: 'Nuestro video' }),
+      block('text', { text: 'Nos hizo mucha ilusión grabarlo pensando en ti.', italic: true }),
+    ],
+  },
+  {
+    key: 'then-now', label: 'Antes y ahora', icon: '🔀', group: 'Fotos y recuerdos',
+    desc: 'Dos fotos comparadas con un deslizador',
+    create: () => [
+      block('heading', { text: 'Antes y ahora', font: 'script' }),
+      block('beforeAfter', { caption: 'Desliza para vernos entonces… y hoy' }),
+    ],
+  },
+
+  // ── Invitados ───────────────────────────────────────────────────────────────
+  {
+    key: 'family', label: 'Familia', icon: '👨‍👩‍👧', group: 'Invitados',
     desc: 'Padres y padrinos en columnas',
     create: () => [block('parents', {})],
   },
   {
-    key: 'guests-info', label: 'Info para invitados', icon: '🧳',
+    key: 'guests-info', label: 'Info para invitados', icon: '🧳', group: 'Invitados',
     desc: 'Vestimenta + hospedaje + hashtag',
     create: () => [
       block('dressCode', {}),
@@ -1465,12 +1572,123 @@ export const SECTION_PRESETS: SectionPreset[] = [
     ],
   },
   {
-    key: 'closing', label: 'Cierre', icon: '🤍',
+    key: 'gifts', label: 'Mesa de regalos', icon: '🎁', group: 'Invitados',
+    desc: 'Datos bancarios o QR + mensaje',
+    create: () => [
+      block('gift', {}),
+      block('text', { text: 'Cualquier detalle lo recibiremos con muchísimo cariño.', italic: true }),
+    ],
+  },
+  {
+    key: 'guestbook', label: 'Libro de mensajes', icon: '💬', group: 'Invitados',
+    desc: 'Los invitados dejan su saludo',
+    create: () => [
+      block('guestbook', {}),
+      block('divider', { style: 'line' }),
+    ],
+  },
+  {
+    key: 'tables', label: 'Tu lugar en la fiesta', icon: '🪑', group: 'Invitados',
+    desc: 'Buscador de mesa por nombre',
+    create: () => [
+      block('tableFinder', {}),
+      block('text', { text: 'Si no encuentras tu nombre, escríbenos y lo resolvemos al instante.', italic: true }),
+    ],
+  },
+  {
+    key: 'closing', label: 'Cierre', icon: '🤍', group: 'Invitados',
     desc: 'Cuenta regresiva + confirmación',
     create: () => [
       block('countdown', { label: 'Solo faltan' }),
       block('rsvp', { mode: 'form' }),
       block('text', { text: '¡Te esperamos!', italic: true }),
+    ],
+  },
+
+  // ── XV Años ─────────────────────────────────────────────────────────────────
+  {
+    key: 'xv-welcome', label: 'Bienvenida de XV', icon: '👑', group: 'XV Años',
+    desc: 'Título + mensaje de la quinceañera',
+    create: () => [
+      block('heading', { text: 'Mis XV Años', font: 'script' }),
+      block('text', { text: 'Hoy cumplo quince años y quiero celebrarlo con las personas que más quiero. Me haría muy feliz que me acompañes.', italic: true }),
+      block('divider', { style: 'art' }),
+    ],
+  },
+  {
+    key: 'xv-party', label: 'Vals y fiesta', icon: '💃', group: 'XV Años',
+    desc: 'Itinerario con misa, vals, brindis y fiesta',
+    create: () => [
+      block('heading', { text: 'Programa de la noche', font: 'script' }),
+      block('itinerary', {
+        title: '', items: [
+          { time: '18:00', label: 'Misa de acción de gracias', icon: 'church' },
+          { time: '20:00', label: 'Recepción', icon: 'cheers' },
+          { time: '21:00', label: 'Vals', icon: 'dance' },
+          { time: '22:00', label: 'Brindis y pastel', icon: 'cake' },
+          { time: '23:00', label: 'Fiesta', icon: 'party' },
+        ],
+      }),
+    ],
+  },
+  {
+    key: 'xv-court', label: 'Damas y chambelanes', icon: '🎀', group: 'XV Años',
+    desc: 'Corte de honor y padrinos',
+    create: () => [
+      block('parents', {
+        title: 'Mi corte de honor',
+        message: '',
+        items: [
+          { role: 'Damas', names: 'Nombre\nNombre\nNombre' },
+          { role: 'Chambelanes', names: 'Nombre\nNombre\nNombre' },
+        ],
+      }),
+      block('parents', {
+        title: 'Con la bendición de',
+        message: '',
+        items: [
+          { role: 'Mis padres', names: 'Nombre\nNombre' },
+          { role: 'Mis padrinos', names: 'Nombre\nNombre' },
+        ],
+      }),
+    ],
+  },
+
+  // ── Otros eventos ───────────────────────────────────────────────────────────
+  {
+    key: 'birthday', label: 'Cumpleaños', icon: '🎂', group: 'Otros eventos',
+    desc: 'Fecha + lugar de la fiesta + confirmación',
+    create: () => [
+      block('heading', { text: '¡Estás invitado!', font: 'script' }),
+      block('dateBadge', {}),
+      block('eventCard', { title: 'La fiesta', time: '20:00 h', place: 'Lugar de la celebración', icon: 'party' }),
+      block('rsvp', { mode: 'whatsapp', message: 'Avísame si vienes para reservarte un lugar.', buttonLabel: 'Confirmar por WhatsApp' }),
+    ],
+  },
+  {
+    key: 'baby-shower', label: 'Baby shower', icon: '🍼', group: 'Otros eventos',
+    desc: 'Mensaje + tarjeta del evento + regalos',
+    create: () => [
+      block('heading', { text: 'Baby Shower', font: 'script' }),
+      block('text', { text: 'Estamos contando los días para conocerle. Ven a celebrar con nosotros esta nueva etapa.', italic: true }),
+      block('eventCard', { title: 'Celebración', time: '17:00 h', place: 'Lugar del evento', icon: 'cheers' }),
+      block('gift', { title: 'Sugerencia de regalo', message: 'Tu presencia es el mejor regalo, pero si quieres traer algo, aquí van unas ideas.' }),
+    ],
+  },
+  {
+    key: 'baptism', label: 'Bautizo', icon: '✝️', group: 'Otros eventos',
+    desc: 'Versículo + ceremonia + padrinos',
+    create: () => [
+      block('quote', { text: 'Dejen que los niños vengan a mí, porque de ellos es el reino de los cielos.', author: 'Mateo 19:14' }),
+      block('eventCard', { title: 'Ceremonia', time: '11:00 h', place: 'Parroquia', icon: 'church' }),
+      block('parents', {
+        title: 'Con la bendición de',
+        message: '',
+        items: [
+          { role: 'Papás', names: 'Nombre\nNombre' },
+          { role: 'Padrinos', names: 'Nombre\nNombre' },
+        ],
+      }),
     ],
   },
 ];

@@ -9,7 +9,7 @@
 
 import { Reorder } from 'framer-motion';
 import { InvitationParsed, BuilderConfig, Block, BlockType, BlockLayout, ScrollPreset, LAYOUT_VERSION } from '@/lib/types';
-import { BLOCKS, PALETTE_GROUPS, SECTION_PRESETS, CHILD_PALETTE, createBlock, createOverlayGroup, FONT_OPTIONS, type FieldDef } from '@/components/invitations/blocks/registry';
+import { BLOCKS, PALETTE_GROUPS, SECTION_PRESETS, SECTION_GROUPS, CHILD_PALETTE, createBlock, createOverlayGroup, FONT_OPTIONS, type FieldDef } from '@/components/invitations/blocks/registry';
 import { layoutForTemplate } from '@/lib/layout-presets';
 import { themeForTemplate, motionForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import { listUserTemplates, saveUserTemplate, deleteUserTemplate, type UserTemplate } from '@/lib/user-templates';
@@ -40,6 +40,15 @@ const ANIM_PRESETS: { value: ScrollPreset; label: string }[] = [
   { value: 'parallax', label: 'Parallax' }, { value: 'zoomScroll', label: 'Zoom con scroll (fotos)' },
   { value: 'none', label: 'Ninguna' },
 ];
+
+/** Apartado de "Secciones listas" que se abre por defecto según el tipo de evento. */
+const SECTION_GROUP_FOR_TYPE: Record<string, string> = {
+  boda: 'Inicio',
+  xv: 'XV Años',
+  cumpleanos: 'Otros eventos',
+  baby_shower: 'Otros eventos',
+  bautizo: 'Otros eventos',
+};
 
 // ── Controles base ────────────────────────────────────────────────────────────
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
@@ -153,6 +162,9 @@ export default function BlockEditorPanel({ data, onChange, selectedId, onSelect,
 
   // Búsqueda en la paleta de bloques.
   const [paletteQuery, setPaletteQuery] = useState('');
+
+  // Secciones listas: apartado abierto (arranca en el que encaja con el tipo de evento).
+  const [openSectionGroup, setOpenSectionGroup] = useState<string | null>(() => SECTION_GROUP_FOR_TYPE[data.type] ?? 'Inicio');
 
   // ── Plantillas guardadas (galería) ──
   const [templates, setTemplates] = useState<UserTemplate[]>([]);
@@ -564,25 +576,47 @@ export default function BlockEditorPanel({ data, onChange, selectedId, onSelect,
       <div>
         <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-2">Secciones listas</h4>
         <div className="space-y-1.5">
-          {SECTION_PRESETS.map(p => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => {
-                const nuevos = p.create();
-                setBlocks([...blocks, ...nuevos]);
-                if (nuevos[0]) onSelect(nuevos[0].id);
-              }}
-              className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 bg-white hover:border-enkarta-gold/40 hover:bg-enkarta-gold/5 transition-all text-left group"
-            >
-              <span className="text-lg flex-shrink-0">{p.icon}</span>
-              <span className="min-w-0">
-                <span className="block text-xs font-outfit font-medium text-gray-700 group-hover:text-enkarta-gold transition-colors">{p.label}</span>
-                <span className="block text-[10px] font-outfit text-gray-400 truncate">{p.desc}</span>
-              </span>
-              <span className="ml-auto text-enkarta-gold opacity-0 group-hover:opacity-100 transition-opacity text-sm flex-shrink-0">+</span>
-            </button>
-          ))}
+          {SECTION_GROUPS.map(g => {
+            const presets = SECTION_PRESETS.filter(p => p.group === g);
+            if (presets.length === 0) return null;
+            const open = openSectionGroup === g;
+            return (
+              <div key={g} className="rounded-xl border border-gray-100 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setOpenSectionGroup(open ? null : g)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${open ? 'bg-enkarta-gold/5' : 'bg-white hover:bg-gray-50'}`}
+                >
+                  <span className={`text-xs font-outfit font-medium ${open ? 'text-enkarta-gold' : 'text-gray-700'}`}>{g}</span>
+                  <span className="text-[10px] font-outfit text-gray-400">{presets.length}</span>
+                  <span className={`ml-auto text-gray-400 text-[10px] transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
+                </button>
+                {open && (
+                  <div className="p-1.5 pt-0 space-y-1.5 border-t border-gray-100">
+                    {presets.map(p => (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => {
+                          const nuevos = p.create();
+                          setBlocks([...blocks, ...nuevos]);
+                          if (nuevos[0]) onSelect(nuevos[0].id);
+                        }}
+                        className="w-full flex items-center gap-3 p-2.5 mt-1.5 rounded-xl border border-gray-100 bg-white hover:border-enkarta-gold/40 hover:bg-enkarta-gold/5 transition-all text-left group"
+                      >
+                        <span className="text-lg flex-shrink-0">{p.icon}</span>
+                        <span className="min-w-0">
+                          <span className="block text-xs font-outfit font-medium text-gray-700 group-hover:text-enkarta-gold transition-colors">{p.label}</span>
+                          <span className="block text-[10px] font-outfit text-gray-400 truncate">{p.desc}</span>
+                        </span>
+                        <span className="ml-auto text-enkarta-gold opacity-0 group-hover:opacity-100 transition-opacity text-sm flex-shrink-0">+</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
