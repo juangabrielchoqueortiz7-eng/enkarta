@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { InvitationParsed, BuilderConfig } from '@/lib/types';
 import { FONT_CATALOG, DEFAULT_FAMILY, googleFontsUrl, FontRole } from '@/lib/fonts';
 import { tokensForTemplate } from '@/lib/template-themes';
+import { Seam, SEAM_OPTIONS } from '@/components/invitations/shared';
 
 interface Props {
   data: InvitationParsed;
@@ -53,6 +54,9 @@ export default function StylePanel({ data, onChange }: Props) {
   const tokens = cfg.tokens ?? tokensForTemplate(data.template);
   const setTokens = (patch: Partial<NonNullable<BuilderConfig['tokens']>>) =>
     onChange({ config: { ...cfg, tokens: { ...tokens, ...patch } } });
+  // Miniaturas de costura con los colores reales de la invitación.
+  const seamBand = cfg.theme?.primary || '#b8975a';
+  const seamPaper = cfg.theme?.bg || '#faf7f2';
 
   return (
     <div className="space-y-6 p-4">
@@ -195,6 +199,30 @@ export default function StylePanel({ data, onChange }: Props) {
             <div>
               <label className="block text-xs font-outfit text-gray-500 mb-1">Radio de sección ({tokens.sectionRadius ?? 0}px)</label>
               <input type="range" min={0} max={36} step={2} value={tokens.sectionRadius ?? 0} onChange={e => setTokens({ sectionRadius: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
+            </div>
+          </div>
+          {/* Costura: el borde con el que una banda de color entra en la siguiente.
+              Se elige mirándolo, no por su nombre — "ogiva" o "chaflán" no dicen nada. */}
+          <div>
+            <label className="block text-xs font-outfit text-gray-500 mb-1.5">Costura entre secciones</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {SEAM_OPTIONS.map(o => {
+                const on = (tokens.seam ?? 'curve') === o.key;
+                return (
+                  <button
+                    key={o.key}
+                    type="button"
+                    onClick={() => setTokens({ seam: o.key })}
+                    className={`rounded-xl border overflow-hidden transition-all ${on ? 'border-enkarta-gold ring-1 ring-enkarta-gold/40' : 'border-gray-100 hover:border-enkarta-gold/40'}`}
+                    title={o.label}
+                  >
+                    <span className="relative block h-10" style={{ background: seamPaper }}>
+                      <Seam shape={o.key} from={seamBand} height={26} shadow={false} />
+                    </span>
+                    <span className={`block text-[9px] font-outfit py-1 leading-none ${on ? 'text-enkarta-gold' : 'text-gray-400'}`}>{o.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div>

@@ -57,26 +57,84 @@ export type { SeamShape };
  * Se genera en los dos sentidos: `edge` de izquierda a derecha para el filete,
  * y la vuelta de derecha a izquierda para cerrar el relleno.
  */
-function scallopPaths(count = 14) {
-  const w = 1200 / count, top = 24, ctrl = 166;
+function scallopPaths(count = 14, top = 24, ctrl = 166) {
+  const w = 1200 / count;
   let edge = `M0 ${top}`;
-  for (let i = 0; i < count; i++) edge += ` Q${(i + 0.5) * w} ${ctrl} ${(i + 1) * w} ${top}`;
+  for (let i = 0; i < count; i++) edge += ` Q${((i + 0.5) * w).toFixed(1)} ${ctrl} ${((i + 1) * w).toFixed(1)} ${top}`;
   let back = '';
-  for (let i = count; i > 0; i--) back += ` Q${(i - 0.5) * w} ${ctrl} ${(i - 1) * w} ${top}`;
+  for (let i = count; i > 0; i--) back += ` Q${((i - 0.5) * w).toFixed(1)} ${ctrl} ${((i - 1) * w).toFixed(1)} ${top}`;
   return { edge, fill: `M0 0H1200V${top}${back}Z` };
+}
+
+/** Sierra: dientes rectos entre `top` y `bottom`. Dientes poco profundos y algo
+ *  más numerosos: a 34→80 parecía una hoja de sierra, no una cenefa. */
+function zigzagPaths(count = 22, top = 46, bottom = 78) {
+  const w = 1200 / count;
+  let edge = `M0 ${top}`;
+  for (let i = 0; i < count; i++) edge += ` L${((i + 0.5) * w).toFixed(1)} ${bottom} L${((i + 1) * w).toFixed(1)} ${top}`;
+  let back = '';
+  for (let i = count; i > 0; i--) back += ` L${((i - 0.5) * w).toFixed(1)} ${bottom} L${((i - 1) * w).toFixed(1)} ${top}`;
+  return { edge, fill: `M0 0H1200V${top}${back}Z` };
+}
+
+/**
+ * Papel rasgado. Las alturas van en una tabla fija en vez de sacarse al azar:
+ * un borde que cambia en cada render se ve como parpadeo, y además la costura
+ * dejaría de coincidir entre el servidor y el cliente.
+ */
+const TORN_Y = [62, 70, 56, 74, 60, 68, 54, 72, 58, 76, 64, 70, 52, 66, 74, 58, 68, 56, 72, 62, 76, 60, 66, 54, 70, 58, 64];
+function tornPaths() {
+  const n = TORN_Y.length - 1;
+  const w = 1200 / n;
+  let edge = `M0 ${TORN_Y[0]}`;
+  for (let i = 1; i <= n; i++) edge += ` L${(i * w).toFixed(1)} ${TORN_Y[i]}`;
+  let back = '';
+  for (let i = n; i >= 0; i--) back += ` L${(i * w).toFixed(1)} ${TORN_Y[i]}`;
+  return { edge, fill: `M0 0H1200${back}Z` };
 }
 
 // Geometría de cada forma en un lienzo 1200×100 que se estira al ancho real
 // (preserveAspectRatio="none"). `fill` es la banda anterior; `edge` es el mismo
 // borde como trazo abierto, para el filete. Las formas ocupan ~60-75 de los 100
 // de alto: por debajo de eso la curva se aplana tanto que en móvil no se lee.
-const SEAM_PATHS: Record<'arch' | 'curve' | 'wave' | 'bevel' | 'scallop', { fill: string; edge: string }> = {
+type SeamPathShape = 'arch' | 'curve' | 'wave' | 'bevel' | 'scallop'
+  | 'peak' | 'slant' | 'zigzag' | 'dunes' | 'torn' | 'steps' | 'lace';
+
+const SEAM_PATHS: Record<SeamPathShape, { fill: string; edge: string }> = {
   arch:    { fill: 'M0 0H1200V92Q600 -32 0 92Z',       edge: 'M0 92Q600 -32 1200 92' },
   curve:   { fill: 'M0 0H1200V14Q600 142 0 14Z',       edge: 'M0 14Q600 142 1200 14' },
   wave:    { fill: 'M0 0H1200V26C912 104 288 -6 0 66Z', edge: 'M0 66C288 -6 912 104 1200 26' },
   bevel:   { fill: 'M0 0H1200V16L600 94 0 16Z',        edge: 'M0 16L600 94 1200 16' },
   scallop: scallopPaths(),
+  peak:    { fill: 'M0 0H1200V84Q910 76 600 8Q290 76 0 84Z', edge: 'M0 84Q290 76 600 8Q910 76 1200 84' },
+  slant:   { fill: 'M0 0H1200V24L0 86Z',               edge: 'M0 86L1200 24' },
+  zigzag:  zigzagPaths(),
+  dunes:   { fill: 'M0 0H1200V52C980 96 820 56 620 44 380 30 220 92 0 58Z', edge: 'M0 58C220 92 380 30 620 44 820 56 980 96 1200 52' },
+  torn:    tornPaths(),
+  // Zigurat de 4 peldaños por lado: con solo dos y poco fondo (26→62) se leía
+  // como un mordisco en la banda, no como una escalera déco.
+  steps:   { fill: 'M0 0H1200V18H1050V34H900V50H750V66H450V50H300V34H150V18H0Z', edge: 'M0 18H150V34H300V50H450V66H750V50H900V34H1050V18H1200' },
+  lace:    scallopPaths(26, 40, 112),
 };
+
+/** Catálogo para los selectores del panel: clave + nombre en español. */
+export const SEAM_OPTIONS: { key: SeamShape; label: string }[] = [
+  { key: 'arch', label: 'Cúpula' },
+  { key: 'curve', label: 'Valle' },
+  { key: 'peak', label: 'Ogiva' },
+  { key: 'wave', label: 'Ola' },
+  { key: 'dunes', label: 'Dunas' },
+  { key: 'bevel', label: 'Chaflán' },
+  { key: 'slant', label: 'Diagonal' },
+  { key: 'steps', label: 'Escalonado' },
+  { key: 'zigzag', label: 'Sierra' },
+  { key: 'scallop', label: 'Festón' },
+  { key: 'lace', label: 'Encaje' },
+  { key: 'torn', label: 'Papel rasgado' },
+  { key: 'fade', label: 'Degradado' },
+  { key: 'line', label: 'Filete recto' },
+  { key: 'none', label: 'Sin costura' },
+];
 
 /** Alto por defecto: generoso en escritorio, discreto en móvil (siempre por
  *  debajo del padding superior de `SECTION.tight`, para no pisar el contenido). */

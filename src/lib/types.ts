@@ -215,6 +215,13 @@ export type SeamShape =
   | 'wave'     // ola en S (tropical / boho / viaje)
   | 'bevel'    // V muy abierta (geométrico, editorial, art-déco)
   | 'scallop'  // festón tipo encaje (romántico)
+  | 'peak'     // ogiva: arco apuntado (formal, catedral)
+  | 'slant'    // diagonal limpia (editorial moderno)
+  | 'zigzag'   // sierra fina (geométrico, fiesta)
+  | 'dunes'    // dos ondas asimétricas (orgánico, playa)
+  | 'torn'     // papel rasgado (artesanal, rústico)
+  | 'steps'    // escalonado simétrico (art déco)
+  | 'lace'     // festón fino y menudo (encaje delicado)
   | 'fade'     // degradado: la banda anterior se disuelve, sin borde
   | 'line'     // filete recto + sombra (editorial estricto)
   | 'none';
