@@ -149,10 +149,38 @@ type SeamInfo = { from: string; shape: SeamShape; hairline: string };
  * cuando el bloque ANTERIOR tiene un color sólido: pintar el arranque de un
  * degradado como si fuera plano se nota, y es peor que no poner costura.
  */
+/**
+ * Banda "suave": un velo de `primary` sobre el papel. Se calcula al pintar en vez
+ * de guardar un hex, así que la banda sigue la paleta cuando el cliente cambia
+ * los colores. Va opaca (no rgba) para que la costura pueda nombrar el color.
+ */
+function softBand(t: BlockTheme): string {
+  return `color-mix(in srgb, ${t.primary} 9%, ${t.bg})`;
+}
+
+/**
+ * Tema invertido para las secciones oscuras (banda `primary` o imagen a sangre).
+ * Sin esto, los bloques que pintan sus propios colores desde el tema —el
+ * itinerario tira de `primary` para las horas y de `muted` para los nombres—
+ * salen en tinta oscura sobre fondo oscuro y no se leen. El fallo solo aparece
+ * cuando hay bandas de color, o sea desde que existen las recetas de arranque.
+ */
+function invertedTheme(t: BlockTheme, ink: string): BlockTheme {
+  return {
+    ...t,
+    primary: ink,
+    text: ink,
+    muted: `color-mix(in srgb, ${ink} 72%, transparent)`,
+    line: `color-mix(in srgb, ${ink} 28%, transparent)`,
+    onPrimary: t.primaryDeep,
+  };
+}
+
 function blockBg(b: Block, t: BlockTheme): string | null {
   if (b.type === 'story') return null;
   const s = b.style ?? {};
   if (s.bgKind === 'solid') return s.bg || null;
+  if (s.bgKind === 'soft') return softBand(t);
   if (s.bgKind === 'primary') return t.primaryDeep;
   if (!s.bgKind || s.bgKind === 'none') return t.bg; // transparente = fondo de página
   return null; // gradient | image
@@ -175,10 +203,12 @@ function BlockView({ block, seam }: { block: Block; tokens?: TemplateTokens; sea
   const isImg = s.bgKind === 'image' && !!s.bgImage;
   const bg =
     s.bgKind === 'solid' ? (s.bg || undefined)
+    : s.bgKind === 'soft' ? softBand(t)
     : s.bgKind === 'gradient' ? `linear-gradient(160deg, ${s.bg || t.bg}, ${t.primary}22)`
     : s.bgKind === 'primary' ? t.primaryDeep
     : undefined;
   const color = s.bgKind === 'primary' ? t.onPrimary : isImg ? (s.text || '#ffffff') : (s.text || undefined);
+  const isDark = s.bgKind === 'primary' || isImg;
   const align = s.align ?? 'center';
   const basePad = 44;
   const padTop = s.padTop ?? basePad;
@@ -217,7 +247,9 @@ function BlockView({ block, seam }: { block: Block; tokens?: TemplateTokens; sea
         <Seam from={seam.from} shape={seam.shape} hairline={seam.hairline} height={seamH} style={{ zIndex: 1 }} />
       )}
       <div style={{ position: 'relative', zIndex: 1, maxWidth: maxW || undefined, marginLeft: 'auto', marginRight: 'auto', width: '100%' }}>
-        <Comp block={block} />
+        {isDark
+          ? <BlockThemeProvider value={invertedTheme(t, color || t.onPrimary)}><Comp block={block} /></BlockThemeProvider>
+          : <Comp block={block} />}
       </div>
     </section>
   );

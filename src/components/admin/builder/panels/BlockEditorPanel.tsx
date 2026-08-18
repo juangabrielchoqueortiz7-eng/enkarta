@@ -442,6 +442,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, onSelect,
           <Labeled label="Fondo">
             <select className={inputCls} value={st.bgKind ?? 'none'} onChange={e => setStyle({ bgKind: e.target.value })}>
               <option value="none">Transparente</option>
+              <option value="soft">Tinte de la paleta</option>
               <option value="solid">Color sólido</option>
               <option value="gradient">Degradado</option>
               <option value="primary">Color principal (oscuro)</option>

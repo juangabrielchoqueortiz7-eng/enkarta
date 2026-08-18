@@ -6,6 +6,7 @@
 
 import type { InvitationParsed, PageLayout, Block, BlockType, BlockBindings } from './types';
 import { LAYOUT_VERSION } from './types';
+import { applyRecipe } from './layout-recipes';
 
 let _seq = 0;
 function uid(type: string) {
@@ -71,7 +72,7 @@ function applyTemplatePreset(layout: PageLayout, inv: InvitationParsed): PageLay
     version: LAYOUT_VERSION,
     basePreset: inv.template,
     presetKey: inv.template,
-    blocks: [...layout.blocks],
+    blocks: applyRecipe(layout.blocks, inv.template),
   };
 }
 
@@ -318,7 +319,7 @@ export function contentToLayout(c: any, template?: string): PageLayout {
     version: LAYOUT_VERSION,
     basePreset: template as PageLayout['basePreset'],
     presetKey: template,
-    blocks,
+    blocks: applyRecipe(blocks, template),
   };
 
   return layout;

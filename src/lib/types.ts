@@ -335,7 +335,11 @@ export interface BlockAnimation {
 
 /** Estilo editable de un bloque (fondo, color, alineación, espaciado). */
 export interface BlockStyle {
-  bgKind?: 'none' | 'solid' | 'gradient' | 'primary' | 'image';
+  /**
+   * `soft` es un tinte de `primary` sobre el papel: se resuelve al pintar, no se
+   * guarda un hex, así que la banda sigue la paleta cuando el cliente la cambia.
+   */
+  bgKind?: 'none' | 'solid' | 'soft' | 'gradient' | 'primary' | 'image';
   bg?: string;
   /** Imagen de fondo a sangre (cuando bgKind = 'image'). */
   bgImage?: string;
