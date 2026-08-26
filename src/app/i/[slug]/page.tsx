@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { Invitation, parseInvitation } from '@/lib/types';
+import { Guest, Invitation, parseInvitation } from '@/lib/types';
 import { PREMIUM_REGISTRY } from '@/lib/template-registry';
 import { notFound } from 'next/navigation';
 import React from 'react';
@@ -20,12 +20,16 @@ import { DEFAULT_MUSIC_URL } from '@/lib/music';
 import { resolveLayoutBindings } from '@/lib/block-bindings';
 import { findGuestByPublicId } from '@/lib/guests';
 import { headers } from 'next/headers';
+import InvitationAnalytics from '@/components/invitations/InvitationAnalytics';
+import { canManageInvitation } from '@/lib/host-session';
+import { latestPublishedInvitation, publicInvitationData } from '@/lib/published-invitation';
+import PreviewCaptureController from '@/components/invitations/PreviewCaptureController';
 
 export const dynamic = 'force-dynamic';
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ full?: string; g?: string }>;
+  searchParams: Promise<{ full?: string; g?: string; preview?: string; sample?: string; capture?: 'cover' | 'middle' | 'end' }>;
 }
 
 /** Iniciales para el sello del sobre: "Ana & Carlos" → "A & C" */
@@ -69,7 +73,7 @@ const ClockIcon = (
 
 export default async function InvitationPage({ params, searchParams }: Props) {
   const { slug } = await params;
-  const { full, g } = await searchParams;
+  const { full, g, preview, sample, capture } = await searchParams;
 
   const { data, error } = await supabaseAdmin
     .from('invitations')
@@ -82,9 +86,11 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   }
 
   const invitation = data as Invitation;
+  const privatePreview = preview === '1' && await canManageInvitation(invitation.id);
+  const publishedVersion = privatePreview ? null : await latestPublishedInvitation(invitation);
 
   // ── Borrador: aún no publicada ──
-  if (invitation.status === 'draft') {
+  if (invitation.status === 'draft' && !privatePreview && !publishedVersion) {
     return (
       <StatusScreen
         icon={ClockIcon}
@@ -94,8 +100,16 @@ export default async function InvitationPage({ params, searchParams }: Props) {
     );
   }
 
+  if (invitation.status === 'disabled' && !privatePreview) {
+    return <StatusScreen icon={ClockIcon} title="Invitación temporalmente fuera de línea" text="El anfitrión ha pausado esta invitación. Vuelve a intentarlo más adelante." />;
+  }
+
+  if (invitation.status === 'expired' && !privatePreview) {
+    return <StatusScreen icon={ClockIcon} title="Evento finalizado" text="Gracias por acompañarnos. Esta invitación ya no está disponible." />;
+  }
+
   // ── Dada de baja manualmente ──
-  if (invitation.is_active === false) {
+  if (invitation.is_active === false && !privatePreview) {
     return (
       <StatusScreen
         icon={ClockIcon}
@@ -106,7 +120,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   }
 
   // ── Expiración automática (DATE → comparación por día) ──
-  if (invitation.expires_at) {
+  if (invitation.expires_at && !privatePreview) {
     const today = new Date().toISOString().slice(0, 10);
     if (invitation.expires_at.slice(0, 10) < today) {
       return (
@@ -120,14 +134,15 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   }
 
   // ── Contador de vistas (incremento best-effort, no bloquea el render) ──
-  void supabaseAdmin
-    .from('invitations')
-    .update({ views_count: (invitation.views_count ?? 0) + 1 })
-    .eq('id', invitation.id)
-    .then(() => {}, () => {});
+  if (!privatePreview) void supabaseAdmin.rpc('increment_invitation_views', { target_id: invitation.id }).then(async ({ error: incrementError }) => {
+    // Compatibilidad mientras se aplica la migración 004.
+    if (incrementError) await supabaseAdmin.from('invitations').update({ views_count: (invitation.views_count ?? 0) + 1 }).eq('id', invitation.id);
+  }, () => {});
 
   // El paquete contratado (config.package) apaga las funciones no incluidas.
-  const parsed = gateInvitation(parseInvitation(invitation));
+  // El editor guarda el borrador en `invitations`; el público recibe el último
+  // snapshot publicado. ?preview=1 (admin/anfitrión autenticado) ve el borrador.
+  const parsed = gateInvitation(privatePreview ? parseInvitation(invitation) : (publishedVersion?.data ?? parseInvitation(invitation)));
   const config = parsed.config;
   const feats = resolveFeatures(config);
 
@@ -137,16 +152,28 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   if (feats.music && !config.musicUrl) config.musicUrl = DEFAULT_MUSIC_URL;
 
   // ── Link único por invitado (?g=): su nombre, pases y reglas viajan a la plantilla ──
-  let guest = null;
+  let guest: Guest | null = null;
   if (g && feats.guestNames) {
     guest = await findGuestByPublicId(invitation.id, g);
     if (guest) {
+      const meta = config.guestMeta?.[guest.publicId];
+      guest = { ...guest, ...meta };
+      config.activeGuest = guest;
       parsed.guest_name = guest.name;
       if (feats.passes) parsed.guest_passes = guest.passes;
       // Si este invitado no admite niños, forzamos el párrafo restrictivo aunque
       // la invitación general no lo tenga activado.
       if (!guest.allowKids) parsed.no_kids = true;
     }
+  }
+  if (privatePreview && sample === '1' && feats.guestNames) {
+    guest = {
+      id: 'preview-sample', publicId: 'muestra', name: 'Familia de Ejemplo', tableNo: '12', passes: 3,
+      allowKids: true, group: 'Familia', eventAccess: 'both', sent: true, status: 'pending', accessCode: 'ENK-DEMO',
+    };
+    config.activeGuest = guest;
+    parsed.guest_name = guest.name;
+    if (feats.passes) parsed.guest_passes = guest.passes;
   }
 
   // Fecha límite de confirmación (columna rsvp_deadline): bloquea el formulario.
@@ -155,7 +182,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   // ── Resolver el elemento de la plantilla ──
   // Si la invitación tiene un documento por bloques, manda sobre la plantilla legacy.
   const hasBlocks = !!config.layout?.blocks?.length;
-  const premium = PREMIUM_REGISTRY[invitation.template];
+  const premium = PREMIUM_REGISTRY[parsed.template];
   let templateEl: React.ReactNode;
   if (hasBlocks) {
     templateEl = null; // se reemplaza más abajo por <BlockRenderer> (con sus providers)
@@ -165,7 +192,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
     const templates: Partial<Record<string, React.ComponentType<{ invitation: ReturnType<typeof parseInvitation> }>>> = {
       perla: Perla, marmol: Marmol, terra: Terra, sobre: Sobre, carmesi: Carmesi, gerbera: Gerbera,
     };
-    const Template = templates[invitation.template] || Perla;
+    const Template = templates[parsed.template] || Perla;
     templateEl = <div className="ek-invite"><Template invitation={parsed} /></div>;
   }
 
@@ -174,7 +201,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const entryEnabled = (config.entry?.enabled ?? resolveFeatures(config).entry) && full !== '1';
 
   // Confirmación inteligente: formulario in-app al final (gateado por paquete).
-  const smartRsvp = feats.smartRsvp ? (
+  const smartRsvp = feats.smartRsvp && !privatePreview ? (
     <SmartRsvp
       slug={invitation.slug}
       theme={config.theme}
@@ -182,6 +209,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
       guestName={guest?.name}
       maxPasses={guest?.passes ?? (feats.passes ? parsed.guest_passes : undefined)}
       tableNo={guest?.tableNo}
+      guest={guest ?? undefined}
       deadlinePassed={deadlinePassed}
     />
   ) : null;
@@ -191,8 +219,11 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   // Con bloques, <BlockRenderer> ya incluye sus propios providers (tema + motion).
   const content = (
     <>
+      {!privatePreview && <InvitationAnalytics slug={invitation.slug} guestPublicId={guest?.publicId} />}
+      {privatePreview && !capture && <div className="fixed left-1/2 top-3 z-[200] -translate-x-1/2 rounded-full border border-violet-200 bg-white/95 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-violet-700 shadow-lg backdrop-blur font-outfit">Vista privada del borrador{sample === '1' ? ' · invitado de prueba' : ' · no publicada'}</div>}
+      {privatePreview && capture && <PreviewCaptureController position={capture} />}
       {hasBlocks ? (
-        <BlockRenderer layout={resolveLayoutBindings(config.layout!, parsed)} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} gated={entryEnabled} />
+        <BlockRenderer layout={resolveLayoutBindings(config.layout!, parsed)} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} guest={guest ?? undefined} gated={entryEnabled} />
       ) : (
         <PageMotionProvider value={config.motion} gated={entryEnabled}>
           {templateEl}
@@ -209,11 +240,11 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   return (
     <FontScope config={config}>
       <EntryGate
-        template={invitation.template}
-        names={invitation.names ?? 'Nuestra Boda'}
-        initials={deriveInitials(invitation.names)}
-        dateLine={deriveDateLine(invitation.event_date)}
-        coverImage={invitation.cover_image_url ?? undefined}
+        template={parsed.template}
+        names={parsed.names ?? 'Nuestra Boda'}
+        initials={deriveInitials(parsed.names)}
+        dateLine={deriveDateLine(parsed.event_date)}
+        coverImage={parsed.cover_image_url ?? undefined}
         label={config.entry?.label || 'Ingresar a mi invitación'}
         bg={config.theme?.bg}
         text={config.theme?.text}
@@ -230,9 +261,10 @@ export async function generateMetadata({ params }: Props) {
 
   const { data } = await supabaseAdmin
     .from('invitations')
-    .select('names, type, cover_image_url, event_date, template')
+    .select('*')
     .eq('slug', slug)
     .single();
+  const metaData = data ? await publicInvitationData(data as Invitation) : null;
 
   const titles: Record<string, string> = {
     boda: 'Boda',
@@ -242,12 +274,12 @@ export async function generateMetadata({ params }: Props) {
     bautizo: 'Bautizo',
   };
 
-  const title = data?.names
-    ? `${titles[data.type] || 'Invitación'} - ${data.names} | Enkarta`
+  const title = metaData?.names
+    ? `${titles[metaData.type] || 'Invitación'} - ${metaData.names} | Enkarta`
     : 'Invitación Digital | Enkarta';
-  const dateLine = deriveDateLine(data?.event_date ?? null);
-  const description = data?.names
-    ? `Estás invitado(a) a la ${titles[data.type]?.toLowerCase() || 'celebración'} de ${data.names}${dateLine ? ` · ${dateLine}` : ''}`
+  const dateLine = deriveDateLine(metaData?.event_date ?? null);
+  const description = metaData?.names
+    ? `Estás invitado(a) a la ${titles[metaData.type]?.toLowerCase() || 'celebración'} de ${metaData.names}${dateLine ? ` · ${dateLine}` : ''}`
     : 'Invitación digital personalizada';
 
   // metadataBase para resolver URLs absolutas en la vista previa al compartir.

@@ -1,41 +1,67 @@
 'use client';
 
-import { useEffect } from 'react';
-import { InvitationParsed, BuilderConfig } from '@/lib/types';
-import { FONT_CATALOG, DEFAULT_FAMILY, googleFontsUrl, FontRole } from '@/lib/fonts';
-import { tokensForTemplate } from '@/lib/template-themes';
+import { useEffect, useMemo, useState } from 'react';
+import type { BuilderConfig, InvitationParsed, TemplateTheme, TemplateTokens } from '@/lib/types';
+import { FONT_CATALOG, DEFAULT_FAMILY, googleFontsUrl, type FontRole } from '@/lib/fonts';
+import { themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import { Seam, SEAM_OPTIONS } from '@/components/invitations/shared';
+import { SEAM_FX_OPTIONS } from '@/components/invitations/seam-fx';
+import {
+  applyDesignKitPatch,
+  kitMatchScore,
+  recommendedDesignKits,
+  type DesignKit,
+} from '@/lib/design-kits';
+import { deleteUserDesignKit, listUserDesignKits, saveUserDesignKit } from '@/lib/user-design-kits';
+import { auditDesignConsistency, cleanInvitationDesign } from '@/lib/design-audit';
 
 interface Props {
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
 }
 
-const COLOR_PRESETS = [
-  { name: 'Dorado Clásico', primary: '#B8975A', secondary: '#FAF7F2', accent: '#2C2519' },
-  { name: 'Navy Elegante', primary: '#1B3A6B', secondary: '#F5F7FA', accent: '#0D1F3C' },
-  { name: 'Verde Bosque', primary: '#3D6B4F', secondary: '#F4F8F5', accent: '#1C3326' },
-  { name: 'Rosa Nude', primary: '#C9847A', secondary: '#FDF6F5', accent: '#5C2E28' },
-  { name: 'Negro Obsidiana', primary: '#1A1A1A', secondary: '#F8F8F8', accent: '#333333' },
-  { name: 'Borgoña', primary: '#7B2D42', secondary: '#FDF0F3', accent: '#3D0F1C' },
-  { name: 'Oliva Tierra', primary: '#7B8C5A', secondary: '#F6F5EE', accent: '#3B4228' },
-  { name: 'Azul Serenidad', primary: '#4A7FA5', secondary: '#F0F6FB', accent: '#1C3D54' },
-];
+const EVENT_LABEL = {
+  boda: 'Boda', xv: 'XV años', cumpleanos: 'Cumpleaños', baby_shower: 'Baby shower', bautizo: 'Bautizo',
+};
 
-// Roles de fuente editables: clave en builder_config, etiqueta y texto de muestra.
 const FONT_ROLES: { role: FontRole; key: 'fontScript' | 'fontHeading' | 'fontBody'; label: string; desc: string; preview: string; previewSize: string }[] = [
-  { role: 'script',  key: 'fontScript',  label: 'Caligráfica',     desc: 'Nombres de la pareja',          preview: 'Ana & Carlos',        previewSize: '26px' },
-  { role: 'heading', key: 'fontHeading', label: 'Títulos',         desc: 'Títulos de sección y fechas',   preview: 'NUESTRA BODA · 2026', previewSize: '15px' },
-  { role: 'body',    key: 'fontBody',    label: 'Cuerpo de texto', desc: 'Mensajes y párrafos',           preview: 'Acompáñanos en este día tan especial.', previewSize: '15px' },
+  { role: 'script', key: 'fontScript', label: 'Caligráfica', desc: 'Nombres y títulos especiales', preview: 'Elena & Mateo', previewSize: '26px' },
+  { role: 'heading', key: 'fontHeading', label: 'Títulos', desc: 'Secciones, fechas y números', preview: 'NUESTRA CELEBRACIÓN · 2026', previewSize: '14px' },
+  { role: 'body', key: 'fontBody', label: 'Lectura', desc: 'Mensajes, lugares y detalles', preview: 'Acompáñanos en este día tan especial.', previewSize: '15px' },
 ];
 
-/** Carga todas las fuentes del catálogo (solo en el admin) para previsualizarlas. */
+const SEMANTIC_COLORS: { key: keyof TemplateTheme; label: string; desc: string }[] = [
+  { key: 'bg', label: 'Papel', desc: 'Fondo general' },
+  { key: 'text', label: 'Tinta', desc: 'Texto principal' },
+  { key: 'primary', label: 'Primario', desc: 'Títulos y botones' },
+  { key: 'accent', label: 'Acento', desc: 'Detalles especiales' },
+  { key: 'surface', label: 'Superficie', desc: 'Tarjetas y paneles' },
+  { key: 'line', label: 'Línea', desc: 'Bordes y divisores' },
+];
+
+const TYPE_SCALE: { key: keyof NonNullable<TemplateTokens['typeScale']>; label: string; sample: string }[] = [
+  { key: 'title', label: 'Títulos', sample: 'Elena & Mateo' },
+  { key: 'subtitle', label: 'Subtítulos', sample: 'Nuestra celebración' },
+  { key: 'body', label: 'Texto', sample: 'Información del evento' },
+  { key: 'label', label: 'Etiquetas', sample: 'SÁBADO · 18:00' },
+];
+
+const cardCls = 'rounded-2xl border border-[#ebe5dd] bg-white p-4 shadow-[0_10px_34px_rgba(51,42,31,0.035)]';
+const titleCls = 'text-[10px] font-outfit font-semibold uppercase tracking-[0.16em] text-[#8b8175]';
+const inputCls = 'w-full rounded-xl border border-[#e5dfd7] bg-white px-3 py-2 text-sm font-outfit text-[#4c453d] outline-none transition focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/15';
+
+function colorInputValue(value: string | undefined, fallback: string): string {
+  if (/^#[0-9a-f]{6}$/i.test(value || '')) return value as string;
+  if (/^#[0-9a-f]{3}$/i.test(value || '')) return `#${(value as string).slice(1).split('').map(char => char + char).join('')}`;
+  return fallback;
+}
+
 function useCatalogFonts() {
   useEffect(() => {
     const url = googleFontsUrl([
-      ...FONT_CATALOG.script.map(f => f.family),
-      ...FONT_CATALOG.heading.map(f => f.family),
-      ...FONT_CATALOG.body.map(f => f.family),
+      ...FONT_CATALOG.script.map(font => font.family),
+      ...FONT_CATALOG.heading.map(font => font.family),
+      ...FONT_CATALOG.body.map(font => font.family),
     ]);
     if (!url || document.querySelector('link[data-ek-font-catalog]')) return;
     const link = document.createElement('link');
@@ -46,208 +72,247 @@ function useCatalogFonts() {
   }, []);
 }
 
+function KitCard({ kit, active, recommended, onApply, onDelete }: {
+  kit: DesignKit;
+  active: boolean;
+  recommended?: boolean;
+  onApply: () => void;
+  onDelete?: () => void;
+}) {
+  return (
+    <div className={`group relative overflow-hidden rounded-2xl border-2 transition-all ${active ? 'border-enkarta-gold shadow-[0_10px_28px_rgba(184,151,90,.14)]' : 'border-[#eee9e2] hover:border-enkarta-gold/45'}`}>
+      <button type="button" onClick={onApply} className="block w-full text-left">
+        <span className="relative block h-[116px] overflow-hidden px-3 py-3" style={{ background: kit.theme.bg }}>
+          <span className="absolute -right-6 -top-7 h-24 w-24 rounded-full opacity-15" style={{ background: kit.theme.primary }} />
+          <span className="absolute bottom-0 left-0 h-8 w-full opacity-75" style={{ background: kit.theme.surface }} />
+          <span className="relative block text-center leading-none" style={{ color: kit.theme.primary, fontFamily: `'${kit.fonts.fontScript}'`, fontSize: 23 }}>Elena & Mateo</span>
+          <span className="relative mx-auto mt-2.5 block h-px w-14" style={{ background: kit.theme.line }} />
+          <span className="relative mt-2 block text-center uppercase tracking-[0.18em]" style={{ color: kit.theme.text, fontFamily: `'${kit.fonts.fontHeading}'`, fontSize: 8 }}>Nuestra celebración</span>
+          <span className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-0.5">
+            {kit.colors.map((color, index) => <span key={`${kit.id}-${index}`} className="h-3 w-3 rounded-full border border-black/5" style={{ background: color }} />)}
+          </span>
+          {recommended && <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[7px] font-semibold uppercase tracking-[0.12em] text-[#8e6e35] shadow-sm">Recomendado</span>}
+        </span>
+        <span className="block bg-white p-2.5">
+          <span className="flex items-center justify-between gap-2">
+            <span className="truncate text-xs font-outfit font-semibold text-[#4b443c]">{kit.name}</span>
+            {active && <span className="text-[9px] font-outfit font-semibold text-enkarta-gold">Aplicado</span>}
+          </span>
+          <span className="mt-0.5 block min-h-[22px] text-[9px] font-outfit leading-tight text-[#948b81]">{kit.vibe}</span>
+        </span>
+      </button>
+      {onDelete && (
+        <button type="button" onClick={onDelete} aria-label={`Eliminar ${kit.name}`} className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-[11px] text-[#9b9186] opacity-0 shadow-sm transition hover:text-red-500 group-hover:opacity-100">×</button>
+      )}
+    </div>
+  );
+}
+
 export default function StylePanel({ data, onChange }: Props) {
   useCatalogFonts();
   const cfg: BuilderConfig = data.config ?? {};
+  const baseTheme = themeForTemplate(data.template);
+  const theme: TemplateTheme = { ...baseTheme, ...(cfg.theme ?? {}) };
+  const defaultTokens = tokensForTemplate(data.template);
+  const tokens: TemplateTokens = {
+    ...defaultTokens,
+    ...(cfg.tokens ?? {}),
+    typeScale: { ...(defaultTokens.typeScale ?? {}), ...(cfg.tokens?.typeScale ?? {}) },
+  };
+  const [customKits, setCustomKits] = useState<DesignKit[]>([]);
+  const [kitName, setKitName] = useState('');
+  const [showAllKits, setShowAllKits] = useState(false);
+  const [confirmClean, setConfirmClean] = useState(false);
+  useEffect(() => setCustomKits(listUserDesignKits()), []);
+
+  const orderedKits = useMemo(() => recommendedDesignKits(data), [data]);
+  const visibleKits = showAllKits ? orderedKits : orderedKits.slice(0, 4);
+  const bestKit = orderedKits[0];
+  const allKits = [...orderedKits, ...customKits];
+  const activeKit = allKits.find(kit => kit.id === cfg.designKitId);
+  const audit = useMemo(() => auditDesignConsistency(data), [data]);
+  const seamBand = theme.primary || data.color_primary;
+  const seamPaper = theme.bg || data.color_secondary;
+
   const setFont = (key: 'fontScript' | 'fontHeading' | 'fontBody', value: string) =>
     onChange({ config: { ...cfg, [key]: value || undefined } });
-  const tokens = cfg.tokens ?? tokensForTemplate(data.template);
-  const setTokens = (patch: Partial<NonNullable<BuilderConfig['tokens']>>) =>
-    onChange({ config: { ...cfg, tokens: { ...tokens, ...patch } } });
-  // Miniaturas de costura con los colores reales de la invitación.
-  const seamBand = cfg.theme?.primary || '#b8975a';
-  const seamPaper = cfg.theme?.bg || '#faf7f2';
+  const setTokens = (patch: Partial<TemplateTokens>) =>
+    onChange({ config: { ...cfg, tokens: { ...tokens, ...patch, typeScale: patch.typeScale ? { ...(tokens.typeScale ?? {}), ...patch.typeScale } : tokens.typeScale } } });
+  const setThemeColor = (key: keyof TemplateTheme, value: string) => {
+    const next: Partial<InvitationParsed> = { config: { ...cfg, theme: { ...theme, [key]: value } } };
+    if (key === 'primary') next.color_primary = value;
+    if (key === 'bg') next.color_secondary = value;
+    if (key === 'text') next.color_accent = value;
+    onChange(next);
+  };
+  const applyKit = (kit: DesignKit) => {
+    onChange(applyDesignKitPatch(data, kit));
+    setConfirmClean(false);
+  };
+  const saveCurrentKit = () => {
+    setCustomKits(saveUserDesignKit(kitName, data));
+    setKitName('');
+  };
+  const cleanDesign = () => {
+    const kit = activeKit ?? bestKit;
+    if (kit) onChange(cleanInvitationDesign(data, kit));
+    setConfirmClean(false);
+  };
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-4 p-4 pb-8">
+      <section className={cardCls}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h4 className={titleCls}>Kits visuales oficiales</h4>
+            <p className="mt-1 text-xs font-outfit leading-relaxed text-[#938a80]">Cambian paleta, tipografías, botones, formas, sombras, espaciado y elementos. Tu contenido no se modifica.</p>
+          </div>
+          <span className="flex-none rounded-full bg-[#f5efe4] px-2 py-1 text-[9px] font-outfit font-semibold text-[#9a7536]">{EVENT_LABEL[data.type]}</span>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          {visibleKits.map(kit => (
+            <KitCard key={kit.id} kit={kit} active={cfg.designKitId === kit.id} recommended={kitMatchScore(kit, data) === kitMatchScore(bestKit, data)} onApply={() => applyKit(kit)} />
+          ))}
+        </div>
+        {orderedKits.length > 4 && (
+          <button type="button" onClick={() => setShowAllKits(value => !value)} className="mt-3 w-full rounded-xl border border-[#e9e3db] py-2 text-[11px] font-outfit font-medium text-[#746b61] hover:bg-[#faf8f5]">{showAllKits ? 'Ver recomendados' : `Ver los ${orderedKits.length} kits`}</button>
+        )}
+        {activeKit && <p className="mt-3 rounded-xl bg-[#f8f5ef] px-3 py-2 text-[10px] font-outfit text-[#756c62]">Base activa: <strong>{activeKit.name}</strong>. Puedes personalizarla y guardar tu propia versión.</p>}
+      </section>
 
-      {/* Tipografía */}
-      <div>
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">Tipografía</h4>
-        <p className="text-xs text-gray-400 font-outfit mb-3">
-          Cambia las fuentes de la invitación. &ldquo;Original&rdquo; mantiene la tipografía
-          curada de la plantilla.
-        </p>
-        <div className="space-y-3">
+      <section className={cardCls}>
+        <div className="flex items-center justify-between gap-3">
+          <div><h4 className={titleCls}>Mis kits</h4><p className="mt-1 text-xs font-outfit text-[#938a80]">Guarda el estilo actual para reutilizarlo.</p></div>
+          <span className="text-[10px] font-outfit text-[#aaa198]">{customKits.length}/30</span>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <input value={kitName} onChange={event => setKitName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') saveCurrentKit(); }} placeholder="Ej. Boda verde elegante" className={inputCls} />
+          <button type="button" onClick={saveCurrentKit} className="flex-none rounded-xl bg-[#3f382f] px-4 text-xs font-outfit font-semibold text-white hover:bg-[#2f2a24]">Guardar</button>
+        </div>
+        {customKits.length > 0 && (
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
+            {customKits.map(kit => <KitCard key={kit.id} kit={kit} active={cfg.designKitId === kit.id} onApply={() => applyKit(kit)} onDelete={() => setCustomKits(deleteUserDesignKit(kit.id))} />)}
+          </div>
+        )}
+      </section>
+
+      <section className={cardCls}>
+        <h4 className={titleCls}>Colores semánticos</h4>
+        <p className="mt-1 text-xs font-outfit leading-relaxed text-[#938a80]">Cada color tiene una función fija; así toda la invitación cambia de forma uniforme.</p>
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          {SEMANTIC_COLORS.map(item => {
+            const fallback = item.key === 'line' ? colorInputValue(theme.primary, '#b8975a') : item.key === 'accent' ? colorInputValue(theme.primaryDeep, '#d5ad63') : '#ffffff';
+            const value = colorInputValue(theme[item.key], fallback);
+            return (
+              <label key={item.key} className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-[#ede8e1] bg-[#fbfaf8] p-2.5">
+                <span className="relative h-9 w-9 flex-none overflow-hidden rounded-xl border border-black/10 shadow-inner" style={{ background: value }}>
+                  <input type="color" value={value} onChange={event => setThemeColor(item.key, event.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+                </span>
+                <span className="min-w-0"><span className="block text-xs font-outfit font-medium text-[#544d45]">{item.label}</span><span className="block truncate text-[9px] font-outfit text-[#9f968d]">{item.desc}</span></span>
+              </label>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className={cardCls}>
+        <h4 className={titleCls}>Sistema tipográfico</h4>
+        <p className="mt-1 text-xs font-outfit leading-relaxed text-[#938a80]">Tres familias coordinadas y cuatro tamaños globales para conservar jerarquía.</p>
+        <div className="mt-4 space-y-2.5">
           {FONT_ROLES.map(({ role, key, label, desc, preview, previewSize }) => {
             const value = (cfg[key] as string | undefined) ?? '';
             const family = value || DEFAULT_FAMILY[role];
             return (
-              <div key={key} className="p-3 rounded-xl border border-gray-100 bg-gray-50">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <div>
-                    <p className="text-sm font-outfit text-gray-700">{label}</p>
-                    <p className="text-xs text-gray-400 font-outfit">{desc}</p>
-                  </div>
-                  <select
-                    value={value}
-                    onChange={e => setFont(key, e.target.value)}
-                    className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 bg-white focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit max-w-[150px]"
-                  >
+              <div key={key} className="rounded-xl border border-[#ede8e1] bg-[#fbfaf8] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div><p className="text-xs font-outfit font-medium text-[#554e46]">{label}</p><p className="text-[9px] font-outfit text-[#9c938a]">{desc}</p></div>
+                  <select value={value} onChange={event => setFont(key, event.target.value)} className="max-w-[148px] rounded-lg border border-[#e3ddd5] bg-white px-2 py-1.5 text-[10px] font-outfit text-[#655d54] outline-none focus:border-enkarta-gold">
                     <option value="">Original ({DEFAULT_FAMILY[role]})</option>
-                    {FONT_CATALOG[role].filter(f => f.family !== DEFAULT_FAMILY[role]).map(f => (
-                      <option key={f.family} value={f.family}>{f.family}</option>
-                    ))}
+                    {FONT_CATALOG[role].filter(font => font.family !== DEFAULT_FAMILY[role]).map(font => <option key={font.family} value={font.family}>{font.family}</option>)}
                   </select>
                 </div>
-                <p className="text-gray-700 leading-snug truncate" style={{ fontFamily: `'${family}'`, fontSize: previewSize }}>
-                  {preview}
-                </p>
+                <p className="mt-2 truncate text-[#554d45]" style={{ fontFamily: `'${family}'`, fontSize: previewSize }}>{preview}</p>
               </div>
             );
           })}
         </div>
-        {(cfg.fontScript || cfg.fontHeading || cfg.fontBody) && (
-          <button
-            type="button"
-            onClick={() => onChange({ config: { ...cfg, fontScript: undefined, fontHeading: undefined, fontBody: undefined } })}
-            className="mt-2 text-xs text-gray-400 hover:underline font-outfit"
-          >
-            Restaurar tipografía original
-          </button>
-        )}
-      </div>
-
-      {/* Paletas predefinidas */}
-      <div>
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">Paletas de Color</h4>
-        <div className="grid grid-cols-2 gap-2">
-          {COLOR_PRESETS.map(preset => (
-            <button
-              key={preset.name}
-              type="button"
-              onClick={() => onChange({
-                color_primary: preset.primary,
-                color_secondary: preset.secondary,
-                color_accent: preset.accent,
-              })}
-              className={`p-3 rounded-xl border-2 text-left transition-all hover:border-enkarta-gold/50 ${
-                data.color_primary === preset.primary
-                  ? 'border-enkarta-gold bg-enkarta-gold/5'
-                  : 'border-gray-100 bg-gray-50'
-              }`}
-            >
-              {/* Muestra de colores */}
-              <div className="flex gap-1 mb-1.5">
-                <div className="w-5 h-5 rounded-full border border-gray-200" style={{ background: preset.primary }} />
-                <div className="w-5 h-5 rounded-full border border-gray-200" style={{ background: preset.secondary }} />
-                <div className="w-5 h-5 rounded-full border border-gray-200" style={{ background: preset.accent }} />
-              </div>
-              <p className="text-xs font-outfit text-gray-600 leading-tight">{preset.name}</p>
-            </button>
-          ))}
+        <div className="mt-4 space-y-3 rounded-xl bg-[#f8f5f0] p-3">
+          {TYPE_SCALE.map(item => {
+            const value = tokens.typeScale?.[item.key] ?? 1;
+            return (
+              <label key={item.key} className="block">
+                <span className="mb-1 flex items-center justify-between text-[10px] font-outfit text-[#70675d]"><span>{item.label}</span><strong>{Math.round(value * 100)}%</strong></span>
+                <input type="range" min={0.8} max={1.25} step={0.02} value={value} onChange={event => setTokens({ typeScale: { [item.key]: Number(event.target.value) } })} className="w-full accent-enkarta-gold" />
+              </label>
+            );
+          })}
         </div>
-      </div>
+      </section>
 
-      {/* Colores personalizados */}
-      <div>
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">Colores Personalizados</h4>
-        <div className="space-y-3">
+      <section className={cardCls}>
+        <h4 className={titleCls}>Formas y ritmo</h4>
+        <p className="mt-1 text-xs font-outfit text-[#938a80]">Un solo lenguaje para tarjetas, botones, campos, sombras y espacios.</p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Densidad</span><select className={inputCls} value={tokens.spacing ?? 'normal'} onChange={event => setTokens({ spacing: event.target.value as TemplateTokens['spacing'] })}><option value="compact">Compacta</option><option value="normal">Balanceada</option><option value="airy">Amplia</option></select></label>
+          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Acabado</span><select className={inputCls} value={tokens.surface ?? 'flat'} onChange={event => setTokens({ surface: event.target.value as TemplateTokens['surface'] })}><option value="flat">Plano</option><option value="soft">Suave</option><option value="card">Tarjeta</option></select></label>
+          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Sombra</span><select className={inputCls} value={tokens.shadow ?? 'soft'} onChange={event => setTokens({ shadow: event.target.value as TemplateTokens['shadow'] })}><option value="none">Sin sombra</option><option value="soft">Suave</option><option value="medium">Media</option><option value="strong">Profunda</option></select></label>
+          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Ancho · {tokens.contentWidth ?? 680}px</span><input type="range" min={560} max={820} step={10} value={tokens.contentWidth ?? 680} onChange={event => setTokens({ contentWidth: Number(event.target.value) })} className="w-full accent-enkarta-gold" /></label>
+        </div>
+        <div className="mt-4 space-y-3">
           {[
-            { key: 'color_primary', label: 'Color Principal', desc: 'Títulos, botones, acentos' },
-            { key: 'color_secondary', label: 'Color de Fondo', desc: 'Fondo general de la invitación' },
-            { key: 'color_accent', label: 'Color de Texto', desc: 'Texto general y detalles' },
-          ].map(({ key, label, desc }) => (
-            <div key={key} className="flex items-center gap-3">
-              <input
-                type="color"
-                value={data[key as keyof InvitationParsed] as string}
-                onChange={e => onChange({ [key]: e.target.value } as Partial<InvitationParsed>)}
-                className="w-10 h-10 rounded-xl border border-gray-200 cursor-pointer p-0.5 flex-shrink-0"
-              />
-              <div>
-                <p className="text-sm font-outfit text-gray-700">{label}</p>
-                <p className="text-xs text-gray-400 font-outfit">{desc}</p>
-              </div>
-              <p className="ml-auto text-xs font-mono text-gray-500">
-                {data[key as keyof InvitationParsed] as string}
-              </p>
+            { key: 'sectionRadius' as const, label: 'Secciones', min: 0, max: 40 },
+            { key: 'cardRadius' as const, label: 'Tarjetas', min: 0, max: 40 },
+            { key: 'buttonRadius' as const, label: 'Botones', min: 0, max: 50 },
+            { key: 'fieldRadius' as const, label: 'Campos', min: 0, max: 28 },
+          ].map(item => (
+            <label key={item.key} className="block"><span className="mb-1 flex justify-between text-[10px] font-outfit text-[#756d64]"><span>Radio de {item.label.toLowerCase()}</span><strong>{tokens[item.key] ?? 0}px</strong></span><input type="range" min={item.min} max={item.max} step={2} value={tokens[item.key] ?? 0} onChange={event => setTokens({ [item.key]: Number(event.target.value) })} className="w-full accent-enkarta-gold" /></label>
+          ))}
+          <label className="block"><span className="mb-1 flex justify-between text-[10px] font-outfit text-[#756d64]"><span>Escala de espacio</span><strong>{Math.round((tokens.spacingScale ?? 1) * 100)}%</strong></span><input type="range" min={0.8} max={1.25} step={0.05} value={tokens.spacingScale ?? 1} onChange={event => setTokens({ spacingScale: Number(event.target.value) })} className="w-full accent-enkarta-gold" /></label>
+        </div>
+        <div className="mt-4 grid grid-cols-[1fr_1.4fr] gap-3 rounded-xl border border-[#eee8e1] p-3">
+          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Color de iconos</span><input type="color" value={cfg.iconColor || theme.primary || '#b8975a'} onChange={event => onChange({ config: { ...cfg, iconColor: event.target.value } })} className="h-10 w-full cursor-pointer rounded-lg border border-[#e5dfd7] p-1" /></label>
+          <label><span className="mb-1 flex justify-between text-[10px] font-outfit text-[#756d64]"><span>Tamaño de iconos</span><strong>{Math.round((cfg.iconScale ?? 1) * 100)}%</strong></span><input type="range" min={0.7} max={1.4} step={0.05} value={cfg.iconScale ?? 1} onChange={event => onChange({ config: { ...cfg, iconScale: Number(event.target.value) } })} className="mt-2 w-full accent-enkarta-gold" /></label>
+        </div>
+      </section>
+
+      <section className={cardCls}>
+        <h4 className={titleCls}>Costura entre secciones</h4>
+        <div className="mt-3 grid grid-cols-3 gap-1.5">
+          {SEAM_OPTIONS.map(option => {
+            const on = (tokens.seam ?? 'curve') === option.key;
+            return (
+              <button key={option.key} type="button" onClick={() => setTokens({ seam: option.key })} className={`overflow-hidden rounded-xl border transition-all ${on ? 'border-enkarta-gold ring-1 ring-enkarta-gold/35' : 'border-[#ebe5de] hover:border-enkarta-gold/40'}`} title={option.label}>
+                <span className="relative block h-10" style={{ background: seamPaper }}><Seam shape={option.key} from={seamBand} height={26} shadow={false} /></span>
+                <span className={`block py-1 text-[9px] font-outfit leading-none ${on ? 'text-enkarta-gold' : 'text-[#8f867d]'}`}>{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <label className="mt-3 block"><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Movimiento de la costura</span><select className={inputCls} value={tokens.seamFx ?? 'none'} onChange={event => setTokens({ seamFx: event.target.value as NonNullable<TemplateTokens['seamFx']> })}>{SEAM_FX_OPTIONS.map(option => <option key={option.key} value={option.key}>{option.label} — {option.desc}</option>)}</select></label>
+      </section>
+
+      <section className={`${cardCls} overflow-hidden`}>
+        <div className="flex items-center gap-3">
+          <span className={`grid h-12 w-12 flex-none place-items-center rounded-2xl text-lg font-outfit font-bold ${audit.score >= 85 ? 'bg-emerald-50 text-emerald-600' : audit.score >= 65 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>{audit.score}</span>
+          <div><h4 className={titleCls}>Auditor de consistencia</h4><p className="mt-1 text-xs font-outfit text-[#82796f]">{audit.score >= 85 ? 'El sistema visual está bien coordinado.' : 'Hay estilos aislados que conviene unificar.'}</p></div>
+        </div>
+        <div className="mt-4 space-y-2">
+          {audit.issues.map(issue => (
+            <div key={issue.key} className="flex items-center justify-between gap-3 rounded-xl bg-[#faf8f5] px-3 py-2">
+              <div className="min-w-0"><p className="text-[11px] font-outfit font-medium text-[#5e564d]">{issue.label}</p><p className="truncate text-[9px] font-outfit text-[#9c9389]">{issue.detail}</p></div>
+              <span className={`flex-none rounded-full px-2 py-1 text-[9px] font-outfit font-semibold ${issue.level === 'good' ? 'bg-emerald-50 text-emerald-600' : issue.level === 'warning' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>{issue.count}/{issue.limit}</span>
             </div>
           ))}
         </div>
-      </div>
-
-      <div>
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">Ritmo Visual del Modelo</h4>
-        <p className="text-xs text-gray-400 font-outfit mb-3">
-          Estos tokens ayudan a que la invitación conserve el carácter del modelo aunque muevas bloques o cambies colores.
-        </p>
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-outfit text-gray-500 mb-1">Espaciado</label>
-              <select className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit" value={tokens.spacing ?? 'normal'} onChange={e => setTokens({ spacing: e.target.value as typeof tokens.spacing })}>
-                <option value="compact">Compacto</option>
-                <option value="normal">Balanceado</option>
-                <option value="airy">Amplio</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-outfit text-gray-500 mb-1">Superficie</label>
-              <select className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit" value={tokens.surface ?? 'flat'} onChange={e => setTokens({ surface: e.target.value as typeof tokens.surface })}>
-                <option value="flat">Plana</option>
-                <option value="soft">Suave</option>
-                <option value="card">Tarjeta</option>
-              </select>
-            </div>
+        {!confirmClean ? (
+          <button type="button" onClick={() => setConfirmClean(true)} className="mt-4 w-full rounded-xl border border-[#ded7ce] bg-white py-2.5 text-xs font-outfit font-semibold text-[#61584f] hover:border-enkarta-gold hover:text-enkarta-gold">Limpiar diseño</button>
+        ) : (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+            <p className="text-[10px] font-outfit leading-relaxed text-amber-800">Se normalizarán fuentes, colores, radios y espacios manuales usando <strong>{(activeKit ?? bestKit)?.name}</strong>. Textos, fotos, bloques e información del evento se conservan.</p>
+            <div className="mt-2 flex gap-2"><button type="button" onClick={() => setConfirmClean(false)} className="flex-1 rounded-lg border border-amber-200 bg-white py-2 text-[10px] font-outfit text-amber-800">Cancelar</button><button type="button" onClick={cleanDesign} className="flex-1 rounded-lg bg-amber-700 py-2 text-[10px] font-outfit font-semibold text-white">Sí, normalizar</button></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-outfit text-gray-500 mb-1">Ancho del contenido ({tokens.contentWidth ?? 680}px)</label>
-              <input type="range" min={560} max={820} step={10} value={tokens.contentWidth ?? 680} onChange={e => setTokens({ contentWidth: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
-            </div>
-            <div>
-              <label className="block text-xs font-outfit text-gray-500 mb-1">Radio de sección ({tokens.sectionRadius ?? 0}px)</label>
-              <input type="range" min={0} max={36} step={2} value={tokens.sectionRadius ?? 0} onChange={e => setTokens({ sectionRadius: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
-            </div>
-          </div>
-          {/* Costura: el borde con el que una banda de color entra en la siguiente.
-              Se elige mirándolo, no por su nombre — "ogiva" o "chaflán" no dicen nada. */}
-          <div>
-            <label className="block text-xs font-outfit text-gray-500 mb-1.5">Costura entre secciones</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {SEAM_OPTIONS.map(o => {
-                const on = (tokens.seam ?? 'curve') === o.key;
-                return (
-                  <button
-                    key={o.key}
-                    type="button"
-                    onClick={() => setTokens({ seam: o.key })}
-                    className={`rounded-xl border overflow-hidden transition-all ${on ? 'border-enkarta-gold ring-1 ring-enkarta-gold/40' : 'border-gray-100 hover:border-enkarta-gold/40'}`}
-                    title={o.label}
-                  >
-                    <span className="relative block h-10" style={{ background: seamPaper }}>
-                      <Seam shape={o.key} from={seamBand} height={26} shadow={false} />
-                    </span>
-                    <span className={`block text-[9px] font-outfit py-1 leading-none ${on ? 'text-enkarta-gold' : 'text-gray-400'}`}>{o.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-outfit text-gray-500 mb-1">Aire lateral ({tokens.sectionInset ?? 24}px)</label>
-            <input type="range" min={12} max={40} step={2} value={tokens.sectionInset ?? 24} onChange={e => setTokens({ sectionInset: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
-          </div>
-          <button
-            type="button"
-            onClick={() => onChange({ config: { ...cfg, tokens: tokensForTemplate(data.template) } })}
-            className="text-xs text-gray-400 hover:underline font-outfit"
-          >
-            Restaurar tokens del modelo
-          </button>
-        </div>
-      </div>
-
-      {/* Nota: dónde se aplica cada cosa */}
-      <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
-        <p className="text-xs text-amber-700 font-outfit">
-          ℹ️ Estos 3 colores aplican a las plantillas clásicas y al sobre de entrada.
-          Para recolorear una plantilla premium usa la pestaña <strong>Decoración</strong>,
-          que controla su paleta completa.
-        </p>
-      </div>
-
+        )}
+      </section>
     </div>
   );
 }

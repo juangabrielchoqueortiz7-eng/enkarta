@@ -8,14 +8,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import type { Block, BlockType, BlockLayout } from '@/lib/types';
-import { useBlockTheme } from './theme';
+import { useBlockDesign, useBlockTheme } from './theme';
 import { Editable, useBlockData, useBlockEdit } from './editable';
 import { useCountdown, CopyBtn, PhotoGrid, EventIcon, OrchidSprig, Odometer, Tilt, type GalleryLayout } from '../shared';
-import { Stagger, RevealDraw, PinnedStory } from '@/lib/scroll-motion';
+import { RevealDraw, PinnedStory } from '@/lib/scroll-motion';
 import { PetalBurst } from '../effects';
-import { renderElement, getElement } from './elements-library';
+import { renderElement, getElement, type ElementPalette } from './elements-library';
 import { InvitationDivider, DEFAULT_DIVIDER } from '../dividers';
 import { sanitizeSvg } from '@/lib/sanitize-svg';
+import { PassportHeroBlock, PassportTicketBlock } from './passport-scenes';
+import { imageAspect, imageColorOverlayStyle, imageFilter, imageFrameStyle, imageTemperatureStyle, imageTransform, imageViewportStyle } from '@/lib/image-effects';
+import QrCard from '../QrCard';
 
 // ── Lectura de props con defaults ─────────────────────────────────────────────
 const str = (b: Block, k: string, d = '') => (typeof b.props[k] === 'string' ? (b.props[k] as string) : d);
@@ -37,13 +40,29 @@ export const FONT_OPTIONS = [
   { value: 'outfit', label: 'Sans (Outfit)' },
 ];
 function famClass(b: Block) { return FONT_CLASS[str(b, 'family')] || ''; }
-function typoStyle(b: Block): React.CSSProperties {
+function typeScale(b: Block) { return Math.max(0.75, Math.min(1.35, num(b, '__responsiveFontScale', 1))); }
+type TypeRole = 'title' | 'subtitle' | 'body' | 'label';
+function semanticPx(px: number, role: TypeRole = 'body') { return `calc(${px}px * var(--ek-type-${role}, 1))`; }
+function scaledPx(b: Block, px: number, role: TypeRole = 'body') { return `calc(${Math.round(px * typeScale(b) * 10) / 10}px * var(--ek-type-${role}, 1))`; }
+function fluidType(b: Block, min: number, vw: number, max: number, role: TypeRole = 'title') {
+  const scale = typeScale(b);
+  return `clamp(calc(${Math.round(min * scale * 10) / 10}px * var(--ek-type-${role}, 1)), calc(${Math.round(vw * scale * 10) / 10}vw * var(--ek-type-${role}, 1)), calc(${Math.round(max * scale * 10) / 10}px * var(--ek-type-${role}, 1)))`;
+}
+function typoStyle(b: Block, role: TypeRole = 'body'): React.CSSProperties {
   const s: React.CSSProperties = {};
-  const size = num(b, 'size', 0); if (size) s.fontSize = `${size}px`;
+  const size = num(b, 'size', 0); if (size) s.fontSize = scaledPx(b, size, role);
   const color = str(b, 'textColor'); if (color) s.color = color;
   const w = str(b, 'weight'); if (w) s.fontWeight = w as React.CSSProperties['fontWeight'];
   const tk = b.props.tracking; if (typeof tk === 'number') s.letterSpacing = `${tk}px`;
-  const lh = b.props.lineHeight; if (typeof lh === 'number') s.lineHeight = String(lh);
+  const lh = b.props.lineHeight; if (typeof lh === 'number' && lh > 0) s.lineHeight = String(lh);
+  const textCase = str(b, 'textCase');
+  if (['uppercase', 'lowercase', 'capitalize'].includes(textCase)) s.textTransform = textCase as React.CSSProperties['textTransform'];
+  const opacity = b.props.textOpacity;
+  if (typeof opacity === 'number') s.opacity = Math.max(0, Math.min(100, opacity)) / 100;
+  const shadow = str(b, 'textShadow');
+  if (shadow === 'soft') s.textShadow = '0 2px 12px rgba(20,15,10,0.2)';
+  if (shadow === 'strong') s.textShadow = '0 3px 18px rgba(20,15,10,0.42)';
+  if (shadow === 'glow') s.textShadow = '0 0 18px currentColor';
   return s;
 }
 
@@ -71,15 +90,33 @@ export interface BlockDef {
   Component: React.FC<{ block: Block }>;
 }
 
+// Los componentes interactivos comparten la misma geometría que la plantilla.
+// Así una invitación editorial conserva esquinas precisas y una romántica usa
+// curvas amplias, sin que cada bloque parezca pertenecer a un producto distinto.
+function useInvitationShape() {
+  const tokens = useBlockDesign();
+  const source = tokens.sectionRadius ?? 18;
+  const mood = source <= 12 ? 'editorial' : source >= 24 ? 'rounded' : 'balanced';
+  const cardRadius = tokens.cardRadius ?? (mood === 'editorial' ? Math.max(7, source) : mood === 'rounded' ? Math.min(30, source) : Math.max(14, source));
+  const fieldRadius = tokens.fieldRadius ?? (mood === 'editorial' ? 8 : mood === 'rounded' ? 16 : 12);
+  const buttonRadius = tokens.buttonRadius ?? (mood === 'editorial' ? 8 : mood === 'rounded' ? 999 : 14);
+  return { mood, cardRadius, fieldRadius, buttonRadius, shadow: tokens.shadow ?? 'soft' };
+}
+
 // ── Botón decorativo compartido ───────────────────────────────────────────────
 function Pill({ href, children, filled }: { href?: string; children: React.ReactNode; filled?: boolean }) {
   const t = useBlockTheme();
+  const shape = useInvitationShape();
+  const buttonShadow = shape.shadow === 'none' ? undefined
+    : shape.shadow === 'strong' ? `0 16px 40px color-mix(in srgb, ${t.primary} 34%, transparent)`
+    : shape.shadow === 'medium' ? `0 12px 30px color-mix(in srgb, ${t.primary} 25%, transparent)`
+    : `0 9px 24px color-mix(in srgb, ${t.primary} 18%, transparent)`;
   const style: React.CSSProperties = filled
-    ? { background: t.primary, color: t.onPrimary, borderRadius: '20px 6px 20px 6px' }
-    : { border: `1px solid ${t.line}`, color: t.primary, borderRadius: '20px 6px 20px 6px' };
+    ? { background: t.primary, color: t.onPrimary, borderRadius: shape.buttonRadius, boxShadow: buttonShadow }
+    : { border: `1px solid ${t.line}`, color: t.primary, borderRadius: shape.buttonRadius, background: `color-mix(in srgb, ${t.surface} 82%, ${t.bg})` };
   return (
     <a href={href || '#'} target="_blank" rel="noreferrer"
-      className={`inline-flex items-center justify-center px-7 py-2.5 font-cinzel uppercase tracking-[0.18em] text-[11px] transition-opacity hover:opacity-90 ek-shine ${filled ? 'ek-shine-auto' : ''}`}
+      className={`inline-flex min-h-11 items-center justify-center px-7 py-2.5 font-cinzel uppercase tracking-[0.16em] text-[11px] transition-all hover:-translate-y-px hover:opacity-95 ek-shine ${filled ? 'ek-shine-auto' : ''}`}
       style={style}>
       {children}
     </a>
@@ -92,13 +129,13 @@ const CoverBlock: React.FC<{ block: Block }> = ({ block }) => {
   const image = str(block, 'image');
   return (
     <div className="flex flex-col items-center">
-      <Editable as="h1" k="groom" effect="write" value={str(block, 'groom', 'Lorena')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={{ color: t.primary, fontSize: 'clamp(44px,13vw,76px)', ...typoStyle(block) }} />
-      <span className="font-cormorant my-1" style={{ color: t.muted, fontSize: '24px' }}>&amp;</span>
-      <Editable as="h1" k="bride" effect="write" value={str(block, 'bride', 'Marcos')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={{ color: t.primary, fontSize: 'clamp(44px,13vw,76px)', ...typoStyle(block) }} />
-      <Editable as="p" k="tagline" effect="cascade" value={str(block, 'tagline', 'Nos casamos')} className="font-cinzel uppercase tracking-[0.22em] mt-5" style={{ color: t.muted, fontSize: '12px' }} />
+      <Editable as="h1" k="groom" effect="write" value={str(block, 'groom', 'Lorena')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={{ color: t.primary, fontSize: fluidType(block, 44, 13, 76), ...typoStyle(block, 'title') }} />
+      <span className="font-cormorant my-1" style={{ color: t.muted, fontSize: scaledPx(block, 24, 'subtitle') }}>&amp;</span>
+      <Editable as="h1" k="bride" effect="write" value={str(block, 'bride', 'Marcos')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={{ color: t.primary, fontSize: fluidType(block, 44, 13, 76), ...typoStyle(block, 'title') }} />
+      <Editable as="p" k="tagline" effect="cascade" value={str(block, 'tagline', 'Nos casamos')} className="font-cinzel uppercase tracking-[0.22em] mt-5" style={{ color: t.muted, fontSize: scaledPx(block, 12, 'label') }} />
       {image && (
         <div className="mt-8 w-full overflow-hidden rounded-2xl shadow-sm" style={{ maxWidth: 480, border: `1px solid ${t.line}` }}>
-          <img src={image} alt="" className="w-full object-cover" style={{ maxHeight: 600, objectPosition: str(block, 'focal', '50% 50%') }} />
+          <img src={image} alt="" decoding="async" fetchPriority="high" className="w-full object-cover" style={{ maxHeight: 600, objectPosition: str(block, 'focal', '50% 50%') }} />
         </div>
       )}
     </div>
@@ -111,18 +148,19 @@ const HeadingBlock: React.FC<{ block: Block }> = ({ block }) => {
   const font = str(block, 'font', 'caps');
   const size = num(block, 'size', 0);
   const fc = famClass(block);
-  const ts = typoStyle(block);
-  if (font === 'script') return <Editable as="h2" k="text" effect="write" value={text} className={fc || 'font-great'} style={{ color: t.primary, fontSize: size ? `${size}px` : 'clamp(34px,7vw,52px)', ...ts }} />;
-  if (font === 'serif') return <Editable as="h2" k="text" effect="cascadeWords" value={text} className={fc || 'font-playfair'} style={{ color: t.primary, fontSize: size ? `${size}px` : 'clamp(24px,5vw,36px)', ...ts }} />;
-  return <Editable as="h2" k="text" effect="cascade" value={text} className={fc || 'font-cinzel uppercase tracking-[0.18em]'} style={{ color: t.muted, fontSize: size ? `${size}px` : 'clamp(14px,3vw,18px)', ...ts }} />;
+  const role: TypeRole = font === 'caps' ? 'subtitle' : 'title';
+  const ts = typoStyle(block, role);
+  if (font === 'script') return <Editable as="h2" k="text" effect="write" value={text} className={fc || 'font-great'} style={{ color: t.primary, fontSize: size ? scaledPx(block, size, role) : fluidType(block, 34, 7, 52, role), ...ts }} />;
+  if (font === 'serif') return <Editable as="h2" k="text" effect="cascadeWords" value={text} className={fc || 'font-playfair'} style={{ color: t.primary, fontSize: size ? scaledPx(block, size, role) : fluidType(block, 24, 5, 36, role), ...ts }} />;
+  return <Editable as="h2" k="text" effect="cascade" value={text} className={fc || 'font-cinzel uppercase tracking-[0.18em]'} style={{ color: t.muted, fontSize: size ? scaledPx(block, size, role) : fluidType(block, 14, 3, 18, role), ...ts }} />;
 };
 
 const TextBlock: React.FC<{ block: Block }> = ({ block }) => (
-  <Editable as="p" k="text" value={str(block, 'text', 'Escribe aquí tu mensaje…')} className={`${famClass(block) || 'font-cormorant'} ${bool(block, 'italic') ? 'italic' : ''}`} style={{ color: 'inherit', fontSize: '18px', lineHeight: 1.75, opacity: 0.96, ...typoStyle(block) }} />
+  <Editable as="p" k="text" value={str(block, 'text', 'Escribe aquí tu mensaje…')} className={`${famClass(block) || 'font-cormorant'} ${bool(block, 'italic') ? 'italic' : ''}`} style={{ color: 'inherit', fontSize: scaledPx(block, 18, 'body'), lineHeight: 1.75, opacity: 0.96, ...typoStyle(block, 'body') }} />
 );
 
 // Dígito con volteo 3D al cambiar (estilo tablero de aeropuerto/reloj flip).
-function FlipDigit({ value }: { value: string }) {
+function FlipDigit({ value, compact = false }: { value: string; compact?: boolean }) {
   const t = useBlockTheme();
   const reduced = useReducedMotion();
   const [display, setDisplay] = useState(value);
@@ -140,7 +178,7 @@ function FlipDigit({ value }: { value: string }) {
       className="relative inline-flex items-center justify-center font-playfair font-bold"
       style={{
         color: t.onPrimary, background: t.primaryDeep, borderRadius: 8,
-        padding: '6px 2px', minWidth: '1.1em', fontSize: 'clamp(26px,7vw,42px)', lineHeight: 1,
+        padding: compact ? '5px 1px' : '6px 2px', minWidth: '1.05em', fontSize: semanticPx(compact ? 21 : 30, 'subtitle'), lineHeight: 1,
         boxShadow: 'inset 0 -1px 0 rgba(255,255,255,0.08), 0 6px 14px -6px rgba(0,0,0,0.5)',
         transformStyle: 'preserve-3d', transition: 'transform .28s ease',
         transform: flipping ? 'rotateX(-90deg)' : 'rotateX(0deg)',
@@ -155,24 +193,28 @@ function FlipDigit({ value }: { value: string }) {
 
 const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const shape = useInvitationShape();
   const { days, hours, mins, secs } = useCountdown(str(block, 'isoDate', new Date().toISOString()));
-  const flip = str(block, 'display', 'flip') !== 'plain';
-  const units: [number, string][] = [[days, 'Días'], [hours, 'Horas'], [mins, 'Min'], [secs, 'Seg']];
+  const storedDisplay = str(block, 'display', 'cards');
+  const display = storedDisplay === 'plain' ? 'minimal' : storedDisplay;
+  const units: [number, string][] = [[days, 'Días'], [hours, 'Horas'], [mins, 'Min'], ...(bool(block, 'showSeconds', true) ? [[secs, 'Seg'] as [number, string]] : [])];
+  const gridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: `repeat(${units.length}, minmax(0, 1fr))`, gap: 'clamp(6px, 2vw, 12px)', maxWidth: 560, margin: '0 auto' };
+  const title = <p className="mb-5 font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 17, 'body') }}>{str(block, 'label', 'Solo faltan')}</p>;
+  const numberSize = (value: number, regular: number, compact: number) => scaledPx(block, value >= 100 ? compact : regular, 'subtitle');
 
-  if (flip) {
+  if (display === 'flip') {
     return (
       <div>
-        <p className="font-cormorant italic mb-5" style={{ color: t.muted, fontSize: '17px' }}>{str(block, 'label', 'Solo faltan')}</p>
-        <div className="flex items-start justify-center gap-3 sm:gap-4">
+        {title}
+        <div style={gridStyle}>
           {units.map(([n, l]) => {
             const s = String(n).padStart(2, '0');
             return (
-              <div key={l} className="flex flex-col items-center gap-2">
-                <span className="flex gap-1">
-                  <FlipDigit value={s[0]} />
-                  <FlipDigit value={s[1]} />
+              <div key={l} className="flex min-w-0 flex-col items-center gap-2">
+                <span className="flex max-w-full gap-0.5">
+                  {s.split('').map((digit, index) => <FlipDigit key={`${l}-${index}`} value={digit} compact={s.length > 2} />)}
                 </span>
-                <span className="font-cinzel uppercase tracking-widest" style={{ color: t.muted, fontSize: '10px' }}>{l}</span>
+                <span className="font-cinzel uppercase tracking-widest" style={{ color: t.muted, fontSize: scaledPx(block, 10, 'label') }}>{l}</span>
               </div>
             );
           })}
@@ -181,14 +223,48 @@ const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
     );
   }
 
+  if (display === 'rings') {
+    return (
+      <div>
+        {title}
+        <div style={gridStyle}>
+          {units.map(([n, l]) => (
+            <div key={l} className="flex min-w-0 flex-col items-center gap-2">
+              <div className="flex aspect-square w-full max-w-[78px] items-center justify-center rounded-full" style={{ border: `1.5px solid ${t.primary}`, background: `radial-gradient(circle, color-mix(in srgb, ${t.primary} 9%, transparent), transparent 68%)`, boxShadow: `0 10px 28px color-mix(in srgb, ${t.primary} 10%, transparent)` }}>
+                <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: numberSize(n, 34, 27) }}><Odometer value={n} /></span>
+              </div>
+              <span className="font-cinzel uppercase tracking-[0.14em]" style={{ color: t.muted, fontSize: scaledPx(block, 9, 'label') }}>{l}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (display === 'minimal') {
+    return (
+      <div>
+        {title}
+        <div style={{ ...gridStyle, gap: 0 }}>
+          {units.map(([n, l], index) => (
+            <div key={l} className="flex min-w-0 flex-col items-center px-1.5" style={{ borderLeft: index ? `1px solid ${t.line}` : undefined }}>
+              <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: numberSize(n, 39, 29) }}><Odometer value={n} /></span>
+              <span className="mt-2 font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: scaledPx(block, 9, 'label') }}>{l}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <p className="font-cormorant italic mb-4" style={{ color: t.muted, fontSize: '17px' }}>{str(block, 'label', 'Solo faltan')}</p>
-      <div className="flex items-baseline justify-center gap-5">
+      {title}
+      <div style={gridStyle}>
         {units.map(([n, l]) => (
-          <div key={l} className="flex flex-col items-center">
-            <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: 'clamp(28px,7vw,44px)' }}><Odometer value={n} /></span>
-            <span className="font-cinzel uppercase tracking-widest mt-1" style={{ color: t.muted, fontSize: '10px' }}>{l}</span>
+          <div key={l} className="flex min-w-0 flex-col items-center px-1 py-3.5" style={{ borderRadius: shape.cardRadius, border: `1px solid ${t.line}`, background: `linear-gradient(145deg, color-mix(in srgb, ${t.bg} 72%, white), color-mix(in srgb, ${t.primary} 7%, ${t.bg}))`, boxShadow: '0 12px 34px rgba(34,27,18,.065)' }}>
+            <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: numberSize(n, 36, 28) }}><Odometer value={n} /></span>
+            <span className="mt-2 font-cinzel uppercase tracking-[0.12em]" style={{ color: t.muted, fontSize: scaledPx(block, 9, 'label') }}>{l}</span>
           </div>
         ))}
       </div>
@@ -198,15 +274,16 @@ const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 const DateBadgeBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const shape = useInvitationShape();
   return (
     <div className="flex items-center justify-center gap-4">
-      <span className="font-cinzel uppercase tracking-[0.2em]" style={{ color: t.muted, fontSize: '13px' }}>{str(block, 'weekday', 'Sábado')}</span>
-      <div className="flex flex-col items-center justify-center w-24 h-28 rounded-full flex-shrink-0" style={{ border: `1px solid ${t.line}` }}>
-        {str(block, 'city') && <span className="font-cinzel uppercase tracking-widest" style={{ color: t.muted, fontSize: '8px' }}>{str(block, 'city')}</span>}
-        <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: '46px' }}>{str(block, 'day', '04')}</span>
-        <span className="font-cinzel tracking-widest" style={{ color: t.muted, fontSize: '10px' }}>{str(block, 'year', '2026')}</span>
+      <span className="font-cinzel uppercase tracking-[0.2em]" style={{ color: t.muted, fontSize: scaledPx(block, 13, 'label') }}>{str(block, 'weekday', 'Sábado')}</span>
+      <div className="flex flex-col items-center justify-center w-24 h-28 flex-shrink-0" style={{ border: `1px solid ${t.line}`, borderRadius: shape.mood === 'rounded' ? 999 : shape.cardRadius, background: `color-mix(in srgb, ${t.bg} 86%, white)` }}>
+        {str(block, 'city') && <span className="font-cinzel uppercase tracking-widest" style={{ color: t.muted, fontSize: scaledPx(block, 8, 'label') }}>{str(block, 'city')}</span>}
+        <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: scaledPx(block, 46, 'title') }}>{str(block, 'day', '04')}</span>
+        <span className="font-cinzel tracking-widest" style={{ color: t.muted, fontSize: scaledPx(block, 10, 'label') }}>{str(block, 'year', '2026')}</span>
       </div>
-      <span className="font-cinzel uppercase tracking-[0.2em]" style={{ color: t.muted, fontSize: '13px' }}>{str(block, 'month', 'Julio')}</span>
+      <span className="font-cinzel uppercase tracking-[0.2em]" style={{ color: t.muted, fontSize: scaledPx(block, 13, 'label') }}>{str(block, 'month', 'Julio')}</span>
     </div>
   );
 };
@@ -218,10 +295,10 @@ const EventCardBlock: React.FC<{ block: Block }> = ({ block }) => {
       <span className="inline-flex w-12 h-12 mb-3">
         <EventIcon name={str(block, 'icon', 'church')} className="w-12 h-12" stroke={t.primary} lottieColors={block.props.iconColors as any} speed={block.props.iconSpeed as any} />
       </span>
-      <h3 className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: '14px' }}>{str(block, 'title', 'Ceremonia')}</h3>
-      <p className="font-playfair font-bold mt-2" style={{ color: t.primary, fontSize: '30px' }}>{str(block, 'time', '16:00 h')}</p>
-      <p className="font-cormorant mt-1" style={{ color: 'inherit', fontSize: '16px' }}>{str(block, 'place', 'Lugar del evento')}</p>
-      {str(block, 'address') && <p className="font-cormorant" style={{ color: t.muted, fontSize: '14px' }}>{str(block, 'address')}</p>}
+      <h3 className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'subtitle') }}>{str(block, 'title', 'Ceremonia')}</h3>
+      <p className="font-playfair font-bold mt-2" style={{ color: t.primary, fontSize: scaledPx(block, 30, 'title') }}>{str(block, 'time', '16:00 h')}</p>
+      <p className="font-cormorant mt-1" style={{ color: 'inherit', fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'place', 'Lugar del evento')}</p>
+      {str(block, 'address') && <p className="font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'body') }}>{str(block, 'address')}</p>}
       {str(block, 'mapsUrl') && <div className="mt-4"><Pill href={str(block, 'mapsUrl')}>Ver ubicación</Pill></div>}
     </div>
   );
@@ -232,8 +309,8 @@ const DressCodeBlock: React.FC<{ block: Block }> = ({ block }) => {
   return (
     <div className="flex flex-col items-center">
       <span className="inline-flex w-12 h-12 mb-3"><EventIcon name={str(block, 'icon', 'dress')} className="w-12 h-12" stroke={t.primary} /></span>
-      <h3 className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: '15px' }}>{str(block, 'title', 'Código de vestimenta')}</h3>
-      <div className="font-cormorant mt-3" style={{ color: 'inherit', fontSize: '17px' }}>
+      <h3 className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'subtitle') }}>{str(block, 'title', 'Código de vestimenta')}</h3>
+      <div className="font-cormorant mt-3" style={{ color: 'inherit', fontSize: scaledPx(block, 17, 'body') }}>
         <p><span className="font-semibold">Hombres:</span> <span style={{ color: t.muted }}>{str(block, 'men', 'Formal')}</span></p>
         <p><span className="font-semibold">Damas:</span> <span style={{ color: t.muted }}>{str(block, 'women', 'Formal')}</span></p>
       </div>
@@ -243,39 +320,87 @@ const DressCodeBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const shape = useInvitationShape();
   const items = list<{ time?: string; label?: string; icon?: string; iconColors?: any; iconSpeed?: number }>(block, 'items');
+  const layout = str(block, 'layout', 'timeline');
+  const iconFor = (it: (typeof items)[number], size = 42) => (
+    <span className="inline-flex flex-shrink-0 items-center justify-center" style={{ width: size, height: size }}>
+      <EventIcon name={it.icon || 'rings'} className="h-full w-full" stroke={it.iconColors?.__tint || t.primary} lottieColors={it.iconColors} speed={it.iconSpeed} />
+    </span>
+  );
+  const cardStyle: React.CSSProperties = { borderRadius: shape.cardRadius, border: `1px solid ${t.line}`, background: `color-mix(in srgb, ${t.bg} 78%, white)`, boxShadow: '0 10px 28px rgba(34,27,18,.05)' };
+
+  const content = layout === 'cards' ? (
+    <div className="mx-auto grid max-w-xl grid-cols-2 gap-3">
+      {items.map((it, i) => (
+        <div key={i} className="flex min-w-0 flex-col items-center px-3 py-4 text-center" style={cardStyle}>
+          {iconFor(it, 44)}
+          <p className="mt-2 font-cormorant leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 16, 'body') }}>{it.label}</p>
+          <p className="mt-1 font-cinzel tracking-[0.08em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') }}>{it.time}</p>
+        </div>
+      ))}
+    </div>
+  ) : layout === 'carousel' ? (
+    <div className="mx-auto flex max-w-xl snap-x snap-mandatory gap-3 overflow-x-auto pb-3 text-left" style={{ scrollbarWidth: 'thin' }}>
+      {items.map((it, i) => (
+        <div key={i} className="flex min-w-[72%] snap-center items-center gap-3 px-4 py-4" style={cardStyle}>
+          {iconFor(it, 48)}
+          <span className="min-w-0">
+            <span className="block font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 17, 'body') }}>{it.label}</span>
+            <span className="mt-0.5 block font-cinzel tracking-[0.1em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') }}>{it.time}</span>
+          </span>
+        </div>
+      ))}
+    </div>
+  ) : layout === 'compact' ? (
+    <div className="mx-auto max-w-lg overflow-hidden text-left" style={cardStyle}>
+      {items.map((it, i) => (
+        <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ borderTop: i ? `1px solid ${t.line}` : undefined }}>
+          {iconFor(it, 38)}
+          <p className="min-w-0 flex-1 font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 16, 'body') }}>{it.label}</p>
+          <p className="flex-shrink-0 font-cinzel tracking-[0.08em]" style={{ color: t.primary, fontSize: scaledPx(block, 12, 'label') }}>{it.time}</p>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div className="mx-auto max-w-lg text-left">
+      {items.map((it, i) => (
+        <div key={i} className="relative flex gap-4 pb-5 last:pb-0">
+          {i < items.length - 1 && <span className="absolute left-[24px] top-[49px] bottom-0 w-px" style={{ background: t.line }} />}
+          <span className="relative z-[1] flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full" style={{ background: `color-mix(in srgb, ${t.primary} 10%, ${t.bg})`, border: `1px solid ${t.line}` }}>{iconFor(it, 32)}</span>
+          <div className="min-w-0 flex-1 pt-0.5">
+            <p className="font-cormorant leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 18, 'body') }}>{it.label}</p>
+            <p className="mt-1 font-cinzel tracking-[0.1em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') }}>{it.time}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div>
-      {str(block, 'title') && <h2 className="font-great mb-6" style={{ color: t.primary, fontSize: 'clamp(32px,6vw,48px)' }}>{str(block, 'title')}</h2>}
-      <Stagger className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-2xl mx-auto" step={130}>
-        {items.map((it, i) => (
-          <div key={i} className="flex flex-col items-center">
-            <span className="inline-flex w-10 h-10 mb-2"><EventIcon name={it.icon || 'rings'} className="w-10 h-10" stroke={t.primary} lottieColors={it.iconColors} speed={it.iconSpeed} /></span>
-            <div className="w-full h-px my-2" style={{ background: t.line }} />
-            <p className="font-cormorant" style={{ color: t.muted, fontSize: '16px' }}>{it.label}</p>
-            <p className="font-cinzel tracking-[0.1em] mt-1" style={{ color: t.primary, fontSize: '18px' }}>{it.time}</p>
-          </div>
-        ))}
-      </Stagger>
+      {str(block, 'title') && <h2 className="mb-8 font-great" style={{ color: t.primary, fontSize: fluidType(block, 32, 6, 48, 'title') }}>{str(block, 'title')}</h2>}
+      {content}
     </div>
   );
 };
 
 const GiftBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const shape = useInvitationShape();
   return (
     <div>
-      <h2 className="font-great" style={{ color: t.primary, fontSize: 'clamp(32px,6vw,48px)' }}>{str(block, 'title', 'Sugerencia de Regalo')}</h2>
-      {str(block, 'message') && <p className="font-cormorant mt-3 mb-8 mx-auto" style={{ color: 'inherit', maxWidth: 480, fontSize: '17px' }}>{str(block, 'message')}</p>}
+      <h2 className="font-great" style={{ color: t.primary, fontSize: fluidType(block, 32, 6, 48, 'title') }}>{str(block, 'title', 'Sugerencia de Regalo')}</h2>
+      {str(block, 'message') && <p className="font-cormorant mt-3 mb-8 mx-auto" style={{ color: 'inherit', maxWidth: 480, fontSize: scaledPx(block, 17, 'body') }}>{str(block, 'message')}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
-        <Tilt className="rounded-2xl p-6 text-left" style={{ background: t.primaryDeep, color: t.onPrimary }}>
+        <Tilt className="p-6 text-left" style={{ background: t.primaryDeep, color: t.onPrimary, borderRadius: shape.cardRadius, boxShadow: '0 18px 42px rgba(22,18,12,.12)' }}>
           <p className="font-cinzel uppercase tracking-[0.16em] text-[12px] opacity-80">Transferencia bancaria</p>
           <p className="font-cinzel font-bold mt-3">{str(block, 'bank', 'Banco')}</p>
           <p className="font-cormorant mt-1 text-[15px]">{str(block, 'account', '000-0000')} <CopyBtn value={str(block, 'account')} color={t.onPrimary} /></p>
           {str(block, 'holder') && <p className="font-cinzel text-[12px] tracking-wide mt-2 opacity-80">{str(block, 'holder')}</p>}
         </Tilt>
         {str(block, 'qrUrl') && (
-          <Tilt className="rounded-2xl p-6 flex flex-col items-center justify-center" style={{ border: `1px solid ${t.line}` }}>
+          <Tilt className="p-6 flex flex-col items-center justify-center" style={{ border: `1px solid ${t.line}`, borderRadius: shape.cardRadius, background: `color-mix(in srgb, ${t.bg} 84%, white)` }}>
             <p className="font-cinzel uppercase tracking-[0.16em] text-[12px] mb-3" style={{ color: t.muted }}>Transferencia QR</p>
             <img src={str(block, 'qrUrl')} alt="QR" className="w-36 h-36 rounded-lg" />
           </Tilt>
@@ -290,7 +415,7 @@ const GalleryBlock: React.FC<{ block: Block }> = ({ block }) => {
   const layout = (str(block, 'layout', 'grid') as GalleryLayout);
   return (
     <div className="flex flex-col items-center">
-      {str(block, 'message') && <p className="font-cormorant mb-6 mx-auto" style={{ color: t.muted, maxWidth: 420, fontSize: '16px' }}>{str(block, 'message')}</p>}
+      {str(block, 'message') && <p className="font-cormorant mb-6 mx-auto" style={{ color: t.muted, maxWidth: 420, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
       <PhotoGrid images={list<string>(block, 'images')} layout={layout} className={layout === 'carousel' || layout === 'coverflow' ? 'w-full' : 'max-w-lg mx-auto'} />
       {str(block, 'shareUrl') && <div className="mt-6"><Pill href={str(block, 'shareUrl')}>Compartir fotos</Pill></div>}
     </div>
@@ -337,23 +462,31 @@ const StoryBlock: React.FC<{ block: Block }> = ({ block }) => {
 // Formulario de confirmación digital: guarda la respuesta vía /api/rsvp.
 function RsvpForm({ block }: { block: Block }) {
   const t = useBlockTheme();
-  const { slug } = useBlockData();
+  const shape = useInvitationShape();
+  const { slug, guest } = useBlockData();
   const { editing } = useBlockEdit();
-  const [name, setName] = useState('');
-  const [attending, setAttending] = useState<'yes' | 'no'>('yes');
-  const [passes, setPasses] = useState(1);
+  const [name, setName] = useState(guest?.name ?? '');
+  const [attending, setAttending] = useState<'yes' | 'no'>(guest?.status === 'declined' ? 'no' : 'yes');
+  const [passes, setPasses] = useState(guest?.confirmedPasses ?? 1);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(Boolean(guest && guest.status !== 'pending'));
 
-  const field: React.CSSProperties = { background: '#fff', border: `1px solid ${t.line}`, color: t.text, borderRadius: 10, padding: '10px 12px', fontSize: 15, width: '100%', outline: 'none' };
+  useEffect(() => {
+    setName(guest?.name ?? '');
+    setAttending(guest?.status === 'declined' ? 'no' : 'yes');
+    setPasses(guest?.confirmedPasses ?? 1);
+    setDone(Boolean(guest && guest.status !== 'pending'));
+  }, [guest]);
+
+  const field: React.CSSProperties = { background: `color-mix(in srgb, ${t.bg} 76%, white)`, border: `1px solid ${t.line}`, color: t.text, borderRadius: shape.fieldRadius, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none', boxShadow: '0 5px 18px rgba(30,24,16,.035)' };
 
   if (done) {
     return (
       <div className="text-center">
         {attending === 'yes' && <PetalBurst color={t.primary} />}
-        <p className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.primary, fontSize: 16 }}>¡Gracias por confirmar! 🤍</p>
-        <p className="font-cormorant mt-2" style={{ color: t.muted }}>Hemos recibido tu respuesta.</p>
+        <p className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.primary, fontSize: 16 }}>{attending === 'yes' ? '¡Asistencia confirmada! 🤍' : 'Gracias por avisarnos'}</p>
+        <p className="font-cormorant mt-2" style={{ color: t.muted }}>{attending === 'yes' ? `${passes} ${passes === 1 ? 'lugar reservado' : 'lugares reservados'}.` : 'Lamentamos que no puedas acompañarnos.'}</p>
       </div>
     );
   }
@@ -364,7 +497,7 @@ function RsvpForm({ block }: { block: Block }) {
     if (!slug) return;
     setBusy(true);
     try {
-      await fetch('/api/rsvp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug, name, attending, passes, message: msg }) });
+      await fetch(guest?.publicId ? '/api/guests/confirm' : '/api/rsvp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(guest?.publicId ? { slug, publicId: guest.publicId, confirmName: name, attending, passes, message: msg } : { slug, name, attending, passes, message: msg }) });
       setDone(true);
     } catch { /* sin conexión */ }
     setBusy(false);
@@ -374,7 +507,7 @@ function RsvpForm({ block }: { block: Block }) {
     <div className="mx-auto text-left" style={{ maxWidth: 380 }}>
       <h3 className="font-cinzel uppercase tracking-[0.16em] text-center mb-5" style={{ color: t.muted, fontSize: 15 }}>{str(block, 'message', 'Confirma tu asistencia')}</h3>
       <div className="space-y-3 font-cormorant">
-        <input style={field} placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />
+        {!guest?.publicId && <input style={field} placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />}
         <select style={field} value={attending} onChange={e => setAttending(e.target.value as 'yes' | 'no')}>
           <option value="yes">Sí, asistiré</option>
           <option value="no">No podré asistir</option>
@@ -382,11 +515,11 @@ function RsvpForm({ block }: { block: Block }) {
         {attending === 'yes' && (
           <div className="flex items-center gap-3">
             <span style={{ color: t.muted, fontSize: 15 }}>N.º de personas</span>
-            <input style={{ ...field, width: 90 }} type="number" min={1} max={20} value={passes} onChange={e => setPasses(parseInt(e.target.value) || 1)} />
+            <input style={{ ...field, width: 90 }} type="number" min={1} max={guest?.passes ?? 20} value={passes} onChange={e => setPasses(parseInt(e.target.value) || 1)} />
           </div>
         )}
         <textarea style={{ ...field, minHeight: 70 }} placeholder="Mensaje para los novios (opcional)" value={msg} onChange={e => setMsg(e.target.value)} />
-        <button onClick={submit} disabled={busy} className="w-full font-cinzel uppercase tracking-[0.18em] text-[12px] py-3 transition-opacity hover:opacity-90 disabled:opacity-50 ek-shine ek-shine-auto" style={{ background: t.primary, color: t.onPrimary, borderRadius: '20px 6px 20px 6px' }}>
+        <button onClick={submit} disabled={busy} className="w-full font-cinzel uppercase tracking-[0.16em] text-[12px] py-3 transition-all hover:-translate-y-px hover:opacity-95 disabled:opacity-50 ek-shine ek-shine-auto" style={{ background: t.primary, color: t.onPrimary, borderRadius: shape.buttonRadius, boxShadow: `0 9px 24px color-mix(in srgb, ${t.primary} 20%, transparent)` }}>
           {busy ? 'Enviando…' : str(block, 'buttonLabel', 'Confirmar asistencia')}
         </button>
       </div>
@@ -405,11 +538,79 @@ const RsvpBlock: React.FC<{ block: Block }> = ({ block }) => {
   );
 };
 
+/** Pase individual como bloque nativo: nombre, cupos, mesa, código y QR real. */
+const AccessPassBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const t = useBlockTheme();
+  const { guest } = useBlockData();
+  const { editing } = useBlockEdit();
+  const title = str(block, 'title', 'Tu pase personal');
+  const message = str(block, 'message', 'Preséntalo al ingresar al evento.');
+
+  if (!guest) {
+    return (
+      <div className="mx-auto max-w-sm rounded-[24px] border border-dashed px-6 py-8 text-center" style={{ borderColor: t.line, background: `color-mix(in srgb, ${t.bg} 82%, white)` }}>
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl text-2xl" style={{ background: `color-mix(in srgb, ${t.primary} 12%, white)` }}>▦</div>
+        <p className="mt-4 font-cinzel text-sm uppercase tracking-[0.15em]" style={{ color: t.text }}>{title}</p>
+        <p className="mt-2 font-cormorant text-lg" style={{ color: t.muted }}>{editing ? 'Selecciona un invitado en la pestaña Invitados para ver su pase.' : 'Este pase está disponible únicamente desde un enlace personal.'}</p>
+      </div>
+    );
+  }
+
+  if (!guest.accessToken && !editing) {
+    return (
+      <div className="mx-auto max-w-sm rounded-[24px] border px-6 py-8 text-center" style={{ borderColor: t.line, background: '#fff' }}>
+        <p className="font-cinzel text-sm uppercase tracking-[0.15em]" style={{ color: t.primary }}>{title}</p>
+        <p className="mt-3 font-cormorant text-lg" style={{ color: t.muted }}>Tu código QR aparecerá aquí después de confirmar tu asistencia.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-center">
+      <p className="font-cinzel text-sm uppercase tracking-[0.15em]" style={{ color: t.primary }}>{title}</p>
+      <p className="mt-2 font-cormorant text-lg" style={{ color: t.muted }}>{message}</p>
+      <QrCard
+        t={t}
+        accessToken={guest.accessToken || `enkarta-preview-${guest.publicId}`}
+        accessCode={guest.accessCode || 'VISTA-PREVIA'}
+        guestName={guest.name}
+        tableNo={guest.tableNo}
+        passes={guest.confirmedPasses ?? guest.passes}
+      />
+    </div>
+  );
+};
+
 const ImageBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
   const url = str(block, 'url');
   if (!url) return <p className="font-outfit text-sm" style={{ color: t.muted }}>Selecciona una imagen…</p>;
-  return <img src={url} alt="" className="mx-auto w-full object-cover" style={{ borderRadius: num(block, 'rounded', 16), maxHeight: num(block, 'maxHeight', 0) || undefined, objectPosition: str(block, 'focal', '50% 50%') }} />;
+  const settings = block.props;
+  const aspect = imageAspect(settings);
+  const cropped = Boolean(aspect);
+  const temperatureStyle = imageTemperatureStyle(settings);
+  const overlayStyle = imageColorOverlayStyle(settings);
+  return (
+    <div className="mx-auto w-full" style={imageFrameStyle(settings)}>
+      <div style={{ ...imageViewportStyle(settings), aspectRatio: aspect, maxHeight: num(block, 'maxHeight', 0) || undefined }}>
+        <img
+          src={url}
+          alt={str(block, 'alt')}
+          loading="lazy"
+          decoding="async"
+          className={`${cropped ? 'absolute inset-0 h-full' : 'relative block h-auto'} w-full object-cover transition-[filter,transform] duration-200`}
+          style={{
+            minHeight: cropped ? '100%' : undefined,
+            objectPosition: str(block, 'focal', '50% 50%'),
+            transform: imageTransform(settings),
+            filter: imageFilter(settings),
+          }}
+        />
+        {temperatureStyle && <span className="pointer-events-none absolute inset-0" style={temperatureStyle} aria-hidden />}
+        {overlayStyle && <span className="pointer-events-none absolute inset-0" style={overlayStyle} aria-hidden />}
+      </div>
+    </div>
+  );
 };
 
 const ButtonBlock: React.FC<{ block: Block }> = ({ block }) => (
@@ -538,10 +739,21 @@ const ElementBlock: React.FC<{ block: Block }> = ({ block }) => {
   const source = str(block, 'source', 'library');
   const color = str(block, 'color') || t.primary;
   const color2 = str(block, 'color2') || undefined;
+  const color3 = str(block, 'color3') || undefined;
+  const color4 = str(block, 'color4') || undefined;
   const flipH = bool(block, 'flipH');
   const flipV = bool(block, 'flipV');
   const opacity = typeof block.props.opacity === 'number' ? (block.props.opacity as number) : 1;
-  const shadow = bool(block, 'shadow');
+  const legacyShadow = bool(block, 'shadow');
+  const shadowStyle = str(block, 'shadowStyle', legacyShadow ? 'deep' : 'none');
+  const shadowFilters: Record<string, string> = {
+    none: '',
+    soft: 'drop-shadow(0 4px 7px rgba(28,22,18,0.16))',
+    deep: 'drop-shadow(0 10px 14px rgba(28,22,18,0.3))',
+    glow: `drop-shadow(0 0 10px ${color3 || color2 || color}88)`,
+  };
+  const saturation = typeof block.props.saturation === 'number' ? (block.props.saturation as number) : 1;
+  const filters = [shadowFilters[shadowStyle] ?? '', saturation !== 1 ? `saturate(${saturation})` : ''].filter(Boolean).join(' ');
   const sx = flipH ? -1 : 1;
   const sy = flipV ? -1 : 1;
   // En el editor no se anima (evita conflictos al arrastrar); en lectura sí.
@@ -552,7 +764,8 @@ const ElementBlock: React.FC<{ block: Block }> = ({ block }) => {
     width: '100%',
     opacity,
     transform: (sx !== 1 || sy !== 1) ? `scale(${sx}, ${sy})` : undefined,
-    filter: shadow ? 'drop-shadow(0 8px 12px rgba(0,0,0,0.28))' : undefined,
+    filter: filters || undefined,
+    mixBlendMode: (str(block, 'blendMode', 'normal') as React.CSSProperties['mixBlendMode']),
     lineHeight: 0,
   };
   let inner: React.ReactNode;
@@ -562,7 +775,7 @@ const ElementBlock: React.FC<{ block: Block }> = ({ block }) => {
     const recolor = bool(block, 'recolor') && /\.svg(\?|$)/i.test(url);
     inner = recolor ? <RecolorSvg url={url} color={color} /> : <img src={url} alt="" className="w-full h-auto block" />;
   } else {
-    const node = renderElement(str(block, 'motif', 'corner-orchid'), color, color2);
+    const node = renderElement(str(block, 'motif', 'corner-orchid'), color, color2, color3, color4);
     if (!node) return <span className="font-outfit text-xs" style={{ color: t.muted }}>Elige un elemento…</span>;
     inner = node;
   }
@@ -608,7 +821,7 @@ const MapBlock: React.FC<{ block: Block }> = ({ block }) => {
   const zoom = num(block, 'zoom', 15);
   return (
     <div className="mx-auto w-full">
-      {str(block, 'title') && <h3 className="font-cinzel uppercase tracking-[0.16em] mb-4" style={{ color: t.muted, fontSize: '14px' }}>{str(block, 'title')}</h3>}
+      {str(block, 'title') && <h3 className="font-cinzel uppercase tracking-[0.16em] mb-4" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'subtitle') }}>{str(block, 'title')}</h3>}
       <div className="overflow-hidden" style={{ maxWidth: 560, margin: '0 auto', borderRadius: num(block, 'rounded', 16), border: `1px solid ${t.line}`, aspectRatio: '4 / 3' }}>
         <iframe
           src={`https://www.google.com/maps?q=${encodeURIComponent(q)}&z=${zoom}&output=embed`}
@@ -627,10 +840,10 @@ const QuoteBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
   return (
     <div className="mx-auto" style={{ maxWidth: 480 }}>
-      <span aria-hidden className="font-playfair block leading-none" style={{ color: t.primary, fontSize: '54px', opacity: 0.35 }}>&ldquo;</span>
-      <Editable as="p" k="text" value={str(block, 'text', 'El amor es paciente, el amor es bondadoso…')} className={`${famClass(block) || 'font-cormorant'} italic -mt-5`} style={{ color: 'inherit', fontSize: '19px', lineHeight: 1.8, ...typoStyle(block) }} />
+      <span aria-hidden className="font-playfair block leading-none" style={{ color: t.primary, fontSize: scaledPx(block, 54, 'title'), opacity: 0.35 }}>&ldquo;</span>
+      <Editable as="p" k="text" value={str(block, 'text', 'El amor es paciente, el amor es bondadoso…')} className={`${famClass(block) || 'font-cormorant'} italic -mt-5`} style={{ color: 'inherit', fontSize: scaledPx(block, 19, 'body'), lineHeight: 1.8, ...typoStyle(block, 'body') }} />
       {str(block, 'author') && (
-        <p className="font-cinzel uppercase tracking-[0.2em] mt-4" style={{ color: t.muted, fontSize: '11px' }}>— {str(block, 'author')}</p>
+        <p className="font-cinzel uppercase tracking-[0.2em] mt-4" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>— {str(block, 'author')}</p>
       )}
     </div>
   );
@@ -642,15 +855,15 @@ const ParentsBlock: React.FC<{ block: Block }> = ({ block }) => {
   const items = list<{ role?: string; names?: string }>(block, 'items');
   return (
     <div>
-      {str(block, 'title') && <h2 className="font-great mb-2" style={{ color: t.primary, fontSize: 'clamp(30px,6vw,44px)' }}>{str(block, 'title')}</h2>}
-      {str(block, 'message') && <p className="font-cormorant italic mb-6 mx-auto" style={{ color: t.muted, maxWidth: 420, fontSize: '16px' }}>{str(block, 'message')}</p>}
+      {str(block, 'title') && <h2 className="font-great mb-2" style={{ color: t.primary, fontSize: fluidType(block, 30, 6, 44, 'title') }}>{str(block, 'title')}</h2>}
+      {str(block, 'message') && <p className="font-cormorant italic mb-6 mx-auto" style={{ color: t.muted, maxWidth: 420, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
       <div className={`grid gap-7 max-w-2xl mx-auto ${items.length >= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} grid-cols-1`}>
         {items.map((it, i) => (
           <div key={i} className="flex flex-col items-center">
-            <p className="font-cinzel uppercase tracking-[0.18em]" style={{ color: t.muted, fontSize: '11px' }}>{it.role}</p>
+            <p className="font-cinzel uppercase tracking-[0.18em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>{it.role}</p>
             <div className="h-px w-10 my-2.5" style={{ background: t.line }} />
             {(it.names ?? '').split('\n').filter(Boolean).map((n, j) => (
-              <p key={j} className="font-cormorant" style={{ color: 'inherit', fontSize: '18px', lineHeight: 1.6 }}>{n}</p>
+              <p key={j} className="font-cormorant" style={{ color: 'inherit', fontSize: scaledPx(block, 18, 'body'), lineHeight: 1.6 }}>{n}</p>
             ))}
           </div>
         ))}
@@ -662,19 +875,20 @@ const ParentsBlock: React.FC<{ block: Block }> = ({ block }) => {
 // Sugerencia de hospedaje: tarjeta con foto, descripción y enlace.
 const LodgingBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const shape = useInvitationShape();
   const image = str(block, 'image');
   return (
-    <div className="mx-auto overflow-hidden text-center" style={{ maxWidth: 440, borderRadius: 18, border: `1px solid ${t.line}` }}>
+    <div className="mx-auto overflow-hidden text-center" style={{ maxWidth: 440, borderRadius: shape.cardRadius, border: `1px solid ${t.line}`, background: `color-mix(in srgb, ${t.bg} 84%, white)`, boxShadow: '0 16px 45px rgba(31,24,16,.07)' }}>
       {image && (
         <div className="relative overflow-hidden" style={{ aspectRatio: '16 / 9' }}>
           <img src={image} alt="" className="h-full w-full object-cover" style={{ objectPosition: str(block, 'focal', '50% 50%') }} />
         </div>
       )}
       <div className="px-6 py-6">
-        <p className="font-cinzel uppercase tracking-[0.18em]" style={{ color: t.muted, fontSize: '11px' }}>{str(block, 'title', 'Sugerencia de hospedaje')}</p>
-        <h3 className="font-playfair font-bold mt-2" style={{ color: t.primary, fontSize: '24px' }}>{str(block, 'name', 'Hotel')}</h3>
-        {str(block, 'desc') && <p className="font-cormorant mt-2" style={{ color: 'inherit', fontSize: '16px', lineHeight: 1.65 }}>{str(block, 'desc')}</p>}
-        {str(block, 'phone') && <p className="font-cormorant mt-1" style={{ color: t.muted, fontSize: '15px' }}>Tel: {str(block, 'phone')}</p>}
+        <p className="font-cinzel uppercase tracking-[0.18em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>{str(block, 'title', 'Sugerencia de hospedaje')}</p>
+        <h3 className="font-playfair font-bold mt-2" style={{ color: t.primary, fontSize: scaledPx(block, 24, 'subtitle') }}>{str(block, 'name', 'Hotel')}</h3>
+        {str(block, 'desc') && <p className="font-cormorant mt-2" style={{ color: 'inherit', fontSize: scaledPx(block, 16, 'body'), lineHeight: 1.65 }}>{str(block, 'desc')}</p>}
+        {str(block, 'phone') && <p className="font-cormorant mt-1" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>Tel: {str(block, 'phone')}</p>}
         {str(block, 'url') && <div className="mt-4"><Pill href={str(block, 'url')}>{str(block, 'buttonLabel', 'Ver hotel')}</Pill></div>}
       </div>
     </div>
@@ -687,8 +901,8 @@ const HashtagBlock: React.FC<{ block: Block }> = ({ block }) => {
   const tag = str(block, 'tag', '#NuestraBoda').replace(/^#?/, '#');
   return (
     <div className="flex flex-col items-center">
-      {str(block, 'message') && <p className="font-cormorant italic mb-3 mx-auto" style={{ color: t.muted, maxWidth: 380, fontSize: '16px' }}>{str(block, 'message')}</p>}
-      <p className={famClass(block) || 'font-great'} style={{ color: t.primary, fontSize: 'clamp(28px,7vw,46px)', ...typoStyle(block) }}>{tag}</p>
+      {str(block, 'message') && <p className="font-cormorant italic mb-3 mx-auto" style={{ color: t.muted, maxWidth: 380, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
+      <p className={famClass(block) || 'font-great'} style={{ color: t.primary, fontSize: fluidType(block, 28, 7, 46, 'title'), ...typoStyle(block, 'title') }}>{tag}</p>
       <div className="h-px w-24 mt-3" style={{ background: t.line }} />
     </div>
   );
@@ -742,7 +956,7 @@ const MonogramBlock: React.FC<{ block: Block }> = ({ block }) => {
         <text x="122" y="118" textAnchor="middle" fill={color} style={{ fontFamily: 'var(--ek-font-script, "Great Vibes")', fontSize: 64, opacity: 0, animation: 'ekMonoFade .8s 1.5s ease forwards' }}>{b}</text>
       </svg>
       {str(block, 'date') && (
-        <p className="mt-2 text-center font-cinzel uppercase tracking-[0.3em]" style={{ color: t.muted, fontSize: '11px' }}>{str(block, 'date')}</p>
+        <p className="mt-2 text-center font-cinzel uppercase tracking-[0.3em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>{str(block, 'date')}</p>
       )}
     </div>
   );
@@ -754,7 +968,7 @@ const TimelineBlock: React.FC<{ block: Block }> = ({ block }) => {
   const items = list<{ year?: string; title?: string; text?: string; image?: string }>(block, 'items');
   return (
     <div>
-      {str(block, 'title') && <h2 className="font-great mb-10" style={{ color: t.primary, fontSize: 'clamp(32px,6vw,48px)' }}>{str(block, 'title')}</h2>}
+      {str(block, 'title') && <h2 className="font-great mb-10" style={{ color: t.primary, fontSize: fluidType(block, 32, 6, 48, 'title') }}>{str(block, 'title')}</h2>}
       <div className="relative mx-auto max-w-2xl">
         {/* Línea central */}
         <div className="absolute bottom-0 left-[7px] top-0 w-px sm:left-1/2 sm:-translate-x-1/2" style={{ background: t.line }} aria-hidden />
@@ -795,9 +1009,9 @@ function TimelineCard({ it, t }: { it: { year?: string; title?: string; text?: s
           <img src={it.image} alt="" loading="lazy" className="h-full w-full object-cover" />
         </div>
       )}
-      {it.year && <p className="font-playfair font-bold" style={{ color: t.primary, fontSize: '22px' }}>{it.year}</p>}
-      {it.title && <p className="font-cinzel uppercase tracking-[0.14em] mt-0.5" style={{ color: t.muted, fontSize: '13px' }}>{it.title}</p>}
-      {it.text && <p className="font-cormorant mt-1.5" style={{ color: 'inherit', fontSize: '16px', lineHeight: 1.6 }}>{it.text}</p>}
+      {it.year && <p className="font-playfair font-bold" style={{ color: t.primary, fontSize: semanticPx(22, 'subtitle') }}>{it.year}</p>}
+      {it.title && <p className="font-cinzel uppercase tracking-[0.14em] mt-0.5" style={{ color: t.muted, fontSize: semanticPx(13, 'label') }}>{it.title}</p>}
+      {it.text && <p className="font-cormorant mt-1.5" style={{ color: 'inherit', fontSize: semanticPx(16, 'body'), lineHeight: 1.6 }}>{it.text}</p>}
     </div>
   );
 }
@@ -836,7 +1050,7 @@ function BeforeAfterBlock({ block }: { block: Block }) {
           </span>
         </div>
       </div>
-      {str(block, 'caption') && <p className="mt-3 text-center font-cormorant italic" style={{ color: t.muted, fontSize: '15px' }}>{str(block, 'caption')}</p>}
+      {str(block, 'caption') && <p className="mt-3 text-center font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{str(block, 'caption')}</p>}
     </div>
   );
 }
@@ -854,13 +1068,14 @@ function useCallbackPos(ref: React.RefObject<HTMLElement>, setPos: (n: number) =
 // Buscador de mesa: el invitado escribe su nombre y ve su número de mesa.
 function TableFinderBlock({ block }: { block: Block }) {
   const t = useBlockTheme();
+  const shape = useInvitationShape();
   const { slug } = useBlockData();
   const { editing } = useBlockEdit();
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<null | { name: string; tableNo: string; passes: number }[]>(null);
   const [err, setErr] = useState('');
-  const field: React.CSSProperties = { background: '#fff', border: `1px solid ${t.line}`, color: t.text, borderRadius: 10, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none' };
+  const field: React.CSSProperties = { background: `color-mix(in srgb, ${t.bg} 76%, white)`, border: `1px solid ${t.line}`, color: t.text, borderRadius: shape.fieldRadius, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none' };
 
   const search = async () => {
     if (q.trim().length < 2 || busy) return;
@@ -881,22 +1096,22 @@ function TableFinderBlock({ block }: { block: Block }) {
 
   return (
     <div className="mx-auto" style={{ maxWidth: 420 }}>
-      <h2 className="font-great" style={{ color: t.primary, fontSize: 'clamp(30px,6vw,44px)' }}>{str(block, 'title', 'Encuentra tu mesa')}</h2>
-      {str(block, 'message') && <p className="font-cormorant mt-2 mb-5 mx-auto" style={{ color: t.muted, fontSize: '16px' }}>{str(block, 'message')}</p>}
+      <h2 className="font-great" style={{ color: t.primary, fontSize: fluidType(block, 30, 6, 44, 'title') }}>{str(block, 'title', 'Encuentra tu mesa')}</h2>
+      {str(block, 'message') && <p className="font-cormorant mt-2 mb-5 mx-auto" style={{ color: t.muted, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
       <div className="flex gap-2">
         <input style={field} placeholder="Escribe tu nombre" value={q}
           onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') search(); }} />
         <button onClick={search} disabled={busy} className="font-cinzel uppercase tracking-[0.14em] text-[12px] px-5 transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{ background: t.primary, color: t.onPrimary, borderRadius: 10, flexShrink: 0 }}>
+          style={{ background: t.primary, color: t.onPrimary, borderRadius: shape.buttonRadius, flexShrink: 0 }}>
           {busy ? '…' : 'Buscar'}
         </button>
       </div>
-      {err && <p className="font-cormorant mt-4" style={{ color: t.muted, fontSize: '15px' }}>{err}</p>}
+      {err && <p className="font-cormorant mt-4" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{err}</p>}
       {res && res.map((m, i) => (
-        <div key={i} className="mt-4 rounded-2xl px-6 py-5" style={{ background: '#fff', border: `1px solid ${t.line}` }}>
-          <p className="font-cormorant" style={{ color: t.muted, fontSize: '15px' }}>{m.name}, tu lugar es la</p>
-          <p className="font-playfair font-bold my-1" style={{ color: t.primary, fontSize: '40px', lineHeight: 1 }}>Mesa {m.tableNo}</p>
-          {m.passes > 0 && <p className="font-cinzel uppercase tracking-[0.14em]" style={{ color: t.muted, fontSize: '11px' }}>{m.passes} {m.passes === 1 ? 'lugar' : 'lugares'}</p>}
+        <div key={i} className="mt-4 px-6 py-5" style={{ background: `color-mix(in srgb, ${t.bg} 76%, white)`, border: `1px solid ${t.line}`, borderRadius: shape.cardRadius }}>
+          <p className="font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{m.name}, tu lugar es la</p>
+          <p className="font-playfair font-bold my-1" style={{ color: t.primary, fontSize: scaledPx(block, 40, 'title'), lineHeight: 1 }}>Mesa {m.tableNo}</p>
+          {m.passes > 0 && <p className="font-cinzel uppercase tracking-[0.14em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>{m.passes} {m.passes === 1 ? 'lugar' : 'lugares'}</p>}
         </div>
       ))}
     </div>
@@ -906,13 +1121,14 @@ function TableFinderBlock({ block }: { block: Block }) {
 // Libro de mensajes: muro de saludos que los invitados dejan en vivo.
 function GuestbookBlock({ block }: { block: Block }) {
   const t = useBlockTheme();
+  const shape = useInvitationShape();
   const { slug } = useBlockData();
   const { editing } = useBlockEdit();
   const [name, setName] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [entries, setEntries] = useState<{ id: string; name: string; message: string; at: string }[]>([]);
-  const field: React.CSSProperties = { background: '#fff', border: `1px solid ${t.line}`, color: t.text, borderRadius: 10, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none' };
+  const field: React.CSSProperties = { background: `color-mix(in srgb, ${t.bg} 76%, white)`, border: `1px solid ${t.line}`, color: t.text, borderRadius: shape.fieldRadius, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none' };
 
   useEffect(() => {
     if (editing || !slug) {
@@ -939,23 +1155,23 @@ function GuestbookBlock({ block }: { block: Block }) {
 
   return (
     <div className="mx-auto" style={{ maxWidth: 520 }}>
-      <h2 className="font-great" style={{ color: t.primary, fontSize: 'clamp(30px,6vw,46px)' }}>{str(block, 'title', 'Déjanos un mensaje')}</h2>
-      {str(block, 'message') && <p className="font-cormorant mt-2 mb-5 mx-auto" style={{ color: t.muted, fontSize: '16px' }}>{str(block, 'message')}</p>}
+      <h2 className="font-great" style={{ color: t.primary, fontSize: fluidType(block, 30, 6, 46, 'title') }}>{str(block, 'title', 'Déjanos un mensaje')}</h2>
+      {str(block, 'message') && <p className="font-cormorant mt-2 mb-5 mx-auto" style={{ color: t.muted, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
       <div className="space-y-2.5 text-left">
         <input style={field} placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />
         <textarea style={{ ...field, minHeight: 80 }} placeholder="Escribe tu saludo para los novios…" value={msg} onChange={e => setMsg(e.target.value)} />
         <button onClick={send} disabled={busy || !name.trim() || !msg.trim()}
           className="w-full font-cinzel uppercase tracking-[0.16em] text-[12px] py-3 transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{ background: t.primary, color: t.onPrimary, borderRadius: '22px 6px 22px 6px' }}>
+          style={{ background: t.primary, color: t.onPrimary, borderRadius: shape.buttonRadius, boxShadow: `0 9px 24px color-mix(in srgb, ${t.primary} 20%, transparent)` }}>
           {busy ? 'Enviando…' : str(block, 'buttonLabel', 'Firmar el libro')}
         </button>
       </div>
       {entries.length > 0 && (
         <div className="mt-8 space-y-3 text-left">
           {entries.map(e => (
-            <div key={e.id} className="rounded-2xl px-5 py-4" style={{ background: '#fff', border: `1px solid ${t.line}` }}>
-              <p className="font-cormorant" style={{ color: t.text, fontSize: '17px', lineHeight: 1.5 }}>&ldquo;{e.message}&rdquo;</p>
-              <p className="font-cinzel uppercase tracking-[0.16em] mt-2" style={{ color: t.primary, fontSize: '11px' }}>— {e.name}</p>
+            <div key={e.id} className="px-5 py-4" style={{ background: `color-mix(in srgb, ${t.bg} 76%, white)`, border: `1px solid ${t.line}`, borderRadius: shape.cardRadius }}>
+              <p className="font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 17, 'body'), lineHeight: 1.5 }}>&ldquo;{e.message}&rdquo;</p>
+              <p className="font-cinzel uppercase tracking-[0.16em] mt-2" style={{ color: t.primary, fontSize: scaledPx(block, 11, 'label') }}>— {e.name}</p>
             </div>
           ))}
         </div>
@@ -1014,6 +1230,38 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
       { key: 'focal', label: 'Encuadre de la foto', kind: 'focal' },
     ],
   },
+  passportHero: {
+    label: 'Portada de viaje', icon: '✈️', Component: PassportHeroBlock,
+    defaultProps: {
+      groom: 'Robert', bride: 'Isabella', tagline: 'Pasaporte a nuestra boda',
+      eyebrow: 'Nuestra próxima aventura', image: '', focal: '50% 50%',
+      origin: 'Colombia', destination: 'Bolivia', dateLabel: '26 · 12 · 2026',
+    },
+    fields: [
+      { key: 'groom', label: 'Nombre 1', kind: 'text' },
+      { key: 'bride', label: 'Nombre 2', kind: 'text' },
+      { key: 'tagline', label: 'Título del pasaporte', kind: 'text' },
+      { key: 'eyebrow', label: 'Frase sobre la foto', kind: 'text' },
+      { key: 'image', label: 'Foto protagonista', kind: 'image' },
+      { key: 'focal', label: 'Encuadre de la foto', kind: 'focal' },
+      { key: 'origin', label: 'Origen de la ruta', kind: 'text' },
+      { key: 'destination', label: 'Destino de la ruta', kind: 'text' },
+      { key: 'dateLabel', label: 'Fecha visible', kind: 'text' },
+    ],
+  },
+  passportTicket: {
+    label: 'Pases de viaje', icon: '🎫', Component: PassportTicketBlock,
+    defaultProps: {
+      callout: 'Prepara tus maletas y acompáñanos en esta aventura.',
+      question: '¿Te unes?', passesLabel: '2 pases', guestName: 'Invitado especial',
+    },
+    fields: [
+      { key: 'callout', label: 'Mensaje de viaje', kind: 'textarea' },
+      { key: 'question', label: 'Pregunta', kind: 'text' },
+      { key: 'passesLabel', label: 'Pases reservados', kind: 'text' },
+      { key: 'guestName', label: 'Nombre del invitado', kind: 'text' },
+    ],
+  },
   heading: {
     label: 'Título', icon: '🔤', Component: HeadingBlock,
     defaultProps: { text: 'Nuevo título', font: 'caps', size: 0 },
@@ -1033,13 +1281,17 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
   },
   countdown: {
     label: 'Cuenta regresiva', icon: '⏳', Component: CountdownBlock,
-    defaultProps: { isoDate: '', label: 'Solo faltan', display: 'flip' },
+    defaultProps: { isoDate: '', label: 'Solo faltan', display: 'cards', showSeconds: true },
     fields: [
       { key: 'isoDate', label: 'Fecha y hora', kind: 'text', placeholder: '2026-07-04T16:00' },
       { key: 'label', label: 'Texto superior', kind: 'text' },
       { key: 'display', label: 'Estilo', kind: 'select', options: [
-        { value: 'flip', label: 'Tablero (flip 3D)' }, { value: 'plain', label: 'Números simples' },
+        { value: 'cards', label: 'Tarjetas elegantes' },
+        { value: 'rings', label: 'Círculos delicados' },
+        { value: 'minimal', label: 'Editorial minimalista' },
+        { value: 'flip', label: 'Tablero (flip 3D)' },
       ] },
+      { key: 'showSeconds', label: 'Mostrar segundos', kind: 'switch' },
     ],
   },
   calendar: {
@@ -1088,9 +1340,15 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
   },
   itinerary: {
     label: 'Itinerario', icon: '🗓️', Component: ItineraryBlock,
-    defaultProps: { title: 'Itinerario', items: [{ time: '16:00', label: 'Ceremonia', icon: 'church' }, { time: '18:00', label: 'Recepción', icon: 'cheers' }, { time: '20:00', label: 'Fiesta', icon: 'dance' }] },
+    defaultProps: { title: 'Itinerario', layout: 'timeline', items: [{ time: '16:00', label: 'Ceremonia', icon: 'church' }, { time: '18:00', label: 'Recepción', icon: 'cheers' }, { time: '20:00', label: 'Fiesta', icon: 'dance' }] },
     fields: [
       { key: 'title', label: 'Título', kind: 'text' },
+      { key: 'layout', label: 'Organización en celular', kind: 'select', options: [
+        { value: 'timeline', label: 'Línea vertical' },
+        { value: 'cards', label: 'Tarjetas en 2 columnas' },
+        { value: 'compact', label: 'Lista compacta' },
+        { value: 'carousel', label: 'Carrusel deslizable' },
+      ] },
       {
         key: 'items', label: 'Pasos', kind: 'list', itemFields: [
           { key: 'icon', label: 'Icono', kind: 'icon' },
@@ -1219,12 +1477,21 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
       { key: 'whatsappUrl', label: 'Enlace de WhatsApp (modo WhatsApp)', kind: 'text' },
     ],
   },
+  accessPass: {
+    label: 'Pase personal', icon: '▦', Component: AccessPassBlock,
+    defaultProps: { title: 'Tu pase personal', message: 'Preséntalo al ingresar al evento.' },
+    fields: [
+      { key: 'title', label: 'Título', kind: 'text' },
+      { key: 'message', label: 'Mensaje', kind: 'textarea' },
+    ],
+  },
   image: {
     label: 'Imagen', icon: '📷', Component: ImageBlock,
-    defaultProps: { url: '', rounded: 16, maxHeight: 0, focal: '50% 50%' },
+    defaultProps: { url: '', alt: '', rounded: 16, maxHeight: 0, focal: '50% 50%', aspect: 'original', zoom: 1, imageRotate: 0, imageFlipH: false, imageFlipV: false, brightness: 1, contrast: 1, imageSaturation: 1, grayscale: 0, sepia: 0, temperature: 0, blur: 0, mask: 'none', overlayColor: '#5d3d76', overlayOpacity: 0, overlayMode: 'solid', overlayBlend: 'normal' },
     fields: [
       { key: 'url', label: 'Imagen', kind: 'image' },
       { key: 'focal', label: 'Encuadre (punto focal)', kind: 'focal' },
+      { key: 'alt', label: 'Descripción accesible', kind: 'text', placeholder: 'Ej: La pareja durante la ceremonia' },
       { key: 'rounded', label: 'Redondeo (px)', kind: 'number', min: 0, max: 60 },
       { key: 'maxHeight', label: 'Alto máx. (px, 0=auto)', kind: 'number', min: 0, max: 900 },
     ],
@@ -1347,10 +1614,12 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
   },
   element: {
     label: 'Elemento', icon: '✿', Component: ElementBlock,
-    defaultProps: { source: 'library', motif: 'corner-orchid', url: '', color: '', color2: '', flipH: false, flipV: false, shadow: false, opacity: 1, anim: 'none', recolor: false },
+    defaultProps: { source: 'library', motif: 'corner-orchid', url: '', color: '', color2: '', color3: '', color4: '', flipH: false, flipV: false, shadow: false, shadowStyle: 'none', blendMode: 'normal', saturation: 1, opacity: 1, anim: 'none', recolor: false },
     fields: [
       { key: 'color', label: 'Color', kind: 'color' },
       { key: 'color2', label: 'Color secundario', kind: 'color' },
+      { key: 'color3', label: 'Color de acento', kind: 'color' },
+      { key: 'color4', label: 'Color de detalle', kind: 'color' },
       { key: 'flipH', label: 'Espejo horizontal', kind: 'switch' },
       { key: 'flipV', label: 'Espejo vertical', kind: 'switch' },
       { key: 'shadow', label: 'Sombra', kind: 'switch' },
@@ -1360,17 +1629,17 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
 
 /** Orden de la paleta "Añadir bloque" (lista plana, por compatibilidad). */
 export const BLOCK_PALETTE: BlockType[] = [
-  'cover', 'monogram', 'heading', 'text', 'quote', 'image', 'video', 'countdown', 'dateBadge', 'calendar',
+  'cover', 'passportHero', 'passportTicket', 'monogram', 'heading', 'text', 'quote', 'image', 'video', 'countdown', 'dateBadge', 'calendar',
   'eventCard', 'map', 'dressCode', 'itinerary', 'timeline', 'story', 'parents', 'lodging', 'gift', 'gallery', 'beforeAfter',
-  'rsvp', 'tableFinder', 'guestbook', 'hashtag', 'button', 'ornament', 'group', 'divider', 'spacer',
+  'rsvp', 'accessPass', 'tableFinder', 'guestbook', 'hashtag', 'button', 'ornament', 'group', 'divider', 'spacer',
 ];
 
 /** Paleta agrupada por categorías (para el panel de añadir bloques). */
 export const PALETTE_GROUPS: { label: string; types: BlockType[] }[] = [
-  { label: 'Esenciales',  types: ['heading', 'text', 'quote', 'monogram', 'image', 'video', 'cover'] },
+  { label: 'Esenciales',  types: ['heading', 'text', 'quote', 'monogram', 'image', 'video', 'cover', 'passportHero', 'passportTicket'] },
   { label: 'El evento',   types: ['eventCard', 'dateBadge', 'countdown', 'itinerary', 'map', 'calendar'] },
   { label: 'Fotos',       types: ['gallery', 'timeline', 'story', 'beforeAfter'] },
-  { label: 'Invitados',   types: ['rsvp', 'tableFinder', 'guestbook', 'dressCode', 'parents', 'lodging', 'gift', 'hashtag'] },
+  { label: 'Invitados',   types: ['rsvp', 'accessPass', 'tableFinder', 'guestbook', 'dressCode', 'parents', 'lodging', 'gift', 'hashtag'] },
   { label: 'Diseño',      types: ['group', 'button', 'ornament', 'divider', 'spacer'] },
 ];
 
@@ -1466,7 +1735,7 @@ export const SECTION_PRESETS: SectionPreset[] = [
     desc: 'Fecha + cuenta regresiva + botón de calendario',
     create: () => [
       block('dateBadge', {}),
-      block('countdown', { label: 'Solo faltan', display: 'flip' }),
+      block('countdown', { label: 'Solo faltan', display: 'cards', showSeconds: true }),
       block('calendar', { label: 'Agendar en mi calendario' }),
     ],
   },
@@ -1604,6 +1873,19 @@ export const SECTION_PRESETS: SectionPreset[] = [
     ],
   },
   {
+    key: 'personal-access', label: 'Acceso personal', icon: '▦', group: 'Invitados',
+    desc: 'Nombre, estado, mesa, cupos y QR individual',
+    create: () => {
+      const pass = block('accessPass', {});
+      pass.visibility = { audience: 'personalized', rsvpStatus: 'confirmed' };
+      return [
+        block('heading', { text: 'Hola, {{guest.name}}', font: 'script' }),
+        block('text', { text: '{{guest.passesLabel}} · {{guest.tableLabel}}', italic: true }),
+        pass,
+      ];
+    },
+  },
+  {
     key: 'closing', label: 'Cierre', icon: '🤍', group: 'Invitados',
     desc: 'Cuenta regresiva + confirmación',
     create: () => [
@@ -1704,7 +1986,7 @@ export const SECTION_PRESETS: SectionPreset[] = [
 // ── Elementos flotantes (stickers) ────────────────────────────────────────────
 
 /** Crea un elemento flotante desde la librería (motif) o una imagen subida (url). */
-export function createElementBlock(opts: { motif?: string; url?: string; color?: string }): Block {
+export function createElementBlock(opts: { motif?: string; url?: string; color?: string; palette?: ElementPalette }): Block {
   const b = createBlock('element');
   const def = opts.motif ? getElement(opts.motif) : undefined;
   b.props = {
@@ -1712,14 +1994,17 @@ export function createElementBlock(opts: { motif?: string; url?: string; color?:
     source: opts.url ? 'upload' : 'library',
     motif: opts.motif ?? 'corner-orchid',
     url: opts.url ?? '',
-    color: opts.color ?? '',
+    color: opts.palette?.primary ?? opts.color ?? '',
+    color2: opts.palette?.secondary ?? '',
+    color3: opts.palette?.accent ?? '',
+    color4: opts.palette?.detail ?? '',
   };
   b.layout = { anchor: def?.anchor ?? 'tc', w: def?.w ?? (opts.url ? 160 : 170), z: 60 };
   return b;
 }
 
 /** Atajo "decorar esquinas": 4 esquineros del mismo motivo, anclados y espejados. */
-export function createCornerSet(motif: string, color?: string): Block[] {
+export function createCornerSet(motif: string, color?: string, palette?: ElementPalette): Block[] {
   const def = getElement(motif);
   const w = def?.w ?? 170;
   const corners: { anchor: NonNullable<BlockLayout['anchor']>; flipH?: boolean; flipV?: boolean }[] = [
@@ -1730,15 +2015,25 @@ export function createCornerSet(motif: string, color?: string): Block[] {
   ];
   return corners.map((c, i) => {
     const b = createBlock('element');
-    b.props = { ...b.props, source: 'library', motif, color: color ?? '', flipH: !!c.flipH, flipV: !!c.flipV };
+    b.props = {
+      ...b.props,
+      source: 'library',
+      motif,
+      color: palette?.primary ?? color ?? '',
+      color2: palette?.secondary ?? '',
+      color3: palette?.accent ?? '',
+      color4: palette?.detail ?? '',
+      flipH: !!c.flipH,
+      flipV: !!c.flipV,
+    };
     b.layout = { anchor: c.anchor, w, z: 60 + i };
     return b;
   });
 }
 
 // ── Packs decorativos (un clic = look completo coherente) ──────────────────────
-function packElem(motif: string, color: string, patch?: Partial<BlockLayout>): Block {
-  const b = createElementBlock({ motif, color });
+function packElem(motif: string, palette: ElementPalette, patch?: Partial<BlockLayout>): Block {
+  const b = createElementBlock({ motif, palette });
   if (patch) b.layout = { ...(b.layout ?? {}), ...patch };
   return b;
 }
@@ -1749,39 +2044,39 @@ export interface DecorPack {
   desc: string;
   /** Motivo representativo para la miniatura. */
   preview: string;
-  build: (color: string) => Block[];
+  build: (palette: ElementPalette) => Block[];
 }
 
 export const DECOR_PACKS: DecorPack[] = [
   {
     key: 'orchid-garden', label: 'Jardín de orquídeas', desc: 'Esquinas de orquídeas + cenefa',
     preview: 'corner-orchid',
-    build: (c) => [...createCornerSet('corner-orchid', c), packElem('divider-floral', c, { anchor: 'tc', y: 70, z: 70 })],
+    build: (p) => [...createCornerSet('corner-orchid', p.primary, p), packElem('divider-floral', p, { anchor: 'tc', y: 70, z: 70 })],
   },
   {
     key: 'eucalyptus', label: 'Eucalipto', desc: 'Esquinas de eucalipto, fresco y natural',
     preview: 'corner-eucalyptus',
-    build: (c) => [...createCornerSet('corner-eucalyptus', c)],
+    build: (p) => [...createCornerSet('corner-eucalyptus', p.primary, p)],
   },
   {
     key: 'roses-romance', label: 'Romance de rosas', desc: 'Esquinas de rosas + ramo inferior',
     preview: 'corner-rose',
-    build: (c) => [...createCornerSet('corner-rose', c), packElem('bouquet-roses', c, { anchor: 'bc', y: -10, z: 70 })],
+    build: (p) => [...createCornerSet('corner-rose', p.primary, p), packElem('bouquet-roses', p, { anchor: 'bc', y: -10, z: 70 })],
   },
   {
     key: 'deco-gold', label: 'Déco dorado', desc: 'Abanicos déco + cenefa geométrica',
     preview: 'corner-fan',
-    build: (c) => [...createCornerSet('corner-fan', c), packElem('divider-deco', c, { anchor: 'tc', y: 70, z: 70 })],
+    build: (p) => [...createCornerSet('corner-fan', p.primary, p), packElem('divider-deco', p, { anchor: 'tc', y: 70, z: 70 })],
   },
   {
     key: 'wildflowers', label: 'Flores silvestres', desc: 'Esquinas de margaritas y brotes',
     preview: 'corner-wild',
-    build: (c) => [...createCornerSet('corner-wild', c)],
+    build: (p) => [...createCornerSet('corner-wild', p.primary, p)],
   },
   {
     key: 'laurel-frame', label: 'Marco de laurel', desc: 'Esquinas de laurel + corona superior',
     preview: 'corner-laurel',
-    build: (c) => [...createCornerSet('corner-laurel', c), packElem('wreath-laurel', c, { anchor: 'tc', y: 40, w: 120, z: 70 })],
+    build: (p) => [...createCornerSet('corner-laurel', p.primary, p), packElem('wreath-laurel', p, { anchor: 'tc', y: 40, w: 120, z: 70 })],
   },
 ];
 

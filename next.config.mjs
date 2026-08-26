@@ -7,6 +7,8 @@ const nextConfig = {
     // Las fotos las sube el cliente (Supabase Storage) o vienen de samples
     // externos; se permite cualquier host https y next/image las optimiza.
     remotePatterns: [{ protocol: 'https', hostname: '**' }],
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86400,
   },
 };
 

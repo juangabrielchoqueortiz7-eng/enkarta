@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import type { Invitation } from '@/lib/types';
+import { publicInvitationData } from '@/lib/published-invitation';
 
 // Imagen de vista previa al compartir (WhatsApp / redes) generada al vuelo:
 // la foto de portada con un velo oscuro + los nombres en script y la fecha, con
@@ -51,16 +53,17 @@ export default async function OgImage({ params }: { params: Promise<{ slug: stri
 
   const { data } = await supabaseAdmin
     .from('invitations')
-    .select('names, type, cover_image_url, event_date, color_primary, color_secondary')
+    .select('*')
     .eq('slug', slug)
     .single();
+  const published = data ? await publicInvitationData(data as Invitation) : null;
 
-  const names = data?.names || 'Nuestra Boda';
-  const dateLine = dateLineOf(data?.event_date ?? null);
-  const tagline = TAGLINE[data?.type ?? 'boda'] ?? 'Te invitamos';
-  const cover = data?.cover_image_url || undefined;
-  const primary = data?.color_primary || '#b3924f';
-  const secondary = data?.color_secondary || '#2c2519';
+  const names = published?.names || 'Nuestra Boda';
+  const dateLine = dateLineOf(published?.event_date ?? null);
+  const tagline = TAGLINE[published?.type ?? 'boda'] ?? 'Te invitamos';
+  const cover = published?.cover_image_url || undefined;
+  const primary = published?.color_primary || '#b3924f';
+  const secondary = published?.color_secondary || '#2c2519';
 
   const scriptText = names;
   const serifText = `${tagline}${dateLine}·&ABCDEFGHIJKLMNÑOPQRSTUVWXYZáéíóúÁÉÍÓÚ`;

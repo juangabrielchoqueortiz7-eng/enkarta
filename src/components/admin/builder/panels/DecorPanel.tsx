@@ -120,7 +120,7 @@ export default function DecorPanel({ data, onChange }: Props) {
         <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
           <p className="text-xs text-blue-600 font-outfit">
             💡 En esta plantilla, la paleta recolorea todos sus elementos de diseño. Las plumas/adornos
-            de esquina son exclusivos de Azure.
+            de esquina son exclusivos de Lunaria.
           </p>
         </div>
       )}

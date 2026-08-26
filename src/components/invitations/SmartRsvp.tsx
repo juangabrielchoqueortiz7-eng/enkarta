@@ -7,11 +7,12 @@
 // acceso. Sin publicId cae en la confirmación abierta (POST /api/rsvp, sin QR).
 // El botón "Confirmar" de la plantilla enlaza a la ancla #enkarta-confirmar.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { resolveBlockTheme } from '@/components/invitations/blocks/theme';
 import QrCard from '@/components/invitations/QrCard';
 import { PetalBurst } from '@/components/invitations/effects';
 import type { TemplateTheme, Guest } from '@/lib/types';
+import { emitInvitationAnalytics } from './InvitationAnalytics';
 
 interface Props {
   slug: string;
@@ -22,22 +23,32 @@ interface Props {
   /** Pases asignados a ese invitado (tope del selector). */
   maxPasses?: number;
   tableNo?: string;
+  /** Registro completo para representar su estado RSVP real en la vista previa. */
+  guest?: Guest;
   /** La fecha límite de confirmación ya pasó: el formulario se bloquea. */
   deadlinePassed?: boolean;
 }
 
-export default function SmartRsvp({ slug, theme, publicId, guestName, maxPasses, deadlinePassed }: Props) {
+export default function SmartRsvp({ slug, theme, publicId, guestName, maxPasses, guest, deadlinePassed }: Props) {
   const t = resolveBlockTheme(theme);
-  const [name, setName] = useState(guestName ?? '');
+  const [name, setName] = useState(guest?.name ?? guestName ?? '');
   const [attending, setAttending] = useState<'yes' | 'no'>('yes');
-  const [passes, setPasses] = useState(1);
+  const [passes, setPasses] = useState(guest?.confirmedPasses ?? 1);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<null | 'yes' | 'no'>(null);
-  const [card, setCard] = useState<Guest | null>(null);
+  const [done, setDone] = useState<null | 'yes' | 'no'>(guest?.status === 'confirmed' ? 'yes' : guest?.status === 'declined' ? 'no' : null);
+  const [card, setCard] = useState<Guest | null>(guest?.status === 'confirmed' ? guest : null);
   const [error, setError] = useState('');
 
   const cap = maxPasses && maxPasses > 0 ? maxPasses : 20;
+
+  useEffect(() => {
+    setName(guest?.name ?? guestName ?? '');
+    setPasses(guest?.confirmedPasses ?? 1);
+    setDone(guest?.status === 'confirmed' ? 'yes' : guest?.status === 'declined' ? 'no' : null);
+    setCard(guest?.status === 'confirmed' ? guest : null);
+    setError('');
+  }, [guest, guestName]);
   const field: React.CSSProperties = {
     background: '#fff', border: `1px solid ${t.line}`, color: t.text,
     borderRadius: 10, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none',
@@ -58,12 +69,15 @@ export default function SmartRsvp({ slug, theme, publicId, guestName, maxPasses,
         if (!res.ok) { setError(data.error || 'No se pudo confirmar'); setBusy(false); return; }
         if (attending === 'yes' && data.guest?.accessToken) setCard(data.guest as Guest);
       } else {
-        await fetch('/api/rsvp', {
+        const res = await fetch('/api/rsvp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ slug, name, attending, passes, message: msg }),
         });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error || 'No se pudo confirmar'); setBusy(false); return; }
       }
+      emitInvitationAnalytics('rsvp_submit', { attending, passes: attending === 'yes' ? passes : 0, personalized: Boolean(publicId) });
       setDone(attending);
     } catch { setError('Sin conexión. Intenta de nuevo.'); }
     setBusy(false);

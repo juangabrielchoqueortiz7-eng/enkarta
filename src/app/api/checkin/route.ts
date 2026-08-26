@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { mapGuestRow, mapAttendeeRow, materializeAttendees } from '@/lib/guests';
 import { canManageInvitation, invitationIdOfAttendee } from '@/lib/host-session';
 
-const FORBIDDEN = NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+const forbidden = () => NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 
 // Control de acceso en la puerta.
 //   GET  ?token=<accessToken> | ?code=<accessCode>  → carga el grupo (guest + asientos)
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   const g = await resolveGuest(token, code);
   if (!g) return NextResponse.json({ error: 'Código no válido' }, { status: 404 });
   // Solo el operador del evento (o admin) puede cargar el grupo.
-  if (!(await canManageInvitation(g.invitation_id))) return FORBIDDEN;
+  if (!(await canManageInvitation(g.invitation_id))) return forbidden();
   if (g.status !== 'confirmed') return NextResponse.json({ error: 'Este invitado no ha confirmado asistencia' }, { status: 409 });
 
   // Asegura los asientos según los pases (reconcilia si cambiaron).
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     if (!attendeeId) return NextResponse.json({ error: 'attendeeId requerido' }, { status: 400 });
 
     const ownerId = await invitationIdOfAttendee(attendeeId);
-    if (!ownerId || !(await canManageInvitation(ownerId))) return FORBIDDEN;
+    if (!ownerId || !(await canManageInvitation(ownerId))) return forbidden();
 
     const { data: att } = await supabaseAdmin.from('attendees').select('*').eq('id', attendeeId).maybeSingle();
     if (!att) return NextResponse.json({ error: 'Asistente no encontrado' }, { status: 404 });

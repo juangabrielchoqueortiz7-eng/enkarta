@@ -988,6 +988,17 @@ export function EventIcon({ name, className = '', stroke = 'currentColor', lotti
     if (custom.iconColor) stroke = custom.iconColor;
   }
 
+  // `__tint` es el color general elegido desde el editor. Se guarda dentro del
+  // mismo mapa para mantener compatibilidad con invitaciones existentes, pero
+  // no debe enviarse como si fuera un color original del archivo Lottie.
+  const uniformTint = lottieColors?.__tint;
+  if (uniformTint) {
+    tint = tint ?? uniformTint;
+    stroke = uniformTint;
+    const explicit = Object.fromEntries(Object.entries(lottieColors ?? {}).filter(([key]) => key !== '__tint'));
+    lottieColors = Object.keys(explicit).length ? explicit : undefined;
+  }
+
   // Los iconos animados conservan sus colores propios; sólo se recolorean si el
   // usuario edita colores concretos (lottieColors) o pide un tinte explícito (tint).
   const lottieTint = tint;

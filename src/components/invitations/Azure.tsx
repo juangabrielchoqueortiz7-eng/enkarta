@@ -306,15 +306,33 @@ export default function Azure({ data }: { data: InvitationContent }) {
       </button>)}
 
       {/* ════════ INTRO (script names in orchid wreath) ════════ */}
-      <section id="az-intro" className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 text-center">
+      <section id="az-intro" className="relative z-10 min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 py-16 text-center">
+        <div className="pointer-events-none absolute inset-x-0 top-[18%] mx-auto h-[420px] max-w-3xl rounded-full blur-3xl" aria-hidden
+          style={{ background: `radial-gradient(circle, ${C.navy}14 0%, transparent 68%)` }} />
+        <Reveal className="relative mb-5">
+          <div className="inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-sm"
+            style={{ borderColor: `${C.navy}2e`, background: `${C.bg}b8` }}>
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: C.navy }} />
+            <span className="font-cinzel text-[9px] tracking-[0.28em] sm:text-[10px]" style={{ color: C.soft }}>
+              ENKARTA · COLECCIÓN LUNARIA
+            </span>
+          </div>
+        </Reveal>
         <Reveal>
           <CircleWreath groom={data.groom} bride={data.bride} size={300} />
         </Reveal>
         <Reveal delay={150}>
-          <p className="font-cormorant mt-10 max-w-xl mx-auto" style={{ color: C.ink, fontSize: '19px', lineHeight: 1.7 }}>
-            {data.introMessage}
-          </p>
+          <div className="mx-auto mt-8 max-w-xl rounded-[28px_8px_28px_8px] border px-6 py-5 backdrop-blur-md sm:px-9"
+            style={{ borderColor: `${C.navy}24`, background: `${C.bg}c9`, boxShadow: `0 24px 70px ${C.navy}14` }}>
+            <p className="font-cormorant" style={{ color: C.ink, fontSize: '19px', lineHeight: 1.7 }}>
+              {data.introMessage}
+            </p>
+          </div>
         </Reveal>
+        <div className="absolute bottom-7 flex flex-col items-center gap-2" aria-hidden>
+          <span className="font-cinzel text-[8px] tracking-[0.3em]" style={{ color: C.soft }}>DESCUBRE LA HISTORIA</span>
+          <span className="h-8 w-px" style={{ background: `linear-gradient(${C.line}, transparent)` }} />
+        </div>
       </section>
 
       {/* ════════ FOTO DE PORTADA (solo si el cliente subió una) ════════ */}
@@ -398,13 +416,14 @@ export default function Azure({ data }: { data: InvitationContent }) {
         {/* Solo faltan + wide countdown */}
         <Reveal delay={240} className="mt-12">
           <p className="font-cormorant italic mb-5" style={{ color: C.soft, fontSize: '17px' }}>Solo faltan</p>
-          <div className="flex items-baseline justify-between max-w-md sm:max-w-xl mx-auto px-1">
+          <div className="mx-auto grid max-w-xl grid-cols-4 gap-2 sm:gap-3">
             {[[days, 'Días'], [hours, 'Horas'], [mins, 'Min.'], [secs, 'Seg.']].map(([n, l]) => (
-              <div key={l as string} className="flex items-baseline gap-0.5">
-                <span className="font-playfair font-bold leading-none" style={{ color: C.navy, fontSize: 'clamp(26px,6vw,40px)' }}>
+              <div key={l as string} className="min-w-0 rounded-[18px_6px_18px_6px] border px-1.5 py-4 text-center backdrop-blur-sm sm:py-5"
+                style={{ borderColor: `${C.navy}24`, background: `${C.bg}b8`, boxShadow: `0 12px 30px ${C.navy}0d` }}>
+                <span className="font-playfair block font-bold leading-none" style={{ color: C.navy, fontSize: 'clamp(24px,6vw,40px)' }}>
                   <Odometer value={n as number} />
                 </span>
-                <span className="font-cormorant" style={{ color: C.soft, fontSize: '12px' }}>{l}</span>
+                <span className="font-cinzel mt-2 block truncate tracking-[0.12em]" style={{ color: C.soft, fontSize: '9px' }}>{l}</span>
               </div>
             ))}
           </div>
@@ -463,11 +482,12 @@ export default function Azure({ data }: { data: InvitationContent }) {
         <Reveal>
           <h2 className="font-great" style={{ color: C.navy, fontSize: 'clamp(34px,6vw,52px)' }}>Itinerario</h2>
         </Reveal>
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-4 max-w-3xl mx-auto">
+        <div className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
           {data.itinerary.map((it, i) => (
-            <Reveal key={it.label} delay={i * 120} className="flex flex-col items-center">
+            <Reveal key={it.label} delay={i * 120} className="flex flex-col items-center rounded-[24px_8px_24px_8px] border px-5 py-6 backdrop-blur-sm"
+              style={{ borderColor: `${C.navy}20`, background: `${C.bg}b5` }}>
               <SecIcon name={it.icon} className="w-10 h-10 mb-3" scale={iconScale} color={iconColor} colors={it.iconColors} speed={it.iconSpeed} />
-              <div className="w-full h-px my-2" style={{ background: C.line }} />
+              <div className="my-2 h-px w-14" style={{ background: C.line }} />
               <p className="font-cormorant" style={{ color: C.soft, fontSize: '16px' }}>{it.label}</p>
               <p className="font-cinzel tracking-[0.1em] mt-1" style={{ color: C.navy, fontSize: '18px' }}>{it.time}</p>
             </Reveal>

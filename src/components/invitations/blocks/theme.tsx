@@ -6,25 +6,29 @@
 // vía `useBlockTheme()`.
 
 import { createContext, useContext } from 'react';
-import type { TemplateTheme } from '@/lib/types';
+import type { TemplateTheme, TemplateTokens } from '@/lib/types';
 
 export interface BlockTheme {
   primary: string;     // títulos, trazos, botones
   primaryDeep: string; // bloques/paneles oscuros, pie
+  accent: string;      // acento secundario
   text: string;        // texto principal
   muted: string;       // texto secundario
   line: string;        // líneas divisorias
   bg: string;          // fondo de página
+  surface: string;     // tarjetas y superficies elevadas
   onPrimary: string;   // texto sobre bloques primarios
 }
 
 export const DEFAULT_BLOCK_THEME: BlockTheme = {
   primary: '#b8975a',
   primaryDeep: '#2c2519',
+  accent: '#d5ad63',
   text: '#3a342b',
   muted: '#8a7d6a',
   line: 'rgba(60,50,35,0.22)',
   bg: '#faf7f2',
+  surface: '#ffffff',
   onPrimary: '#ffffff',
 };
 
@@ -32,10 +36,12 @@ export function resolveBlockTheme(t?: TemplateTheme): BlockTheme {
   return {
     primary: t?.primary || DEFAULT_BLOCK_THEME.primary,
     primaryDeep: t?.primaryDeep || DEFAULT_BLOCK_THEME.primaryDeep,
+    accent: t?.accent || t?.primaryDeep || DEFAULT_BLOCK_THEME.accent,
     text: t?.text || DEFAULT_BLOCK_THEME.text,
     muted: t?.muted || DEFAULT_BLOCK_THEME.muted,
     line: t?.line || DEFAULT_BLOCK_THEME.line,
     bg: t?.bg || DEFAULT_BLOCK_THEME.bg,
+    surface: t?.surface || DEFAULT_BLOCK_THEME.surface,
     onPrimary: t?.onPrimary || DEFAULT_BLOCK_THEME.onPrimary,
   };
 }
@@ -43,3 +49,7 @@ export function resolveBlockTheme(t?: TemplateTheme): BlockTheme {
 const Ctx = createContext<BlockTheme>(DEFAULT_BLOCK_THEME);
 export const useBlockTheme = () => useContext(Ctx);
 export const BlockThemeProvider = Ctx.Provider;
+
+const DesignCtx = createContext<TemplateTokens>({});
+export const useBlockDesign = () => useContext(DesignCtx);
+export const BlockDesignProvider = DesignCtx.Provider;

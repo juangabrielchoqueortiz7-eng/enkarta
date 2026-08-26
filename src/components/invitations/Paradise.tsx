@@ -51,6 +51,24 @@ function MarbleBg() {
   );
 }
 
+// Rama editorial propia de Verdealma: enmarca sin competir con la fotografía.
+function BotanicalFrame({ color, className = '' }: { color: string; className?: string }) {
+  return (
+    <svg viewBox="0 0 220 220" className={className} fill="none" stroke={color} strokeLinecap="round" aria-hidden>
+      <path d="M8 210C42 169 65 124 82 74 94 40 116 18 156 8" strokeWidth="1.2" />
+      {[
+        [34, 174, -34], [48, 148, 38], [60, 122, -40], [70, 94, 42],
+        [83, 67, -36], [101, 43, 36], [126, 23, -30], [153, 10, 30],
+      ].map(([x, y, r], i) => (
+        <path key={i} transform={`rotate(${r} ${x} ${y})`}
+          d={`M${x} ${y}c10-13 25-12 31-8-4 12-16 21-31 8-6-7-6-15 0-20Z`}
+          fill={color} fillOpacity={i % 2 ? 0.08 : 0.14} strokeWidth="0.9" />
+      ))}
+      <circle cx="82" cy="74" r="2.5" fill={color} stroke="none" />
+    </svg>
+  );
+}
+
 // ── Foto en marco de arco (parte superior redondeada) ────────────────────────────
 function ArchPhoto({ src, className = '', style, first, second }: { src?: string; className?: string; style?: React.CSSProperties; first?: string; second?: string }) {
   const C = useC();
@@ -73,7 +91,7 @@ function CapsTitle({ children, className = '', style }: { children: React.ReactN
   return <h3 className={className} style={{ fontFamily: F.serif, letterSpacing: '0.12em', textTransform: 'uppercase', lineHeight: 1.4, ...style }}>{children}</h3>;
 }
 
-// ── Iconos de línea propios (estilo Invitali) ────────────────────────────────────
+// ── Iconos de línea orgánicos de Enkarta ─────────────────────────────────────
 function BookCross({ color, className = '' }: { color: string; className?: string }) {
   return (
     <svg viewBox="0 0 64 56" className={className} fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -168,8 +186,16 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
       </button>)}
 
       {/* ════════ PORTADA ════════ */}
-      <section className="relative px-6 py-16 md:py-0 md:min-h-screen md:flex md:items-center" style={{ background: C.green, color: C.creamText }}>
+      <section className="relative min-h-screen overflow-hidden px-6 py-20 md:flex md:items-center md:py-0" style={{ background: `linear-gradient(145deg, ${C.greenDeep} 0%, ${C.green} 58%, ${C.greenDeep} 125%)`, color: C.creamText }}>
         <MarbleBg />
+        <BotanicalFrame color={C.gold} className="pointer-events-none absolute -bottom-10 -left-10 w-56 opacity-60" />
+        <BotanicalFrame color={C.gold} className="pointer-events-none absolute -right-10 -top-10 w-56 rotate-180 opacity-50" />
+        <span className="absolute left-5 top-5 text-[8px] tracking-[0.28em] sm:left-8 sm:top-8" style={{ color: C.creamText, fontFamily: F.caps }}>
+          ENKARTA · COLECCIÓN VERDEALMA
+        </span>
+        <span className="absolute right-5 top-5 text-[8px] tracking-[0.22em] sm:right-8 sm:top-8" style={{ color: C.gold, fontFamily: F.caps }}>
+          JARDÍN · {data.city}
+        </span>
         <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-10 md:grid-cols-2">
           {/* Nombres */}
           <div className="order-2 text-center md:order-1 md:text-left md:pl-8" style={{ animation: 'paFade 1s ease' }}>
@@ -187,7 +213,9 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
           {/* Foto + fecha/ciudad verticales */}
           <div className="order-1 flex items-center justify-center gap-4 md:order-2">
             <span className="hidden text-[13px] tracking-[0.35em] sm:block" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', color: C.creamText }}>{data.dateLabel}</span>
-            <ArchPhoto src={data.coverImage} first={data.bride} second={data.groom} className="w-[min(78vw,360px)]" style={{ aspectRatio: '3 / 4' }} />
+            <div className="relative rounded-t-full border p-2" style={{ borderColor: `${C.gold}99`, boxShadow: '0 30px 80px rgba(20,30,14,0.28)' }}>
+              <ArchPhoto src={data.coverImage} first={data.bride} second={data.groom} className="w-[min(76vw,350px)]" style={{ aspectRatio: '3 / 4' }} />
+            </div>
             <span className="hidden text-[13px] tracking-[0.35em] sm:block" style={{ writingMode: 'vertical-rl', color: C.creamText }}>{data.city}</span>
           </div>
         </div>
@@ -228,12 +256,12 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
         <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
           <Reveal className="text-center">
             <Script style={{ fontSize: '40px' }}>Faltan</Script>
-            <div className="mt-4 rounded-2xl px-4 py-6" style={{ border: `1px solid ${C.creamText}` }}>
+            <div className="mt-4 rounded-[28px_8px_28px_8px] border px-3 py-3 backdrop-blur-sm" style={{ borderColor: `${C.gold}99`, background: `${C.greenDeep}66` }}>
               <div className="grid grid-cols-4 gap-2">
                 {cd.map(c => (
-                  <div key={c.l}>
+                  <div key={c.l} className="rounded-[16px_5px_16px_5px] px-1 py-3" style={{ background: `${C.creamText}0f` }}>
                     <p style={{ fontFamily: F.serif, fontSize: 'clamp(26px,5vw,40px)', lineHeight: 1 }}><Odometer value={c.v} /></p>
-                    <p className="mt-1" style={{ fontSize: '12px', opacity: 0.85 }}>{c.l}</p>
+                    <p className="mt-1 truncate" style={{ fontFamily: F.caps, fontSize: '9px', letterSpacing: '0.08em', opacity: 0.85 }}>{c.l}</p>
                   </div>
                 ))}
               </div>
@@ -278,7 +306,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
             ...(data.ceremonyCivil ? [{ icon: 'rings', title: 'Ceremonia Civil', c: data.ceremonyCivil }] : []),
           ].map((b, i) => (
             <Reveal key={b.title} className="flex flex-col items-center text-center">
-              <EventIcon name={b.icon} className="mb-3 h-14 w-14" stroke={C.creamText} custom={data} sec={i === 0 ? 'ceremony' : 'reception'} />
+              <EventIcon name={b.icon} className="mb-3 h-14 w-14" stroke={data.iconColor || C.creamText} custom={data} sec={i === 0 ? 'ceremony' : 'reception'} />
               <Script style={{ fontSize: '34px' }}>{b.title}</Script>
               <div className="mt-3 flex items-center justify-center gap-3" style={{ fontSize: '16px' }}>
                 <span>{b.c.time}</span>
@@ -294,7 +322,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
           ))}
         </div>
         <Reveal className="relative z-10 mt-14 flex flex-col items-center text-center">
-          <EventIcon name="dress" className="mb-3 h-16 w-16" stroke={C.creamText} custom={data} sec="dress" />
+          <EventIcon name="dress" className="mb-3 h-16 w-16" stroke={data.iconColor || C.creamText} custom={data} sec="dress" />
           <Script style={{ fontSize: '32px' }}>Vestimenta</Script>
           <p className="mt-1" style={{ fontSize: '17px' }}>{data.dressCode}</p>
         </Reveal>
@@ -307,18 +335,29 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
         <Reveal className="relative z-10">
           <Script className="text-center" style={{ fontSize: '44px' }}>Cronograma</Script>
           <div className="relative mx-auto mt-10 max-w-2xl">
-            <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2" style={{ background: C.gold }} />
-            <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full" style={{ background: C.gold }} />
-            <span className="absolute left-1/2 bottom-0 h-2 w-2 -translate-x-1/2 rounded-full" style={{ background: C.gold }} />
+            <div className="absolute bottom-0 left-1/2 top-0 hidden w-px -translate-x-1/2 sm:block" style={{ background: C.gold }} />
+            <span className="absolute left-1/2 top-0 hidden h-2 w-2 -translate-x-1/2 rounded-full sm:block" style={{ background: C.gold }} />
+            <span className="absolute bottom-0 left-1/2 hidden h-2 w-2 -translate-x-1/2 rounded-full sm:block" style={{ background: C.gold }} />
+            <div className="absolute bottom-5 left-6 top-5 w-px sm:hidden" style={{ background: C.gold }} aria-hidden />
             {data.itinerary.map((it, i) => {
               const right = i % 2 === 0;
               return (
-                <div key={i} className="relative grid grid-cols-2 items-center" style={{ minHeight: 108 }}>
-                  <div className={right ? '' : 'flex flex-col items-center'}>
-                    {!right && <TimelineItem icon={it.icon} label={it.label} time={it.time} color={C.creamText} line={C.gold} colors={it.iconColors} speed={it.iconSpeed} />}
+                <div key={i} className="relative py-2 sm:grid sm:grid-cols-2 sm:items-center sm:py-0" style={{ minHeight: 108 }}>
+                  <div className={right ? 'hidden sm:block' : 'hidden sm:flex sm:flex-col sm:items-center'}>
+                    {!right && <TimelineItem icon={it.icon} label={it.label} time={it.time} color={C.creamText} iconColor={data.iconColor} line={C.gold} colors={it.iconColors} speed={it.iconSpeed} />}
                   </div>
-                  <div className={right ? 'flex flex-col items-center' : ''}>
-                    {right && <TimelineItem icon={it.icon} label={it.label} time={it.time} color={C.creamText} line={C.gold} colors={it.iconColors} speed={it.iconSpeed} />}
+                  <div className={right ? 'hidden sm:flex sm:flex-col sm:items-center' : 'hidden sm:block'}>
+                    {right && <TimelineItem icon={it.icon} label={it.label} time={it.time} color={C.creamText} iconColor={data.iconColor} line={C.gold} colors={it.iconColors} speed={it.iconSpeed} />}
+                  </div>
+                  <div className="grid grid-cols-[48px_1fr] items-center gap-3 sm:hidden">
+                    <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full border" style={{ borderColor: C.gold, background: C.greenDeep }}>
+                      <EventIcon name={it.icon} className="h-8 w-8" stroke={data.iconColor || C.creamText} lottieColors={it.iconColors} speed={it.iconSpeed} />
+                    </div>
+                    <div className="rounded-[20px_6px_20px_6px] border px-5 py-4 text-left" style={{ borderColor: `${C.gold}80`, background: `${C.green}78` }}>
+                      <p style={{ fontFamily: F.serif, fontSize: '18px', color: C.creamText }}>{it.label}</p>
+                      <span className="my-2 block h-px w-12" style={{ background: C.gold }} />
+                      <p style={{ fontFamily: F.caps, fontSize: '13px', letterSpacing: '0.08em', color: C.gold }}>{it.time}</p>
+                    </div>
                   </div>
                 </div>
               );
@@ -331,7 +370,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
       <section className="relative px-6 py-16 text-center" style={{ background: C.cream, color: C.greenText }}>
         {sew('regalos')}
         <Reveal className="mx-auto max-w-4xl">
-          <EventIcon name="gift" className="mx-auto mb-4 h-12 w-12" stroke={C.greenText} custom={data} sec="gift" />
+          <EventIcon name="gift" className="mx-auto mb-4 h-12 w-12" stroke={data.iconColor || C.greenText} custom={data} sec="gift" />
           <Script style={{ fontSize: '38px', color: C.greenText }}>Sugerencia de Regalo</Script>
           <p className="mx-auto mt-4 max-w-lg" style={{ fontSize: '16px', lineHeight: 1.6 }}>{data.giftMessage}</p>
           <div className="mt-8 grid gap-5 md:grid-cols-2">
@@ -379,7 +418,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
               <p className="mt-2" style={{ fontSize: '15px', lineHeight: 1.6 }}>{data.noKids}</p>
             </Reveal>
             <Reveal delay={100} className="flex flex-col items-center rounded-2xl p-7 text-center" style={{ background: C.greenDeep }}>
-              <EventIcon name="camera" className="mb-3 h-12 w-12" stroke={C.creamText} custom={data} sec="gallery" />
+              <EventIcon name="camera" className="mb-3 h-12 w-12" stroke={data.iconColor || C.creamText} custom={data} sec="gallery" />
               <p style={{ fontSize: '15px', lineHeight: 1.6 }}>{data.galleryMsg}</p>
               <a href={data.galleryUrl} target="_blank" rel="noopener noreferrer"
                 className="mt-5 rounded-full px-6 py-2.5 text-[13px] transition-opacity hover:opacity-90"
@@ -423,10 +462,10 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
 }
 
 // ── Ítem del cronograma ───────────────────────────────────────────────────────────
-function TimelineItem({ icon, label, time, color, line, colors, speed }: { icon?: string; label: string; time: string; color: string; line: string; colors?: Record<string, string>; speed?: number }) {
+function TimelineItem({ icon, label, time, color, iconColor, line, colors, speed }: { icon?: string; label: string; time: string; color: string; iconColor?: string; line: string; colors?: Record<string, string>; speed?: number }) {
   return (
     <div className="flex flex-col items-center px-3 text-center">
-      <EventIcon name={icon ?? 'rings'} className="h-12 w-12" stroke={color} lottieColors={colors} speed={speed} />
+      <EventIcon name={icon ?? 'rings'} className="h-12 w-12" stroke={iconColor || color} lottieColors={colors} speed={speed} />
       <p className="mt-2" style={{ fontFamily: F.body, fontSize: '16px', color }}>{label}</p>
       <span className="my-1 block h-px w-16" style={{ borderTop: `1px dashed ${line}` }} />
       <p style={{ fontFamily: F.body, fontSize: '16px', color }}>{time}</p>

@@ -5,7 +5,14 @@ import { Reveal, useCountdown, Odometer, PhotoGrid, EventIcon, SECTION, ENKARTA_
 import { WriteOn } from '@/lib/scroll-motion';
 import { PrimiciaContent, TemplateTheme } from './types';
 
-const DEFAULT_C = { paper: '#fdfcfa', ink: '#1a1714', soft: '#3c372f', faint: '#7a7368', rule: '#1a1714' };
+const DEFAULT_C = {
+  paper: '#fdfbf5',
+  ink: '#191713',
+  soft: '#484136',
+  faint: '#7a7368',
+  rule: '#191713',
+  accent: '#b88a3b',
+};
 type PrimiciaPalette = typeof DEFAULT_C;
 
 const ThemeCtx = createContext<PrimiciaPalette>(DEFAULT_C);
@@ -18,7 +25,8 @@ function resolvePrimiciaTheme(t?: TemplateTheme): PrimiciaPalette {
     ink:   t?.primary || t?.text || DEFAULT_C.ink,
     soft:  t?.muted   || DEFAULT_C.soft,
     faint: DEFAULT_C.faint,
-    rule:  t?.line    || t?.primary || DEFAULT_C.rule,
+    rule:  t?.primary || t?.text || DEFAULT_C.rule,
+    accent: t?.line   || DEFAULT_C.accent,
   };
 }
 const FONT = {
@@ -115,7 +123,7 @@ function Rule({ className = '' }: { className?: string }) {
   const C = useC();
   return (
     <div className={className} aria-hidden>
-      <div style={{ borderTop: `2.5px solid ${C.rule}`, marginBottom: '2px' }} />
+      <div style={{ borderTop: `2.5px solid ${C.accent}`, marginBottom: '2px' }} />
       <div style={{ borderTop: `1px solid ${C.rule}` }} />
     </div>
   );
@@ -215,6 +223,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const C = resolvePrimiciaTheme(data.theme);
+  const iconColor = data.iconColor || C.ink;
 
   useEffect(() => {
     document.body.style.background = C.paper;
@@ -229,7 +238,13 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
     <ThemeCtx.Provider value={C}>
     <div
       className="relative min-h-screen w-full overflow-x-hidden"
-      style={{ background: C.paper, color: C.ink, fontFamily: FONT.body }}
+      style={{
+        backgroundColor: C.paper,
+        backgroundImage: `radial-gradient(${C.ink}0b 0.65px, transparent 0.65px), linear-gradient(90deg, transparent 49.7%, ${C.accent}0b 50%, transparent 50.3%)`,
+        backgroundSize: '6px 6px, 100% 100%',
+        color: C.ink,
+        fontFamily: FONT.body,
+      }}
     >
       <style>{`
         @keyframes prBounce { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(7px);} }
@@ -253,23 +268,29 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         }}
         className="fixed bottom-5 right-5 z-50 flex h-10 w-10 items-center justify-center rounded-full transition-transform hover:scale-110"
         style={{ border: `1.5px solid ${C.ink}`, background: C.paper }}
-        aria-label="Musica"
+        aria-label="Música"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill={C.ink}>
           <path d="M9 17a3 3 0 11-2-2.83V5l11-2v10.17A3 3 0 1116 14V7L9 8.4V17z" />
         </svg>
       </button>)}
 
-      <section className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center">
-        <div className="w-full max-w-3xl">
-          <p style={{ fontFamily: FONT.head, fontWeight: 700, letterSpacing: '0.3em', fontSize: '10px' }}>
-            EDICION ESPECIAL · BODAS
+      <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 py-16 text-center">
+        <span className="absolute left-5 top-5 font-cinzel text-[8px] tracking-[0.28em] sm:left-8 sm:top-8" style={{ color: C.faint }}>
+          ENKARTA · COLECCIÓN ÁUREA
+        </span>
+        <span className="absolute right-5 top-5 font-cinzel text-[8px] tracking-[0.28em] sm:right-8 sm:top-8" style={{ color: C.faint }}>
+          Nº {data.dateYear}{data.dateDay}
+        </span>
+        <div className="w-full max-w-3xl border-y px-2 py-10 sm:px-8" style={{ borderColor: `${C.accent}66` }}>
+          <p style={{ fontFamily: FONT.head, fontWeight: 700, letterSpacing: '0.3em', fontSize: '10px', color: C.accent }}>
+            EDICIÓN EXTRAORDINARIA · BODAS
           </p>
           <p className="mt-5" style={{ fontFamily: FONT.black, fontSize: 'clamp(34px,7vw,72px)', lineHeight: 1 }}>
-            Noticia de Ultimo momento
+            Una historia para recordar
           </p>
           <Head className="mt-4" style={{ fontSize: 'clamp(28px,6vw,58px)', fontWeight: 900, textTransform: 'uppercase' }}>
-            La Boda del Ano
+            La celebración del año
           </Head>
           <Rule className="mt-8 mb-2" />
           <p
@@ -284,7 +305,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
             {data.dateLine}
           </p>
           <Rule className="mt-2 mb-10" />
-          <OutBtn onClick={enter}>Ingresar a mi invitacion</OutBtn>
+          <OutBtn onClick={enter}>Abrir esta edición</OutBtn>
         </div>
       </section>
 
@@ -296,6 +317,9 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
             style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, transparent 40%, rgba(0,0,0,0.45) 100%)' }}
           />
           <div className="absolute inset-x-0 bottom-[13%] px-6 text-center text-white">
+            <p className="mb-5 text-[9px] tracking-[0.35em] sm:text-[11px]" style={{ fontFamily: FONT.head }}>
+              HISTORIA PRINCIPAL · {data.dateLine}
+            </p>
             <p style={{ fontFamily: FONT.script, fontSize: 'clamp(46px,11vw,104px)', lineHeight: 0.9 }}><WriteOn>{data.groom}</WriteOn></p>
             <p style={{ fontFamily: FONT.script, fontSize: 'clamp(22px,5vw,40px)', margin: '2px 0' }}>&amp;</p>
             <p style={{ fontFamily: FONT.script, fontSize: 'clamp(46px,11vw,104px)', lineHeight: 0.9 }}><WriteOn delay={500}>{data.bride}</WriteOn></p>
@@ -311,7 +335,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
 
       <section className={`mx-auto max-w-2xl px-6 ${SECTION.base} text-center`}>
         <Reveal>
-          <Head style={{ fontSize: 'clamp(18px,4vw,26px)' }}>Bienvenidos a la invitacion de nuestra Boda</Head>
+          <Head style={{ fontSize: 'clamp(18px,4vw,26px)' }}>Bienvenidos a la invitación de nuestra boda</Head>
           <Rule className="mx-auto mb-6 mt-6 w-24" />
           {data.guestName && <p style={{ fontFamily: FONT.script, fontSize: '42px', color: C.ink }}>{data.guestName}</p>}
           {data.guestPasses && (<>
@@ -329,7 +353,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
       <section className={`px-6 ${SECTION.tight} text-center`}>
         <Reveal>
           <Head style={{ fontSize: 'clamp(16px,3.6vw,24px)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-            El gran dia se acerca y no puedes faltar
+            El gran día se acerca y no puedes faltar
           </Head>
           <div className="mb-7 mt-7 flex items-center justify-center gap-4">
             <span style={{ fontFamily: FONT.head, letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '13px' }}>
@@ -346,22 +370,22 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
               <div>{data.dateYear}</div>
             </div>
           </div>
-          <div className="flex items-start justify-center gap-3 sm:gap-5">
+          <div className="mx-auto grid max-w-md grid-cols-3 gap-2 sm:gap-4">
             {[
-              [days, 'Dias'],
+              [days, 'Días'],
               [hours, 'Horas'],
               [mins, 'Mins.'],
             ].map(([n, l]) => (
-              <div key={l as string} className="text-center">
+              <div key={l as string} className="border px-1 py-4 text-center sm:py-5" style={{ borderColor: `${C.accent}66`, background: `${C.paper}d9`, boxShadow: `inset 0 3px 0 ${C.accent}` }}>
                 <div
                   className="flex items-center justify-center"
-                  style={{ background: C.ink, color: C.paper, width: 'clamp(64px,18vw,92px)', height: 'clamp(64px,18vw,92px)' }}
+                  style={{ color: C.ink }}
                 >
                   <span style={{ fontFamily: FONT.head, fontWeight: 800, fontSize: 'clamp(26px,7vw,40px)' }}>
                     <Odometer value={n as number} />
                   </span>
                 </div>
-                <p className="mt-2" style={{ fontFamily: FONT.head, fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                <p className="mt-2 truncate" style={{ fontFamily: FONT.head, fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: C.soft }}>
                   {l}
                 </p>
               </div>
@@ -392,7 +416,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
       <section className={`mx-auto max-w-5xl px-6 ${SECTION.tight}`}>
         <Reveal>
           <Head className="mb-10 text-center" style={{ fontSize: 'clamp(15px,3.4vw,22px)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Con la bendicion de Dios y de nuestros padres
+            Con la bendición de Dios y de nuestros padres
           </Head>
           <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-12">
             <div className="space-y-8 text-center md:text-left">
@@ -422,15 +446,15 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
           <Head className="mb-12 text-center" style={{ fontSize: 'clamp(24px,5vw,38px)' }}>
             Itinerario
           </Head>
-          <div className="relative mx-auto max-w-4xl px-2 md:px-6">
-            <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2" style={{ background: '#9ea392' }} aria-hidden />
+          <div className="relative mx-auto max-w-4xl px-0 sm:px-2 md:px-6">
+            <div className="absolute bottom-0 left-[19px] top-0 w-px sm:left-1/2 sm:-translate-x-1/2" style={{ background: `${C.accent}99` }} aria-hidden />
             <div className="relative space-y-10 md:space-y-12">
               {data.itinerary.map((item, index) => {
                 const left = index % 2 === 0;
                 const delay = `${index * 0.45}s`;
                 const block = (
-                  <div className={`flex flex-col ${left ? 'items-end text-right' : 'items-start text-left'}`}>
-                    <div className={`mb-3 ${left ? 'mr-2' : 'ml-2'}`} style={{ color: C.ink }}>
+                  <div className={`flex flex-col items-start text-left ${left ? 'sm:items-end sm:text-right' : 'sm:items-start sm:text-left'}`}>
+                    <div className={`mb-3 ${left ? 'sm:mr-2' : 'sm:ml-2'}`} style={{ color: iconColor }}>
                       <ItineraryIcon
                         name={item.icon === 'cheers' && item.label.toLowerCase().includes('fin') ? 'party' : item.icon}
                         className="h-12 w-12 md:h-14 md:w-14"
@@ -468,12 +492,15 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
                 );
 
                 return (
-                  <div key={`${item.label}-${item.time}`} className="grid grid-cols-[1fr_28px_1fr] items-center gap-x-3 md:gap-x-8">
-                    <div>{left ? block : null}</div>
+                  <div key={`${item.label}-${item.time}`} className="grid grid-cols-[40px_1fr] items-center gap-x-3 sm:grid-cols-[1fr_28px_1fr] md:gap-x-8">
+                    <div className="hidden sm:block">{left ? block : null}</div>
                     <div className="flex justify-center">
-                      <div className="h-3.5 w-3.5 rounded-full border-[3px]" style={{ background: '#fff', borderColor: C.ink }} />
+                      <div className="h-3.5 w-3.5 rounded-full border-[3px]" style={{ background: C.paper, borderColor: C.accent }} />
                     </div>
-                    <div>{!left ? block : null}</div>
+                    <div className="hidden sm:block">{!left ? block : null}</div>
+                    <div className="border px-5 py-5 sm:hidden" style={{ borderColor: `${C.accent}66`, background: `${C.paper}e8`, boxShadow: `4px 4px 0 ${C.accent}1f` }}>
+                      {block}
+                    </div>
                   </div>
                 );
               })}
@@ -485,11 +512,11 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
       <section className={`px-6 ${SECTION.base} text-center`}>
         <Reveal>
           {data.icons?.dress && (
-            <EventIcon name="" custom={data} sec="dress" className="mx-auto mb-3 h-11 w-11" stroke={C.ink} />
+            <EventIcon name="" custom={data} sec="dress" className="mx-auto mb-3 h-11 w-11" stroke={iconColor} />
           )}
-          <Head style={{ fontSize: 'clamp(24px,5vw,38px)' }}>Codigo de Vestimenta</Head>
+          <Head style={{ fontSize: 'clamp(24px,5vw,38px)' }}>Código de vestimenta</Head>
           <p className="mt-4" style={{ fontFamily: FONT.body, fontSize: '17px', color: C.soft }}>
-            Para este dia tan especial, se ha elegido un estilo:
+            Para este día tan especial, se ha elegido un estilo:
           </p>
           <p className="mt-2" style={{ fontFamily: FONT.head, fontWeight: 900, fontSize: 'clamp(30px,7vw,52px)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             {data.dressCode}
@@ -501,7 +528,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         <Reveal>
           <div className="mb-8 flex justify-center">
             {data.icons?.ceremony ? (
-              <EventIcon name="" custom={data} sec="ceremony" className="h-12 w-12" stroke={C.ink} />
+              <EventIcon name="" custom={data} sec="ceremony" className="h-12 w-12" stroke={iconColor} />
             ) : (
               <svg width="40" height="48" viewBox="0 0 24 28" fill="none" stroke={C.ink} strokeWidth="1.2">
                 <path d="M12 1C7 1 3 5 3 10c0 6.5 9 16 9 16s9-9.5 9-16c0-5-4-9-9-9z" />
@@ -530,7 +557,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
                   {location.maps && (
                     <div className="mt-4">
                       <BlackBtn href={location.maps} full>
-                        Ver ubicacion
+                        Ver ubicación
                       </BlackBtn>
                     </div>
                   )}
@@ -551,7 +578,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
               <path d="M10 10 38 38" />
             </svg>
             <p style={{ fontFamily: FONT.body, fontSize: '16px', color: C.soft, lineHeight: 1.6 }}>
-              Amamos a sus ninos y queremos que ustedes disfruten sin parar, por ello es que la invitacion es solo para adultos.
+              Amamos a sus niños y queremos que ustedes disfruten sin parar; por ello, la invitación es solo para adultos.
             </p>
           </div>
         </Reveal>
@@ -561,7 +588,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         <Reveal>
           <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-12">
             <div>
-              <Head style={{ fontSize: 'clamp(24px,4.5vw,34px)' }}>Querida familia y Amigos</Head>
+              <Head style={{ fontSize: 'clamp(24px,4.5vw,34px)' }}>Querida familia y amigos</Head>
               <p className="mt-5" style={{ fontFamily: FONT.body, fontSize: '15px', color: C.soft, lineHeight: 1.75, textAlign: 'justify' }}>
                 {data.rsvpMessage}
               </p>
@@ -588,7 +615,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         <Reveal>
           <div className="p-8" style={{ border: `1.5px solid ${C.ink}` }}>
             {data.icons?.gift && (
-              <EventIcon name="" custom={data} sec="gift" className="mx-auto mb-3 h-11 w-11" stroke={C.ink} />
+              <EventIcon name="" custom={data} sec="gift" className="mx-auto mb-3 h-11 w-11" stroke={iconColor} />
             )}
             <Head style={{ fontSize: 'clamp(20px,4.5vw,30px)', textTransform: 'uppercase' }}>Sugerencia de Regalo</Head>
             <p className="mx-auto mt-5 max-w-lg italic" style={{ fontFamily: FONT.body, fontSize: '17px', color: C.soft, lineHeight: 1.7 }}>
@@ -603,7 +630,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
               </p>
             </div>
             <p className="mt-5 italic" style={{ color: C.soft, fontSize: '15px' }}>
-              Gracias por su muestra de carino.
+              Gracias por su muestra de cariño.
             </p>
           </div>
         </Reveal>
@@ -613,7 +640,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         <section className={`mx-auto max-w-3xl px-6 ${SECTION.base} text-center`}>
           <Reveal>
             {data.icons?.gallery && (
-              <EventIcon name="" custom={data} sec="gallery" className="mx-auto mb-3 h-11 w-11" stroke={C.ink} />
+              <EventIcon name="" custom={data} sec="gallery" className="mx-auto mb-3 h-11 w-11" stroke={iconColor} />
             )}
             <Head style={{ fontSize: 'clamp(20px,4.5vw,30px)', textTransform: 'uppercase' }}>Nuestra Galería</Head>
             <div className="mt-7">
@@ -627,7 +654,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
         <Seam shape="bevel" from={C.paper} hairline={C.rule} />
         <p style={{ fontFamily: FONT.black, fontSize: '24px' }}>Enkarta</p>
         <p className="mt-1" style={{ fontFamily: FONT.body, fontSize: '14px', opacity: 0.7 }}>
-          Deseas una invitacion para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
+          ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>
       </footer>
     </div>

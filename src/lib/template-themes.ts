@@ -58,7 +58,7 @@ export const TEMPLATE_TOKEN_DEFAULTS: Record<string, TemplateTokens> = {
   // herede el acabado de la plantilla de la que partió.
   azure:      { contentWidth: 700, sectionInset: 24, sectionRadius: 28, spacing: 'airy', surface: 'soft', seam: 'arch' },
   primicia:   { contentWidth: 760, sectionInset: 26, sectionRadius: 12, spacing: 'normal', surface: 'flat', seam: 'bevel' },
-  passport:   { contentWidth: 720, sectionInset: 24, sectionRadius: 18, spacing: 'normal', surface: 'card', seam: 'wave' },
+  passport:   { contentWidth: 760, sectionInset: 24, sectionRadius: 0, spacing: 'airy', surface: 'flat', seam: 'wave' },
   paradise:   { contentWidth: 720, sectionInset: 24, sectionRadius: 26, spacing: 'airy', surface: 'soft', seam: 'wave' },
   obsidiana:  { contentWidth: 700, sectionInset: 28, sectionRadius: 22, spacing: 'normal', surface: 'card', seam: 'bevel' },
   dolcevita:  { contentWidth: 710, sectionInset: 24, sectionRadius: 24, spacing: 'normal', surface: 'soft', seam: 'scallop' },

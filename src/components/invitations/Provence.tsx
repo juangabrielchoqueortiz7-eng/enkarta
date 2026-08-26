@@ -14,7 +14,7 @@ import {
 } from './shared';
 import { WriteOn, CascadeText } from '@/lib/scroll-motion';
 
-// ── Paleta de Colores por Defecto (Inspirada en Annie & Micky / Invitali) ───
+// ── Paleta solar mediterránea de la colección Atelier ────────────────────────
 const DEFAULT_C = {
   bg: '#F7EFE4',          // Crema cálido principal
   paper: '#FAF6EE',       // Marfil suave para secciones

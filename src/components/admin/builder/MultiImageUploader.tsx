@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useCallback } from 'react';
+import { compressImage } from '@/lib/image-compress';
 
 interface Props {
   values: string[];
@@ -20,6 +21,7 @@ export default function MultiImageUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedBytes, setSavedBytes] = useState(0);
 
   const uploadFiles = useCallback(async (files: FileList) => {
     setError(null);
@@ -28,7 +30,10 @@ export default function MultiImageUploader({
     const batch = Array.from(files).slice(0, room);
     const uploaded: string[] = [];
     try {
-      for (const file of batch) {
+      let saved = 0;
+      for (const original of batch) {
+        const file = await compressImage(original, 1920, 0.82);
+        saved += Math.max(0, original.size - file.size);
         const fd = new FormData();
         fd.append('file', file);
         fd.append('folder', folder);
@@ -38,6 +43,7 @@ export default function MultiImageUploader({
         if (!res.ok) throw new Error(json.error || 'Error al subir');
         uploaded.push(json.url as string);
       }
+      setSavedBytes(value => value + saved);
       onChange([...values, ...uploaded]);
     } catch (e) {
       if (uploaded.length) onChange([...values, ...uploaded]);
@@ -99,6 +105,7 @@ export default function MultiImageUploader({
       <p className="text-xs text-gray-400 font-outfit mt-2">
         {values.length}/{max} fotos · arrastra para reordenar con ← →
       </p>
+      {savedBytes > 0 && <p className="mt-1 text-xs font-outfit text-emerald-600">✓ Galería optimizada · ahorraste {(savedBytes / 1024 / 1024).toFixed(1)} MB</p>}
       {error && <p className="text-xs text-red-500 font-outfit mt-1">{error}</p>}
 
       <input

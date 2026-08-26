@@ -1,228 +1,228 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { InvitationParsed, Guest } from '@/lib/types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Guest, GuestEventAccess, GuestMetadata, InvitationParsed } from '@/lib/types';
+import { guessGuestColumn, mapGuestCsvRows, normalizeGuestPhone, parseGuestCsv, type GuestImportField, type GuestImportRow, type ParsedGuestCsv } from '@/lib/guest-import';
 
 interface Props {
   data: InvitationParsed;
+  onChange?: (patch: Partial<InvitationParsed>) => void;
+  onPreview?: (guest: Guest | null) => void;
+  previewGuestId?: string;
 }
 
 const STATUS_META: Record<Guest['status'], { label: string; cls: string }> = {
-  confirmed: { label: 'Confirmado', cls: 'bg-green-50 text-green-600' },
-  declined: { label: 'No asiste', cls: 'bg-red-50 text-red-500' },
-  pending: { label: 'Pendiente', cls: 'bg-gray-100 text-gray-500' },
+  confirmed: { label: 'Confirmado', cls: 'bg-emerald-50 text-emerald-700' },
+  declined: { label: 'No asiste', cls: 'bg-rose-50 text-rose-600' },
+  pending: { label: 'Pendiente', cls: 'bg-amber-50 text-amber-700' },
 };
-
+const EVENT_LABEL: Record<GuestEventAccess, string> = { both: 'Todo el evento', ceremony: 'Solo ceremonia', reception: 'Solo recepción' };
+const IMPORT_FIELDS: { value: GuestImportField; label: string }[] = [
+  { value: 'ignore', label: 'Ignorar columna' }, { value: 'name', label: 'Nombre' }, { value: 'phone', label: 'Teléfono' },
+  { value: 'passes', label: 'Pases' }, { value: 'tableNo', label: 'Mesa' }, { value: 'group', label: 'Grupo' },
+  { value: 'allowKids', label: 'Permite niños' }, { value: 'eventAccess', label: 'Acceso al evento' },
+];
 type StatusFilter = 'all' | Guest['status'] | 'sent' | 'unsent';
 
-export default function GuestsPanel({ data }: Props) {
+export default function GuestsPanel({ data, onChange, onPreview, previewGuestId }: Props) {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [loading, setLoading] = useState(false);
   const [bulk, setBulk] = useState('');
-  const [showBulk, setShowBulk] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [csv, setCsv] = useState<ParsedGuestCsv | null>(null);
+  const [mapping, setMapping] = useState<Record<number, GuestImportField>>({});
+  const [notice, setNotice] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
+  const [messageGuestId, setMessageGuestId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<StatusFilter>('all');
+  const metaRef = useRef<Record<string, GuestMetadata>>(data.config?.guestMeta ?? {});
 
   const base = typeof window !== 'undefined' ? window.location.origin : 'https://enkarta.com';
   const linkFor = (publicId: string) => `${base}/i/${data.slug}?g=${publicId}`;
+  const enrich = useCallback((guest: Guest): Guest => ({ ...guest, ...(metaRef.current[guest.publicId] ?? {}) }), []);
+
+  useEffect(() => {
+    metaRef.current = data.config?.guestMeta ?? {};
+    setGuests(current => current.map(enrich));
+  }, [data.config?.guestMeta, enrich]);
 
   const load = useCallback(() => {
     setLoading(true);
     fetch(`/api/guests?id=${data.id}`)
-      .then(r => r.json())
-      .then(g => setGuests(Array.isArray(g) ? g : []))
+      .then(response => response.json())
+      .then(value => setGuests(Array.isArray(value) ? value.map(enrich) : []))
       .catch(() => setGuests([]))
       .finally(() => setLoading(false));
-  }, [data.id]);
-
+  }, [data.id, enrich]);
   useEffect(() => { load(); }, [load]);
 
-  // ── Operaciones CRUD (optimistas) ──
+  const writeMetadata = (publicId: string, patch: Partial<GuestMetadata>) => {
+    const nextItem = { ...(metaRef.current[publicId] ?? {}), ...patch };
+    const next = { ...metaRef.current, [publicId]: nextItem };
+    metaRef.current = next;
+    onChange?.({ config: { ...(data.config ?? {}), guestMeta: next } });
+  };
+
   const patchGuest = (id: string, patch: Partial<Guest>) => {
-    setGuests(gs => gs.map(g => g.id === id ? { ...g, ...patch } : g));
-    fetch('/api/guests', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, ...patch }),
+    const current = guests.find(guest => guest.id === id);
+    if (!current) return;
+    const updated = { ...current, ...patch };
+    setGuests(items => items.map(guest => guest.id === id ? updated : guest));
+    if (previewGuestId === id) onPreview?.(updated);
+
+    const metadata: Partial<GuestMetadata> = {};
+    if (patch.phone !== undefined) metadata.phone = patch.phone;
+    if (patch.group !== undefined) metadata.group = patch.group;
+    if (patch.eventAccess !== undefined) metadata.eventAccess = patch.eventAccess;
+    if (Object.keys(metadata).length) writeMetadata(current.publicId, metadata);
+
+    const apiPatch: Partial<Guest> = { ...patch };
+    delete apiPatch.phone; delete apiPatch.group; delete apiPatch.eventAccess;
+    if (Object.keys(apiPatch).length) fetch('/api/guests', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...apiPatch }),
     }).catch(() => {});
   };
 
-  const removeGuest = (id: string) => {
-    setGuests(gs => gs.filter(g => g.id !== id));
-    fetch(`/api/guests?guestId=${id}`, { method: 'DELETE' }).catch(() => {});
+  const removeGuest = (guest: Guest) => {
+    setGuests(items => items.filter(item => item.id !== guest.id));
+    if (previewGuestId === guest.id) onPreview?.(null);
+    const next = { ...metaRef.current }; delete next[guest.publicId]; metaRef.current = next;
+    onChange?.({ config: { ...(data.config ?? {}), guestMeta: next } });
+    fetch(`/api/guests?guestId=${guest.id}`, { method: 'DELETE' }).catch(() => {});
   };
 
-  const addGuests = async (rows: { name: string; passes?: number; tableNo?: string }[]) => {
-    const res = await fetch('/api/guests', {
+  const addGuests = async (rows: GuestImportRow[]) => {
+    const response = await fetch('/api/guests', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invitationId: data.id, guests: rows }),
-    }).then(r => r.json()).catch(() => null);
-    if (res?.guests) setGuests(gs => [...gs, ...res.guests]);
+      body: JSON.stringify({ invitationId: data.id, guests: rows.map(({ name, passes, tableNo, allowKids }) => ({ name, passes, tableNo, allowKids })) }),
+    }).then(item => item.json()).catch(() => null);
+    if (!Array.isArray(response?.guests)) { setNotice(response?.error || 'No se pudo completar la importación.'); return 0; }
+
+    const created: Guest[] = response.guests.map((guest: Guest, index: number) => {
+      const source = rows[index];
+      return { ...guest, phone: source?.phone, group: source?.group, eventAccess: source?.eventAccess ?? 'both' };
+    });
+    const nextMeta = { ...metaRef.current };
+    created.forEach(guest => { nextMeta[guest.publicId] = { phone: guest.phone, group: guest.group, eventAccess: guest.eventAccess }; });
+    metaRef.current = nextMeta;
+    onChange?.({ config: { ...(data.config ?? {}), guestMeta: nextMeta } });
+    setGuests(items => [...items, ...created]);
+    return created.length;
   };
 
-  const importBulk = () => {
-    const rows = bulk.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
-      const m = line.match(/^(.*?)[\s,]+(\d{1,2})\s*$/);
-      return { name: (m ? m[1] : line).trim().slice(0, 80), passes: m ? Math.max(1, Math.min(20, parseInt(m[2]))) : 1 };
-    }).filter(g => g.name);
-    if (rows.length) addGuests(rows);
-    setBulk('');
-    setShowBulk(false);
+  const importBulk = async () => {
+    const rows: GuestImportRow[] = bulk.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+      const match = line.match(/^(.*?)[\s,]+(\d{1,2})\s*$/);
+      return { name: (match ? match[1] : line).trim().slice(0, 80), passes: match ? Math.max(1, Math.min(20, parseInt(match[2]))) : 1, allowKids: true, eventAccess: 'both' as const };
+    }).filter(row => row.name);
+    const count = rows.length ? await addGuests(rows) : 0;
+    setNotice(count ? `${count} invitados añadidos.` : 'No encontramos invitados válidos.');
+    if (count) setBulk('');
   };
 
-  const copy = (publicId: string) => {
-    navigator.clipboard?.writeText(linkFor(publicId)).then(() => {
-      setCopied(publicId);
-      setTimeout(() => setCopied(null), 1500);
-    }).catch(() => {});
+  const readCsv = async (file?: File) => {
+    if (!file) return;
+    const parsed = parseGuestCsv(await file.text());
+    setCsv(parsed);
+    setMapping(Object.fromEntries(parsed.headers.map((header, index) => [index, guessGuestColumn(header)])));
+    setNotice('');
+  };
+  const mappedCsv = useMemo(() => csv ? mapGuestCsvRows(csv, mapping, guests) : null, [csv, mapping, guests]);
+  const importCsv = async () => {
+    if (!mappedCsv?.rows.length) return;
+    const count = await addGuests(mappedCsv.rows);
+    setNotice(`${count} añadidos · ${mappedCsv.duplicates} duplicados omitidos · ${mappedCsv.invalid} filas inválidas.`);
+    if (count) { setCsv(null); setMapping({}); }
   };
 
-  const waLink = (g: Guest) => {
-    const tpl = (data.config?.whatsappTemplate as string | undefined)?.trim();
-    const txt = tpl
-      ? tpl.replace('{nombre}', g.name).replace('{link}', linkFor(g.publicId))
-      : `¡Hola ${g.name}! 💌 Estás invitado(a). Aquí tu invitación personal: ${linkFor(g.publicId)}`;
-    return `https://wa.me/?text=${encodeURIComponent(txt)}`;
+  const copy = (value: string, key: string) => navigator.clipboard?.writeText(value).then(() => {
+    setCopied(key); setTimeout(() => setCopied(null), 1500);
+  }).catch(() => {});
+
+  const whatsappText = (guest: Guest) => {
+    const template = (data.config?.whatsappTemplate as string | undefined)?.trim() || '¡Hola {nombre}! 💌 Estás invitado(a). Aquí tienes tu invitación personal: {link}';
+    return template
+      .replaceAll('{nombre}', guest.name).replaceAll('{link}', linkFor(guest.publicId))
+      .replaceAll('{pases}', String(guest.passes)).replaceAll('{mesa}', guest.tableNo || 'por asignar')
+      .replaceAll('{codigo}', guest.accessCode || 'se generará al confirmar');
+  };
+  const waLink = (guest: Guest) => {
+    const digits = normalizeGuestPhone(guest.phone || '').replace(/\D/g, '');
+    return `https://wa.me/${digits}?text=${encodeURIComponent(whatsappText(guest))}`;
+  };
+
+  const exportCsv = () => {
+    const cell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const header = ['Nombre', 'Teléfono', 'Grupo', 'Acceso', 'Mesa', 'Pases', 'Estado', 'Pases confirmados', 'Enviada', 'Enlace personal'];
+    const rows = guests.map(guest => [guest.name, guest.phone ?? '', guest.group ?? '', EVENT_LABEL[guest.eventAccess ?? 'both'], guest.tableNo ?? '', guest.passes, STATUS_META[guest.status].label, guest.confirmedPasses ?? '', guest.sent ? 'Sí' : 'No', linkFor(guest.publicId)]);
+    const url = URL.createObjectURL(new Blob(['\uFEFF' + [header, ...rows].map(row => row.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${data.slug}-invitados.csv`; anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const stats = useMemo(() => {
-    const confirmed = guests.filter(g => g.status === 'confirmed');
+    const confirmed = guests.filter(guest => guest.status === 'confirmed');
     return {
-      total: guests.length,
-      sent: guests.filter(g => g.sent).length,
-      confirmed: confirmed.length,
-      pending: guests.filter(g => g.status === 'pending').length,
-      declined: guests.filter(g => g.status === 'declined').length,
-      cuposConfirmed: confirmed.reduce((s, g) => s + (g.confirmedPasses ?? g.passes ?? 1), 0),
-      cuposTotal: guests.reduce((s, g) => s + (g.passes || 1), 0),
+      total: guests.length, sent: guests.filter(guest => guest.sent).length, confirmed: confirmed.length,
+      pending: guests.filter(guest => guest.status === 'pending').length, declined: guests.filter(guest => guest.status === 'declined').length,
+      seats: confirmed.reduce((sum, guest) => sum + (guest.confirmedPasses ?? guest.passes), 0), capacity: guests.reduce((sum, guest) => sum + guest.passes, 0),
     };
   }, [guests]);
 
   const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return guests.filter(g => {
-      if (q && !g.name.toLowerCase().includes(q) && !(g.tableNo || '').toLowerCase().includes(q)) return false;
-      if (filter === 'sent') return g.sent;
-      if (filter === 'unsent') return !g.sent;
-      if (filter !== 'all') return g.status === filter;
-      return true;
+    const query = search.trim().toLowerCase();
+    return guests.filter(guest => {
+      if (query && ![guest.name, guest.tableNo, guest.phone, guest.group].some(value => value?.toLowerCase().includes(query))) return false;
+      if (filter === 'sent') return guest.sent;
+      if (filter === 'unsent') return !guest.sent;
+      return filter === 'all' || guest.status === filter;
     });
   }, [guests, search, filter]);
 
-  const Stat = ({ n, label, color }: { n: number | string; label: string; color: string }) => (
-    <div className="flex-1 rounded-xl border border-gray-100 bg-gray-50 py-2.5 text-center min-w-[60px]">
-      <p className="font-playfair font-bold text-lg" style={{ color }}>{n}</p>
-      <p className="text-[9px] font-outfit text-gray-400 uppercase tracking-wide">{label}</p>
-    </div>
-  );
-
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Lista de Invitados</h4>
-        <button type="button" onClick={load} className="text-xs text-enkarta-gold hover:underline font-outfit">
-          {loading ? 'Actualizando…' : '↻ Actualizar'}
-        </button>
+        <div><h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 font-outfit">Invitados personalizados</h4><p className="mt-0.5 text-[10px] text-gray-400 font-outfit">Segmenta, simula y envía cada invitación.</p></div>
+        <div className="flex gap-2"><button type="button" onClick={exportCsv} disabled={!guests.length} className="text-xs text-gray-500 disabled:opacity-30 font-outfit">↓ CSV</button><button type="button" onClick={load} className="text-xs text-enkarta-gold font-outfit">{loading ? 'Actualizando…' : '↻ Actualizar'}</button></div>
       </div>
 
-      {/* Conteos */}
-      <div className="flex gap-1.5 flex-wrap">
-        <Stat n={stats.total} label="Invitados" color="#5a4e34" />
-        <Stat n={stats.sent} label="Enviadas" color="#5a7a9a" />
-        <Stat n={stats.confirmed} label="Confirman" color="#3d6b4f" />
-        <Stat n={stats.pending} label="Pend." color="#9a8a5a" />
-        <Stat n={stats.declined} label="No asisten" color="#9a5a5a" />
+      <div className="grid grid-cols-5 gap-1.5">
+        {[[stats.total, 'Total', '#5a4e34'], [stats.sent, 'Enviadas', '#3d6b78'], [stats.confirmed, 'Sí', '#357054'], [stats.pending, 'Pend.', '#9a762f'], [stats.declined, 'No', '#9a4f59']].map(([number, label, color]) => <div key={String(label)} className="rounded-xl border border-gray-100 bg-white py-2 text-center"><p className="font-playfair text-lg font-bold" style={{ color: String(color) }}>{number}</p><p className="text-[8px] uppercase tracking-wide text-gray-400 font-outfit">{label}</p></div>)}
       </div>
-      <div className="rounded-xl border border-enkarta-gold/20 bg-enkarta-gold/5 py-2.5 text-center">
-        <p className="font-playfair font-bold text-2xl text-enkarta-gold">{stats.cuposConfirmed}<span className="text-gray-300 text-base"> / {stats.cuposTotal}</span></p>
-        <p className="text-[10px] font-outfit text-gray-400 uppercase tracking-wide">Cupos confirmados</p>
+      <div className="rounded-2xl border border-enkarta-gold/20 bg-gradient-to-r from-enkarta-gold/5 to-white p-3 text-center"><p className="font-playfair text-2xl font-bold text-enkarta-gold">{stats.seats}<span className="text-base text-gray-300"> / {stats.capacity}</span></p><p className="text-[9px] uppercase tracking-wider text-gray-400 font-outfit">Cupos confirmados</p></div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => addGuests([{ name: 'Nuevo invitado', passes: 1, allowKids: true, eventAccess: 'both' }])} className="rounded-xl bg-enkarta-gold py-2.5 text-sm font-medium text-white font-outfit">+ Invitado</button>
+        <button type="button" onClick={() => setShowImport(value => !value)} className="rounded-xl border border-gray-200 py-2.5 text-sm text-gray-600 font-outfit">Importar lista</button>
       </div>
 
-      {/* Acciones */}
-      <div className="flex gap-2">
-        <button type="button" onClick={() => addGuests([{ name: 'Nuevo invitado', passes: 1 }])} className="flex-1 py-2 rounded-xl bg-enkarta-gold text-white text-sm font-outfit font-medium hover:opacity-90 transition-opacity">
-          + Agregar invitado
-        </button>
-        <button type="button" onClick={() => setShowBulk(s => !s)} className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-outfit text-gray-600 hover:bg-gray-50 transition-colors">
-          Importar
-        </button>
-      </div>
+      {showImport && <div className="space-y-3 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-3">
+        <div><p className="text-xs font-semibold text-cyan-900 font-outfit">Importación inteligente CSV</p><p className="text-[10px] text-cyan-700/70 font-outfit">Reconoce coma, punto y coma o tabulaciones; después puedes corregir cada columna.</p></div>
+        <label className="block cursor-pointer rounded-xl border border-dashed border-cyan-200 bg-white px-3 py-3 text-center text-xs text-cyan-700 font-outfit">Seleccionar archivo .CSV<input type="file" accept=".csv,text/csv" className="hidden" onChange={event => readCsv(event.target.files?.[0])} /></label>
+        {csv && <div className="space-y-2 rounded-xl border border-cyan-100 bg-white p-2.5">
+          {csv.headers.map((header, index) => <div key={`${header}-${index}`} className="grid grid-cols-[1fr_1.2fr] items-center gap-2"><span className="truncate text-[10px] font-medium text-gray-500 font-outfit">{header}</span><select className="rounded-lg border border-gray-200 px-2 py-1.5 text-[10px] font-outfit" value={mapping[index] ?? 'ignore'} onChange={event => setMapping(current => ({ ...current, [index]: event.target.value as GuestImportField }))}>{IMPORT_FIELDS.map(field => <option key={field.value} value={field.value}>{field.label}</option>)}</select></div>)}
+          <p className="rounded-lg bg-gray-50 p-2 text-[10px] text-gray-500 font-outfit"><b>{mappedCsv?.rows.length ?? 0}</b> listos · {mappedCsv?.duplicates ?? 0} duplicados · {mappedCsv?.invalid ?? 0} inválidos</p>
+          <button type="button" disabled={!mappedCsv?.rows.length} onClick={importCsv} className="w-full rounded-lg bg-cyan-700 py-2 text-xs font-medium text-white disabled:opacity-40 font-outfit">Importar invitados válidos</button>
+        </div>}
+        <details><summary className="cursor-pointer text-[10px] text-gray-500 font-outfit">Pegar una lista rápida</summary><div className="mt-2 space-y-2"><textarea value={bulk} onChange={event => setBulk(event.target.value)} rows={4} placeholder={'Ana López, 2\nCarlos Pérez, 1'} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none font-outfit"/><button type="button" onClick={importBulk} className="w-full rounded-lg bg-gray-800 py-2 text-xs text-white font-outfit">Añadir lista pegada</button></div></details>
+        {notice && <p className="rounded-lg bg-white px-2.5 py-2 text-[10px] text-cyan-800 font-outfit">{notice}</p>}
+      </div>}
 
-      {showBulk && (
-        <div className="space-y-2 p-3 rounded-xl border border-gray-100 bg-gray-50">
-          <p className="text-xs text-gray-500 font-outfit">Un invitado por línea. Opcional el nº de pases: <code className="text-gray-400">Ana López, 2</code></p>
-          <textarea value={bulk} onChange={e => setBulk(e.target.value)} rows={5} placeholder={'Ana López, 2\nCarlos Pérez, 1\nFamilia Gómez, 4'} className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-enkarta-gold outline-none font-outfit" />
-          <button type="button" onClick={importBulk} className="w-full py-2 rounded-lg bg-enkarta-dark text-white text-sm font-outfit hover:opacity-90 transition-opacity">
-            Añadir {bulk.split('\n').filter(l => l.trim()).length || ''} invitados
-          </button>
-        </div>
-      )}
+      {!!guests.length && <div className="space-y-2"><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar nombre, teléfono, grupo o mesa…" className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-enkarta-gold font-outfit"/><div className="flex flex-wrap gap-1">{([['all', 'Todos'], ['confirmed', 'Confirmados'], ['pending', 'Pendientes'], ['declined', 'No asisten'], ['sent', 'Enviadas'], ['unsent', 'Sin enviar']] as [StatusFilter, string][]).map(([value, label]) => <button key={value} type="button" onClick={() => setFilter(value)} className={`rounded-full px-2.5 py-1 text-[10px] font-outfit ${filter === value ? 'bg-enkarta-gold text-white' : 'bg-gray-100 text-gray-500'}`}>{label}</button>)}</div></div>}
 
-      {/* Buscador + filtros */}
-      {guests.length > 0 && (
-        <div className="space-y-2">
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o mesa…" className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold outline-none font-outfit" />
-          <div className="flex gap-1 flex-wrap">
-            {([['all', 'Todos'], ['confirmed', 'Confirman'], ['pending', 'Pendientes'], ['declined', 'No asisten'], ['sent', 'Enviadas'], ['unsent', 'Sin enviar']] as [StatusFilter, string][]).map(([v, label]) => (
-              <button key={v} type="button" onClick={() => setFilter(v)} className={`px-2.5 py-1 rounded-full text-xs font-outfit transition-all ${filter === v ? 'bg-enkarta-gold text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Lista */}
-      {guests.length === 0 ? (
-        <div className="p-6 text-center text-sm text-gray-400 font-outfit bg-gray-50 rounded-xl">
-          Aún no hay invitados. Agrégalos para generar sus links personales.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {visible.map(g => (
-            <div key={g.id} className="p-3 rounded-xl border border-gray-100 bg-white space-y-2">
-              <div className="flex items-center gap-2">
-                <input value={g.name} onChange={e => patchGuest(g.id, { name: e.target.value })} placeholder="Nombre" className="flex-1 px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 focus:border-enkarta-gold outline-none font-outfit min-w-0" />
-                <button type="button" onClick={() => removeGuest(g.id)} title="Eliminar" className="p-1.5 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-1 text-xs text-gray-400 font-outfit">
-                  Mesa
-                  <input value={g.tableNo ?? ''} onChange={e => patchGuest(g.id, { tableNo: e.target.value })} placeholder="—" className="w-12 px-1.5 py-1 text-sm rounded-lg border border-gray-200 focus:border-enkarta-gold outline-none font-outfit text-center" />
-                </label>
-                <label className="flex items-center gap-1 text-xs text-gray-400 font-outfit">
-                  Pases
-                  <input type="number" min={1} max={20} value={g.passes} onChange={e => patchGuest(g.id, { passes: Math.max(1, Math.min(20, parseInt(e.target.value) || 1)) })} className="w-12 px-1.5 py-1 text-sm rounded-lg border border-gray-200 focus:border-enkarta-gold outline-none font-outfit text-center" />
-                </label>
-                <button type="button" onClick={() => patchGuest(g.id, { allowKids: !g.allowKids })} title="Permite niños" className={`px-2 py-1 rounded-lg text-xs font-outfit transition-all ${g.allowKids ? 'bg-gray-100 text-gray-500' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>
-                  {g.allowKids ? '👶 Niños sí' : '🚫 Sin niños'}
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-outfit px-2 py-0.5 rounded-full ${STATUS_META[g.status].cls}`}>
-                  {STATUS_META[g.status].label}{g.status === 'confirmed' && g.confirmedPasses ? ` · ${g.confirmedPasses}` : ''}
-                </span>
-                {g.accessCode && <span className="text-[10px] font-mono text-gray-400">{g.accessCode}</span>}
-                <div className="ml-auto flex gap-1 flex-shrink-0">
-                  <button type="button" onClick={() => patchGuest(g.id, { sent: !g.sent })} className={`px-2 py-1 text-[11px] font-outfit rounded-lg border transition-colors ${g.sent ? 'border-blue-200 bg-blue-50 text-blue-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                    {g.sent ? '✓ Enviada' : 'Marcar enviada'}
-                  </button>
-                  <button type="button" onClick={() => copy(g.publicId)} className="px-2 py-1 text-[11px] font-outfit rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                    {copied === g.publicId ? '✓' : '🔗'}
-                  </button>
-                  <a href={waLink(g)} target="_blank" rel="noopener noreferrer" onClick={() => !g.sent && patchGuest(g.id, { sent: true })} className="px-2 py-1 text-[11px] font-outfit rounded-lg text-white transition-opacity hover:opacity-90" style={{ background: '#25D366' }}>
-                    WhatsApp
-                  </a>
-                </div>
-              </div>
-              {g.message && <p className="text-[11px] text-gray-400 font-cormorant italic">“{g.message}”</p>}
-            </div>
-          ))}
-          {visible.length === 0 && <p className="text-center text-sm text-gray-400 font-outfit py-4">Ningún invitado coincide con el filtro.</p>}
-        </div>
-      )}
+      {!guests.length ? <div className="rounded-xl bg-gray-50 p-6 text-center text-sm text-gray-400 font-outfit">Añade invitados para crear enlaces, contenido y pases personales.</div> : <div className="space-y-2">
+        {visible.map(guest => <div key={guest.id} className={`space-y-2.5 rounded-2xl border bg-white p-3 transition-all ${previewGuestId === guest.id ? 'border-cyan-300 shadow-[0_8px_25px_rgba(8,145,178,.10)]' : 'border-gray-100'}`}>
+          <div className="flex items-center gap-2"><input value={guest.name} onChange={event => patchGuest(guest.id, { name: event.target.value })} className="min-w-0 flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-enkarta-gold font-outfit"/><button type="button" onClick={() => removeGuest(guest)} title="Eliminar" className="px-1.5 text-gray-300 hover:text-red-500">×</button></div>
+          <div className="grid grid-cols-2 gap-2"><input value={guest.phone ?? ''} onChange={event => patchGuest(guest.id, { phone: event.target.value })} onBlur={event => patchGuest(guest.id, { phone: normalizeGuestPhone(event.target.value) })} placeholder="WhatsApp +591…" className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none font-outfit"/><input value={guest.group ?? ''} onChange={event => patchGuest(guest.id, { group: event.target.value })} placeholder="Grupo: Familia, VIP…" className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none font-outfit"/></div>
+          <div className="grid grid-cols-[72px_72px_1fr] gap-2"><label className="text-[9px] text-gray-400 font-outfit">Mesa<input value={guest.tableNo ?? ''} onChange={event => patchGuest(guest.id, { tableNo: event.target.value })} className="mt-0.5 w-full rounded-lg border border-gray-200 px-2 py-1 text-center text-xs outline-none"/></label><label className="text-[9px] text-gray-400 font-outfit">Pases<input type="number" min={1} max={20} value={guest.passes} onChange={event => patchGuest(guest.id, { passes: Math.max(1, Math.min(20, parseInt(event.target.value) || 1)) })} className="mt-0.5 w-full rounded-lg border border-gray-200 px-2 py-1 text-center text-xs outline-none"/></label><label className="text-[9px] text-gray-400 font-outfit">Acceso<select value={guest.eventAccess ?? 'both'} onChange={event => patchGuest(guest.id, { eventAccess: event.target.value as GuestEventAccess })} className="mt-0.5 w-full rounded-lg border border-gray-200 px-1.5 py-1 text-[10px] outline-none"><option value="both">Todo</option><option value="ceremony">Ceremonia</option><option value="reception">Recepción</option></select></label></div>
+          <div className="flex items-center gap-1.5"><button type="button" onClick={() => patchGuest(guest.id, { allowKids: !guest.allowKids })} className={`rounded-lg px-2 py-1 text-[10px] font-outfit ${guest.allowKids ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{guest.allowKids ? 'Niños permitidos' : 'Solo adultos'}</button><span className={`rounded-full px-2 py-1 text-[10px] font-outfit ${STATUS_META[guest.status].cls}`}>{STATUS_META[guest.status].label}</span>{guest.accessCode && <span className="text-[9px] text-gray-400 font-mono">{guest.accessCode}</span>}</div>
+          <div className="grid grid-cols-4 gap-1.5"><button type="button" onClick={() => onPreview?.(previewGuestId === guest.id ? null : guest)} className={`rounded-lg border py-1.5 text-[10px] font-outfit ${previewGuestId === guest.id ? 'border-cyan-300 bg-cyan-50 text-cyan-700' : 'border-gray-200 text-gray-500'}`}>{previewGuestId === guest.id ? '◎ Viendo' : 'Vista'}</button><button type="button" onClick={() => patchGuest(guest.id, { sent: !guest.sent })} className={`rounded-lg border py-1.5 text-[10px] font-outfit ${guest.sent ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500'}`}>{guest.sent ? '✓ Enviada' : 'Enviar'}</button><button type="button" onClick={() => copy(linkFor(guest.publicId), guest.publicId)} className="rounded-lg border border-gray-200 py-1.5 text-[10px] text-gray-500 font-outfit">{copied === guest.publicId ? '✓ Copiado' : 'Copiar link'}</button><button type="button" onClick={() => setMessageGuestId(value => value === guest.id ? null : guest.id)} className="rounded-lg bg-[#25D366] py-1.5 text-[10px] text-white font-outfit">WhatsApp</button></div>
+          {messageGuestId === guest.id && <div className="space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/50 p-2.5"><p className="whitespace-pre-wrap text-[11px] leading-relaxed text-gray-600 font-outfit">{whatsappText(guest)}</p><div className="flex gap-2"><button type="button" onClick={() => copy(whatsappText(guest), `message-${guest.id}`)} className="flex-1 rounded-lg border border-emerald-200 bg-white py-1.5 text-[10px] text-emerald-700 font-outfit">{copied === `message-${guest.id}` ? '✓ Copiado' : 'Copiar mensaje'}</button><a href={waLink(guest)} target="_blank" rel="noopener noreferrer" onClick={() => !guest.sent && patchGuest(guest.id, { sent: true })} className="flex-1 rounded-lg bg-[#25D366] py-1.5 text-center text-[10px] text-white font-outfit">Abrir WhatsApp</a></div></div>}
+          {guest.message && <p className="text-[11px] italic text-gray-400 font-cormorant">“{guest.message}”</p>}
+        </div>)}
+        {!visible.length && <p className="py-4 text-center text-sm text-gray-400 font-outfit">Ningún invitado coincide con el filtro.</p>}
+      </div>}
     </div>
   );
 }

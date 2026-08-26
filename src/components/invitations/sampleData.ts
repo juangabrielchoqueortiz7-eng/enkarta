@@ -102,7 +102,7 @@ const F_CARMESI   = fechaDemo('Agosto',      6, '14:30', 1);
 const F_ESMERALDA = fechaDemo('Agosto',      6, '14:00', 2);
 const F_PROVENCE  = fechaDemo('Septiembre',  6, '12:00', 3);
 
-// Sample content used by the preview route. Mirrors the Invitali demo data
+// Contenido editorial de demostración usado por las muestras de Enkarta.
 // so we can match the reference designs 1:1 while building.
 export const azureSample: InvitationContent = {
   groom: 'Lorena',
@@ -239,7 +239,7 @@ export const passportSample: PassportContent = {
   initials: ['R', 'I'],
   guestName: 'Invitado',
   guestPasses: '2 pases',
-  coverImage: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=900&q=80',
+  coverImage: '/images/passport-hero-v2.png',
   isoDate: F_PASSPORT.isoDate,
   announce: 'Nos casamos',
   verse:
@@ -772,7 +772,7 @@ export const provenceSample: ProvenceContent = {
   dateYear: F_PROVENCE.year,
   locationBadge: 'CIENEGUILLA',
 
-  coverImage: 'https://invitali.com/wp-content/uploads/2026/07/Novios-annie-y-Micky.webp',
+  coverImage: '/catalog/solar-original.png',
   middleImage: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1200&q=80',
 
   headerSub: 'TENEMOS EL HONOR DE INVITARTE A NUESTRA BODA',
@@ -827,4 +827,3 @@ export const provenceSample: ProvenceContent = {
   whatsapp: 'https://wa.me/59162449491?text=Hola%20Annie%20y%20Miguel%2C%20confirmo%20mi%20asistencia%20a%20su%20boda%F0%9F%A4%B5%F0%9F%91%B0',
   // La canción la pone /muestra (DEMO_MUSIC) desde la colección de public/musica.
 };
-

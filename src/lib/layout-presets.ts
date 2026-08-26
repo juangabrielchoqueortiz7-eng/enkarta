@@ -97,12 +97,18 @@ export function invitationToLayout(inv: InvitationParsed): PageLayout {
     || (cfg.photoUrl as string)
     || (cfg.galleryImages as string[] | undefined)?.[0]
     || '';
+  const isPassport = inv.template === 'passport';
 
-  blocks.push(blk('cover', {
+  blocks.push(blk(isPassport ? 'passportHero' : 'cover', {
     groom,
     bride,
-    tagline: (cfg.welcomeTitle as string) || 'Nos casamos',
+    tagline: isPassport ? ((cfg.announce as string) || 'Pasaporte a nuestra boda') : ((cfg.welcomeTitle as string) || 'Nos casamos'),
+    eyebrow: (cfg.welcomeTitle as string) || 'Nuestra próxima aventura',
     image: coverImg,
+    focal: '50% 50%',
+    origin: (cfg.routeOrigin as string) || 'Nuestro origen',
+    destination: (cfg.city as string) || 'Nuestro destino',
+    dateLabel: `${dp.day} · ${String(new Date(`${inv.event_date ?? new Date().toISOString().slice(0, 10)}T12:00:00`).getMonth() + 1).padStart(2, '0')} · ${dp.year}`,
   }, { padTop: 80, padBottom: 40 }, {
     groom: 'couple.groom',
     bride: 'couple.bride',
@@ -114,6 +120,22 @@ export function invitationToLayout(inv: InvitationParsed): PageLayout {
   if (intro) {
     blocks.push(blk('text', { text: intro, italic: false }, { maxWidth: 560 }, {
       text: 'content.intro',
+    }));
+  }
+
+  if (isPassport && cfg.verse) {
+    blocks.push(blk('quote', {
+      text: cfg.verse as string,
+      author: (cfg.verseRef as string) || '',
+    }, { maxWidth: 660, padTop: 72, padBottom: 52 }));
+  }
+
+  if (isPassport) {
+    blocks.push(blk('passportTicket', {
+      callout: (cfg.callout as string) || 'Prepara tus maletas y acompáñanos en esta aventura.',
+      question: (cfg.callout2 as string) || '¿Te unes?',
+      passesLabel: (cfg.guestPasses as string) || 'Pases asignados',
+      guestName: (cfg.guestName as string) || 'Invitado especial',
     }));
   }
 
@@ -239,14 +261,34 @@ export function layoutForTemplate(inv: InvitationParsed): PageLayout {
  */
 export function contentToLayout(c: any, template?: string): PageLayout {
   const blocks: Block[] = [];
+  const isPassport = template === 'passport';
+  const sampleDate = dateParts(c.isoDate || null);
 
-  blocks.push(blk('cover', {
+  blocks.push(blk(isPassport ? 'passportHero' : 'cover', {
     groom: c.groom || 'Lorena', bride: c.bride || 'Marcos',
-    tagline: c.welcomeTitle || c.coverLabel || 'Nos casamos',
+    tagline: isPassport ? (c.announce || 'Pasaporte a nuestra boda') : (c.welcomeTitle || c.coverLabel || 'Nos casamos'),
+    eyebrow: c.welcomeTitle || 'Nuestra próxima aventura',
     image: c.coverImage || '',
+    focal: '50% 50%',
+    origin: c.routeOrigin || 'Colombia',
+    destination: c.city || c.dateCity || 'Bolivia',
+    dateLabel: c.dateLabel || `${sampleDate.day} · ${String(new Date(c.isoDate || Date.now()).getMonth() + 1).padStart(2, '0')} · ${sampleDate.year}`,
   }, { padTop: 80, padBottom: 40 }));
 
   if (c.introMessage) blocks.push(blk('text', { text: c.introMessage }, { maxWidth: 560 }));
+
+  if (isPassport && c.verse) {
+    blocks.push(blk('quote', { text: c.verse, author: c.verseRef || '' }, { maxWidth: 660, padTop: 72, padBottom: 52 }));
+  }
+
+  if (isPassport) {
+    blocks.push(blk('passportTicket', {
+      callout: c.callout || 'Prepara tus maletas y acompáñanos en esta aventura.',
+      question: c.callout2 || '¿Te unes?',
+      passesLabel: c.guestPasses || '2 pases',
+      guestName: c.guestName || 'Invitado especial',
+    }));
+  }
 
   blocks.push(blk('dateBadge', {
     weekday: c.weekday || c.dateWeekday || 'Sábado',

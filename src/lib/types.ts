@@ -1,4 +1,5 @@
 import { migrateBuilderConfig } from './layout-migrations';
+import { ENKARTA_COLLECTIONS } from './enkarta-collections';
 
 export type InvitationStatus = 'draft' | 'ready' | 'expired' | 'disabled';
 
@@ -8,10 +9,34 @@ export type InvitationTemplate =
   // Próximamente
   | 'paradise' | 'obsidiana' | 'dolcevita' | 'grazia' | 'carmesi_v2' | 'napoly'
   | 'perla_v2' | 'euforia' | 'rosegold' | 'allegria' | 'provence'
+  | 'esmeralda'
   // Clásicas (legacy)
   | 'perla' | 'marmol' | 'terra' | 'sobre' | 'carmesi' | 'gerbera';
 
 export type InvitationType = 'boda' | 'xv' | 'cumpleanos' | 'baby_shower' | 'bautizo';
+
+export type GuestEventAccess = 'both' | 'ceremony' | 'reception';
+export type BuilderRole = 'admin' | 'designer' | 'client' | 'viewer';
+export type ReviewStatus = 'pending' | 'approved' | 'changes';
+
+export interface BuilderWorkflow {
+  reviewStatus?: ReviewStatus;
+  draftUpdatedAt?: string;
+  reviewUpdatedAt?: string;
+  lastPublishedAt?: string;
+  lastPublishedVersionId?: string;
+  lastPublishedSummary?: string;
+  scheduledAt?: string;
+  scheduledVersionId?: string;
+  unpublishedAt?: string;
+}
+
+/** Datos de segmentación que viven en builder_config para no exigir columnas nuevas. */
+export interface GuestMetadata {
+  phone?: string;
+  group?: string;
+  eventAccess?: GuestEventAccess;
+}
 
 export interface Sponsor {
   role: string;
@@ -112,6 +137,16 @@ export interface BuilderConfig {
   fontHeading?: string;
   /** Fuente del cuerpo de texto (reemplaza Cormorant / Lora / Nunito) */
   fontBody?: string;
+  /** Kit visual aplicado actualmente (oficial o guardado por el usuario). */
+  designKitId?: string;
+  /** Segmentación adicional por publicId del invitado. */
+  guestMeta?: Record<string, GuestMetadata>;
+  /** Invitado activo durante el render/preview. Es contexto efímero. */
+  activeGuest?: Guest;
+  /** Estado editorial del borrador y referencia de la última publicación. */
+  workflow?: BuilderWorkflow;
+  /** Privacidad y ciclo de vida de la analítica agregada. */
+  analytics?: { enabled?: boolean; retentionDays?: 30 | 90 | 180 | 365 };
   // ── Paquete contratado (Exclusive/Premium/Plus) y ajustes finos ──
   /** Paquete del cliente: siembra qué funciones están activas. Sin valor = todo activo. */
   package?: InvitationPackage;
@@ -170,11 +205,13 @@ export interface PackageFeatureOverrides {
  */
 export interface TemplateTheme {
   primary?: string;     // color principal: títulos, trazos, botones
-  primaryDeep?: string; // variante oscura: pie de página, bloques
+  primaryDeep?: string; // variante oscura: pie de página, bloques (compatibilidad)
+  accent?: string;      // acento secundario: detalles y llamadas visuales
   text?: string;        // texto principal (ink)
   muted?: string;       // texto secundario / suave
   line?: string;        // líneas divisorias
   bg?: string;          // fondo de la página
+  surface?: string;     // tarjetas y superficies elevadas
   onPrimary?: string;   // texto sobre bloques de color primario (ej. blanco/crema)
 }
 
@@ -183,14 +220,33 @@ export interface TemplateTokens {
   contentWidth?: number;
   sectionInset?: number;
   sectionRadius?: number;
+  cardRadius?: number;
+  buttonRadius?: number;
+  fieldRadius?: number;
   spacing?: 'compact' | 'normal' | 'airy';
+  /** Multiplicador global del ritmo de espacios (0.8–1.25). */
+  spacingScale?: number;
   surface?: 'flat' | 'soft' | 'card';
+  shadow?: 'none' | 'soft' | 'medium' | 'strong';
+  /** Escala tipográfica semántica, independiente de las familias elegidas. */
+  typeScale?: {
+    title?: number;
+    subtitle?: number;
+    body?: number;
+    label?: number;
+  };
   /**
    * Costura entre bloques de distinto fondo en el constructor. Se hereda de la
    * plantilla de la que partió la invitación, para que un documento por bloques
    * tenga el mismo borde entre bandas que su plantilla premium.
    */
   seam?: SeamShape;
+  /**
+   * Efecto de scroll sobre esa costura (pliegue 3D, telón, cristal…). Vive
+   * aparte de `seam` a propósito: la forma es identidad de la plantilla y el
+   * efecto es intensidad, y se eligen por separado.
+   */
+  seamFx?: 'none' | 'depth' | 'fold' | 'glass' | 'curtain';
 }
 
 /** Formas disponibles para las partículas que caen. */
@@ -286,6 +342,14 @@ export interface PageMotion {
   perspective?: number;
   /** Multiplicador de intensidad de las animaciones (rango sugerido 0.5–1.5). */
   intensity?: number;
+  /** Ritmo de las entradas. Mantiene una duración uniforme en toda la invitación. */
+  tempo?: 'quick' | 'balanced' | 'slow';
+  /** Comportamiento del desplazamiento entre secciones. */
+  scrollFlow?: 'free' | 'guided' | 'cinematic';
+  /** Guía visual del avance de la invitación. */
+  progress?: 'none' | 'line' | 'steps';
+  /** Fuerza de parallax de las capas que lo soportan (0–0.25). */
+  parallax?: number;
 }
 
 // ── Modelo de bloques (constructor visual, Fase 2) ────────────────────────────
@@ -295,6 +359,8 @@ export interface PageMotion {
 
 export type BlockType =
   | 'cover'      // portada interna: nombres script (+ foto opcional)
+  | 'passportHero' // portada de viaje dividida: foto + mapa/ruta animada
+  | 'passportTicket' // banda ondulada de pases / invitado estilo pasaporte
   | 'heading'    // título (script / mayúsculas / serif)
   | 'text'       // párrafo / mensaje
   | 'countdown'  // cuenta regresiva
@@ -323,6 +389,7 @@ export type BlockType =
   | 'beforeAfter' // comparador de dos fotos con deslizador
   | 'tableFinder' // buscador de mesa por nombre del invitado
   | 'guestbook'  // libro de mensajes / muro de saludos en vivo
+  | 'accessPass' // tarjeta individual con QR, código, pases y mesa
   | 'story'      // historia fija: foto anclada + frases ligadas al scroll
   | 'element';   // sticker decorativo flotante (librería curada o imagen subida)
 
@@ -331,6 +398,10 @@ export interface BlockAnimation {
   preset?: ScrollPreset;
   /** Retraso de entrada en ms. */
   delay?: number;
+  /** Duración de la entrada en ms (vacío = tempo global). */
+  duration?: number;
+  /** Si está activo, vuelve a animarse cada vez que entra en pantalla. */
+  repeat?: boolean;
 }
 
 /** Estilo editable de un bloque (fondo, color, alineación, espaciado). */
@@ -353,19 +424,39 @@ export interface BlockStyle {
   minHeight?: number;
   text?: string;
   align?: 'left' | 'center' | 'right';
+  /** Alineación vertical del contenido dentro de la sección. */
+  verticalAlign?: 'start' | 'center' | 'end';
   padTop?: number;     // px
   padBottom?: number;  // px
+  padX?: number;       // px
   maxWidth?: number;   // px (0 = ancho completo)
+  /** Acabado de la caja interior; inherit conserva el de la plantilla. */
+  surface?: 'inherit' | 'flat' | 'soft' | 'card' | 'glass';
+  contentPadding?: number; // px
+  radius?: number;         // px
+  borderWidth?: number;    // px
+  borderColor?: string;
+  shadow?: 'none' | 'soft' | 'medium' | 'strong' | 'glow';
+  /** Opacidad de la caja y su contenido (0–1). */
+  contentOpacity?: number;
 }
 
 /** Override por breakpoint del layout libre de un bloque. */
 export interface BlockViewportLayout {
+  /** Cómo se resuelve la geometría en este dispositivo. Sin valor conserva documentos antiguos. */
+  mode?: 'inherit' | 'auto' | 'custom';
   x?: number;
   y?: number;
   w?: number;
   rotate?: number;
   anchor?: 'tl' | 'tc' | 'tr' | 'ml' | 'mc' | 'mr' | 'bl' | 'bc' | 'br';
   z?: number;
+  /** Visibilidad específica: undefined hereda la regla general. */
+  hidden?: boolean;
+  /** Orden específico dentro del recorrido de este dispositivo. */
+  order?: number;
+  /** Escala tipográfica segura (0.75–1.35) para los bloques de texto. */
+  fontScale?: number;
 }
 
 /**
@@ -396,6 +487,20 @@ export interface BlockLayout {
 
 export type BlockBindings = Record<string, string>;
 
+/** Reglas simples de audiencia para mostrar una sección según el enlace invitado. */
+export interface BlockVisibility {
+  audience?: 'all' | 'personalized' | 'generic';
+  minPasses?: number;
+  maxPasses?: number;
+  guestType?: 'all' | 'adultsOnly' | 'kidsAllowed';
+  /** Parte del evento a la que debe estar invitado para ver el bloque. */
+  eventAccess?: 'all' | 'ceremony' | 'reception';
+  /** Si hay valores, el bloque es privado para esos grupos. */
+  groups?: string[];
+  /** Permite preparar mensajes distintos según el estado real del RSVP. */
+  rsvpStatus?: 'all' | 'pending' | 'confirmed' | 'declined';
+}
+
 /** Un bloque del documento: tipo + contenido + estilo + animación. */
 export interface Block {
   id: string;
@@ -406,6 +511,8 @@ export interface Block {
   props: Record<string, unknown>;
   style?: BlockStyle;
   animation?: BlockAnimation;
+  /** Contenido condicional resuelto al abrir el enlace de cada invitado. */
+  visibility?: BlockVisibility;
   /** Transformación libre (posición/tamaño/giro) del lienzo. */
   layout?: BlockLayout;
   /** Enlaces opcionales a datos globales de la invitación. */
@@ -438,6 +545,9 @@ export interface Guest {
   tableNo?: string;      // mesa (opcional)
   passes: number;
   allowKids: boolean;    // false → la invitación muestra el párrafo "no niños"
+  phone?: string;        // metadata del constructor, normalizado para WhatsApp
+  group?: string;        // familia, VIP, proveedores, etc.
+  eventAccess?: GuestEventAccess;
   sent: boolean;         // "invitación enviada" (manual)
   status: 'pending' | 'confirmed' | 'declined';
   /** Cuántos pases confirmó realmente usar (≤ passes). */
@@ -613,27 +723,12 @@ export interface InvitationFormData {
 }
 
 export const TEMPLATE_OPTIONS: { value: InvitationTemplate; label: string; description: string; premium?: boolean }[] = [
-  // ── Premium (con editor visual) ──
-  { value: 'azure', label: 'Azure', description: 'Acuarela azul con orquídeas', premium: true },
-  { value: 'primicia', label: 'Primicia', description: 'Estilo periódico elegante', premium: true },
-  { value: 'passport', label: 'Passport', description: 'Pasaporte de viaje', premium: true },
-  { value: 'paradise', label: 'Paradise', description: 'Tropical verde y dorado', premium: true },
-  { value: 'obsidiana', label: 'Obsidiana', description: 'Negro y dorado de lujo', premium: true },
-  { value: 'dolcevita', label: 'Dolce Vita', description: 'Verde bosque y dorado', premium: true },
-  { value: 'grazia', label: 'Grazia', description: 'Champán sofisticado', premium: true },
-  { value: 'carmesi_v2', label: 'Carmesí', description: 'Vino y dorado con rosas', premium: true },
-  { value: 'napoly', label: 'Napoly', description: 'Taupe y rosa empolvado', premium: true },
-  { value: 'euforia', label: 'Euforia', description: 'Mocha cálido y pastel', premium: true },
-  { value: 'rosegold', label: 'Rose Gold', description: 'Durazno y rosa dorado', premium: true },
-  { value: 'allegria', label: 'Allegría', description: 'Salvia minimalista', premium: true },
-  { value: 'provence', label: 'Provence', description: 'Elegante marfil y dorado (Boda Annie & Micky)', premium: true },
-  // ── Clásicas (legacy) ──
-  { value: 'perla', label: 'Perla', description: 'Elegante con hojas verdes y dorado' },
-  { value: 'marmol', label: 'Mármol', description: 'Sofisticado con texturas de mármol' },
-  { value: 'terra', label: 'Terra', description: 'Tonos tierra, rústico y cálido' },
-  { value: 'sobre', label: 'Sobre', description: 'Clásico estilo sobre real' },
-  { value: 'carmesi', label: 'Carmesí (clásica)', description: 'Dramático en rojos profundos' },
-  { value: 'gerbera', label: 'Gerbera', description: 'Floral y vibrante con atardecer' },
+  ...Object.values(ENKARTA_COLLECTIONS).filter(collection => collection.available).map(collection => ({
+    value: collection.key,
+    label: collection.name,
+    description: collection.description,
+    premium: collection.premium || undefined,
+  })),
 ];
 
 export const TYPE_OPTIONS: { value: InvitationType; label: string }[] = [

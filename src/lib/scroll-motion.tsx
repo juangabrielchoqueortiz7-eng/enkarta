@@ -20,8 +20,10 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import {
   motion,
   useInView,
+  useMotionValueEvent,
   useReducedMotion,
   useScroll,
+  useSpring,
   useTransform,
   type MotionValue,
   type Variants,
@@ -89,6 +91,9 @@ interface ResolvedMotion {
   perspective: number;
   intensity: number;
   parallax: number;      // fuerza del parallax de fondo
+  duration: number;      // duración uniforme de las entradas
+  scrollFlow: NonNullable<PageMotion['scrollFlow']>;
+  progress: NonNullable<PageMotion['progress']>;
   reduced: boolean;
   /** Las animaciones solo arrancan cuando la página está "armada" (tras la portada). */
   armed: boolean;
@@ -98,12 +103,16 @@ interface ResolvedMotion {
 
 function resolveMotion(value: PageMotion | undefined, reduced: boolean): Omit<ResolvedMotion, 'armed' | 'scrollRoot'> {
   const preset = value?.preset ?? 'elegant';
+  const duration = value?.tempo === 'quick' ? 0.58 : value?.tempo === 'slow' ? 1.12 : 0.85;
   return {
     preset,
     variant: PRESET_TO_VARIANT[preset],
     perspective: value?.perspective ?? 1000,
     intensity: value?.intensity ?? 1,
-    parallax: PRESET_TO_PARALLAX[preset],
+    parallax: value?.parallax ?? PRESET_TO_PARALLAX[preset],
+    duration,
+    scrollFlow: value?.scrollFlow ?? 'free',
+    progress: value?.progress ?? 'none',
     reduced,
   };
 }
@@ -219,13 +228,15 @@ interface ScrollRevealProps {
   variant?: ScrollPreset;
   /** Anima cada vez que entra (por defecto solo la primera vez). */
   repeat?: boolean;
+  /** Duración de entrada en ms; vacío conserva el tempo global. */
+  duration?: number;
 }
 
 /**
  * Sección que se revela al hacer scroll. Reemplaza al antiguo `Reveal`; lee el
  * preset global del contexto salvo que se le pase `variant`.
  */
-export function ScrollReveal({ children, className, style, delay = 0, variant, repeat = false }: ScrollRevealProps) {
+export function ScrollReveal({ children, className, style, delay = 0, variant, repeat = false, duration }: ScrollRevealProps) {
   const m = usePageMotion();
   const v = variant ?? m.variant;
   const ref = useRef<HTMLDivElement>(null);
@@ -249,7 +260,7 @@ export function ScrollReveal({ children, className, style, delay = 0, variant, r
 
   if (v === 'parallax') {
     return (
-      <ParallaxReveal className={className} style={style} delay={delay} intensity={m.intensity}>
+      <ParallaxReveal className={className} style={style} delay={delay} duration={duration} repeat={repeat} intensity={m.intensity}>
         {children}
       </ParallaxReveal>
     );
@@ -257,7 +268,7 @@ export function ScrollReveal({ children, className, style, delay = 0, variant, r
 
   if (v === 'zoomScroll') {
     return (
-      <ZoomScrollReveal className={className} style={style} delay={delay} intensity={m.intensity}>
+      <ZoomScrollReveal className={className} style={style} delay={delay} duration={duration} repeat={repeat} intensity={m.intensity}>
         {children}
       </ZoomScrollReveal>
     );
@@ -274,7 +285,7 @@ export function ScrollReveal({ children, className, style, delay = 0, variant, r
       variants={variants}
       initial="hidden"
       animate={show ? 'show' : 'hidden'}
-      transition={{ duration: 0.85, ease: ease.soft, delay: delay / 1000 }}
+      transition={{ duration: duration ? duration / 1000 : m.duration, ease: ease.soft, delay: delay / 1000 }}
     >
       {children}
     </motion.div>
@@ -287,12 +298,16 @@ function ParallaxReveal({
   className,
   style,
   delay,
+  duration,
+  repeat,
   intensity,
 }: {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
   delay: number;
+  duration?: number;
+  repeat: boolean;
   intensity: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -305,8 +320,8 @@ function ParallaxReveal({
       style={{ y, ...style }}
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
-      viewport={VIEWPORT}
-      transition={{ duration: 0.8, ease: ease.soft, delay: delay / 1000 }}
+      viewport={{ ...VIEWPORT, once: !repeat }}
+      transition={{ duration: duration ? duration / 1000 : 0.8, ease: ease.soft, delay: delay / 1000 }}
     >
       {children}
     </motion.div>
@@ -320,12 +335,16 @@ function ZoomScrollReveal({
   className,
   style,
   delay,
+  duration,
+  repeat,
   intensity,
 }: {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
   delay: number;
+  duration?: number;
+  repeat: boolean;
   intensity: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -339,8 +358,8 @@ function ZoomScrollReveal({
       style={{ scale, y, ...style }}
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
-      viewport={VIEWPORT}
-      transition={{ duration: 0.8, ease: ease.soft, delay: delay / 1000 }}
+      viewport={{ ...VIEWPORT, once: !repeat }}
+      transition={{ duration: duration ? duration / 1000 : 0.8, ease: ease.soft, delay: delay / 1000 }}
     >
       {children}
     </motion.div>
@@ -650,7 +669,7 @@ export function ParallaxLayer({
 }) {
   const m = usePageMotion();
   const s = strength ?? m.parallax;
-  const { scrollY } = useScroll();
+  const { scrollY } = useScroll({ container: m.scrollRoot });
   const y = useTransform(scrollY, [0, 1000], [0, 1000 * s], { clamp: false });
   if (m.reduced || s === 0) {
     return (
@@ -663,5 +682,75 @@ export function ParallaxLayer({
     <motion.div className={className} style={{ y, ...style }}>
       {children}
     </motion.div>
+  );
+}
+
+// ── Experiencia de desplazamiento ────────────────────────────────────────────
+
+/**
+ * Aplica el ritmo de scroll elegido al scrollport real (ventana o preview) y
+ * dibuja una guía discreta de avance. El efecto se limpia al desmontarse para
+ * no contaminar el resto del panel de administración.
+ */
+export function ScrollExperience({ children, color, disabled = false }: { children: React.ReactNode; color: string; disabled?: boolean }) {
+  const m = usePageMotion();
+  const { scrollYProgress } = useScroll({ container: m.scrollRoot });
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 120, damping: 24, mass: 0.25 });
+  const [percent, setPercent] = useState(0);
+
+  useMotionValueEvent(scrollYProgress, 'change', value => setPercent(Math.round(value * 100)));
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const root = m.scrollRoot?.current ?? document.documentElement;
+    const previousSnap = root.style.scrollSnapType;
+    const previousBehavior = root.style.scrollBehavior;
+    const previousOverscroll = root.style.overscrollBehaviorY;
+    root.style.scrollSnapType = !disabled && m.scrollFlow === 'cinematic'
+      ? 'y mandatory'
+      : !disabled && m.scrollFlow === 'guided' ? 'y proximity' : '';
+    root.style.scrollBehavior = 'smooth';
+    root.style.overscrollBehaviorY = !disabled && m.scrollFlow === 'cinematic' ? 'contain' : '';
+    return () => {
+      root.style.scrollSnapType = previousSnap;
+      root.style.scrollBehavior = previousBehavior;
+      root.style.overscrollBehaviorY = previousOverscroll;
+    };
+  }, [disabled, m.scrollFlow, m.scrollRoot]);
+
+  const show = !disabled && !m.reduced && m.progress !== 'none';
+  return (
+    <>
+      {children}
+      {show && (
+        <div
+          className="pointer-events-none fixed right-3 top-1/2 z-40 -translate-y-1/2"
+          aria-hidden
+        >
+          {m.progress === 'line' ? (
+            <div className="relative h-28 w-[3px] overflow-hidden rounded-full bg-black/10 backdrop-blur-sm">
+              <motion.span
+                className="absolute inset-x-0 top-0 h-full origin-top rounded-full"
+                style={{ scaleY: smoothProgress, background: color }}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 rounded-full border border-white/30 bg-white/70 px-2 py-3 shadow-lg backdrop-blur-md">
+              {[0, 25, 50, 75, 100].map(step => (
+                <span
+                  key={step}
+                  className="block rounded-full transition-all duration-300"
+                  style={{
+                    width: percent >= step ? 6 : 4,
+                    height: percent >= step ? 6 : 4,
+                    background: percent >= step ? color : 'rgba(0,0,0,0.18)',
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Invitation, Guest } from '@/lib/types';
+import { publicTemplateName } from '@/lib/enkarta-collections';
 
 interface Props {
   invitations: Invitation[];
@@ -120,7 +121,7 @@ export default function ConfirmationsDashboard({ invitations }: Props) {
                 <div className="min-w-0 flex-1">
                   <p className="font-outfit font-medium text-gray-900 truncate">{inv.names || inv.slug}</p>
                   <p className="text-xs text-gray-400 font-outfit">
-                    {inv.event_date ? new Date(inv.event_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Sin fecha'} · {inv.template}
+                    {inv.event_date ? new Date(inv.event_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Sin fecha'} · {publicTemplateName(inv.template)}
                   </p>
                 </div>
                 <div className="hidden sm:flex items-center gap-2 flex-shrink-0">

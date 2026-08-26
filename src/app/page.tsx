@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { motion, MotionConfig, useMotionValue, useSpring, useInView, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { collectionFor } from '@/lib/enkarta-collections';
 
 // ── Scroll reveal (entrada elegante al hacer scroll) ─────────────────────────
 function Reveal({ children, delay = 0, y = 32, className = '' }: {
@@ -446,20 +447,32 @@ function TabletCarousel() {
 }
 
 // ── Data ─────────────────────────────────────────────────────────────────────
-const templates = [
-  { name: 'Azure',      tag: 'Clásico',   desc: 'Azul · Elegante & Clásico',    bg: '#f8fbff', card: '#deeaf8', text: '#1a3a5c', accent: '#3a7ab5', coverStart: '#1a3a5c', coverEnd: '#2e6da4',    n1: 'Laura',   n2: 'Kevin',     dateStr: '15 · Nov · 2025', floral: false, img: '/catalog/azure.jpg', demoPath: '/muestra/azure?m=Daniel%20Martinez&n=2%20pases' },
-  { name: 'Primicia',   tag: 'Moderno',   desc: 'Oscuro · Drama & Oro',          bg: '#0e0e0e', card: '#1c1c1c', text: '#d4a030', accent: '#c89828', coverStart: '#1a0f02', coverEnd: '#3a2508',    n1: 'Jhoana',  n2: 'Nikol',     dateStr: '22 · Oct · 2025', floral: false, img: '/catalog/primicia.jpg', demoPath: '/muestra/primicia?m=Daniel%20Martinez&n=2%20pases' },
-  { name: 'Passport',   tag: 'Viajero',   desc: 'Salvia · Aventura & Mapa',      bg: '#f5f3ed', card: '#e8e2d0', text: '#3a4a28', accent: '#6a8a45', coverStart: '#2a3a18', coverEnd: '#4a6a28',    n1: 'Robert',  n2: 'Isabella',  dateStr: '08 · Abr · 2025', floral: false, img: '/catalog/passport.jpg', demoPath: '/muestra/passport?m=Daniel%20Martinez&n=2%20pases' },
-  { name: 'Paradise',   tag: 'Bohemio',   desc: 'Salvia · Boho & Natural',        bg: '#eceedd', card: '#dde2c8', text: '#3c4a2a', accent: '#5f6b47', coverStart: '#3c4a2a', coverEnd: '#5f6b47',    n1: 'Laura',   n2: 'Elvis',     dateStr: '30 · May · 2025', floral: true,  img: '/catalog/paradise.jpg', demoPath: '/muestra/paradise?m=Daniel%20Martinez&n=2%20pases' },
-  { name: 'Obsidiana',  tag: 'Nocturno',  desc: 'Negro · Oro & Mármol',           bg: '#100f0c', card: '#1c1b14', text: '#ece6d6', accent: '#c6a86a', coverStart: '#100f0c', coverEnd: '#3a3d28',    n1: 'Karlene', n2: 'María',     dateStr: '30 · Ene · 2026', floral: false, img: '/catalog/obsidiana.jpg', demoPath: '/muestra/obsidiana?m=Daniel%20Martinez&n=2%20pases' },
-  { name: 'Dolce Vita', tag: 'Romántico', desc: 'Marfil · Botánico & Script',     bg: '#fbfaf3', card: '#eef0dd', text: '#3b3b35', accent: '#4f7a52', coverStart: '#c2a368', coverEnd: '#e0d2a8',    n1: 'José',    n2: 'Nikol',     dateStr: '14 · Jun · 2025', floral: true,  img: '/catalog/dolcevita.jpg', demoPath: '/muestra/dolcevita?m=Daniel%20Martinez&n=2%20pases' },
-  { name: 'Grazia',     tag: 'Minimal',   desc: 'Champagne · Fino & Chic',        bg: '#fdfcf8', card: '#f1e9d8', text: '#2c2c27', accent: '#bca478', coverStart: '#a8916a', coverEnd: '#d8c9a8',    n1: 'Lorenzo', n2: 'Isabella',  dateStr: '19 · Jul · 2025', floral: false, img: '/catalog/grazia.jpg', demoPath: '/muestra/grazia?m=Daniel%20Martinez&n=2%20pases' },
-  { name: 'Carmesí',    tag: 'Dramático', desc: 'Vino · Rosas & Oro',             bg: '#f6efe3', card: '#f0e3cf', text: '#4a3733', accent: '#871a2f', coverStart: '#871a2f', coverEnd: '#6d1424',    n1: 'José',    n2: 'María',     dateStr: '11 · Ago · 2025', floral: true,  img: '/catalog/carmesi.jpg', demoPath: '/muestra/carmesi?m=Daniel%20Martinez&n=2%20pases' },
-  { name: 'Napoly',     tag: 'Clásico',   desc: 'Taupe · Rosa empolvado',         bg: '#fbf8f3', card: '#f3e8e0', text: '#5a4d44', accent: '#b98a86', coverStart: '#6f6052', coverEnd: '#b98a86',    n1: 'Nestor',  n2: 'Sandra',    dateStr: '07 · Sep · 2026', floral: true,  img: '/catalog/perla.jpg', demoPath: '/muestra/napoly?m=Daniel%20Martinez&n=2%20pases' },
-  { name: 'Euforia',    tag: 'Floral',    desc: 'Mocha · Cálido & Acuarela',      bg: '#f7f1e5', card: '#efe3cd', text: '#5d5040', accent: '#8a7257', coverStart: '#6b563f', coverEnd: '#a08458',    n1: 'Andrea',  n2: 'Marget',    dateStr: '03 · Sep · 2025', floral: true,  img: '/catalog/euforia.jpg', demoPath: '/muestra/euforia?m=Daniel%20Martinez&n=2%20pases' },
-  { name: 'Rose Gold',  tag: 'Romántico', desc: 'Blush · Suave & Floral',         bg: '#fdf6f1', card: '#f8e3da', text: '#7a6157', accent: '#b97f86', coverStart: '#b97f86', coverEnd: '#d8a8a0',    n1: 'Lucía',   n2: 'Pablo',     dateStr: '28 · Sep · 2025', floral: true,  img: '/catalog/rosegold.jpg', demoPath: '/muestra/rosegold?m=Daniel%20Martinez&n=2%20pases' },
-  { name: 'Allegria',   tag: 'Minimal',   desc: 'Salvia · Limpio & Fresco',       bg: '#fbfbf8', card: '#e9ede5', text: '#3a3a34', accent: '#8c9a86', coverStart: '#6f7d69', coverEnd: '#8c9a86',    n1: 'María',   n2: 'Vincent',   dateStr: '15 · Oct · 2025', floral: false, img: '/catalog/allegria.jpg', demoPath: '/muestra/allegria?m=Daniel%20Martinez&n=2%20pases' },
-];
+const templateVisuals = [
+  { key: 'azure',      bg: '#f8fbff', card: '#deeaf8', text: '#1a3a5c', accent: '#3a7ab5', coverStart: '#1a3a5c', coverEnd: '#2e6da4', n1: 'Laura',   n2: 'Kevin',    dateStr: '15 · Nov · 2025', floral: false },
+  { key: 'primicia',   bg: '#0e0e0e', card: '#1c1c1c', text: '#d4a030', accent: '#c89828', coverStart: '#1a0f02', coverEnd: '#3a2508', n1: 'Jhoana',  n2: 'Nikol',    dateStr: '22 · Oct · 2025', floral: false },
+  { key: 'passport',   bg: '#f5f3ed', card: '#e8e2d0', text: '#3a4a28', accent: '#6a8a45', coverStart: '#2a3a18', coverEnd: '#4a6a28', n1: 'Robert',  n2: 'Isabella', dateStr: '08 · Abr · 2025', floral: false },
+  { key: 'paradise',   bg: '#eceedd', card: '#dde2c8', text: '#3c4a2a', accent: '#5f6b47', coverStart: '#3c4a2a', coverEnd: '#5f6b47', n1: 'Laura',   n2: 'Elvis',    dateStr: '30 · May · 2025', floral: true  },
+  { key: 'obsidiana',  bg: '#100f0c', card: '#1c1b14', text: '#ece6d6', accent: '#c6a86a', coverStart: '#100f0c', coverEnd: '#3a3d28', n1: 'Karlene', n2: 'María',    dateStr: '30 · Ene · 2026', floral: false },
+  { key: 'dolcevita',  bg: '#fbfaf3', card: '#eef0dd', text: '#3b3b35', accent: '#4f7a52', coverStart: '#c2a368', coverEnd: '#e0d2a8', n1: 'José',    n2: 'Nikol',    dateStr: '14 · Jun · 2025', floral: true  },
+  { key: 'grazia',     bg: '#fdfcf8', card: '#f1e9d8', text: '#2c2c27', accent: '#bca478', coverStart: '#a8916a', coverEnd: '#d8c9a8', n1: 'Lorenzo', n2: 'Isabella', dateStr: '19 · Jul · 2025', floral: false },
+  { key: 'carmesi_v2', bg: '#f6efe3', card: '#f0e3cf', text: '#4a3733', accent: '#871a2f', coverStart: '#871a2f', coverEnd: '#6d1424', n1: 'José',    n2: 'María',    dateStr: '11 · Ago · 2025', floral: true  },
+  { key: 'napoly',     bg: '#fbf8f3', card: '#f3e8e0', text: '#5a4d44', accent: '#b98a86', coverStart: '#6f6052', coverEnd: '#b98a86', n1: 'Nestor',  n2: 'Sandra',   dateStr: '07 · Sep · 2026', floral: true  },
+  { key: 'euforia',    bg: '#f7f1e5', card: '#efe3cd', text: '#5d5040', accent: '#8a7257', coverStart: '#6b563f', coverEnd: '#a08458', n1: 'Andrea',  n2: 'Marget',   dateStr: '03 · Sep · 2025', floral: true  },
+  { key: 'rosegold',   bg: '#fdf6f1', card: '#f8e3da', text: '#7a6157', accent: '#b97f86', coverStart: '#b97f86', coverEnd: '#d8a8a0', n1: 'Lucía',   n2: 'Pablo',    dateStr: '28 · Sep · 2025', floral: true  },
+  { key: 'allegria',   bg: '#fbfbf8', card: '#e9ede5', text: '#3a3a34', accent: '#8c9a86', coverStart: '#6f7d69', coverEnd: '#8c9a86', n1: 'María',   n2: 'Vincent',  dateStr: '15 · Oct · 2025', floral: false },
+] as const;
+
+const templates = templateVisuals.map((visual) => {
+  const identity = collectionFor(visual.key);
+  return {
+    ...visual,
+    name: identity.name,
+    tag: identity.tag,
+    desc: identity.description,
+    img: identity.image,
+    demoPath: `/muestra/${identity.demoKey ?? visual.key}?m=Daniel%20Martinez&n=2%20pases`,
+  };
+});
 
 const features = [
   { title: 'Ubicación Maps',                desc: 'Botón directo a Google Maps incluido en cada invitación.',
@@ -532,10 +545,10 @@ const additionalServices = [
 ];
 
 const testimonials = [
-  { name: 'Valentina R.',  event: 'Boda · Plantilla Perla',     text: 'Quedé completamente enamorada de mi invitación. Todos mis invitados me preguntaron dónde la había hecho. ¡Super recomendado!', stars: 5, initial: 'V' },
-  { name: 'Mariana S.',    event: 'XV Años · Plantilla Euforia', text: 'El proceso fue facilísimo y el resultado fue hermoso. La invitación de mis XV quedó mejor de lo que imaginé.',              stars: 5, initial: 'M' },
-  { name: 'Lucía & Andrés',event: 'Boda · Plantilla Carmesí',   text: 'Elegimos Carmesí para nuestra boda y fue perfecta. Dramática, única y elegante. Nuestros invitados quedaron impresionados.',  stars: 5, initial: 'L' },
-  { name: 'Carolina T.',   event: 'Boda · Plantilla Azure',      text: 'Rápidos, atentos y el diseño quedó hermoso. Me cambiaron detalles sin problema hasta que quedó perfecta.',                    stars: 5, initial: 'C' },
+  { name: 'Valentina R.',  event: 'Boda · Colección Lirio',       text: 'Quedé completamente enamorada de mi invitación. Todos mis invitados me preguntaron dónde la había hecho. ¡Super recomendado!', stars: 5, initial: 'V' },
+  { name: 'Mariana S.',    event: 'XV Años · Colección Terracota', text: 'El proceso fue facilísimo y el resultado fue hermoso. La invitación de mis XV quedó mejor de lo que imaginé.',              stars: 5, initial: 'M' },
+  { name: 'Lucía & Andrés',event: 'Boda · Colección Granate',     text: 'Elegimos Granate para nuestra boda y fue perfecta. Dramática, única y elegante. Nuestros invitados quedaron impresionados.', stars: 5, initial: 'L' },
+  { name: 'Carolina T.',   event: 'Boda · Colección Lunaria',     text: 'Rápidos, atentos y el diseño quedó hermoso. Me cambiaron detalles sin problema hasta que quedó perfecta.',                    stars: 5, initial: 'C' },
 ];
 
 const faqs = [
@@ -885,11 +898,11 @@ export default function LandingPage() {
 
           <motion.p variants={{ hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}
             className="font-cormorant text-center tracking-[0.18em]" style={{ color: 'rgba(44,37,25,0.55)', fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 500 }}>
-            Celebra con elegancia
+            Cada historia merece su propia forma
           </motion.p>
           <motion.h1 variants={{ hidden: { opacity: 0, y: 28, scale: 0.97 }, show: { opacity: 1, y: 0, scale: 1, transition: { duration: 1, ease: [0.22, 1, 0.36, 1] } } }}
             className="font-great text-center" style={{ color: '#8B7D5F', fontSize: 'clamp(44px, 6.5vw, 76px)', lineHeight: 1.05 }}>
-            invita con estilo
+            conviértela en una experiencia
           </motion.h1>
 
           <motion.div variants={{ hidden: { opacity: 0, scaleX: 0.4 }, show: { opacity: 1, scaleX: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}
@@ -981,9 +994,9 @@ export default function LandingPage() {
         <div className="relative max-w-6xl mx-auto">
           <Reveal className="text-center mb-20">
             <p className="font-great text-4xl mb-2" style={{ color: '#B8975A' }}>Catálogo</p>
-            <h3 className="font-cinzel text-3xl sm:text-4xl tracking-[0.08em]" style={{ color: '#5a4e34' }}>INVITACIONES ÚNICAS</h3>
+            <h3 className="font-cinzel text-3xl sm:text-4xl tracking-[0.08em]" style={{ color: '#5a4e34' }}>COLECCIONES CON ALMA</h3>
             <p className="font-cormorant mt-4 max-w-xl mx-auto" style={{ color: 'rgba(44,37,25,0.55)', fontSize: '20px', fontWeight: 500 }}>
-              Descubre diseños únicos creados por nuestro equipo de expertos para tus momentos más especiales.
+              Explora universos visuales creados para convertir la personalidad de tu evento en una experiencia memorable.
             </p>
           </Reveal>
           {/* 1 col en móvil: con 2 cols los mockups quedan flacos/alargados y
@@ -1022,17 +1035,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Editorial transition: primer detalle ── */}
+      {/* ── Transición editorial de marca ── */}
       <section className="py-28 px-6" style={{ backgroundColor: '#F4EEE5' }}>
         <Reveal className="max-w-2xl mx-auto text-center">
           <h2 className="font-great mb-8" style={{ color: '#8B7D5F', fontSize: 'clamp(44px, 6vw, 72px)', lineHeight: 1 }}>
-            primer detalle
+            diseño que cuenta
           </h2>
           <p className="font-cormorant" style={{ color: 'rgba(44,37,25,0.7)', fontSize: '22px', lineHeight: 1.7, fontWeight: 500 }}>
-            Nuestro equipo de <strong style={{ color: '#5a4e34' }}>diseñadores y programadores</strong> sabe que cada
-            invitación es el primer detalle de un momento inolvidable. Para un toque aún más personal,
-            nuestra tecnología permite <strong style={{ color: '#5a4e34' }}>personalizar la invitación con el nombre de cada invitado</strong>,
-            haciendo que cada destinatario se sienta parte especial de su historia.
+            Enkarta une <strong style={{ color: '#5a4e34' }}>dirección artística y tecnología</strong> para que cada
+            invitación tenga una voz propia. Personalizamos el recorrido, los detalles y el nombre de cada invitado para que
+            <strong style={{ color: '#5a4e34' }}> abrirla se sienta como entrar a tu celebración</strong>.
           </p>
         </Reveal>
       </section>
@@ -1403,7 +1415,7 @@ export default function LandingPage() {
             Cuéntanos los detalles de tu evento y empieza tu invitación{' '}
             <span style={{ color: '#B8975A' }}>hoy mismo</span>
           </h3>
-          <p className="font-outfit text-white/50 mb-10 text-sm">Elige el modelo y paquete que prefieras. Nosotros nos encargamos del resto.</p>
+          <p className="font-outfit text-white/50 mb-10 text-sm">Elige la colección que conecte contigo. Nosotros convertimos tus detalles en una experiencia completa.</p>
           <a href={WA} target="_blank" rel="noopener noreferrer"
              className="inline-flex items-center gap-3 px-8 py-4 rounded-xl font-outfit font-semibold text-lg text-white transition-all"
              style={{ backgroundColor: '#B8975A', boxShadow: '0 8px 40px rgba(184,151,90,0.3)' }}>

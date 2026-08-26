@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ease } from '@/lib/motion';
 import { themeFor, type EntryTheme } from './entry/config';
 import { EntryScene } from './entry/scenes';
+import { emitInvitationAnalytics } from './InvitationAnalytics';
 
 interface Props {
   children: React.ReactNode;
@@ -54,6 +55,7 @@ export default function EntryGate({
 
   const enter = () => {
     if (phase !== 'idle') return;
+    emitInvitationAnalytics('entry_open');
     setPhase('opening');
     // Pantalla completa inmersiva (móvil y escritorio). Debe llamarse de forma
     // síncrona dentro del gesto del usuario o el navegador la rechaza. En

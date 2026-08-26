@@ -604,7 +604,7 @@ export function mapToProvence(inv: InvitationParsed): ProvenceContent {
     dateYear: parts.year,
     locationBadge: config?.city?.toUpperCase() ?? (inv.ceremony_address ? inv.ceremony_address.toUpperCase() : 'CIENEGUILLA'),
 
-    coverImage: inv.cover_image_url ?? (config?.sectionImages?.hero as string | undefined) ?? 'https://invitali.com/wp-content/uploads/2026/07/Novios-annie-y-Micky.webp',
+    coverImage: inv.cover_image_url ?? (config?.sectionImages?.hero as string | undefined) ?? '/catalog/solar-original.png',
     middleImage: config?.secondaryImage ?? (config?.sectionImages?.couple as string | undefined) ?? 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1200&q=80',
 
     headerSub: config?.welcomeTitle ?? 'TENEMOS EL HONOR DE INVITARTE A NUESTRA BODA',

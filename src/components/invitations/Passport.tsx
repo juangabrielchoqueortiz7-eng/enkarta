@@ -184,7 +184,13 @@ export default function Passport({ data }: { data: PassportContent }) {
 
   return (
     <ThemeCtx.Provider value={C}>
-    <div className="relative min-h-screen w-full overflow-x-hidden" style={{ background: C.cream, color: C.dark, fontFamily: F.body }}>
+    <div className="relative min-h-screen w-full overflow-x-hidden" style={{
+      backgroundColor: C.cream,
+      backgroundImage: `linear-gradient(90deg, ${C.dark}08 1px, transparent 1px), linear-gradient(${C.dark}08 1px, transparent 1px), radial-gradient(${C.sage}12 0.7px, transparent 0.7px)`,
+      backgroundSize: '48px 48px, 48px 48px, 7px 7px',
+      color: C.dark,
+      fontFamily: F.body,
+    }}>
       <style>{`
         @keyframes ppOrbit { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
         @keyframes ppFade { from { opacity: 0; transform: translateY(16px);} to { opacity: 1; transform: translateY(0);} }
@@ -208,7 +214,7 @@ export default function Passport({ data }: { data: PassportContent }) {
         }}
         className="fixed bottom-5 right-5 z-50 flex h-10 w-10 items-center justify-center rounded-full transition-transform hover:scale-110"
         style={{ border: `1.5px solid ${C.sage}`, background: C.cream }}
-        aria-label="Musica"
+        aria-label="Música"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill={C.sage}>
           <path d="M9 17a3 3 0 11-2-2.83V5l11-2v10.17A3 3 0 1116 14V7L9 8.4V17z" />
@@ -216,6 +222,12 @@ export default function Passport({ data }: { data: PassportContent }) {
       </button>)}
 
       <section className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center" style={{ background: C.sage }}>
+        <span className="absolute left-5 top-5 text-[8px] tracking-[0.28em] sm:left-8 sm:top-8" style={{ color: C.creamDim, fontFamily: F.caps }}>
+          ENKARTA · COLECCIÓN ATLAS
+        </span>
+        <span className="absolute right-5 top-5 text-[8px] tracking-[0.22em] sm:right-8 sm:top-8" style={{ color: C.creamDim, fontFamily: F.caps }}>
+          VIAJE Nº {data.isoDate.slice(0, 4)}
+        </span>
         <div className="flex flex-col items-center" style={{ animation: 'ppFade 1.1s ease both' }}>
           <div className="pp-globe relative" style={{ width: 60, height: 60 }}>
             <svg viewBox="0 0 48 48" className="absolute inset-0 h-full w-full" fill="none" stroke={C.creamText} strokeWidth="1.2">
@@ -229,8 +241,8 @@ export default function Passport({ data }: { data: PassportContent }) {
               </svg>
             </div>
           </div>
-          <Caps className="mt-5" style={{ color: C.creamText, fontSize: 'clamp(26px,6vw,44px)', letterSpacing: '0.28em' }}>Pasaporte</Caps>
-          <p style={{ fontFamily: F.script, fontSize: 'clamp(26px,5vw,40px)', color: C.creamText, marginTop: 2 }}>a nuestra boda</p>
+          <Caps className="mt-5" style={{ color: C.creamText, fontSize: 'clamp(32px,7vw,54px)', letterSpacing: '0.28em' }}>Atlas</Caps>
+          <p style={{ fontFamily: F.script, fontSize: 'clamp(25px,5vw,38px)', color: C.creamText, marginTop: 4 }}>cuaderno de nuestra boda</p>
           <div className="relative my-8 flex items-center justify-center" style={{ width: 156, height: 156 }}>
             <div className="absolute inset-0 rounded-full" style={{ border: `2px dashed ${C.creamText}`, opacity: 0.85 }} />
             <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" fill="none" stroke={C.creamText} strokeWidth="1.4">
@@ -250,7 +262,7 @@ export default function Passport({ data }: { data: PassportContent }) {
               className="inline-flex items-center justify-center gap-2 rounded-full px-7 py-2.5 text-[12px] tracking-[0.16em] uppercase transition-all duration-300 hover:bg-[#ece6d6] hover:text-[#6e795b]"
               style={{ border: `1.5px solid ${C.creamText}`, color: C.creamText, fontFamily: F.caps, fontWeight: 600 }}
             >
-              Explorar tu pasaporte
+              Abrir el cuaderno de viaje
             </button>
           </div>
         </div>
@@ -317,7 +329,7 @@ export default function Passport({ data }: { data: PassportContent }) {
       <section className={`relative px-6 ${SECTION.tight} text-center`}>
         {sew('padres')}
         <Reveal className="mx-auto max-w-2xl">
-          <Caps style={{ fontSize: 'clamp(13px,3.2vw,18px)', letterSpacing: '0.16em' }}>Con la bendicion de Dios y de nuestros padres</Caps>
+          <Caps style={{ fontSize: 'clamp(13px,3.2vw,18px)', letterSpacing: '0.16em' }}>Con la bendición de Dios y de nuestros padres</Caps>
           <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2">
             {[
               ['Padres de la Novia', data.parentsBride],
@@ -340,24 +352,24 @@ export default function Passport({ data }: { data: PassportContent }) {
       <section className="px-6 pb-14">
         <Reveal className="mx-auto max-w-xl">
           <div style={{ borderTop: `1px solid ${C.line}`, width: '70%', margin: '0 auto' }} />
-          <div className="my-3 flex items-center justify-center gap-2 sm:gap-4">
-            <Flourish />
-            <div className="flex items-start gap-4 sm:gap-6">
+          <div className="my-4 flex items-center justify-center gap-3 sm:gap-4">
+            <div className="hidden sm:block"><Flourish /></div>
+            <div className="grid w-full max-w-md grid-cols-4 gap-2 sm:gap-3">
               {[
-                [days, 'Dias'],
+                [days, 'Días'],
                 [hours, 'Hrs'],
                 [mins, 'Mins'],
                 [secs, 'Segs'],
               ].map(([n, label]) => (
-                <div key={label as string} className="text-center">
+                <div key={label as string} className="rounded-lg border px-1 py-4 text-center" style={{ borderColor: C.line, background: `${C.cream}d9`, boxShadow: `0 8px 22px ${C.dark}0d` }}>
                   <p style={{ fontFamily: F.caps, fontWeight: 700, fontSize: 'clamp(24px,6vw,36px)', lineHeight: 1, color: C.dark }}>
                     <Odometer value={n as number} />
                   </p>
-                  <p className="mt-1.5" style={{ fontFamily: F.body, fontSize: '14px', color: C.darkSoft }}>{label}</p>
+                  <p className="mt-1.5 truncate" style={{ fontFamily: F.body, fontSize: '12px', color: C.darkSoft }}>{label}</p>
                 </div>
               ))}
             </div>
-            <Flourish flip />
+            <div className="hidden sm:block"><Flourish flip /></div>
           </div>
           <div style={{ borderTop: `1px solid ${C.line}`, width: '70%', margin: '0 auto' }} />
         </Reveal>
@@ -366,7 +378,7 @@ export default function Passport({ data }: { data: PassportContent }) {
       <section className={`px-6 ${SECTION.tight} text-center`}>
         <Reveal className="flex flex-col items-center">
           {data.icons?.ceremony ? (
-            <EventIcon name="" custom={data} sec="ceremony" className="h-10 w-10" stroke={C.sage} />
+            <EventIcon name="" custom={data} sec="ceremony" className="h-10 w-10" stroke={data.iconColor || C.sage} />
           ) : (
             <svg width="34" height="40" viewBox="0 0 24 28" fill="none" stroke={C.sage} strokeWidth="1.2">
               <path d="M12 1C7 1 3 5 3 10c0 6.5 9 16 9 16s9-9.5 9-16c0-5-4-9-9-9z" />
@@ -376,14 +388,14 @@ export default function Passport({ data }: { data: PassportContent }) {
           <Script className="mt-2" style={titleSize}>Escala</Script>
           <p className="mt-3" style={{ fontFamily: F.body, fontSize: '20px', color: C.dark }}>{data.escala.place}</p>
           <p style={{ fontFamily: F.body, fontSize: '20px', color: C.darkSoft }}>{data.escala.time}</p>
-          <div className="mt-5"><SageBtn href={data.escala.maps}>Ver ubicacion</SageBtn></div>
+          <div className="mt-5"><SageBtn href={data.escala.maps}>Ver ubicación</SageBtn></div>
         </Reveal>
       </section>
 
       <section className={`px-6 ${SECTION.tight} text-center`}>
         <Reveal className="mx-auto max-w-xl">
           {data.icons?.dress && (
-            <EventIcon name="" custom={data} sec="dress" className="mx-auto mb-2 h-10 w-10" stroke={C.sage} />
+            <EventIcon name="" custom={data} sec="dress" className="mx-auto mb-2 h-10 w-10" stroke={data.iconColor || C.sage} />
           )}
           <Script style={titleSize}>Vestimenta</Script>
           <Caps className="mt-3" style={{ fontSize: '16px', letterSpacing: '0.1em' }}>Etiqueta Rigurosa</Caps>
@@ -415,17 +427,18 @@ export default function Passport({ data }: { data: PassportContent }) {
           <div className="text-center">
             <Script style={titleSize}>Itinerario</Script>
             <p className="mx-auto mb-10 mt-3 max-w-md italic" style={{ fontFamily: F.body, fontSize: '17px', color: C.darkSoft }}>
-              La vida esta llena de momentos que no se pueden recuperar. Llega puntual y comparte este momento especial con nosotros.
+              La vida está llena de momentos que no se pueden recuperar. Llega puntual y comparte este momento especial con nosotros.
             </p>
           </div>
           <div className="relative mx-auto max-w-2xl">
             <div className="absolute bottom-2 left-1/2 top-2 hidden -translate-x-1/2 sm:block" style={{ width: '1px', background: C.line }} aria-hidden />
-            <div className="space-y-9">
+            <div className="absolute bottom-4 left-6 top-4 w-px sm:hidden" style={{ background: C.line }} aria-hidden />
+            <div className="space-y-4 sm:space-y-9">
               {data.itinerary.map((item, index) => {
                 const left = index % 2 === 0;
                 const block = (
                   <div className={`flex flex-col items-center text-center ${left ? 'sm:items-end sm:text-right' : 'sm:items-start sm:text-left'}`}>
-                    <EventIcon name={item.icon} className="mb-1.5 h-9 w-9" stroke={C.sage} custom={data} lottieColors={item.iconColors} speed={item.iconSpeed} />
+                    <EventIcon name={item.icon} className="mb-1.5 h-9 w-9" stroke={data.iconColor || C.sage} custom={data} lottieColors={item.iconColors} speed={item.iconSpeed} />
                     <p style={{ fontFamily: F.body, fontSize: '17px', color: C.dark }}>{item.label}</p>
                     <p style={{ fontFamily: F.caps, fontWeight: 600, fontSize: '15px', color: C.sage }}>{item.time}</p>
                   </div>
@@ -438,7 +451,21 @@ export default function Passport({ data }: { data: PassportContent }) {
                       <span className="h-2.5 w-2.5 rounded-full" style={{ background: C.sage }} />
                     </div>
                     <div className={`hidden sm:block ${!left ? 'sm:pl-6' : ''}`}>{!left && block}</div>
-                    <div className="sm:hidden">{block}</div>
+                    <div className="grid grid-cols-[48px_1fr] items-center gap-3 sm:hidden">
+                      <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full border text-[11px] font-semibold"
+                        style={{ borderColor: C.sage, background: C.cream, color: C.sage, fontFamily: F.caps }}>
+                        {String(index + 1).padStart(2, '0')}
+                      </div>
+                      <div className="rounded-xl border px-4 py-4" style={{ borderColor: C.line, background: `${C.cream}e8`, boxShadow: `0 10px 26px ${C.dark}10` }}>
+                        <div className="flex items-center gap-3 text-left">
+                          <EventIcon name={item.icon} className="h-10 w-10 shrink-0" stroke={data.iconColor || C.sage} custom={data} lottieColors={item.iconColors} speed={item.iconSpeed} />
+                          <div className="min-w-0">
+                            <p style={{ fontFamily: F.body, fontSize: '17px', color: C.dark }}>{item.label}</p>
+                            <p style={{ fontFamily: F.caps, fontWeight: 600, fontSize: '13px', color: C.sage }}>{item.time}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -451,7 +478,7 @@ export default function Passport({ data }: { data: PassportContent }) {
         {sew('galeria')}
         <Reveal className="mx-auto flex max-w-md flex-col items-center">
           {data.icons?.gallery ? (
-            <EventIcon name="" custom={data} sec="gallery" className="mb-5 h-12 w-12" stroke={C.creamText} />
+            <EventIcon name="" custom={data} sec="gallery" className="mb-5 h-12 w-12" stroke={data.iconColor || C.creamText} />
           ) : (
             <svg viewBox="0 0 48 48" width="46" height="46" className="mb-5" fill="none" stroke={C.creamText} strokeWidth="1.3">
               <rect x="6" y="14" width="36" height="26" rx="3" />
@@ -469,7 +496,7 @@ export default function Passport({ data }: { data: PassportContent }) {
               className="inline-flex items-center gap-2 rounded-full px-7 py-2.5 text-[12px] tracking-[0.14em] uppercase"
               style={{ background: C.cream, color: C.sage, fontFamily: F.caps, fontWeight: 600 }}
             >
-              Compartir fotografias
+              Compartir fotografías
             </a>
           </div>
         </Reveal>
@@ -497,7 +524,7 @@ export default function Passport({ data }: { data: PassportContent }) {
       <footer className="py-8 text-center" style={{ background: C.sage, color: C.creamText, borderTop: '1px solid rgba(236,230,214,0.2)' }}>
         <Caps style={{ color: C.creamText, fontSize: '18px', letterSpacing: '0.2em' }}>Enkarta</Caps>
         <p className="mt-1" style={{ fontFamily: F.body, fontSize: '15px', color: C.creamDim }}>
-          Deseas una invitacion para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
+          ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>
       </footer>
     </div>

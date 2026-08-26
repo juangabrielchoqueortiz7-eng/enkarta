@@ -34,7 +34,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
 
   if (t === 'azure') {
     return (
-      <Wrapper title="Textos de la plantilla Azure">
+      <Wrapper title="Textos de la colección Lunaria">
         <Field label="Ciudad">
           <input className={inputCls} value={cfg.city ?? ''} onChange={e => setCfg({ city: e.target.value })} placeholder="Bogotá" />
         </Field>
@@ -56,7 +56,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
 
   if (t === 'primicia') {
     return (
-      <Wrapper title="Textos de la plantilla Primicia">
+      <Wrapper title="Textos de la colección Áurea">
         <Field label="Descripción de la ceremonia">
           <textarea className={textareaCls} rows={3} value={cfg.ceremonyDesc ?? ''} onChange={e => setCfg({ ceremonyDesc: e.target.value })} placeholder="Un espacio sagrado donde uniremos nuestras vidas..." />
         </Field>
@@ -75,7 +75,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
 
   if (t === 'paradise') {
     return (
-      <Wrapper title="Textos de la plantilla Paradise">
+      <Wrapper title="Textos de la colección Verdealma">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Apellido de la novia (script)">
             <input className={inputCls} value={cfg.brideLast ?? ''} onChange={e => setCfg({ brideLast: e.target.value })} placeholder="Ruggeri" />
@@ -133,7 +133,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
       onChange({ sponsors: next });
     };
     return (
-      <Wrapper title="Textos de la plantilla Obsidiana">
+      <Wrapper title="Textos de la colección Nocturna">
         <Field label="Lugar / fecha en portada">
           <input className={inputCls} value={cfg.datePlace ?? ''} onChange={e => setCfg({ datePlace: e.target.value })} placeholder="Santa Cruz · 2026" />
         </Field>
@@ -196,7 +196,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
     const setSponsor = (i: number, patch: { role?: string; names?: string }) =>
       onChange({ sponsors: sponsors.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
     return (
-      <Wrapper title="Textos de la plantilla Dolce Vita">
+      <Wrapper title="Textos de la colección Oliva">
         <Field label="Ciudad (marco de fecha)">
           <input className={inputCls} value={cfg.dateCity ?? ''} onChange={e => setCfg({ dateCity: e.target.value })} placeholder="La Paz" />
         </Field>
@@ -265,7 +265,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
     const setAcct = (i: number, patch: { name?: string; account?: string }) =>
       setCfg({ giftAccounts: accts.map((a, j) => (j === i ? { ...a, ...patch } : a)) });
     return (
-      <Wrapper title="Textos de la plantilla Grazia">
+      <Wrapper title="Textos de la colección Seda">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Nombre completo del novio">
             <input className={inputCls} value={cfg.groomName ?? ''} onChange={e => setCfg({ groomName: e.target.value })} placeholder="Lorenzo Bianchi" />
@@ -342,7 +342,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
 
   if (t === 'passport') {
     return (
-      <Wrapper title="Textos de la plantilla Passport">
+      <Wrapper title="Textos de la colección Atlas">
         <Field label="Anuncio">
           <input className={inputCls} value={cfg.announce ?? ''} onChange={e => setCfg({ announce: e.target.value })} placeholder="Nos casamos" />
         </Field>

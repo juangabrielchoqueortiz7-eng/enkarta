@@ -9,30 +9,42 @@ import { resolveLayoutBindings } from '@/lib/block-bindings';
 import BlockRenderer from '@/components/invitations/BlockRenderer';
 import FontScope from '@/components/invitations/FontScope';
 import SmartRsvp from '@/components/invitations/SmartRsvp';
+import { publicTemplateName } from '@/lib/enkarta-collections';
 
 interface Props {
   invitation: InvitationParsed;
   /** Vista del preview: teléfono o escritorio. */
   device?: 'mobile' | 'desktop';
+  /** Ancho lógico exacto que se quiere auditar (360, 390, 768, 1024 o 1440). */
+  viewportWidth?: number;
   /** En modo bloques el preview es interactivo (clic en un bloque lo selecciona). */
   blockEditor?: boolean;
   selectedBlockId?: string;
-  onSelectBlock?: (id: string) => void;
+  selectedBlockIds?: string[];
+  onSelectBlock?: (id: string, additive?: boolean) => void;
   onTransformBlock?: (id: string, patch: import('@/lib/types').BlockLayout) => void;
   onEditBlockProp?: (id: string, key: string, value: string) => void;
+  onPatchBlock?: (id: string, patch: Partial<import('@/lib/types').Block>) => void;
+  onDuplicateBlock?: (id: string) => void;
+  onDeleteBlock?: (id: string) => void;
+  onCopyBlockStyle?: (id: string) => void;
+  onPasteBlockStyle?: (id: string) => void;
+  hasStyleClipboard?: boolean;
 }
 
-export default function LivePreview({ invitation: rawInvitation, device = 'mobile', blockEditor, selectedBlockId, onSelectBlock, onTransformBlock, onEditBlockProp }: Props) {
+export default function LivePreview({ invitation: rawInvitation, device = 'mobile', viewportWidth, blockEditor, selectedBlockId, selectedBlockIds, onSelectBlock, onTransformBlock, onEditBlockProp, onPatchBlock, onDuplicateBlock, onDeleteBlock, onCopyBlockStyle, onPasteBlockStyle, hasStyleClipboard }: Props) {
   // El preview refleja el paquete contratado (música/galería/pases gateados),
   // igual que la página pública. El editor de bloques usa el layout sin filtrar
   // para poder seguir editando bloques que el paquete oculta.
   const invitation = useMemo(() => gateInvitation(rawInvitation), [rawInvitation]);
   const template = invitation.template;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scaledContentRef = useRef<HTMLDivElement>(null);
+  const [scaledContentHeight, setScaledContentHeight] = useState(0);
   // Dimensiones del marco según el dispositivo.
   const isDesktop = device === 'desktop';
-  const dispW = isDesktop ? 760 : 320;
-  const logicalW = isDesktop ? 1000 : 390;
+  const logicalW = viewportWidth ?? (isDesktop ? 1024 : 390);
+  const dispW = logicalW <= 390 ? 320 : logicalW <= 768 ? 600 : 760;
   const dispH = isDesktop ? 560 : 600;
   const scale = dispW / logicalW;
   // Cambiar de preset re-monta la plantilla para volver a reproducir la animación.
@@ -40,6 +52,21 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
   const motionPreset = invitation.config?.motion?.preset ?? 'elegant';
   const [playNonce, setPlayNonce] = useState(0);
   const remountKey = `${motionPreset}-${playNonce}`;
+
+  // El contenido lógico se dibuja a 390/1000 px y luego se escala para entrar
+  // en el marco. Un transform no reduce la altura de layout: sin compensarla,
+  // el navegador dejaba al final un tramo blanco equivalente a la diferencia
+  // entre la altura original y la altura visible escalada.
+  useEffect(() => {
+    const el = scaledContentRef.current;
+    if (!el) return;
+    const measure = () => setScaledContentHeight(Math.ceil(el.scrollHeight * scale));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    const id = requestAnimationFrame(measure);
+    return () => { observer.disconnect(); cancelAnimationFrame(id); };
+  }, [scale, remountKey, invitation, blockEditor]);
 
   // ▶ Reproducir: recorre el preview de arriba a abajo con scroll suave para ver
   // todas las animaciones de scroll sin salir del editor.
@@ -68,6 +95,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
   // En modo editor de bloques se usa el layout SIN gatear (para poder editarlo todo).
   const renderInvitation = blockEditor ? rawInvitation : invitation;
   const cfg = renderInvitation.config ?? {};
+  const activeGuest = cfg.activeGuest;
   const hasBlocks = !!cfg.layout?.blocks?.length;
   // La confirmación inteligente se muestra al final del preview (sin invitado, modo abierto).
   const smartRsvpOn = !blockEditor && resolveFeatures(invitation.config).smartRsvp;
@@ -84,9 +112,21 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
   const premiumData = useMemo(() => (premium ? premium.map(invitation) : null), [premium, invitation]);
 
   return (
-    <div className="w-full h-full flex items-start justify-center overflow-auto py-6 px-4 bg-gray-100">
+    <div
+      className="relative flex h-full w-full items-start justify-center overflow-auto px-4 pb-8 pt-16"
+      style={{
+        backgroundColor: '#e9e6df',
+        backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(76,65,47,0.10) 1px, transparent 0)',
+        backgroundSize: '22px 22px',
+      }}
+    >
+      <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur-md">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        <span className="text-[10px] font-outfit font-semibold uppercase tracking-[0.14em] text-gray-500">Vista en vivo</span>
+        <span className="text-[10px] font-outfit text-gray-400">· {logicalW}px · {hasBlocks ? `${cfg.layout?.blocks.length ?? 0} bloques` : 'plantilla original'}</span>
+      </div>
       {/* Marco del dispositivo */}
-      <div className="relative flex-shrink-0" style={{ width: dispW }}>
+      <div className="relative flex-shrink-0 drop-shadow-[0_24px_45px_rgba(42,35,25,0.20)]" style={{ width: dispW }}>
         {/* Barra superior (teléfono o navegador) */}
         {isDesktop ? (
           <div className="bg-gray-800 rounded-t-xl h-7 flex items-center gap-1.5 px-3">
@@ -118,7 +158,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
         {/* Contenedor de la plantilla — escalado al ancho del marco */}
         <div
           ref={scrollRef}
-          className="overflow-hidden bg-white"
+          className="overflow-hidden"
           onWheel={() => { if (playing) stopPlay(); }}
           onPointerDown={() => { if (playing) stopPlay(); }}
           style={{
@@ -127,10 +167,21 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
             overflowY: 'auto',
             overflowX: 'hidden',
             position: 'relative',
+            background: cfg.theme?.primaryDeep || '#1f2937',
           }}
         >
           <div
             style={{
+              position: 'relative',
+              width: dispW,
+              height: Math.max(scaledContentHeight, dispH),
+            }}
+          >
+          <div
+            ref={scaledContentRef}
+            style={{
+              position: 'absolute',
+              inset: '0 auto auto 0',
               width: logicalW,
               transformOrigin: 'top left',
               transform: `scale(${scale})`,
@@ -151,12 +202,20 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
                 tokens={cfg.tokens}
                 editor={blockEditor}
                 selectedId={selectedBlockId}
+                selectedIds={selectedBlockIds}
                 onSelectBlock={onSelectBlock}
                 onTransform={onTransformBlock}
                 onEditProp={onEditBlockProp}
+                onPatchBlock={onPatchBlock}
+                onDuplicateBlock={onDuplicateBlock}
+                onDeleteBlock={onDeleteBlock}
+                onCopyBlockStyle={onCopyBlockStyle}
+                onPasteBlockStyle={onPasteBlockStyle}
+                hasStyleClipboard={hasStyleClipboard}
                 previewScale={scale}
                 scrollRoot={scrollRef}
                 viewportMode={device}
+                guest={activeGuest}
               />
             ) : (
             <PageMotionProvider key={remountKey} value={invitation.config?.motion} scrollRoot={scrollRef}>
@@ -173,8 +232,9 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
             )}
             </PageMotionProvider>
             )}
-            {smartRsvpOn && <SmartRsvp slug={invitation.slug} theme={cfg.theme} maxPasses={invitation.guest_passes} />}
+            {smartRsvpOn && <SmartRsvp slug={invitation.slug} theme={cfg.theme} guest={activeGuest} publicId={activeGuest?.publicId} guestName={activeGuest?.name} maxPasses={activeGuest?.passes ?? invitation.guest_passes} tableNo={activeGuest?.tableNo} />}
             </FontScope>
+          </div>
           </div>
         </div>
 
@@ -190,7 +250,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
         {/* Etiqueta de plantilla */}
         <div className="text-center mt-3">
           <span className="text-xs text-gray-400 font-outfit bg-white px-3 py-1 rounded-full border border-gray-200 capitalize">
-            {invitation.template} · {isDesktop ? 'escritorio' : 'móvil'}
+            {publicTemplateName(invitation.template)} · {isDesktop ? 'escritorio' : 'móvil'}
           </span>
         </div>
       </div>

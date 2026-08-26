@@ -8,7 +8,7 @@ import { getAdminSession } from '@/lib/host-session';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const UNAUTH = NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+const unauthenticated = () => NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
 const BUCKET = 'invitations';
 const PATH = 'templates/index.json';
@@ -19,7 +19,7 @@ async function ensureBucket() {
 }
 
 export async function GET() {
-  if (!(await getAdminSession())) return UNAUTH;
+  if (!(await getAdminSession())) return unauthenticated();
   try {
     const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(PATH);
     if (error || !data) return NextResponse.json([]);
@@ -32,7 +32,7 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
-  if (!(await getAdminSession())) return UNAUTH;
+  if (!(await getAdminSession())) return unauthenticated();
   try {
     const body = await request.json();
     if (!Array.isArray(body)) return NextResponse.json({ error: 'Se esperaba un array' }, { status: 400 });

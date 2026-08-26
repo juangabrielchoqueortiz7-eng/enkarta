@@ -62,7 +62,7 @@ const RECIPES: Record<string, TemplateRecipe> = {
   },
   passport: {
     bands: [['paper', 2], ['soft', 3], ['deep', 2], ['paper', 3]],
-    motion: { cover: 'fade', eventCard: 'slideRight', gallery: 'zoomScroll', rsvp: 'riseSoft' },
+    motion: { passportHero: 'none', passportTicket: 'none', cover: 'fade', eventCard: 'slideRight', gallery: 'zoomScroll', rsvp: 'riseSoft' },
   },
   paradise: {
     bands: [['paper', 2], ['soft', 3], ['paper', 2], ['gradient', 2]],

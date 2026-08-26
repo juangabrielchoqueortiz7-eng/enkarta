@@ -4,7 +4,7 @@ import { readGuests, mapGuestRow } from '@/lib/guests';
 import { genPublicId } from '@/lib/access';
 import { canManageInvitation, invitationIdOfGuest } from '@/lib/host-session';
 
-const FORBIDDEN = NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+const forbidden = () => NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 
 // CRUD de invitados (tabla `guests` en Postgres) para el panel del admin/anfitrión.
 //   GET    ?id=<invitationId>          → lista
@@ -38,7 +38,7 @@ function rowFromInput(invitationId: string, g: any) {
 export async function GET(request: NextRequest) {
   const id = new URL(request.url).searchParams.get('id');
   if (!id) return NextResponse.json([]);
-  if (!(await canManageInvitation(id))) return FORBIDDEN;
+  if (!(await canManageInvitation(id))) return forbidden();
   return NextResponse.json(await readGuests(id));
 }
 
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const invitationId = String(body.invitationId || body.id || '').trim();
     if (!invitationId) return NextResponse.json({ error: 'invitationId requerido' }, { status: 400 });
-    if (!(await canManageInvitation(invitationId))) return FORBIDDEN;
+    if (!(await canManageInvitation(invitationId))) return forbidden();
 
     const input = Array.isArray(body.guests) ? body.guests : [body];
     const rows = input.map((g: unknown) => rowFromInput(invitationId, g)).filter(Boolean);
@@ -67,7 +67,7 @@ export async function PATCH(request: NextRequest) {
     const id = String(body.id || '').trim();
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 });
     const ownerId = await invitationIdOfGuest(id);
-    if (!ownerId || !(await canManageInvitation(ownerId))) return FORBIDDEN;
+    if (!ownerId || !(await canManageInvitation(ownerId))) return forbidden();
 
     const patch: Record<string, unknown> = {};
     if (body.name !== undefined) patch.name = String(body.name).trim().slice(0, 80);
@@ -89,7 +89,7 @@ export async function DELETE(request: NextRequest) {
   const guestId = new URL(request.url).searchParams.get('guestId');
   if (!guestId) return NextResponse.json({ error: 'guestId requerido' }, { status: 400 });
   const ownerId = await invitationIdOfGuest(guestId);
-  if (!ownerId || !(await canManageInvitation(ownerId))) return FORBIDDEN;
+  if (!ownerId || !(await canManageInvitation(ownerId))) return forbidden();
   const { error } = await supabaseAdmin.from('guests').delete().eq('id', guestId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

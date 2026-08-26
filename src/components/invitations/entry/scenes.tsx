@@ -325,7 +325,7 @@ function NewspaperScene({ theme, names, dateLine, label, phase, onEnter }: Scene
         >
           <p className="font-cinzel uppercase" style={{ color: theme.soft, letterSpacing: '0.34em', fontSize: 10 }}>{theme.tagline}</p>
           <div className="my-2" style={{ borderTop: `2px solid ${theme.ink}`, borderBottom: `1px solid ${theme.ink}` }}>
-            <h1 className="font-playfair font-black uppercase py-1" style={{ color: theme.ink, fontSize: 'clamp(26px,7vw,40px)', letterSpacing: '0.02em' }}>La Primicia</h1>
+            <h1 className="font-playfair font-black uppercase py-1" style={{ color: theme.ink, fontSize: 'clamp(26px,7vw,40px)', letterSpacing: '0.02em' }}>La Gaceta</h1>
           </div>
           <p className="font-cinzel uppercase" style={{ color: theme.soft, letterSpacing: '0.2em', fontSize: 10 }}>{dateLine}</p>
           <h2 className="font-playfair font-bold mt-5" style={{ color: theme.ink, fontSize: 'clamp(24px,6vw,34px)' }}>{names}</h2>

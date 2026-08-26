@@ -11,6 +11,7 @@
 
 import React, { createContext, useContext } from 'react';
 import { WriteOn, CascadeText } from '@/lib/scroll-motion';
+import type { Guest } from '@/lib/types';
 
 interface BlockEdit {
   editing: boolean;
@@ -22,7 +23,7 @@ export const BlockEditProvider = Ctx.Provider;
 export const useBlockEdit = () => useContext(Ctx);
 
 // Datos de la invitación disponibles para los bloques (p. ej. el slug para el RSVP).
-interface BlockData { slug?: string }
+interface BlockData { slug?: string; guest?: Guest }
 const DataCtx = createContext<BlockData>({});
 export const BlockDataProvider = DataCtx.Provider;
 export const useBlockData = () => useContext(DataCtx);

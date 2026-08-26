@@ -6,7 +6,7 @@ import { sanitizeSvg } from '@/lib/sanitize-svg';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const UNAUTH = NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+const unauthenticated = () => NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
 const BUCKET = 'invitations';
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;   // 8 MB
@@ -44,7 +44,7 @@ function slugifyName(name: string): string {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await getAdminSession())) return UNAUTH;
+  if (!(await getAdminSession())) return unauthenticated();
   try {
     const form = await request.formData();
     const file = form.get('file');
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(BUCKET)
-      .upload(path, buffer, { contentType: file.type, upsert: false });
+      .upload(path, buffer, { contentType: file.type, cacheControl: '31536000', upsert: false });
 
     if (uploadError) {
       return NextResponse.json({ error: uploadError.message }, { status: 500 });
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
 
     const { data: pub } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);
 
-    return NextResponse.json({ url: pub.publicUrl, path });
+    return NextResponse.json({ url: pub.publicUrl, path, bytes: buffer.byteLength, contentType: file.type });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Error del servidor';
     return NextResponse.json({ error: msg }, { status: 500 });
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 
 /** DELETE ?path=... — borra un archivo subido del bucket. */
 export async function DELETE(request: NextRequest) {
-  if (!(await getAdminSession())) return UNAUTH;
+  if (!(await getAdminSession())) return unauthenticated();
   try {
     const { searchParams } = new URL(request.url);
     const path = searchParams.get('path');

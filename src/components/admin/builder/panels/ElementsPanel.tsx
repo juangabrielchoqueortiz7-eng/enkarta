@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import { InvitationParsed, BuilderConfig, Block, BlockLayout, LAYOUT_VERSION } from '@/lib/types';
 import { createElementBlock, createCornerSet, cloneBlock, DECOR_PACKS } from '@/components/invitations/blocks/registry';
-import { ELEMENTS, getElement, renderElement } from '@/components/invitations/blocks/elements-library';
+import { ELEMENTS, ELEMENT_PALETTE_PRESETS, getElement, paletteFromPrimary, renderElement, type ElementPalette } from '@/components/invitations/blocks/elements-library';
 import { listUserPacks, saveUserPack, deleteUserPack, type UserDecorPack } from '@/lib/user-decor-packs';
 import ElementPicker from '../ElementPicker';
 
@@ -42,8 +42,11 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect }: 
   const decor = cfg.decor ?? {};
   const pageCornersOn = decor.corners?.on === true;
   const defaultColor = cfg.theme?.primary || data.color_primary || '#b8975a';
+  const themePalette = paletteFromPrimary(defaultColor);
   const [cornerMotif, setCornerMotif] = useState('corner-orchid');
+  const [paletteKey, setPaletteKey] = useState('theme');
   const [myPacks, setMyPacks] = useState<UserDecorPack[]>(() => listUserPacks());
+  const activePalette = paletteKey === 'theme' ? themePalette : (ELEMENT_PALETTE_PRESETS.find(p => p.key === paletteKey) ?? themePalette);
 
   const disablePageCorners = () =>
     onChange({ config: { ...cfg, decor: { ...decor, corners: { ...(decor.corners ?? {}), on: false } } } });
@@ -73,17 +76,17 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect }: 
   const selected = blocks.find(b => b.id === selectedId && b.type === 'element');
 
   const addElement = (sel: { motif?: string; url?: string }) => {
-    const nb = createElementBlock({ motif: sel.motif, url: sel.url, color: sel.motif ? defaultColor : undefined });
+    const nb = createElementBlock({ motif: sel.motif, url: sel.url, color: sel.motif ? defaultColor : undefined, palette: sel.motif ? activePalette : undefined });
     setBlocks([...blocks, nb]);
     onSelect(nb.id);
   };
   const decorateCorners = () => {
-    const set = createCornerSet(cornerMotif, defaultColor);
+    const set = createCornerSet(cornerMotif, defaultColor, activePalette);
     setBlocks([...blocks, ...set]);
     onSelect(set[0].id);
   };
-  const applyPack = (build: (c: string) => Block[]) => {
-    const set = build(defaultColor);
+  const applyPack = (build: (palette: ElementPalette) => Block[]) => {
+    const set = build(activePalette);
     setBlocks([...blocks, ...set]);
     if (set[0]) onSelect(set[0].id);
   };
@@ -106,7 +109,9 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect }: 
     const isUpload = (p.source ?? 'library') === 'upload';
     const def = !isUpload ? getElement(String(p.motif || '')) : undefined;
     const setProp = (key: string, v: any) => patchBlock(selected.id, { props: { ...selected.props, [key]: v } });
+    const setProps = (patch: Record<string, unknown>) => patchBlock(selected.id, { props: { ...selected.props, ...patch } });
     const setLayout = (patch: Partial<BlockLayout>) => patchBlock(selected.id, { layout: { ...L, ...patch } });
+    const applyPalette = (palette: ElementPalette) => setProps({ color: palette.primary, color2: palette.secondary, color3: palette.accent, color4: palette.detail });
 
     return (
       <div className="p-4 space-y-5">
@@ -147,13 +152,31 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect }: 
 
         {/* Color (solo librería) */}
         {!isUpload && (
-          <div className="grid grid-cols-2 gap-3">
-            <Labeled label="Color">
-              <input type="color" className="w-10 h-9 rounded-lg border border-gray-200 cursor-pointer p-0.5" value={p.color || defaultColor} onChange={e => setProp('color', e.target.value)} />
-            </Labeled>
-            <Labeled label="Color secundario">
-              <input type="color" className="w-10 h-9 rounded-lg border border-gray-200 cursor-pointer p-0.5" value={p.color2 || p.color || defaultColor} onChange={e => setProp('color2', e.target.value)} />
-            </Labeled>
+          <div className="space-y-3 rounded-2xl border border-gray-100 bg-gradient-to-br from-[#fffdf9] to-[#f7f2ea] p-3">
+            <div className="flex items-center justify-between">
+              <div><p className="text-xs font-outfit font-semibold text-gray-700">Paleta del elemento</p><p className="text-[10px] font-outfit text-gray-400">Hasta cuatro tintas independientes</p></div>
+              <div className="flex -space-x-1.5">
+                {[p.color || defaultColor, p.color2 || p.color || defaultColor, p.color3 || '#d4af58', p.color4 || '#71816d'].map((c: string, i: number) => <span key={i} className="w-6 h-6 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: c }} />)}
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[themePalette, ...ELEMENT_PALETTE_PRESETS].map(pal => (
+                <button key={pal.key} type="button" onClick={() => applyPalette(pal)} title={pal.label} className="rounded-xl border border-white bg-white/80 p-1.5 hover:border-enkarta-gold/40 hover:shadow-sm transition-all">
+                  <span className="flex justify-center -space-x-1">{[pal.primary, pal.secondary, pal.accent, pal.detail].map((c, i) => <span key={`${c}-${i}`} className="w-3.5 h-3.5 rounded-full border border-white" style={{ backgroundColor: c }} />)}</span>
+                  <span className="block mt-1 text-[9px] font-outfit text-gray-500 truncate">{pal.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                ['Principal', 'color', p.color || defaultColor],
+                ['Secundario', 'color2', p.color2 || p.color || defaultColor],
+                ['Acento', 'color3', p.color3 || '#d4af58'],
+                ['Detalle', 'color4', p.color4 || '#71816d'],
+              ].map(([label, key, value]) => (
+                <label key={key} className="text-center"><span className="block text-[9px] text-gray-400 font-outfit truncate">{label}</span><input type="color" className="w-full h-9 rounded-lg border border-white cursor-pointer p-0.5 bg-white" value={value} onChange={e => setProp(key, e.target.value)} /></label>
+              ))}
+            </div>
           </div>
         )}
 
@@ -188,12 +211,27 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect }: 
           <p className="text-[11px] text-gray-400 font-outfit mt-1">Sutil; se desactiva si el invitado pidió menos animación.</p>
         </Labeled>
 
-        {/* Espejo / sombra / capa */}
+        {/* Espejo / efectos / capa */}
         <div className="space-y-2.5">
           <label className="flex items-center justify-between cursor-pointer"><span className="text-sm font-outfit text-gray-700">Espejo horizontal</span><Toggle on={!!p.flipH} onToggle={() => setProp('flipH', !p.flipH)} /></label>
           <label className="flex items-center justify-between cursor-pointer"><span className="text-sm font-outfit text-gray-700">Espejo vertical</span><Toggle on={!!p.flipV} onToggle={() => setProp('flipV', !p.flipV)} /></label>
-          <label className="flex items-center justify-between cursor-pointer"><span className="text-sm font-outfit text-gray-700">Sombra</span><Toggle on={!!p.shadow} onToggle={() => setProp('shadow', !p.shadow)} /></label>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Labeled label="Sombra">
+            <select className={inputCls} value={String(p.shadowStyle || (p.shadow ? 'deep' : 'none'))} onChange={e => setProps({ shadowStyle: e.target.value, shadow: false })}>
+              <option value="none">Sin sombra</option><option value="soft">Suave</option><option value="deep">Profunda</option><option value="glow">Resplandor</option>
+            </select>
+          </Labeled>
+          <Labeled label="Mezcla">
+            <select className={inputCls} value={String(p.blendMode || 'normal')} onChange={e => setProp('blendMode', e.target.value)}>
+              <option value="normal">Normal</option><option value="multiply">Multiplicar</option><option value="screen">Aclarar</option><option value="overlay">Superponer</option><option value="soft-light">Luz suave</option>
+            </select>
+          </Labeled>
+        </div>
+
+        <Labeled label={`Intensidad de color (${Math.round((typeof p.saturation === 'number' ? p.saturation : 1) * 100)}%)`}>
+          <input type="range" min={0} max={180} step={5} value={Math.round((typeof p.saturation === 'number' ? p.saturation : 1) * 100)} onChange={e => setProp('saturation', parseInt(e.target.value) / 100)} className="w-full accent-enkarta-gold" />
+        </Labeled>
 
         <div className="grid grid-cols-2 gap-3">
           <Labeled label={`Capa (z: ${L.z ?? 60})`}>
@@ -230,6 +268,22 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect }: 
         </p>
       </div>
 
+      {/* Paleta de trabajo */}
+      <div className="space-y-2.5 rounded-2xl bg-gradient-to-br from-[#fff8ef] via-white to-[#f4f0fb] border border-[#eadfce] p-3">
+        <div className="flex items-center justify-between">
+          <div><h4 className="text-xs font-outfit font-semibold text-gray-700">Paleta de decoración</h4><p className="text-[10px] font-outfit text-gray-400">Se aplica a todo lo que añadas</p></div>
+          <div className="flex -space-x-1.5">{[activePalette.primary, activePalette.secondary, activePalette.accent, activePalette.detail].map((c, i) => <span key={`${c}-${i}`} className="w-6 h-6 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: c }} />)}</div>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
+          {[themePalette, ...ELEMENT_PALETTE_PRESETS].map(pal => (
+            <button key={pal.key} type="button" onClick={() => setPaletteKey(pal.key)} className={`rounded-xl px-1 py-2 transition-all ${paletteKey === pal.key ? 'bg-white shadow ring-1 ring-enkarta-gold/30' : 'hover:bg-white/60'}`}>
+              <span className="flex justify-center -space-x-1">{[pal.primary, pal.secondary, pal.accent, pal.detail].map((c, i) => <span key={`${c}-${i}`} className="w-3 h-3 rounded-full border border-white" style={{ backgroundColor: c }} />)}</span>
+              <span className="block text-[8px] font-outfit text-gray-500 mt-1 truncate">{pal.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Aviso: hay adornos de esquina automáticos (pestaña Decoración) que se
           solaparían con los esquineros que añadas aquí. */}
       {pageCornersOn && (
@@ -253,7 +307,7 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect }: 
           {cornerOptions.map(e => (
             <button key={e.key} type="button" onClick={() => setCornerMotif(e.key)} title={e.label}
               className={`flex-shrink-0 w-14 h-14 rounded-xl border flex items-center justify-center overflow-hidden transition-all ${cornerMotif === e.key ? 'border-enkarta-gold bg-enkarta-gold/10' : 'border-gray-200 hover:border-enkarta-gold/40'}`}>
-              <span style={{ width: '70%', lineHeight: 0 }}>{e.render(defaultColor)}</span>
+              <span style={{ width: '70%', lineHeight: 0 }}>{e.render(activePalette.primary, activePalette.secondary, activePalette.accent, activePalette.detail)}</span>
             </button>
           ))}
         </div>
@@ -271,7 +325,7 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect }: 
             <button key={pk.key} type="button" onClick={() => applyPack(pk.build)} title={pk.desc}
               className="flex items-center gap-2 p-2 rounded-xl border border-gray-100 bg-white hover:border-enkarta-gold/50 hover:bg-enkarta-gold/5 transition-all text-left">
               <span className="w-9 h-9 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                <span style={{ width: '85%', lineHeight: 0 }}>{renderElement(pk.preview, defaultColor)}</span>
+                <span style={{ width: '85%', lineHeight: 0 }}>{renderElement(pk.preview, activePalette.primary, activePalette.secondary, activePalette.accent, activePalette.detail)}</span>
               </span>
               <span className="min-w-0">
                 <span className="block text-[11px] font-outfit font-medium text-gray-700 truncate">{pk.label}</span>
@@ -285,7 +339,7 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect }: 
       {/* Añadir un elemento suelto */}
       <div className="space-y-2">
         <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Añadir un elemento</h4>
-        <ElementPicker color={defaultColor} ownerId={data.id} onPick={addElement} />
+        <ElementPicker color={defaultColor} palette={activePalette} ownerId={data.id} onPick={addElement} />
       </div>
 
       {/* Mis packs guardados */}

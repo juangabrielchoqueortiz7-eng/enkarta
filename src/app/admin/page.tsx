@@ -4,15 +4,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Invitation } from '@/lib/types';
 import ConfirmationsDashboard from '@/components/admin/ConfirmationsDashboard';
+import { collectionFor, publicTemplateName } from '@/lib/enkarta-collections';
 
 const BUILDER_TEMPLATES = ['azure','primicia','passport','paradise','obsidiana','dolcevita','grazia','carmesi_v2','napoly','euforia','rosegold','allegria'];
 
-// Color de acento por plantilla (punto identificador en la tabla)
-const TEMPLATE_COLORS: Record<string, string> = {
-  azure: '#3a7ab5', primicia: '#c89828', passport: '#6a8a45', paradise: '#5f6b47',
-  obsidiana: '#100f0c', dolcevita: '#4f7a52', grazia: '#bca478', carmesi_v2: '#871a2f',
-  napoly: '#b98a86', euforia: '#8a7257', rosegold: '#b97f86', allegria: '#8c9a86',
-};
+const templateColor = (template: string) => collectionFor(template).accent;
 
 type StatusFilter = 'all' | 'ready' | 'draft';
 
@@ -126,7 +122,8 @@ export default function AdminPage() {
       return (
         inv.slug.toLowerCase().includes(q) ||
         (inv.names || '').toLowerCase().includes(q) ||
-        inv.template.toLowerCase().includes(q)
+        inv.template.toLowerCase().includes(q) ||
+        publicTemplateName(inv.template).toLowerCase().includes(q)
       );
     });
   }, [invitations, search, statusFilter]);
@@ -371,7 +368,7 @@ export default function AdminPage() {
                           <td>
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-playfair font-bold text-sm text-white"
-                                style={{ backgroundColor: TEMPLATE_COLORS[inv.template] || '#B8975A' }}>
+                                style={{ backgroundColor: templateColor(inv.template) }}>
                                 {(inv.names || '?').charAt(0).toUpperCase()}
                               </div>
                               <div className="min-w-0">
@@ -382,9 +379,9 @@ export default function AdminPage() {
                           </td>
                           <td>
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-outfit font-medium capitalize"
-                              style={{ backgroundColor: `${TEMPLATE_COLORS[inv.template] || '#B8975A'}12`, color: TEMPLATE_COLORS[inv.template] || '#B8975A' }}>
-                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: TEMPLATE_COLORS[inv.template] || '#B8975A' }} />
-                              {inv.template}
+                              style={{ backgroundColor: `${templateColor(inv.template)}12`, color: templateColor(inv.template) }}>
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: templateColor(inv.template) }} />
+                              {publicTemplateName(inv.template)}
                             </span>
                           </td>
                           <td>

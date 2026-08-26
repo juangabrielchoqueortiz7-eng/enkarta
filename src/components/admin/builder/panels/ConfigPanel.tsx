@@ -4,28 +4,20 @@ import { useState, useEffect } from 'react';
 import { InvitationParsed, InvitationTemplate, InvitationPackage } from '@/lib/types';
 import { PACKAGE_PRESETS, PACKAGE_LABELS, resolveFeatures } from '@/lib/packages';
 import type { BuilderValidation } from '@/lib/builder-validation';
+import { ENKARTA_COLLECTIONS } from '@/lib/enkarta-collections';
+import PublicationAuditPanel from '../PublicationAuditPanel';
 
 interface Props {
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
   onDelete?: () => void;
   validation: BuilderValidation;
+  onOpenBlock?: (blockId: string) => void;
 }
 
 const PREMIUM_TEMPLATES: { value: InvitationTemplate; label: string; available: boolean }[] = [
-  { value: 'azure',     label: 'Azure',      available: true  },
-  { value: 'primicia',  label: 'Primicia',   available: true  },
-  { value: 'passport',  label: 'Passport',   available: true  },
-  { value: 'paradise',  label: 'Paradise',   available: true  },
-  { value: 'obsidiana', label: 'Obsidiana',  available: true  },
-  { value: 'dolcevita', label: 'Dolce Vita', available: true  },
-  { value: 'grazia',    label: 'Grazia',     available: true  },
-  { value: 'carmesi_v2', label: 'Carmesí',   available: true  },
-  { value: 'napoly',    label: 'Napoly',     available: true  },
-  { value: 'perla_v2',  label: 'Perla',      available: false },
-  { value: 'euforia',   label: 'Euforia',    available: true  },
-  { value: 'rosegold',  label: 'Rose Gold',  available: true  },
-  { value: 'allegria',  label: 'Allegria',   available: true  },
+  ...(['azure', 'primicia', 'passport', 'paradise', 'obsidiana', 'dolcevita', 'grazia', 'carmesi_v2', 'napoly', 'perla_v2', 'euforia', 'rosegold', 'allegria'] as InvitationTemplate[])
+    .map(value => ({ value, label: ENKARTA_COLLECTIONS[value].name, available: ENKARTA_COLLECTIONS[value].available })),
 ];
 
 function LinkRow({ label, url }: { label: string; url: string }) {
@@ -117,9 +109,10 @@ function HostAccessSection({ id }: { id: string; slug: string }) {
   );
 }
 
-export default function ConfigPanel({ data, onChange, onDelete, validation }: Props) {
+export default function ConfigPanel({ data, onChange, onDelete, validation, onOpenBlock }: Props) {
   // Calcular si está expirada
   const isExpired = data.expires_at ? new Date(data.expires_at) < new Date() : false;
+  const publicationPaused = data.status === 'disabled';
 
   return (
     <div className="space-y-6 p-4">
@@ -129,40 +122,7 @@ export default function ConfigPanel({ data, onChange, onDelete, validation }: Pr
 
       <div className="border-t border-gray-100 pt-5">
         <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">Checklist de Publicación</h4>
-        <div className={`p-3 rounded-xl border mb-3 ${
-          validation.errors.length
-            ? 'bg-red-50 border-red-200 text-red-700'
-            : validation.warnings.length
-              ? 'bg-amber-50 border-amber-200 text-amber-700'
-              : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-        }`}>
-          <p className="text-sm font-outfit font-medium">
-            {validation.errors.length
-              ? `Hay ${validation.errors.length} error(es) que bloquean la publicación`
-              : validation.warnings.length
-                ? `Hay ${validation.warnings.length} advertencia(s) para revisar`
-                : 'La invitación está lista para publicar'}
-          </p>
-          <p className="text-xs mt-0.5">
-            El botón Publicar ahora valida nombres, fecha, RSVP, galería, paquete y estructura visible.
-          </p>
-        </div>
-        {(validation.errors.length > 0 || validation.warnings.length > 0) && (
-          <div className="space-y-2">
-            {validation.errors.map((issue, i) => (
-              <div key={`err-${i}`} className="p-2.5 rounded-xl border border-red-100 bg-red-50">
-                <p className="text-sm text-red-700 font-outfit font-medium">{issue.title}</p>
-                <p className="text-xs text-red-500 font-outfit mt-0.5">{issue.detail}</p>
-              </div>
-            ))}
-            {validation.warnings.map((issue, i) => (
-              <div key={`warn-${i}`} className="p-2.5 rounded-xl border border-amber-100 bg-amber-50">
-                <p className="text-sm text-amber-700 font-outfit font-medium">{issue.title}</p>
-                <p className="text-xs text-amber-600 font-outfit mt-0.5">{issue.detail}</p>
-              </div>
-            ))}
-          </div>
-        )}
+        <PublicationAuditPanel data={data} validation={validation} onOpenBlock={onOpenBlock} />
       </div>
 
       {/* Estado del link */}
@@ -170,29 +130,33 @@ export default function ConfigPanel({ data, onChange, onDelete, validation }: Pr
         <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">Estado del Link</h4>
 
         <div className={`p-3 rounded-xl border mb-3 ${
-          !data.is_active
+          publicationPaused || !data.is_active
             ? 'bg-red-50 border-red-200 text-red-700'
             : isExpired
             ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
             : 'bg-green-50 border-green-200 text-green-700'
         }`}>
           <p className="text-sm font-outfit font-medium">
-            {!data.is_active ? '🔴 Link dado de baja' : isExpired ? '⏰ Link vencido' : '🟢 Link activo'}
+            {publicationPaused ? '⏸ Publicación pausada' : !data.is_active ? '🔴 Link deshabilitado' : isExpired ? '⏰ Link vencido' : data.status === 'ready' ? '🟢 Invitación publicada' : '🟣 Vista privada disponible'}
           </p>
           <p className="text-xs mt-0.5">
-            {!data.is_active
+            {publicationPaused
+              ? 'Los invitados verán una pausa temporal; el historial permanece intacto'
+              : !data.is_active
               ? 'Los invitados verán una página de "evento terminado"'
               : isExpired
               ? 'La fecha de expiración ya pasó'
-              : `enkarta.com/i/${data.slug}`}
+              : data.status === 'ready'
+              ? `enkarta.com/i/${data.slug}`
+              : 'Publica ahora o programa una fecha desde el botón Publicar'}
           </p>
         </div>
 
         {/* Toggle activo/inactivo */}
         <label className="flex items-center justify-between p-3 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
           <div>
-            <p className="text-sm font-outfit text-gray-700">Invitación activa</p>
-            <p className="text-xs text-gray-400 font-outfit">Desactívala para dar de baja el link</p>
+            <p className="text-sm font-outfit text-gray-700">Link habilitado</p>
+            <p className="text-xs text-gray-400 font-outfit">Control técnico independiente del estado de publicación</p>
           </div>
           <div
             onClick={() => onChange({ is_active: !data.is_active })}
@@ -201,6 +165,21 @@ export default function ConfigPanel({ data, onChange, onDelete, validation }: Pr
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${data.is_active ? 'left-7' : 'left-1'}`} />
           </div>
         </label>
+      </div>
+
+      {/* Privacidad y retención de analítica */}
+      <div className="border-t border-gray-100 pt-5">
+        <div className="flex items-start justify-between gap-3">
+          <div><h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400 font-outfit">Analítica y privacidad</h4><p className="mt-1 text-[11px] leading-relaxed text-gray-400 font-outfit">Mide el recorrido de forma agregada, sin guardar IP, teléfono, nombre ni mensajes.</p></div>
+          <button type="button" role="switch" aria-checked={data.config?.analytics?.enabled !== false} onClick={() => onChange({ config: { ...(data.config ?? {}), analytics: { ...(data.config?.analytics ?? {}), enabled: data.config?.analytics?.enabled === false } } })} className={`relative mt-0.5 h-6 w-12 shrink-0 rounded-full transition ${data.config?.analytics?.enabled === false ? 'bg-gray-300' : 'bg-emerald-500'}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all ${data.config?.analytics?.enabled === false ? 'left-1' : 'left-7'}`}/><span className="sr-only">Activar analítica</span></button>
+        </div>
+        <div className={`mt-3 rounded-2xl border p-3 transition ${data.config?.analytics?.enabled === false ? 'border-gray-100 bg-gray-50 opacity-60' : 'border-emerald-100 bg-emerald-50/50'}`}>
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 font-outfit">Conservar métricas durante</label>
+          <div className="mt-2 grid grid-cols-4 gap-1.5">
+            {([30, 90, 180, 365] as const).map(days => <button key={days} type="button" disabled={data.config?.analytics?.enabled === false} onClick={() => onChange({ config: { ...(data.config ?? {}), analytics: { ...(data.config?.analytics ?? {}), enabled: true, retentionDays: days } } })} className={`rounded-xl border px-1 py-2 text-[10px] font-semibold transition font-outfit ${(data.config?.analytics?.retentionDays ?? 180) === days ? 'border-emerald-300 bg-white text-emerald-700 shadow-sm' : 'border-transparent bg-white/50 text-gray-400 hover:border-emerald-100'}`}>{days === 365 ? '1 año' : `${days} días`}</button>)}
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-gray-400 font-outfit">Los eventos anteriores al periodo elegido se eliminan automáticamente. Los reportes solo muestran totales y sesiones anónimas.</p>
+        </div>
       </div>
 
       {/* Paquete contratado */}

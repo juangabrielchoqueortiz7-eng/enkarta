@@ -64,6 +64,13 @@ export default function IconPicker({ value, colors, speed, defaultIcon, onChange
     onChange(current, c, speed);
   };
   const setSpeed = (next: number) => onChange(current, colors, next);
+  const setUniformTint = (next: string) => onChange(current, { ...(colors ?? {}), __tint: next }, speed);
+  const clearUniformTint = () => {
+    const next = { ...(colors ?? {}) };
+    delete next.__tint;
+    onChange(current, Object.keys(next).length ? next : undefined, speed);
+  };
+  const uniformTint = colors?.__tint;
 
   return (
     <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
@@ -76,7 +83,7 @@ export default function IconPicker({ value, colors, speed, defaultIcon, onChange
           }`}
           title="Cambiar icono"
         >
-          <EventIcon name={current} className="w-7 h-7" stroke="#1e3a5f" lottieColors={colors} speed={speed} />
+          <EventIcon name={current} className="w-7 h-7" stroke={uniformTint || '#1e3a5f'} lottieColors={colors} speed={speed} />
         </button>
         <span className="flex-1 text-xs text-gray-500 font-outfit truncate">
           {value ? (value.startsWith('http') ? 'Icono propio' : isLottie(value) ? 'Animado' : 'Personalizado') : 'Por defecto'}
@@ -101,6 +108,21 @@ export default function IconPicker({ value, colors, speed, defaultIcon, onChange
                 Colores ({palette.length})
               </button>
             )}
+          </div>
+
+          <div className="mx-3 mb-3 flex items-center gap-3 rounded-xl border border-[#e7dfd4] bg-white p-2.5">
+            <span className="flex-1">
+              <span className="block text-xs font-medium text-gray-700 font-outfit">Color general</span>
+              <span className="block text-[10px] text-gray-400 font-outfit">Funciona en iconos de galería y animados.</span>
+            </span>
+            <input
+              type="color"
+              value={uniformTint || '#B8975A'}
+              onChange={(e) => setUniformTint(e.target.value)}
+              className="h-9 w-11 cursor-pointer rounded-lg border border-gray-200 bg-white p-0.5"
+              aria-label="Color general del icono"
+            />
+            {uniformTint && <button type="button" onClick={clearUniformTint} className="text-[11px] text-gray-400 hover:text-gray-700 font-outfit">Auto</button>}
           </div>
 
           {isLottie(current) && (
@@ -145,7 +167,7 @@ export default function IconPicker({ value, colors, speed, defaultIcon, onChange
             {tab === 'colors' && (
               <div className="space-y-2">
                 <p className="text-xs text-gray-500 font-outfit">
-                  Edita cada color del icono para combinarlo con la plantilla. Usa
+                  Edita cada color interno del icono para combinarlo con la plantilla. Usa
                   <span className="font-medium"> Transparente</span> para que esa parte deje ver el fondo.
                 </p>
                 {palette.map((orig) => {

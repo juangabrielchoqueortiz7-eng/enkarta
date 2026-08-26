@@ -7,6 +7,7 @@
 import { useRouter } from 'next/navigation';
 import type { InvitationParsed, RsvpEntry } from '@/lib/types';
 import GuestsPanel from '@/components/admin/builder/panels/GuestsPanel';
+import ClientReviewPanel from './ClientReviewPanel';
 
 export interface HostMetrics {
   total: number;
@@ -131,6 +132,9 @@ export default function HostDashboard({ invitation, metrics, rsvps = [] }: Props
             </ul>
           )}
         </section>
+
+        {/* Revisión del borrador y aprobación del cliente */}
+        <ClientReviewPanel invitation={invitation} />
 
         {/* Gestión de invitados (reusa el panel del editor) */}
         <section className="rounded-2xl border border-gray-200 bg-white overflow-hidden">

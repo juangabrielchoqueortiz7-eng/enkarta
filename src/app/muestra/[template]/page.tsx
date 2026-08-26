@@ -6,14 +6,15 @@ import BlockRenderer from '@/components/invitations/BlockRenderer';
 import { PageMotionProvider } from '@/lib/scroll-motion';
 import { contentToLayout } from '@/lib/layout-presets';
 import { themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
-import type { PageMotionPreset, TemplateDecor, ParticleShape, CornerStyle } from '@/lib/types';
+import type { PageMotionPreset, TemplateDecor, ParticleShape, CornerStyle, InvitationTemplate } from '@/lib/types';
+import { ENKARTA_COLLECTIONS } from '@/lib/enkarta-collections';
 import { entryPropsFor } from '@/components/invitations/entry/config';
 import { DEFAULT_MUSIC_URL, TRACK } from '@/lib/music';
 import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample, provenceSample, esmeraldaSample } from '@/components/invitations/sampleData';
 
 interface Props {
   params: Promise<{ template: string }>;
-  searchParams: Promise<{ n?: string; m?: string; full?: string; mo?: string; blocks?: string; fp?: string; cs?: string }>;
+  searchParams: Promise<{ n?: string; m?: string; full?: string; mo?: string; blocks?: string; fp?: string; cs?: string; seam?: string; fx?: string; flow?: string; prog?: string; tempo?: string; px?: string }>;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -37,23 +38,18 @@ const SAMPLES: Record<string, any> = {
 
 // Nombre público + foto de catálogo por plantilla: alimentan el título y la
 // tarjeta Open Graph al compartir la demo con un cliente (WhatsApp/redes).
-const TEMPLATE_META: Record<string, { name: string; img: string; desc: string }> = {
-  azure:     { name: 'Azure',      img: '/catalog/azure.jpg',     desc: 'Azul elegante y clásico' },
-  primicia:  { name: 'Primicia',   img: '/catalog/primicia.jpg',  desc: 'Oscuro con drama y oro' },
-  passport:  { name: 'Passport',   img: '/catalog/passport.jpg',  desc: 'Aventura estilo pasaporte de viaje' },
-  paradise:  { name: 'Paradise',   img: '/catalog/paradise.jpg',  desc: 'Boho natural en verde salvia' },
-  obsidiana: { name: 'Obsidiana',  img: '/catalog/obsidiana.jpg', desc: 'Negro nocturno con oro y mármol' },
-  dolcevita: { name: 'Dolce Vita', img: '/catalog/dolcevita.jpg', desc: 'Marfil botánico romántico' },
-  grazia:    { name: 'Grazia',     img: '/catalog/grazia.jpg',    desc: 'Champagne fino y chic' },
-  carmesi:   { name: 'Carmesí',    img: '/catalog/carmesi.jpg',   desc: 'Vino dramático con rosas' },
-  napoly:    { name: 'Napoly',     img: '/catalog/perla.jpg',     desc: 'Taupe con rosa empolvado' },
-  euforia:   { name: 'Euforia',    img: '/catalog/euforia.jpg',   desc: 'Mocha cálido en acuarela' },
-  rosegold:  { name: 'Rose Gold',  img: '/catalog/rosegold.jpg',  desc: 'Blush suave y floral' },
-  allegria:  { name: 'Allegria',   img: '/catalog/allegria.jpg',  desc: 'Salvia minimalista y fresca' },
-  // TODO: falta foto propia en /catalog; de momento usa su portada de muestra.
-  esmeralda: { name: 'Esmeralda',  img: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=1100&q=80', desc: 'Verde bosque, formal y muy aireado' },
-  provence:  { name: 'Provence',   img: 'https://invitali.com/wp-content/uploads/2026/07/Novios-annie-y-Micky.webp', desc: 'Elegante marfil y dorado inspirado en Cieneguilla' },
+const DEMO_IDENTITIES: Record<string, InvitationTemplate> = {
+  azure: 'azure', primicia: 'primicia', passport: 'passport', paradise: 'paradise', obsidiana: 'obsidiana',
+  dolcevita: 'dolcevita', grazia: 'grazia', carmesi: 'carmesi_v2', napoly: 'napoly', euforia: 'euforia',
+  rosegold: 'rosegold', allegria: 'allegria', esmeralda: 'esmeralda', provence: 'provence',
 };
+
+const TEMPLATE_META: Record<string, { name: string; img: string; desc: string }> = Object.fromEntries(
+  Object.entries(DEMO_IDENTITIES).map(([demoKey, templateKey]) => {
+    const identity = ENKARTA_COLLECTIONS[templateKey];
+    return [demoKey, { name: identity.name, img: identity.image, desc: identity.description }];
+  }),
+);
 
 export async function generateMetadata({ params }: { params: Promise<{ template: string }> }): Promise<Metadata> {
   const { template } = await params;
@@ -61,8 +57,8 @@ export async function generateMetadata({ params }: { params: Promise<{ template:
   if (key === 'carmesi_v2') key = 'carmesi';
   const m = TEMPLATE_META[key];
   if (!m) return {};
-  const title = `Plantilla ${m.name} · Invitación digital — Enkarta`;
-  const description = `${m.desc}. Ábrela con su sobre animado, música de fondo y confirmación de asistencia: así la vivirán tus invitados.`;
+  const title = `Colección ${m.name} · Invitación digital — Enkarta`;
+  const description = `${m.desc}. Explora su apertura, música, recorrido visual y confirmación de asistencia tal como la vivirán tus invitados.`;
   return {
     title,
     description,
@@ -114,7 +110,7 @@ const DEMO_MUSIC: Record<string, string> = {
 
 export default async function MuestraPage({ params, searchParams }: Props) {
   const { template } = await params;
-  const { n, m, full, mo, blocks, fp, cs } = await searchParams;
+  const { n, m, full, mo, blocks, fp, cs, seam, fx, flow, prog, tempo, px } = await searchParams;
   let key = template.toLowerCase();
   if (key === 'carmesi_v2') key = 'carmesi';
 
@@ -133,8 +129,15 @@ export default async function MuestraPage({ params, searchParams }: Props) {
   };
 
   // ?mo=cinematic3d|parallaxBook|elegant|minimal|none → previsualizar un preset.
-  const motionVal = { preset: (mo as PageMotionPreset) || data.motion?.preset || DEMO_MOTION[key] || 'elegant' };
+  const motionVal = {
+    preset: (mo as PageMotionPreset) || data.motion?.preset || DEMO_MOTION[key] || 'elegant',
+    ...(flow ? { scrollFlow: flow as 'free' | 'guided' | 'cinematic' } : {}),
+    ...(prog ? { progress: prog as 'none' | 'line' | 'steps' } : {}),
+    ...(tempo ? { tempo: tempo as 'quick' | 'balanced' | 'slow' } : {}),
+    ...(px ? { parallax: Math.max(0, Math.min(0.25, Number(px) / 100)) } : {}),
+  };
   // ?blocks=1 → previsualizar la versión por bloques (constructor) de la plantilla.
+  // ?seam=<forma>&fx=<efecto> → previsualizar la costura y su efecto de scroll.
   // ?fp=<forma>&cs=<estilo esquina> → previsualizar partículas/adornos concretos.
   const previewDecor: TemplateDecor | undefined = (fp || cs)
     ? {
@@ -146,7 +149,7 @@ export default async function MuestraPage({ params, searchParams }: Props) {
       ? { background: 'art', corners: { on: true }, floating: { on: true }, ...(data.decor ?? {}) }
       : data.decor;
   const el = blocks === '1' ? (
-    <BlockRenderer layout={contentToLayout(data, key)} theme={data.theme ?? themeForTemplate(key)} motion={motionVal} decor={previewDecor} tokens={data.tokens ?? tokensForTemplate(key)} musicUrl={data.musicUrl} slug={key} gated={full !== '1'} />
+    <BlockRenderer layout={contentToLayout(data, key)} theme={data.theme ?? themeForTemplate(key)} motion={motionVal} decor={previewDecor} tokens={{ ...(data.tokens ?? tokensForTemplate(key)), ...(seam ? { seam: seam as never } : {}), ...(fx ? { seamFx: fx as never } : {}) }} musicUrl={data.musicUrl} slug={key} gated={full !== '1'} />
   ) : (
     <PageMotionProvider value={motionVal} gated={full !== '1'}>
       <div className="ek-invite"><Comp data={data} /></div>

@@ -1,4 +1,4 @@
-// Shared content model for the Invitali-style premium invitations.
+// Modelo de contenido compartido por las colecciones premium de Enkarta.
 // Self-contained (no DB dependency) so templates can be previewed with sample data
 // and later wired to real Supabase data.
 
@@ -443,4 +443,3 @@ export interface ProvenceContent extends IconCustomization {
   theme?: TemplateTheme;
   decor?: TemplateDecor;
 }
-

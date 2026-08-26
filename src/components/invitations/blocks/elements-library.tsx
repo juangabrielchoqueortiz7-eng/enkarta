@@ -12,6 +12,28 @@ import { CornerCluster } from '../decorations';
 export type ElementCategory =
   | 'corner' | 'frame' | 'divider' | 'bouquet' | 'wreath' | 'ribbon' | 'sparkle';
 
+export interface ElementPalette {
+  key: string;
+  label: string;
+  primary: string;
+  secondary: string;
+  accent: string;
+  detail: string;
+}
+
+export const ELEMENT_PALETTE_PRESETS: ElementPalette[] = [
+  { key: 'romance', label: 'Romance', primary: '#8F3148', secondary: '#D88EA1', accent: '#E5B857', detail: '#58745C' },
+  { key: 'garden', label: 'Jardín', primary: '#3F694F', secondary: '#86A978', accent: '#D7B65B', detail: '#F3D9D7' },
+  { key: 'editorial', label: 'Editorial', primary: '#171717', secondary: '#766454', accent: '#C59B43', detail: '#F2E9DF' },
+  { key: 'pastel', label: 'Pastel', primary: '#9B72A5', secondary: '#E6A7B5', accent: '#E8C875', detail: '#A8C7BC' },
+  { key: 'ocean', label: 'Océano', primary: '#235B73', secondary: '#6EA6AE', accent: '#E2B76B', detail: '#D8ECE8' },
+  { key: 'terracotta', label: 'Tierra', primary: '#A45136', secondary: '#D39372', accent: '#D9AE55', detail: '#65785E' },
+];
+
+export function paletteFromPrimary(primary: string): ElementPalette {
+  return { key: 'theme', label: 'De la plantilla', primary, secondary: '#D8A3A8', accent: '#D4AF58', detail: '#71816D' };
+}
+
 export interface ElementDef {
   key: string;
   label: string;
@@ -20,8 +42,8 @@ export interface ElementDef {
   w: number;
   /** Ancla sugerida al insertar (los esquineros → 'tl'). */
   anchor?: NonNullable<BlockLayout['anchor']>;
-  /** Render recoloreable. color2 = color secundario (cae a color si falta). */
-  render: (color: string, color2?: string) => React.ReactNode;
+  /** Render recoloreable con hasta cuatro tintas; las antiguas siguen aceptando una. */
+  render: (color: string, color2?: string, color3?: string, color4?: string) => React.ReactNode;
 }
 
 export const ELEMENT_CATEGORIES: { id: ElementCategory; label: string }[] = [
@@ -60,15 +82,16 @@ const cornerElements: ElementDef[] = CORNER_VARIANTS.map(v => ({
 }));
 
 // ── Cenefas / separadores horizontales ────────────────────────────────────────
-function DividerFloral(color: string, c2: string) {
+function DividerFloral(color: string, c2: string, c3: string, c4: string) {
   return (
     <svg viewBox="0 0 240 28" className={full} fill="none" stroke={color} strokeWidth="1.1" aria-hidden>
       <path d="M20 14 H104" strokeLinecap="round" />
       <path d="M136 14 H220" strokeLinecap="round" />
-      <path d="M120 5 L127 14 L120 23 L113 14 Z" fill={c2} stroke="none" />
+      <path d="M120 5 L127 14 L120 23 L113 14 Z" fill={c3} stroke="none" />
+      <circle cx="120" cy="14" r="2.6" fill={c4} stroke="none" />
       {[[104, 'left'], [136, 'right']].map(([x, side], i) => (
         <g key={i}>
-          <ellipse cx={x as number} cy="14" rx="6" ry="2.4" transform={`rotate(${side === 'left' ? -18 : 18} ${x} 14)`} fill={color} stroke="none" opacity="0.85" />
+          <ellipse cx={x as number} cy="14" rx="6" ry="2.4" transform={`rotate(${side === 'left' ? -18 : 18} ${x} 14)`} fill={i === 0 ? color : c2} stroke="none" opacity="0.85" />
         </g>
       ))}
       <circle cx="20" cy="14" r="2" fill={color} stroke="none" />
@@ -97,13 +120,14 @@ function DividerDots(color: string) {
     </svg>
   );
 }
-function DividerDeco(color: string, c2: string) {
+function DividerDeco(color: string, c2: string, c3: string) {
   return (
     <svg viewBox="0 0 240 24" className={full} fill="none" stroke={color} strokeWidth="1.1" aria-hidden>
       <path d="M10 12 H92" strokeLinecap="round" />
       <path d="M148 12 H230" strokeLinecap="round" />
       <path d="M92 12 L120 4 L148 12 L120 20 Z" fill="none" />
       <path d="M104 12 L120 7 L136 12 L120 17 Z" fill={c2} stroke="none" />
+      <circle cx="120" cy="12" r="2.2" fill={c3} stroke="none" />
     </svg>
   );
 }
@@ -125,16 +149,18 @@ function FrameArch(color: string) {
     </svg>
   );
 }
-function FrameFloral(color: string) {
+function FrameFloral(color: string, c2: string, c3: string, c4: string) {
   const leaf = (x: number, y: number, rot: number) => (
     <g transform={`rotate(${rot} ${x} ${y})`}>
-      <path d={`M${x} ${y} q 18 -10 36 0 q -18 14 -36 0 Z`} fill={color} stroke="none" opacity="0.85" />
+      <path d={`M${x} ${y} q 18 -10 36 0 q -18 14 -36 0 Z`} fill={rot > 100 ? c2 : color} stroke="none" opacity="0.85" />
     </g>
   );
   return (
     <svg viewBox="0 0 300 400" className={full} fill="none" stroke={color} aria-hidden>
       <rect x="16" y="16" width="268" height="368" strokeWidth="1.2" />
       {leaf(16, 16, 20)}{leaf(284, 16, 160)}{leaf(16, 384, -20)}{leaf(284, 384, 200)}
+      <circle cx="22" cy="22" r="7" fill={c3} stroke="none" opacity="0.9" />
+      <circle cx="278" cy="378" r="7" fill={c4} stroke="none" opacity="0.9" />
     </svg>
   );
 }
@@ -150,22 +176,22 @@ function petalFlower(cx: number, cy: number, r: number, color: string, c2: strin
     </g>
   );
 }
-function BouquetRoses(color: string, c2: string) {
+function BouquetRoses(color: string, c2: string, c3: string, c4: string) {
   return (
     <svg viewBox="0 0 200 160" className={full} fill="none" stroke={color} aria-hidden>
       {[[60, 70], [140, 70], [100, 110]].map(([x, y], i) => (
         <g key={i}><path d={`M${x} ${y} C ${x} ${y - 50}, ${x + 36} ${y - 28}, ${x + 16} ${y + 8}`} strokeWidth="1" opacity="0.5" /></g>
       ))}
-      {petalFlower(70, 60, 26, color, c2)}
-      {petalFlower(132, 64, 22, color, c2)}
-      {petalFlower(100, 96, 20, color, c2)}
+      {petalFlower(70, 60, 26, color, c3)}
+      {petalFlower(132, 64, 22, c2, c3)}
+      {petalFlower(100, 96, 20, c4, c3)}
       {[[40, 96], [160, 96], [100, 134]].map(([x, y], i) => (
         <ellipse key={i} cx={x} cy={y} rx="14" ry="5" transform={`rotate(${i * 40 - 40} ${x} ${y})`} fill={color} stroke="none" opacity="0.55" />
       ))}
     </svg>
   );
 }
-function BouquetWild(color: string, c2: string) {
+function BouquetWild(color: string, c2: string, c3: string, c4: string) {
   return (
     <svg viewBox="0 0 200 170" className={full} fill={color} stroke="none" aria-hidden>
       {[-30, -10, 12, 32].map((rot, i) => (
@@ -174,9 +200,9 @@ function BouquetWild(color: string, c2: string) {
           {[120, 100, 80, 64].map((y, j) => <ellipse key={j} cx={100 + (j % 2 ? 9 : -9)} cy={y} rx="7" ry="3" transform={`rotate(${j % 2 ? 30 : -30} ${100 + (j % 2 ? 9 : -9)} ${y})`} opacity="0.8" />)}
         </g>
       ))}
-      {petalFlower(100, 48, 18, color, c2)}
-      {petalFlower(72, 66, 12, color, c2)}
-      {petalFlower(128, 66, 12, color, c2)}
+      {petalFlower(100, 48, 18, color, c3)}
+      {petalFlower(72, 66, 12, c2, c3)}
+      {petalFlower(128, 66, 12, c4, c3)}
     </svg>
   );
 }
@@ -195,7 +221,7 @@ function WreathLaurel(color: string) {
     </svg>
   );
 }
-function WreathFloral(color: string, c2: string) {
+function WreathFloral(color: string, c2: string, c3: string, c4: string) {
   return (
     <svg viewBox="0 0 160 160" className={full} fill="none" stroke={color} aria-hidden>
       <circle cx="80" cy="80" r="62" strokeWidth="1" opacity="0.5" />
@@ -206,29 +232,32 @@ function WreathFloral(color: string, c2: string) {
       })}
       {[0, 90, 180, 270].map(deg => {
         const a = (deg / 180) * Math.PI; const x = 80 + Math.cos(a) * 62; const y = 80 + Math.sin(a) * 62;
-        return petalFlower(x, y, 11, color, c2);
+        return petalFlower(x, y, 11, deg % 180 === 0 ? c2 : c4, c3);
       })}
     </svg>
   );
 }
 
 // ── Cintas ────────────────────────────────────────────────────────────────────
-function RibbonBanner(color: string, c2: string) {
+function RibbonBanner(color: string, c2: string, c3: string, c4: string) {
   return (
     <svg viewBox="0 0 220 70" className={full} aria-hidden>
       <path d="M0 50 L20 30 L20 50 Z" fill={c2} />
       <path d="M220 50 L200 30 L200 50 Z" fill={c2} />
       <path d="M20 18 H200 V52 H20 Z" fill={color} />
+      <path d="M30 24 H190" stroke={c3} strokeWidth="1.2" opacity="0.8" />
+      <circle cx="110" cy="35" r="4" fill={c4} opacity="0.9" />
       <path d="M20 18 V52 L8 35 Z" fill={color} opacity="0.8" />
       <path d="M200 18 V52 L212 35 Z" fill={color} opacity="0.8" />
     </svg>
   );
 }
-function RibbonTag(color: string) {
+function RibbonTag(color: string, c2: string, c3: string) {
   return (
     <svg viewBox="0 0 120 70" className={full} aria-hidden>
       <path d="M6 14 H92 L114 35 L92 56 H6 Z" fill={color} />
-      <circle cx="24" cy="35" r="5" fill="#fff" opacity="0.85" />
+      <path d="M91 14 L114 35 L91 56" fill={c2} opacity="0.55" />
+      <circle cx="24" cy="35" r="5" fill={c3} opacity="0.9" />
     </svg>
   );
 }
@@ -240,12 +269,13 @@ function spark(cx: number, cy: number, r: number, color: string) {
 function SparkleSingle(color: string) {
   return <svg viewBox="0 0 60 60" className={full} aria-hidden>{spark(30, 30, 28, color)}</svg>;
 }
-function SparkleTrio(color: string, c2: string) {
+function SparkleTrio(color: string, c2: string, c3: string, c4: string) {
   return (
     <svg viewBox="0 0 120 80" className={full} aria-hidden>
       {spark(40, 40, 26, color)}
       {spark(86, 26, 16, c2)}
-      {spark(92, 60, 12, color)}
+      {spark(92, 60, 12, c3)}
+      <circle cx="20" cy="18" r="4" fill={c4} opacity="0.9" />
     </svg>
   );
 }
@@ -263,26 +293,26 @@ function StarBurst(color: string) {
 
 const otherElements: ElementDef[] = [
   // Cenefas
-  { key: 'divider-floral', label: 'Floritura', category: 'divider', w: 260, render: (c, c2) => DividerFloral(c, c2 || c) },
+  { key: 'divider-floral', label: 'Floritura', category: 'divider', w: 260, render: (c, c2, c3, c4) => DividerFloral(c, c2 || c, c3 || c2 || c, c4 || c) },
   { key: 'divider-vine', label: 'Enredadera', category: 'divider', w: 260, render: (c) => DividerVine(c) },
-  { key: 'divider-deco', label: 'Déco', category: 'divider', w: 260, render: (c, c2) => DividerDeco(c, c2 || c) },
+  { key: 'divider-deco', label: 'Déco', category: 'divider', w: 260, render: (c, c2, c3) => DividerDeco(c, c2 || c, c3 || c) },
   { key: 'divider-dots', label: 'Puntos', category: 'divider', w: 240, render: (c) => DividerDots(c) },
   // Marcos
   { key: 'frame-line', label: 'Doble línea', category: 'frame', w: 260, anchor: 'mc', render: (c) => FrameLine(c) },
   { key: 'frame-arch', label: 'Arco', category: 'frame', w: 260, anchor: 'mc', render: (c) => FrameArch(c) },
-  { key: 'frame-floral', label: 'Floral', category: 'frame', w: 260, anchor: 'mc', render: (c) => FrameFloral(c) },
+  { key: 'frame-floral', label: 'Floral', category: 'frame', w: 260, anchor: 'mc', render: (c, c2, c3, c4) => FrameFloral(c, c2 || c, c3 || c, c4 || c) },
   // Ramos
-  { key: 'bouquet-roses', label: 'Rosas', category: 'bouquet', w: 180, anchor: 'bc', render: (c, c2) => BouquetRoses(c, c2 || c) },
-  { key: 'bouquet-wild', label: 'Silvestre', category: 'bouquet', w: 170, anchor: 'bc', render: (c, c2) => BouquetWild(c, c2 || c) },
+  { key: 'bouquet-roses', label: 'Rosas', category: 'bouquet', w: 180, anchor: 'bc', render: (c, c2, c3, c4) => BouquetRoses(c, c2 || c, c3 || c, c4 || c2 || c) },
+  { key: 'bouquet-wild', label: 'Silvestre', category: 'bouquet', w: 170, anchor: 'bc', render: (c, c2, c3, c4) => BouquetWild(c, c2 || c, c3 || c, c4 || c2 || c) },
   // Coronas
   { key: 'wreath-laurel', label: 'Laurel', category: 'wreath', w: 180, anchor: 'mc', render: (c) => WreathLaurel(c) },
-  { key: 'wreath-floral', label: 'Floral', category: 'wreath', w: 180, anchor: 'mc', render: (c, c2) => WreathFloral(c, c2 || c) },
+  { key: 'wreath-floral', label: 'Floral', category: 'wreath', w: 180, anchor: 'mc', render: (c, c2, c3, c4) => WreathFloral(c, c2 || c, c3 || c, c4 || c2 || c) },
   // Cintas
-  { key: 'ribbon-banner', label: 'Banderín', category: 'ribbon', w: 200, anchor: 'tc', render: (c, c2) => RibbonBanner(c, c2 || c) },
-  { key: 'ribbon-tag', label: 'Etiqueta', category: 'ribbon', w: 140, anchor: 'tc', render: (c) => RibbonTag(c) },
+  { key: 'ribbon-banner', label: 'Banderín', category: 'ribbon', w: 200, anchor: 'tc', render: (c, c2, c3, c4) => RibbonBanner(c, c2 || c, c3 || c, c4 || c2 || c) },
+  { key: 'ribbon-tag', label: 'Etiqueta', category: 'ribbon', w: 140, anchor: 'tc', render: (c, c2, c3) => RibbonTag(c, c2 || c, c3 || '#fff') },
   // Destellos
   { key: 'sparkle-single', label: 'Destello', category: 'sparkle', w: 60, render: (c) => SparkleSingle(c) },
-  { key: 'sparkle-trio', label: 'Trío', category: 'sparkle', w: 110, render: (c, c2) => SparkleTrio(c, c2 || c) },
+  { key: 'sparkle-trio', label: 'Trío', category: 'sparkle', w: 110, render: (c, c2, c3, c4) => SparkleTrio(c, c2 || c, c3 || c, c4 || c2 || c) },
   { key: 'star-burst', label: 'Estrella', category: 'sparkle', w: 70, render: (c) => StarBurst(c) },
 ];
 
@@ -300,7 +330,7 @@ function peony(cx: number, cy: number, r: number, color: string, c2: string) {
     </g>
   );
 }
-function CornerPeony(color: string, c2: string) {
+function CornerPeony(color: string, c2: string, c3: string, c4: string) {
   return (
     <svg viewBox="0 0 210 210" className={full} aria-hidden>
       <path d="M6 6 C 50 30, 80 60, 96 96" stroke={color} strokeWidth="1" fill="none" opacity="0.55" strokeLinecap="round" />
@@ -308,9 +338,9 @@ function CornerPeony(color: string, c2: string) {
       {([[60, 52, -30], [44, 98, -58], [104, 68, -12], [34, 72, -70], [78, 40, -40]] as [number, number, number][]).map(([x, y, r], i) => (
         <ellipse key={i} cx={x} cy={y} rx="13" ry="5" transform={`rotate(${r} ${x} ${y})`} fill={color} opacity="0.45" />
       ))}
-      {peony(96, 96, 27, color, c2)}
-      {peony(44, 124, 16, color, c2)}
-      {peony(122, 60, 13, color, c2)}
+      {peony(96, 96, 27, color, c3)}
+      {peony(44, 124, 16, c2, c3)}
+      {peony(122, 60, 13, c4, c3)}
     </svg>
   );
 }
@@ -325,7 +355,7 @@ function daisy(cx: number, cy: number, r: number, color: string, c2: string) {
     </g>
   );
 }
-function CornerWild(color: string, c2: string) {
+function CornerWild(color: string, c2: string, c3: string, c4: string) {
   return (
     <svg viewBox="0 0 210 210" className={full} aria-hidden>
       {[[6, 6, 100, 100], [6, 6, 50, 132], [22, 14, 110, 70]].map(([x1, y1, x2, y2], i) => (
@@ -334,9 +364,9 @@ function CornerWild(color: string, c2: string) {
       {([[58, 50, -34], [44, 100, -60], [100, 70, -14]] as [number, number, number][]).map(([x, y, r], i) => (
         <ellipse key={`l${i}`} cx={x} cy={y} rx="11" ry="4" transform={`rotate(${r} ${x} ${y})`} fill={color} opacity="0.5" />
       ))}
-      {daisy(100, 100, 18, color, c2)}
-      {daisy(50, 128, 13, color, c2)}
-      {daisy(112, 66, 10, color, c2)}
+      {daisy(100, 100, 18, color, c3)}
+      {daisy(50, 128, 13, c2, c3)}
+      {daisy(112, 66, 10, c4, c3)}
       {([[70, 60], [40, 86]] as [number, number][]).map(([x, y], i) => (
         <g key={`b${i}`}><circle cx={x} cy={y} r="3.4" fill={color} opacity="0.7" /><line x1={x} y1={y} x2={x - 4} y2={y + 8} stroke={color} strokeWidth="0.8" /></g>
       ))}
@@ -375,8 +405,8 @@ function CornerEucalyptus(color: string) {
 }
 
 const richCornerElements: ElementDef[] = [
-  { key: 'corner-peony', label: 'Peonías', category: 'corner', w: 185, anchor: 'tl', render: (c, c2) => CornerPeony(c, c2 || c) },
-  { key: 'corner-wild', label: 'Silvestres', category: 'corner', w: 180, anchor: 'tl', render: (c, c2) => CornerWild(c, c2 || c) },
+  { key: 'corner-peony', label: 'Peonías', category: 'corner', w: 185, anchor: 'tl', render: (c, c2, c3, c4) => CornerPeony(c, c2 || c, c3 || c, c4 || c2 || c) },
+  { key: 'corner-wild', label: 'Silvestres', category: 'corner', w: 180, anchor: 'tl', render: (c, c2, c3, c4) => CornerWild(c, c2 || c, c3 || c, c4 || c2 || c) },
   { key: 'corner-eucalyptus', label: 'Eucalipto', category: 'corner', w: 185, anchor: 'tl', render: (c) => CornerEucalyptus(c) },
 ];
 
@@ -389,8 +419,8 @@ export function getElement(key: string): ElementDef | undefined {
 }
 
 /** Render de un motivo de la librería (cae a un cuadro tenue si no existe). */
-export function renderElement(motif: string, color: string, color2?: string): React.ReactNode {
+export function renderElement(motif: string, color: string, color2?: string, color3?: string, color4?: string): React.ReactNode {
   const def = BY_KEY[motif];
   if (!def) return null;
-  return def.render(color, color2);
+  return def.render(color, color2, color3, color4);
 }

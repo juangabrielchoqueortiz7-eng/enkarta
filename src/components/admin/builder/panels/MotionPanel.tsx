@@ -64,7 +64,19 @@ interface Props {
 const PREMIUM = ['azure', 'primicia', 'passport', 'paradise', 'obsidiana', 'dolcevita', 'grazia', 'carmesi_v2', 'napoly', 'euforia', 'rosegold', 'allegria'];
 
 // Presets con efecto 3D → mostramos el control de profundidad.
-const PRESETS_3D = ['cinematic3d', 'parallaxBook'];
+const PRESETS_3D = ['cinematic3d', 'parallaxBook', 'luxury3d', 'gallery3d', 'unfold'];
+
+const SCROLL_FLOWS: { value: NonNullable<PageMotion['scrollFlow']>; label: string; desc: string; icon: string }[] = [
+  { value: 'free', label: 'Libre', desc: 'Scroll natural', icon: '↕' },
+  { value: 'guided', label: 'Guiado', desc: 'Se acomoda suave', icon: '⌁' },
+  { value: 'cinematic', label: 'Cinemático', desc: 'Escenas completas', icon: '◫' },
+];
+
+const TEMPOS: { value: NonNullable<PageMotion['tempo']>; label: string }[] = [
+  { value: 'slow', label: 'Sereno' },
+  { value: 'balanced', label: 'Balanceado' },
+  { value: 'quick', label: 'Ágil' },
+];
 
 function Section({ title, children, hint }: { title: string; children: React.ReactNode; hint?: string }) {
   return (
@@ -83,6 +95,10 @@ export default function MotionPanel({ data, onChange }: Props) {
   const preset = motion.preset ?? 'elegant';
   const intensity = motion.intensity ?? 1;
   const perspective = motion.perspective ?? 1000;
+  const scrollFlow = motion.scrollFlow ?? 'free';
+  const progress = motion.progress ?? 'none';
+  const tempo = motion.tempo ?? 'balanced';
+  const parallax = motion.parallax ?? 0.08;
 
   const setMotion = (patch: Partial<PageMotion>) =>
     onChange({ config: { ...cfg, motion: { ...motion, ...patch } } as BuilderConfig });
@@ -155,6 +171,61 @@ export default function MotionPanel({ data, onChange }: Props) {
           />
         </Section>
       )}
+
+      {/* Narrativa de scroll */}
+      <Section title="Narrativa de scroll" hint="Controla cómo avanza la invitación entre una escena y la siguiente.">
+        <div className="grid grid-cols-3 gap-2">
+          {SCROLL_FLOWS.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setMotion({ scrollFlow: option.value })}
+              className={`rounded-xl border-2 px-2 py-3 text-center transition-all ${scrollFlow === option.value ? 'border-enkarta-gold bg-enkarta-gold/5' : 'border-gray-100 bg-gray-50 hover:border-enkarta-gold/40'}`}
+            >
+              <span className="block text-lg text-gray-600">{option.icon}</span>
+              <span className="block text-xs font-outfit font-medium text-gray-700">{option.label}</span>
+              <span className="block text-[9px] font-outfit text-gray-400 leading-tight mt-0.5">{option.desc}</span>
+            </button>
+          ))}
+        </div>
+        {scrollFlow === 'cinematic' && (
+          <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[10px] font-outfit text-amber-700">
+            Funciona mejor cuando portada, fotos e historias usan “Pantalla completa”.
+          </p>
+        )}
+      </Section>
+
+      <Section title="Ritmo y profundidad">
+        <div className="space-y-4">
+          <div>
+            <p className="mb-1.5 text-xs font-outfit text-gray-500">Velocidad de entrada</p>
+            <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
+              {TEMPOS.map(option => (
+                <button key={option.value} type="button" onClick={() => setMotion({ tempo: option.value })} className={`flex-1 rounded-lg py-1.5 text-[11px] font-outfit transition-all ${tempo === option.value ? 'bg-white font-medium text-gray-800 shadow-sm' : 'text-gray-500'}`}>
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="mb-1 flex justify-between text-xs font-outfit text-gray-500">
+              <span>Parallax de fondos</span>
+              <span>{Math.round(parallax * 100)}%</span>
+            </div>
+            <input type="range" min={0} max={25} step={1} value={Math.round(parallax * 100)} onChange={e => setMotion({ parallax: parseInt(e.target.value) / 100 })} className="w-full accent-enkarta-gold" />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Indicador de recorrido" hint="Una guía mínima ayuda al invitado a entender cuánto contenido queda.">
+        <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
+          {([['none', 'Oculto'], ['line', 'Línea'], ['steps', 'Pasos']] as const).map(([value, label]) => (
+            <button key={value} type="button" onClick={() => setMotion({ progress: value })} className={`flex-1 rounded-lg py-1.5 text-xs font-outfit transition-all ${progress === value ? 'bg-white font-medium text-gray-800 shadow-sm' : 'text-gray-500'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </Section>
 
       {/* Profundidad 3D (solo presets 3D) */}
       {is3D && (

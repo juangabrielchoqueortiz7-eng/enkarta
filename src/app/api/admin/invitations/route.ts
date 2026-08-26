@@ -4,11 +4,11 @@ import { getAdminSession } from '@/lib/host-session';
 
 export const runtime = 'nodejs';
 
-const UNAUTH = NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+const unauthenticated = () => NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
 // GET — List all invitations
 export async function GET() {
-  if (!(await getAdminSession())) return UNAUTH;
+  if (!(await getAdminSession())) return unauthenticated();
   try {
     const { data, error } = await supabaseAdmin
       .from('invitations')
@@ -27,7 +27,7 @@ export async function GET() {
 
 // POST — Create invitation
 export async function POST(request: NextRequest) {
-  if (!(await getAdminSession())) return UNAUTH;
+  if (!(await getAdminSession())) return unauthenticated();
   try {
     const body = await request.json();
 
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
 // PUT — Update invitation
 export async function PUT(request: NextRequest) {
-  if (!(await getAdminSession())) return UNAUTH;
+  if (!(await getAdminSession())) return unauthenticated();
   try {
     const body = await request.json();
     const { id, ...updateData } = body;
@@ -124,7 +124,7 @@ export async function PUT(request: NextRequest) {
 
 // DELETE — Delete invitation
 export async function DELETE(request: NextRequest) {
-  if (!(await getAdminSession())) return UNAUTH;
+  if (!(await getAdminSession())) return unauthenticated();
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
