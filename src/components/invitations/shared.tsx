@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import Image from 'next/image';
 import type { IconCustomization } from './types';
 import type { ParticleShape, SeamShape } from '@/lib/types';
 import { ScrollReveal } from '@/lib/scroll-motion';
+import { captionsForImages, type GalleryCaption } from '@/lib/gallery';
+export type { GalleryCaption } from '@/lib/gallery';
 
 // ── Contacto de Enkarta (footer de todas las plantillas) ─────────────────────
 // "Contáctanos" del pie de cada invitación → WhatsApp del negocio. El número
@@ -371,16 +374,19 @@ export function Reveal({
 // navegación (flechas / swipe / teclado), contador y cierre con Escape o tap.
 export function Lightbox({
   images,
+  captions,
   index,
   onClose,
   onIndex,
 }: {
   images: string[];
+  captions?: GalleryCaption[];
   index: number;
   onClose: () => void;
   onIndex: (i: number) => void;
 }) {
   const touch = useRef<{ x: number; y: number } | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const total = images.length;
   const [mounted, setMounted] = useState(false);
 
@@ -391,12 +397,25 @@ export function Lightbox({
   // Solo portamos en cliente (document existe tras montar).
   useEffect(() => { setMounted(true); }, []);
 
+  useEffect(() => {
+    if (!mounted) return;
+    const previous = document.activeElement as HTMLElement | null;
+    dialogRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    return () => previous?.focus();
+  }, [mounted]);
+
   // Teclado: ←/→ navega, Esc cierra.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      else if (e.key === 'ArrowRight') go(1);
-      else if (e.key === 'ArrowLeft') go(-1);
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+      else if (e.key === 'Tab') {
+        const buttons = Array.from(dialogRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? []);
+        const first = buttons[0]; const last = buttons[buttons.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      }
     };
     window.addEventListener('keydown', onKey);
     // Bloquea el scroll del fondo mientras el visor está abierto.
@@ -421,17 +440,22 @@ export function Lightbox({
   // capture el position:fixed y descoloque el visor.
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center"
+      ref={dialogRef}
+      className="ek-lightbox fixed inset-0 z-[100] flex items-center justify-center"
       style={{ background: 'rgba(12,10,8,0.94)', backdropFilter: 'blur(4px)', animation: 'ekLbFade .25s ease' }}
       onClick={onClose}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       role="dialog"
       aria-modal="true"
+      aria-label="Visor de fotografías"
     >
       <style>{`
         @keyframes ekLbFade { from { opacity: 0 } to { opacity: 1 } }
         @keyframes ekLbZoom { from { opacity: 0; transform: scale(.94) } to { opacity: 1; transform: scale(1) } }
+        @media (prefers-reduced-motion: reduce) {
+          .ek-lightbox, .ek-lightbox-figure { animation: none !important; }
+        }
       `}</style>
 
       {/* Cerrar */}
@@ -461,16 +485,26 @@ export function Lightbox({
         </button>
       )}
 
-      {/* Imagen */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      {/* Imagen + relato editorial opcional. */}
+      <figure
         key={index}
-        src={images[index]}
-        alt=""
         onClick={e => e.stopPropagation()}
-        className="max-h-[88vh] max-w-[92vw] object-contain rounded-lg shadow-2xl"
+        className="ek-lightbox-figure flex max-h-[calc(100dvh-160px)] max-w-[92vw] flex-col items-center"
         style={{ animation: 'ekLbZoom .3s cubic-bezier(0.22,1,0.36,1)' }}
-      />
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={images[index]}
+          alt={captions?.[index]?.alt || captions?.[index]?.title || ''}
+          className="min-h-0 max-h-[calc(100dvh-240px)] max-w-full rounded-lg object-contain shadow-2xl"
+        />
+        {(captions?.[index]?.title || captions?.[index]?.caption) && (
+          <figcaption className="mt-4 max-w-xl px-4 text-center text-white">
+            {captions[index]?.title && <span className="block font-playfair text-lg">{captions[index]?.title}</span>}
+            {captions[index]?.caption && <span className="mt-1 block font-outfit text-xs leading-relaxed text-white/70">{captions[index]?.caption}</span>}
+          </figcaption>
+        )}
+      </figure>
 
       {/* Flecha siguiente */}
       {total > 1 && (
@@ -483,19 +517,18 @@ export function Lightbox({
         </button>
       )}
 
-      {/* Miniaturas (en pantallas amplias) */}
+      {/* Miniaturas desplazables, también en celular. */}
       {total > 1 && (
-        <div className="absolute bottom-4 left-1/2 hidden -translate-x-1/2 gap-2 sm:flex">
+        <div className="absolute bottom-4 left-1/2 flex max-w-[80vw] -translate-x-1/2 gap-2 overflow-x-auto p-1">
           {images.map((src, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={`${src}-${i}`}
-              src={src}
-              alt=""
+            <button
+              type="button" key={`${src}-${i}`} aria-label={`Ver foto ${i + 1}`} aria-current={i === index ? 'true' : undefined}
               onClick={e => { e.stopPropagation(); onIndex(i); }}
-              className="h-12 w-12 cursor-pointer rounded object-cover transition-all"
+              className="h-12 w-12 shrink-0 overflow-hidden rounded transition-all"
               style={{ outline: i === index ? '2px solid #fff' : '2px solid transparent', opacity: i === index ? 1 : 0.5 }}
-            />
+            >
+              <Image src={src} alt="" width={48} height={48} sizes="48px" className="h-full w-full object-cover" />
+            </button>
           ))}
         </div>
       )}
@@ -524,14 +557,21 @@ export function FadeImg({ className, style, ...rest }: React.ImgHTMLAttributes<H
   );
 }
 
-export type GalleryLayout = 'grid' | 'masonry' | 'polaroid' | 'carousel' | 'coverflow';
+export type GalleryLayout = 'grid' | 'masonry' | 'polaroid' | 'carousel' | 'coverflow' | 'editorial' | 'filmstrip';
+
+function GalleryPhoto({ src, alt, className = '' }: { src: string; alt: string; className?: string }) {
+  return <Image src={src} alt={alt} fill sizes="(max-width: 640px) 85vw, 520px" className={`object-cover transition-transform duration-500 motion-reduce:transition-none ${className}`} />;
+}
 
 // Carrusel 3D "coverflow": la foto central de frente, las laterales giradas en
 // profundidad. El ángulo/escala de cada celda se recalcula al hacer scroll.
-function CoverflowGallery({ images, radius = 16, lightbox = true, className = '' }: {
+function CoverflowGallery({ images, captions, radius = 16, lightbox = true, showCaptions = false, showCounter = false, className = '' }: {
   images: string[];
+  captions?: GalleryCaption[];
   radius?: number;
   lightbox?: boolean;
+  showCaptions?: boolean;
+  showCounter?: boolean;
   className?: string;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
@@ -566,7 +606,7 @@ function CoverflowGallery({ images, radius = 16, lightbox = true, className = ''
   }, [update]);
 
   const visor = lightbox && open !== null
-    ? <Lightbox images={images} index={open} onClose={() => setOpen(null)} onIndex={setOpen} />
+    ? <Lightbox images={images} captions={captions} index={Math.min(open, images.length - 1)} onClose={() => setOpen(null)} onIndex={setOpen} />
     : null;
 
   return (
@@ -578,13 +618,22 @@ function CoverflowGallery({ images, radius = 16, lightbox = true, className = ''
       >
         {images.map((src, i) => (
           <div key={`${src}-${i}`} className="relative shrink-0 snap-center" style={{ width: 'min(58vw, 230px)', perspective: 900 }}>
-            <div
+            <figure
               onClick={lightbox ? () => setOpen(i) : undefined}
+              role={lightbox ? 'button' : undefined} tabIndex={lightbox ? 0 : undefined} aria-label={lightbox ? `Abrir foto ${i + 1}` : undefined}
+              onKeyDown={lightbox ? event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setOpen(i); } } : undefined}
               className="group relative overflow-hidden bg-black/5 shadow-xl"
               style={{ aspectRatio: '3 / 4', borderRadius: radius, cursor: lightbox ? 'zoom-in' : 'default', transition: 'opacity .2s linear', willChange: 'transform' }}
             >
-              <FadeImg src={src} className="h-full w-full object-cover" />
-            </div>
+              <GalleryPhoto src={src} alt={captions?.[i]?.alt || captions?.[i]?.title || ''} />
+              {showCounter && <span className="absolute left-3 top-3 z-[2] rounded-full bg-black/35 px-2 py-1 font-outfit text-[10px] tracking-[0.16em] text-white backdrop-blur-sm">{String(i + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}</span>}
+              {showCaptions && (captions?.[i]?.title || captions?.[i]?.caption) && (
+                <figcaption className="absolute inset-x-0 bottom-0 z-[2] bg-gradient-to-t from-black/75 via-black/35 to-transparent px-4 pb-4 pt-12 text-left text-white">
+                  {captions?.[i]?.title && <span className="block font-playfair text-[17px] leading-tight">{captions[i]?.title}</span>}
+                  {captions?.[i]?.caption && <span className="mt-1 block font-outfit text-[11px] leading-relaxed text-white/75">{captions[i]?.caption}</span>}
+                </figcaption>
+              )}
+            </figure>
           </div>
         ))}
       </div>
@@ -671,32 +720,154 @@ export function MasonryGallery({
 // ── Photo gallery (renders uploaded images) ───────────────────────────────────
 export function PhotoGrid({
   images,
+  captions: sourceCaptions,
   className = '',
   radius = 16,
   lightbox = true,
   layout = 'grid',
+  showCaptions = false,
+  showCounter = false,
 }: {
   images?: string[];
+  captions?: GalleryCaption[];
   className?: string;
   radius?: number;
   /** Permite abrir cada foto a pantalla completa (por defecto, sí). */
   lightbox?: boolean;
   /** Disposición visual de la galería. */
   layout?: GalleryLayout;
+  /** Muestra título y texto de cada fotografía según su posición. */
+  showCaptions?: boolean;
+  /** Numera las fotografías dentro de la composición. */
+  showCounter?: boolean;
 }) {
   const [open, setOpen] = useState<number | null>(null);
+  const captions = captionsForImages(images ?? [], sourceCaptions);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+  const [scrollable, setScrollable] = useState(false);
+  useEffect(() => {
+    const element = stripRef.current;
+    setActive(0);
+    if (!element) { setScrollable(false); return; }
+    element.scrollLeft = 0;
+    const measure = () => setScrollable(element.scrollWidth > element.clientWidth + 2);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [layout, images?.length]);
   const cursor = lightbox ? 'zoom-in' : 'default';
   const click = (i: number) => (lightbox ? () => setOpen(i) : undefined);
+  const accessible = (i: number) => lightbox ? {
+    role: 'button', tabIndex: 0, 'aria-label': `Abrir foto ${i + 1}`,
+    onKeyDown: (event: React.KeyboardEvent) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setOpen(i); } },
+  } : {};
 
   if (!images || images.length === 0) return null;
 
   const visor = lightbox && open !== null
-    ? <Lightbox images={images} index={open} onClose={() => setOpen(null)} onIndex={setOpen} />
+    ? <Lightbox images={images} captions={captions} index={Math.min(open, images.length - 1)} onClose={() => setOpen(null)} onIndex={setOpen} />
     : null;
+  const hasCaption = (i: number) => showCaptions && Boolean(captions?.[i]?.title || captions?.[i]?.caption);
+  const syncActive = () => {
+    const element = stripRef.current;
+    if (!element) return;
+    if (element.scrollWidth - element.clientWidth - element.scrollLeft < 2) { setActive(images.length - 1); return; }
+    const left = element.getBoundingClientRect().left;
+    let closest = 0; let distance = Infinity;
+    Array.from(element.children).forEach((child, index) => {
+      const current = Math.abs(child.getBoundingClientRect().left - left);
+      if (current < distance) { closest = index; distance = current; }
+    });
+    setActive(closest);
+  };
+  const move = (direction: number) => {
+    const next = Math.max(0, Math.min(images.length - 1, active + direction));
+    stripRef.current?.children[next]?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest', inline: 'start' });
+    setActive(next);
+  };
+  const navigation = images.length > 1 && scrollable ? (
+    <nav aria-label="Navegación de galería" className="mt-3 flex w-full items-center justify-center gap-4 font-outfit text-xs">
+      <button type="button" onClick={() => move(-1)} disabled={active === 0} aria-label="Foto anterior" className="h-11 w-11 rounded-full border disabled:opacity-25" style={{ borderColor: 'color-mix(in srgb, currentColor 20%, transparent)' }}>←</button>
+      <span className="min-w-14 text-center tracking-[0.15em]">{Math.min(active + 1, images.length)} / {images.length}</span>
+      <button type="button" onClick={() => move(1)} disabled={active >= images.length - 1} aria-label="Foto siguiente" className="h-11 w-11 rounded-full border disabled:opacity-25" style={{ borderColor: 'color-mix(in srgb, currentColor 20%, transparent)' }}>→</button>
+    </nav>
+  ) : null;
+  const captionNode = (i: number, overlay = false, counterOnly = false) => (
+    <>
+      {showCounter && (
+        <span className={`font-outfit text-[10px] tracking-[0.16em] ${overlay ? 'absolute left-3 top-3 z-[2] rounded-full bg-black/35 px-2 py-1 text-white backdrop-blur-sm' : 'block opacity-50'}`}>
+          {String(i + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}
+        </span>
+      )}
+      {!counterOnly && hasCaption(i) && (
+        <figcaption className={overlay ? 'absolute inset-x-0 bottom-0 z-[2] bg-gradient-to-t from-black/75 via-black/35 to-transparent px-4 pb-4 pt-12 text-left text-white' : 'px-1 pt-3 text-left'}>
+          {captions?.[i]?.title && <span className="block font-playfair text-[17px] leading-tight">{captions[i]?.title}</span>}
+          {captions?.[i]?.caption && <span className={`mt-1 block font-outfit text-[11px] leading-relaxed ${overlay ? 'text-white/75' : 'opacity-60'}`}>{captions[i]?.caption}</span>}
+        </figcaption>
+      )}
+    </>
+  );
 
   // Coverflow: carrusel 3D con la foto central de frente.
   if (layout === 'coverflow') {
-    return <CoverflowGallery images={images} radius={radius} lightbox={lightbox} className={className} />;
+    return <CoverflowGallery images={images} captions={captions} radius={radius} lightbox={lightbox} showCaptions={showCaptions} showCounter={showCounter} className={className} />;
+  }
+
+  // Editorial: una imagen protagonista abre el relato y las demás completan el mosaico.
+  if (layout === 'editorial') {
+    return (
+      <>
+        <div className={`grid grid-cols-2 gap-2 sm:grid-cols-12 ${className}`} style={{ pointerEvents: 'auto' }}>
+          {images.map((src, i) => {
+            const featured = i === 0;
+            const tail = images.length - 3;
+            const mobileSpan = i === images.length - 1 && images.length % 2 === 0 ? 'col-span-2' : 'col-span-1';
+            const classes = images.length === 1 ? 'col-span-2 aspect-[4/3] sm:col-span-12 sm:aspect-[16/10]'
+              : images.length === 2 ? 'col-span-2 aspect-[4/5] sm:col-span-6'
+              : featured ? 'col-span-2 aspect-[4/5] sm:col-span-7 sm:row-span-2'
+              : i < 3 ? `${mobileSpan} aspect-[4/3] sm:col-span-5 sm:aspect-auto`
+              : `${mobileSpan} aspect-[4/3] ${tail % 3 === 1 && i === images.length - 1 ? 'sm:col-span-12 sm:aspect-[16/9]' : tail % 3 === 2 && i >= images.length - 2 ? 'sm:col-span-6' : 'sm:col-span-4'}`;
+            return (
+              <figure key={`${src}-${i}`} {...accessible(i)} onClick={click(i)} className={`group relative min-w-0 overflow-hidden bg-black/5 ${classes}`} style={{ borderRadius: radius, cursor }}>
+                <GalleryPhoto src={src} alt={captions?.[i]?.alt || captions?.[i]?.title || ''} className="group-hover:scale-105 motion-reduce:transform-none" />
+                {(hasCaption(i) || showCounter) && captionNode(i, true)}
+                {lightbox && <ZoomHint />}
+              </figure>
+            );
+          })}
+        </div>
+        {visor}
+      </>
+    );
+  }
+
+  // Filmstrip: relato horizontal de gesto natural, especialmente claro en celular.
+  if (layout === 'filmstrip') {
+    return (
+      <>
+        <div ref={stripRef} onScroll={syncActive} className={`flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 ${className}`} style={{ pointerEvents: 'auto', scrollbarWidth: 'none' }}>
+          {images.map((src, i) => (
+            <figure key={`${src}-${i}`} {...accessible(i)} onClick={click(i)} className="group min-w-0 shrink-0 snap-center" style={{ width: 'min(82vw, 340px)', cursor }}>
+              <div className="relative overflow-hidden bg-black/5" style={{ borderRadius: radius, aspectRatio: i % 3 === 1 ? '4 / 3' : '4 / 5' }}>
+                <GalleryPhoto src={src} alt={captions?.[i]?.alt || captions?.[i]?.title || ''} className="group-hover:scale-105 motion-reduce:transform-none" />
+                {showCounter && captionNode(i, true, true)}
+                {lightbox && <ZoomHint />}
+              </div>
+              {hasCaption(i) && (
+                <figcaption className="px-1 pt-3 text-left">
+                  {captions?.[i]?.title && <span className="block font-playfair text-[17px] leading-tight">{captions[i]?.title}</span>}
+                  {captions?.[i]?.caption && <span className="mt-1 block font-outfit text-[11px] leading-relaxed opacity-60">{captions[i]?.caption}</span>}
+                </figcaption>
+              )}
+            </figure>
+          ))}
+        </div>
+        {navigation}
+        {visor}
+      </>
+    );
   }
 
   // Masonry: alturas alternadas con columnas CSS (efecto Pinterest).
@@ -705,10 +876,11 @@ export function PhotoGrid({
       <>
         <div className={className} style={{ columnGap: 8, columnCount: 2, pointerEvents: 'auto' }}>
           {images.map((src, i) => (
-            <div key={`${src}-${i}`} onClick={click(i)} className="group relative mb-2 inline-block w-full overflow-hidden bg-black/5" style={{ borderRadius: radius, cursor }}>
-              <FadeImg src={src} className="w-full object-cover group-hover:scale-105" />
+            <figure key={`${src}-${i}`} {...accessible(i)} onClick={click(i)} className="group relative mb-2 inline-block w-full overflow-hidden bg-black/5" style={{ borderRadius: radius, cursor }}>
+              <FadeImg src={src} alt={captions?.[i]?.alt || captions?.[i]?.title || ''} className="w-full object-cover group-hover:scale-105" />
+              {(hasCaption(i) || showCounter) && captionNode(i, true)}
               {lightbox && <ZoomHint />}
-            </div>
+            </figure>
           ))}
         </div>
         {visor}
@@ -722,12 +894,19 @@ export function PhotoGrid({
       <>
         <div className={`flex flex-wrap justify-center gap-4 ${className}`} style={{ pointerEvents: 'auto' }}>
           {images.map((src, i) => (
-            <div key={`${src}-${i}`} onClick={click(i)} className="group relative bg-white p-2 pb-7 shadow-lg transition-transform duration-300 hover:z-10 hover:!rotate-0 hover:scale-105" style={{ width: 'min(40vw,160px)', transform: `rotate(${(i % 3 - 1) * 3}deg)`, cursor }}>
+            <figure key={`${src}-${i}`} {...accessible(i)} onClick={click(i)} className="group relative bg-white p-2 pb-4 shadow-lg transition-transform duration-300 hover:z-10 hover:!rotate-0 hover:scale-105" style={{ width: 'min(40vw,160px)', transform: `rotate(${(i % 3 - 1) * 3}deg)`, cursor }}>
               <div className="relative overflow-hidden" style={{ aspectRatio: '1 / 1' }}>
-                <FadeImg src={src} className="h-full w-full object-cover" />
+                <GalleryPhoto src={src} alt={captions?.[i]?.alt || captions?.[i]?.title || ''} />
+                {showCounter && captionNode(i, true, true)}
                 {lightbox && <ZoomHint />}
               </div>
-            </div>
+              {hasCaption(i) && (
+                <figcaption className="px-1 pt-3 text-left text-stone-700">
+                  {captions?.[i]?.title && <span className="block font-playfair text-[15px] leading-tight">{captions[i]?.title}</span>}
+                  {captions?.[i]?.caption && <span className="mt-1 block font-outfit text-[10px] leading-relaxed opacity-60">{captions[i]?.caption}</span>}
+                </figcaption>
+              )}
+            </figure>
           ))}
         </div>
         {visor}
@@ -739,14 +918,16 @@ export function PhotoGrid({
   if (layout === 'carousel') {
     return (
       <>
-        <div className={`flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 ${className}`} style={{ pointerEvents: 'auto', scrollbarWidth: 'thin' }}>
+        <div ref={stripRef} onScroll={syncActive} className={`flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 ${className}`} style={{ pointerEvents: 'auto', scrollbarWidth: 'thin' }}>
           {images.map((src, i) => (
-            <div key={`${src}-${i}`} onClick={click(i)} className="group relative shrink-0 snap-center overflow-hidden bg-black/5" style={{ width: 'min(70vw,260px)', aspectRatio: '3 / 4', borderRadius: radius, cursor }}>
-              <FadeImg src={src} className="h-full w-full object-cover group-hover:scale-105" />
+            <figure key={`${src}-${i}`} {...accessible(i)} onClick={click(i)} className="group relative shrink-0 snap-center overflow-hidden bg-black/5" style={{ width: 'min(70vw,260px)', aspectRatio: '3 / 4', borderRadius: radius, cursor }}>
+              <GalleryPhoto src={src} alt={captions?.[i]?.alt || captions?.[i]?.title || ''} className="group-hover:scale-105 motion-reduce:transform-none" />
+              {(hasCaption(i) || showCounter) && captionNode(i, true)}
               {lightbox && <ZoomHint />}
-            </div>
+            </figure>
           ))}
         </div>
+        {navigation}
         {visor}
       </>
     );
@@ -757,10 +938,11 @@ export function PhotoGrid({
     <>
       <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 ${className}`} style={{ pointerEvents: 'auto' }}>
         {images.map((src, i) => (
-          <div key={`${src}-${i}`} onClick={click(i)} className="group relative overflow-hidden bg-black/5" style={{ borderRadius: radius, aspectRatio: '1 / 1', cursor }}>
-            <FadeImg src={src} className="h-full w-full object-cover group-hover:scale-105" />
+          <figure key={`${src}-${i}`} {...accessible(i)} onClick={click(i)} className="group relative overflow-hidden bg-black/5" style={{ borderRadius: radius, aspectRatio: '1 / 1', cursor }}>
+            <GalleryPhoto src={src} alt={captions?.[i]?.alt || captions?.[i]?.title || ''} className="group-hover:scale-105 motion-reduce:transform-none" />
+            {(hasCaption(i) || showCounter) && captionNode(i, true)}
             {lightbox && <ZoomHint />}
-          </div>
+          </figure>
         ))}
       </div>
       {visor}
@@ -1039,7 +1221,7 @@ export function EventIcon({ name, className = '', stroke = 'currentColor', lotti
         speed={speed}
         loop
         autoplay
-        lazy={false}
+        lazy
         className={className}
       />
     );

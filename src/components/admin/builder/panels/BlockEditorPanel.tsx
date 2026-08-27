@@ -19,7 +19,8 @@ import ImageUploader from '../ImageUploader';
 import MultiImageUploader from '../MultiImageUploader';
 import ImageStudio from '../ImageStudio';
 import IconPicker from '../IconPicker';
-import { attachDefaultBindings, detachBinding } from '@/lib/block-bindings';
+import { attachDefaultBindings, detachBinding, resolveBlockEditorProps } from '@/lib/block-bindings';
+import { captionsForImages, reorderGalleryCaptions } from '@/lib/gallery';
 import { DIVIDER_VARIANTS, dividerVariant } from '@/components/invitations/dividers';
 import { BlockGlyph, EyeGlyph, LockGlyph, blockVisual, editorCardCls, editorSectionTitleCls } from '../editor-ui';
 import SectionPresetCard, { SectionPreview } from '../SectionPresetCard';
@@ -97,7 +98,7 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
     case 'textarea':
       return <textarea className={inputCls} rows={3} value={value ?? ''} onChange={e => set(e.target.value)} placeholder={field.placeholder} />;
     case 'number':
-      return <input type="number" className={inputCls} value={Number(value) || 0} min={field.min} max={field.max} onChange={e => set(parseInt(e.target.value) || 0)} />;
+      return <input type="number" className={inputCls} value={Number(value) || 0} min={field.min} max={field.max} step={field.step} onChange={e => set(parseFloat(e.target.value) || 0)} />;
     case 'switch':
       return <Toggle on={!!value} onToggle={() => set(!value)} />;
     case 'select':
@@ -109,7 +110,9 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
     case 'color':
       return <input type="color" className="w-10 h-9 rounded-lg border border-gray-200 cursor-pointer p-0.5" value={value || '#000000'} onChange={e => set(e.target.value)} />;
     case 'image':
-      return <ImageUploader value={value} onChange={set} folder="blocks" ownerId={ownerId} aspect="landscape" />;
+      return <ImageUploader value={value} onChange={set} folder="blocks" ownerId={ownerId} aspect={field.previewAspect ?? 'landscape'} hint={field.hint} />;
+    case 'video':
+      return <ImageUploader value={value} onChange={set} folder="videos" ownerId={ownerId} kind="video" aspect={field.previewAspect ?? 'wide'} hint={field.hint ?? 'Recomendado: MP4 H.264 o WebM, 3–12 s y menos de 6 MB.'} />;
     case 'images':
       return <MultiImageUploader values={Array.isArray(value) ? value : []} onChange={set} ownerId={ownerId} />;
     case 'icon':
@@ -159,9 +162,10 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
 }
 
 // Editor de una lista de objetos (ej: pasos del itinerario).
-function ListEditor({ items, itemFields, onChange, ownerId, eventType }: {
-  items: any[]; itemFields: FieldDef[]; onChange: (v: any[]) => void; ownerId?: string; eventType?: any;
+function ListEditor({ items: sourceItems, images, itemFields, onChange, ownerId, eventType }: {
+  items: any[]; images?: string[]; itemFields: FieldDef[]; onChange: (v: any[]) => void; ownerId?: string; eventType?: any;
 }) {
+  const items = images ? captionsForImages(images, sourceItems) : sourceItems;
   const setItem = (i: number, patch: Record<string, any>) => {
     const next = items.map((it, j) => (j === i ? { ...it, ...patch } : it));
     onChange(next);
@@ -172,8 +176,13 @@ function ListEditor({ items, itemFields, onChange, ownerId, eventType }: {
         <div key={i} className="p-3 rounded-xl border border-gray-100 bg-gray-50 space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-xs font-outfit text-gray-400">#{i + 1}</span>
-            <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} className="text-xs text-red-400 hover:text-red-600 font-outfit">Eliminar</button>
+            {!images && <div className="flex gap-2">
+              {([-1, 1] as const).map(direction => <button key={direction} type="button" aria-label={direction < 0 ? 'Subir elemento' : 'Bajar elemento'} disabled={i + direction < 0 || i + direction >= items.length} onClick={() => { const next = [...items]; [next[i], next[i + direction]] = [next[i + direction], next[i]]; onChange(next); }} className="text-gray-500 disabled:opacity-25">{direction < 0 ? '↑' : '↓'}</button>)}
+              <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} className="text-xs text-red-400 hover:text-red-600 font-outfit">Eliminar</button>
+            </div>}
           </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {images && <img src={images[i]} alt={`Foto ${i + 1} que estás editando`} loading="lazy" className="h-24 w-full rounded-lg object-cover" />}
           {itemFields.map(f => (
             <Labeled key={f.key} label={f.label}>
               <FieldControl
@@ -186,9 +195,10 @@ function ListEditor({ items, itemFields, onChange, ownerId, eventType }: {
           ))}
         </div>
       ))}
-      <button type="button" onClick={() => onChange([...items, {}])} className="w-full py-2 text-xs font-outfit text-enkarta-gold border border-dashed border-enkarta-gold/40 rounded-xl hover:bg-enkarta-gold/5">
+      {!images && <button type="button" onClick={() => onChange([...items, {}])} className="w-full py-2 text-xs font-outfit text-enkarta-gold border border-dashed border-enkarta-gold/40 rounded-xl hover:bg-enkarta-gold/5">
         + Añadir elemento
-      </button>
+      </button>}
+      {images?.length === 0 && <p className="text-xs text-gray-500">Sube fotos para añadir sus títulos y descripciones.</p>}
     </div>
   );
 }
@@ -492,7 +502,16 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
   // ── Editor de un bloque seleccionado ──
   if (selected && !batchMode) {
     const def = BLOCKS[selected.type];
-    const setProp = (key: string, v: any) => patchBlock(selected.id, { ...detachBinding(selected, key), props: { ...selected.props, [key]: v } });
+    const editorProps = resolveBlockEditorProps(selected, data);
+    const galleryImages = (block: Block): string[] => {
+      const images = resolveBlockEditorProps(block, data).images;
+      return Array.isArray(images) ? images as string[] : [];
+    };
+    const editedProps = (block: Block, key: string, value: any) => ({
+      ...block.props, [key]: value,
+      ...(block.type === 'gallery' && key === 'images' ? { captions: reorderGalleryCaptions(galleryImages(block), Array.isArray(block.props.captions) ? block.props.captions : [], value) } : {}),
+    });
+    const setProp = (key: string, v: any) => patchBlock(selected.id, { ...detachBinding(selected, key), props: editedProps(selected, key, v) });
     const setProps = (patch: Record<string, unknown>) => patchBlock(selected.id, { props: { ...selected.props, ...patch } });
     const setIcon = (key: string, v: string, colors?: any, speed?: number) =>
       patchBlock(selected.id, { ...detachBinding(selected, key), props: { ...selected.props, [key]: v, [`${key}Colors`]: colors, [`${key}Speed`]: speed } });
@@ -503,12 +522,12 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
       const bindings = { ...(selected.bindings ?? {}) };
       if (path) bindings[key] = path;
       else delete bindings[key];
-      patchBlock(selected.id, { bindings: Object.keys(bindings).length ? bindings : undefined });
+      patchBlock(selected.id, { bindings: Object.keys(bindings).length ? bindings : undefined, ...(!path ? { props: { ...selected.props, [key]: editorProps[key] } } : {}) });
     };
     const insertGuestToken = (token: string) => {
       const field = def?.fields.find(item => item.kind === 'text' || item.kind === 'textarea');
       if (!field) return;
-      const current = String(selected.props[field.key] ?? '').trim();
+      const current = String(editorProps[field.key] ?? '').trim();
       setProp(field.key, current ? `${current} ${token}` : token);
     };
     const setBaseLayout = (patch: Partial<BlockLayout>) => patchBlock(selected.id, { layout: { ...(selected.layout ?? {}), ...patch } });
@@ -582,7 +601,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
     const setKidProp = (i: number, key: string, val: any) => setKids(kids.map((c, j) => {
       if (j !== i) return c;
       const detached = detachBinding(c, key);
-      return { ...c, ...detached, props: { ...c.props, [key]: val } };
+      return { ...c, ...detached, props: editedProps(c, key, val) };
     }));
     const setKidIcon = (i: number, key: string, val: string, colors?: any, speed?: number) => setKids(kids.map((c, j) => {
       if (j !== i) return c;
@@ -652,8 +671,8 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
           )}
           {selected.type === 'image' && (
             <ImageStudio
-              value={String(selected.props.url || '')}
-              settings={selected.props}
+              value={String(editorProps.url || '')}
+              settings={editorProps}
               onImageChange={url => setProp('url', url)}
               onSettingsChange={setProps}
               ownerId={data.id}
@@ -664,13 +683,13 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
           {def?.fields.filter(f => selected.type !== 'image' || !['url', 'focal'].includes(f.key)).map(f => (
             f.kind === 'list' ? (
               <Labeled key={f.key} label={f.label}>
-                <ListEditor items={Array.isArray(selected.props[f.key]) ? (selected.props[f.key] as any[]) : []} itemFields={f.itemFields ?? []} onChange={v => setProp(f.key, v)} ownerId={data.id} eventType={data.type} />
+                <ListEditor items={Array.isArray(editorProps[f.key]) ? (editorProps[f.key] as any[]) : []} images={selected.type === 'gallery' && f.key === 'captions' ? galleryImages(selected) : undefined} itemFields={f.itemFields ?? []} onChange={v => setProp(f.key, v)} ownerId={data.id} eventType={data.type} />
               </Labeled>
             ) : (
               <div key={f.key} className="space-y-1.5">
               <Labeled label={f.label}>
                 <FieldControl
-                  field={f} value={selected.props[f.key]} set={v => setProp(f.key, v)}
+                  field={f} value={editorProps[f.key]} set={v => setProp(f.key, v)}
                   setIcon={(v, c, s) => setIcon(f.key, v, c, s)}
                   colors={selected.props[`${f.key}Colors`]} speed={selected.props[`${f.key}Speed`] as number | undefined}
                   ownerId={data.id} eventType={data.type} accent={cfg.theme?.primary}
@@ -812,6 +831,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
             {isOverlay && <p className="text-xs text-gray-400 font-outfit -mt-1">El primer elemento queda al fondo; usa ↑↓ para el orden de capas y Posición X/Y para centrar el texto sobre la imagen.</p>}
             {kids.map((c, i) => {
               const cdef = BLOCKS[c.type];
+              const childProps = resolveBlockEditorProps(c, data);
               return (
                 <div key={c.id} className="p-3 rounded-xl border border-gray-100 bg-gray-50 space-y-2">
                   <div className="flex items-center justify-between">
@@ -825,12 +845,12 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
                   {cdef?.fields.map(f => (
                     f.kind === 'list' ? (
                       <Labeled key={f.key} label={f.label}>
-                        <ListEditor items={Array.isArray(c.props[f.key]) ? (c.props[f.key] as any[]) : []} itemFields={f.itemFields ?? []} onChange={v => setKidProp(i, f.key, v)} ownerId={data.id} eventType={data.type} />
+                        <ListEditor items={Array.isArray(childProps[f.key]) ? (childProps[f.key] as any[]) : []} images={c.type === 'gallery' && f.key === 'captions' ? galleryImages(c) : undefined} itemFields={f.itemFields ?? []} onChange={v => setKidProp(i, f.key, v)} ownerId={data.id} eventType={data.type} />
                       </Labeled>
                     ) : (
                       <Labeled key={f.key} label={f.label}>
                         <FieldControl
-                          field={f} value={c.props[f.key]} set={v => setKidProp(i, f.key, v)}
+                          field={f} value={childProps[f.key]} set={v => setKidProp(i, f.key, v)}
                           setIcon={(v, col, sp) => setKidIcon(i, f.key, v, col, sp)}
                           colors={c.props[`${f.key}Colors`]} speed={c.props[`${f.key}Speed`] as number | undefined}
                           ownerId={data.id} eventType={data.type}

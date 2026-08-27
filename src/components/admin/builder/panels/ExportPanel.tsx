@@ -26,7 +26,7 @@ interface AnalyticsSummary {
 
 function extensionFor(type: string | null, url: string) {
   const mime = (type || '').split(';')[0].trim().toLowerCase();
-  const byMime: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'image/gif': 'gif', 'audio/mpeg': 'mp3', 'audio/ogg': 'ogg', 'video/mp4': 'mp4' };
+  const byMime: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'image/gif': 'gif', 'audio/mpeg': 'mp3', 'audio/ogg': 'ogg', 'video/mp4': 'mp4', 'video/webm': 'webm' };
   if (byMime[mime]) return byMime[mime];
   const match = new URL(url, window.location.origin).pathname.match(/\.([a-z0-9]{2,5})$/i);
   return match?.[1]?.toLowerCase() || 'bin';

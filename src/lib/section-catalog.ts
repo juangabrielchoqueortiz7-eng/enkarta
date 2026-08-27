@@ -17,15 +17,24 @@ export const SECTION_STYLES: Array<'Todos' | SectionStyle> = ['Todos', 'Románti
 
 const META: Record<string, SectionCatalogMeta> = {
   'cover-photo': { moment: 'Apertura', styles: ['Romántico', 'Editorial', 'Botánico'], preview: 'hero', tags: ['portada', 'foto', 'nombres'], featured: true },
+  'cover-cinematic': { moment: 'Apertura', styles: ['Romántico', 'Editorial'], preview: 'video', tags: ['portada', 'video', 'cinematográfica', 'nombres'], featured: true },
   welcome: { moment: 'Apertura', styles: ['Romántico', 'Minimal'], preview: 'message', tags: ['bienvenida', 'mensaje'] },
   verse: { moment: 'Apertura', styles: ['Romántico', 'Botánico', 'Minimal'], preview: 'quote', tags: ['versículo', 'frase', 'cita'] },
   'save-date': { moment: 'Apertura', styles: ['Editorial', 'Minimal', 'Festivo'], preview: 'countdown', tags: ['fecha', 'contador', 'calendario'], featured: true },
+  'editorial-opening': { moment: 'Apertura', styles: ['Editorial', 'Minimal'], preview: 'message', tags: ['editorial', 'manifiesto', 'titular', 'revista'], featured: true },
+  'editorial-portrait': { moment: 'Historia', styles: ['Editorial', 'Romántico'], preview: 'story', tags: ['editorial', 'retrato', 'relato', 'foto'], featured: true },
+  'editorial-photo-chapter': { moment: 'Historia', styles: ['Editorial', 'Romántico'], preview: 'hero', tags: ['editorial', 'foto', 'portada', 'capítulo'], featured: true },
+  'editorial-letter': { moment: 'Historia', styles: ['Editorial', 'Romántico', 'Minimal'], preview: 'message', tags: ['editorial', 'carta', 'mensaje', 'invitados'] },
+  'editorial-facts': { moment: 'Información', styles: ['Editorial', 'Minimal'], preview: 'details', tags: ['editorial', 'fecha', 'lugar', 'vestimenta', 'datos'], featured: true },
+  'editorial-closing': { moment: 'Cierre', styles: ['Editorial', 'Minimal', 'Romántico'], preview: 'closing', tags: ['editorial', 'confirmación', 'rsvp', 'cierre'], featured: true },
   events: { moment: 'Evento', styles: ['Romántico', 'Editorial', 'Minimal'], preview: 'events', tags: ['ceremonia', 'recepción', 'lugar'], featured: true },
   schedule: { moment: 'Evento', styles: ['Editorial', 'Minimal', 'Viaje', 'Festivo'], preview: 'schedule', tags: ['itinerario', 'horario', 'agenda'], featured: true },
+  'schedule-route': { moment: 'Evento', styles: ['Editorial', 'Viaje', 'Festivo'], preview: 'schedule', tags: ['itinerario', 'ruta', 'alternado', 'celular'], featured: true },
   directions: { moment: 'Evento', styles: ['Minimal', 'Viaje'], preview: 'map', tags: ['mapa', 'ubicación', 'dirección'] },
   details: { moment: 'Información', styles: ['Editorial', 'Minimal'], preview: 'details', tags: ['vestimenta', 'avisos', 'adultos'] },
   story: { moment: 'Historia', styles: ['Romántico', 'Botánico'], preview: 'story', tags: ['historia', 'timeline', 'recuerdos'], featured: true },
   gallery: { moment: 'Historia', styles: ['Romántico', 'Editorial', 'Festivo'], preview: 'gallery', tags: ['galería', 'fotos', 'mosaico'], featured: true },
+  'gallery-filmstrip': { moment: 'Historia', styles: ['Editorial', 'Romántico', 'Viaje'], preview: 'gallery', tags: ['galería', 'fotos', 'carrusel', 'historia', 'pies de foto'], featured: true },
   cinema: { moment: 'Historia', styles: ['Editorial', 'Romántico'], preview: 'cinema', tags: ['cinematográfico', 'scroll', 'foto'] },
   video: { moment: 'Historia', styles: ['Editorial', 'Festivo'], preview: 'video', tags: ['video', 'mensaje'] },
   'then-now': { moment: 'Historia', styles: ['Romántico', 'Festivo'], preview: 'gallery', tags: ['antes', 'después', 'comparación'] },
@@ -45,6 +54,7 @@ const META: Record<string, SectionCatalogMeta> = {
 
 const GROUP_FALLBACK: Record<string, SectionMoment> = {
   Inicio: 'Apertura',
+  Editorial: 'Historia',
   'El evento': 'Evento',
   'Fotos y recuerdos': 'Historia',
   Invitados: 'Información',
@@ -84,6 +94,7 @@ export function isSectionRecommended(meta: SectionCatalogMeta, template: Invitat
 
 const DESIGN_KEYS = new Set([
   'font', 'size', 'display', 'showSeconds', 'layout', 'wreath', 'color', 'color2', 'color3', 'color4',
+  'variant', 'imageSide', 'imageAspect',
   'rounded', 'maxHeight', 'focal', 'overlay', 'height', 'filled', 'style', 'width', 'motif', 'columns',
   'mode', 'zoom', 'imageRotate', 'imageFlipH', 'imageFlipV', 'brightness', 'contrast', 'imageSaturation', 'grayscale', 'sepia',
   'temperature', 'blur', 'mask', 'overlayColor', 'overlayOpacity', 'overlayMode', 'overlayBlend',

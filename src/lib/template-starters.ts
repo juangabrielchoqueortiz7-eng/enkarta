@@ -14,14 +14,15 @@ import {
 } from '@/components/invitations/sampleData';
 import { DEFAULT_MUSIC_URL } from '@/lib/music';
 import { decorForTemplate, motionForTemplate, themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
-import { STARTER_COLLECTION_KEYS, type StarterCollectionKey } from '@/lib/enkarta-collections';
+import { STARTER_DESIGNS, type StarterDesignKey, type StarterCollectionKey } from '@/lib/enkarta-collections';
+import { marfilVivoStarter } from '@/lib/marfil-vivo';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export const STARTER_TEMPLATE_KEYS = STARTER_COLLECTION_KEYS;
-export type StarterTemplateKey = StarterCollectionKey;
+export const STARTER_TEMPLATE_KEYS = STARTER_DESIGNS.map(design => design.key);
+export type StarterTemplateKey = StarterDesignKey;
 
-const SAMPLES: Record<StarterTemplateKey, any> = {
+const SAMPLES: Record<StarterCollectionKey, any> = {
   azure: azureSample,
   primicia: primiciaSample,
   passport: passportSample,
@@ -83,6 +84,7 @@ function whatsappNumber(value: unknown): string | null {
  * el administrador ve desde el primer instante la invitación completa.
  */
 export function invitationStarter(template: StarterTemplateKey) {
+  if (template === 'marfil-vivo') return marfilVivoStarter();
   const sample = SAMPLES[template];
   const first = BRIDE_FIRST.has(template) ? sample.bride : sample.groom;
   const second = BRIDE_FIRST.has(template) ? sample.groom : sample.bride;

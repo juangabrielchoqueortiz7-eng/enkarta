@@ -250,7 +250,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
         {/* Etiqueta de plantilla */}
         <div className="text-center mt-3">
           <span className="text-xs text-gray-400 font-outfit bg-white px-3 py-1 rounded-full border border-gray-200 capitalize">
-            {publicTemplateName(invitation.template)} · {isDesktop ? 'escritorio' : 'móvil'}
+            {publicTemplateName(invitation.template, invitation.config?.layout?.presetKey)} · {isDesktop ? 'escritorio' : 'móvil'}
           </span>
         </div>
       </div>

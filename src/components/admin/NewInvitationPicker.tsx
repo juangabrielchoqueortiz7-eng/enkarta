@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { STARTER_COLLECTIONS, type StarterCollectionKey } from '@/lib/enkarta-collections';
+import { STARTER_DESIGNS, type StarterDesignKey } from '@/lib/enkarta-collections';
 
-const TEMPLATES = STARTER_COLLECTIONS;
-type TemplateKey = StarterCollectionKey;
+const TEMPLATES = STARTER_DESIGNS;
+type TemplateKey = StarterDesignKey;
 
 export default function NewInvitationPicker() {
   const router = useRouter();
@@ -88,11 +89,11 @@ export default function NewInvitationPicker() {
                   aria-label={`Usar la invitación ${template.name}`}
                 >
                   <div className="relative aspect-[4/3] overflow-hidden" style={{ backgroundColor: `${template.accent}16` }}>
-                    {/* Los archivos del catálogo son recursos locales controlados por Enkarta. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={template.image}
                       alt={`Invitación ${template.name}`}
+                      fill
+                      sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 360px"
                       className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.035]"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-black/5" />

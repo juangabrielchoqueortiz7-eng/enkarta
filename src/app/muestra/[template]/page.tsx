@@ -7,7 +7,9 @@ import { PageMotionProvider } from '@/lib/scroll-motion';
 import { contentToLayout } from '@/lib/layout-presets';
 import { themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import type { PageMotionPreset, TemplateDecor, ParticleShape, CornerStyle, InvitationTemplate } from '@/lib/types';
-import { ENKARTA_COLLECTIONS } from '@/lib/enkarta-collections';
+import { ENKARTA_COLLECTIONS, MARFIL_VIVO_DESIGN } from '@/lib/enkarta-collections';
+import { marfilVivoDemo } from '@/lib/marfil-vivo';
+import { resolveLayoutBindings } from '@/lib/block-bindings';
 import { entryPropsFor } from '@/components/invitations/entry/config';
 import { DEFAULT_MUSIC_URL, TRACK } from '@/lib/music';
 import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample, provenceSample, esmeraldaSample } from '@/components/invitations/sampleData';
@@ -55,7 +57,7 @@ export async function generateMetadata({ params }: { params: Promise<{ template:
   const { template } = await params;
   let key = template.toLowerCase();
   if (key === 'carmesi_v2') key = 'carmesi';
-  const m = TEMPLATE_META[key];
+  const m = key === 'marfil-vivo' ? { name: MARFIL_VIVO_DESIGN.name, img: MARFIL_VIVO_DESIGN.image, desc: MARFIL_VIVO_DESIGN.description } : TEMPLATE_META[key];
   if (!m) return {};
   const title = `Colección ${m.name} · Invitación digital — Enkarta`;
   const description = `${m.desc}. Explora su apertura, música, recorrido visual y confirmación de asistencia tal como la vivirán tus invitados.`;
@@ -114,6 +116,15 @@ export default async function MuestraPage({ params, searchParams }: Props) {
   let key = template.toLowerCase();
   if (key === 'carmesi_v2') key = 'carmesi';
 
+  if (key === 'marfil-vivo') {
+    const demo = marfilVivoDemo();
+    if (m) demo.guest_name = m;
+    const config = demo.config;
+    const content = <BlockRenderer layout={resolveLayoutBindings(config.layout!, demo)} theme={config.theme} tokens={config.tokens} motion={config.motion} decor={config.decor} gated={full !== '1'} demo />;
+    if (full === '1') return content;
+    return <EntryGate template="grazia" names={demo.names!} initials="E & M" dateLine={demo.event_date!} coverImage={demo.cover_image_url!} label={config.entry?.label} bg={config.theme?.bg} accent={config.theme?.primary} text={config.theme?.text}>{content}</EntryGate>;
+  }
+
   const sample = SAMPLES[key];
   const registryEntry = PREMIUM_REGISTRY[key === 'carmesi' ? 'carmesi_v2' : key];
   if (!sample || !registryEntry) notFound();
@@ -149,7 +160,7 @@ export default async function MuestraPage({ params, searchParams }: Props) {
       ? { background: 'art', corners: { on: true }, floating: { on: true }, ...(data.decor ?? {}) }
       : data.decor;
   const el = blocks === '1' ? (
-    <BlockRenderer layout={contentToLayout(data, key)} theme={data.theme ?? themeForTemplate(key)} motion={motionVal} decor={previewDecor} tokens={{ ...(data.tokens ?? tokensForTemplate(key)), ...(seam ? { seam: seam as never } : {}), ...(fx ? { seamFx: fx as never } : {}) }} musicUrl={data.musicUrl} slug={key} gated={full !== '1'} />
+    <BlockRenderer layout={contentToLayout(data, key)} theme={data.theme ?? themeForTemplate(key)} motion={motionVal} decor={previewDecor} tokens={{ ...(data.tokens ?? tokensForTemplate(key)), ...(seam ? { seam: seam as never } : {}), ...(fx ? { seamFx: fx as never } : {}) }} musicUrl={data.musicUrl} gated={full !== '1'} demo />
   ) : (
     <PageMotionProvider value={motionVal} gated={full !== '1'}>
       <div className="ek-invite"><Comp data={data} /></div>
@@ -168,7 +179,7 @@ export default async function MuestraPage({ params, searchParams }: Props) {
 }
 
 export function generateStaticParams() {
-  return PREMIUM_KEYS.map(template => ({ template }));
+  return [...PREMIUM_KEYS, 'marfil-vivo'].map(template => ({ template }));
 }
 
 /**

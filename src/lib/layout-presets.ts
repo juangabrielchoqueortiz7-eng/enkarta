@@ -7,6 +7,7 @@
 import type { InvitationParsed, PageLayout, Block, BlockType, BlockBindings } from './types';
 import { LAYOUT_VERSION } from './types';
 import { applyRecipe } from './layout-recipes';
+import { createMarfilVivoLayout } from './marfil-vivo';
 
 let _seq = 0;
 function uid(type: string) {
@@ -251,6 +252,7 @@ export function invitationToLayout(inv: InvitationParsed): PageLayout {
 
 /** Elige el preset por plantilla. */
 export function layoutForTemplate(inv: InvitationParsed): PageLayout {
+  if (inv.config?.layout?.presetKey === 'marfil-vivo') return createMarfilVivoLayout(`${(inv.event_date || new Date().toISOString()).slice(0, 10)}T${(inv.ceremony_time || '16:00').slice(0, 5)}:00`);
   return applyTemplatePreset(invitationToLayout(inv), inv);
 }
 

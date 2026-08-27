@@ -1,6 +1,7 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ease } from '@/lib/motion';
 import type { EntryTheme, Ornament } from './config';
@@ -15,9 +16,16 @@ export interface SceneProps {
   initials: string;
   dateLine?: string;
   coverImage?: string;
+  videoUrl?: string;
+  poster?: string;
+  duration?: number;
+  overlay?: number;
+  showSkip?: boolean;
+  skipLabel?: string;
   label: string;
   phase: 'idle' | 'opening';
   onEnter: () => void;
+  onSkip?: () => void;
 }
 
 /**
@@ -872,8 +880,100 @@ function GiftboxScene({ theme, names, initials, dateLine, label, phase, onEnter 
   );
 }
 
+// ══════════════════════ CINEMATIC ENVELOPE ═══════════════════════════════════
+// El estado cerrado es una pieza editorial clara (monograma + llamada a entrar).
+// Tras el gesto se retira como una cubierta y deja el clip a sangre completa.
+function CinematicScene({
+  theme, names, initials, dateLine, coverImage, videoUrl, poster,
+  duration = 4, overlay = 42, showSkip = true, skipLabel = 'Omitir animación',
+  label, phase, onEnter, onSkip,
+}: SceneProps) {
+  const reducedMotion = useReducedMotion();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [mediaFailed, setMediaFailed] = useState(false);
+  const still = poster || coverImage;
+  const animatedImage = !!videoUrl && (/\.(?:gif|webp)(?:[?#]|$)/i.test(videoUrl) || /^data:image\/(?:gif|webp)/i.test(videoUrl));
+  const opacity = Math.max(0, Math.min(80, overlay)) / 100;
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || phase !== 'opening' || reducedMotion || mediaFailed) {
+      video?.pause();
+      return;
+    }
+    video.currentTime = 0;
+    video.play().catch(() => setMediaFailed(true));
+    return () => video.pause();
+  }, [mediaFailed, phase, reducedMotion, videoUrl]);
+
+  return (
+    <div className="relative h-full w-full overflow-hidden" style={{ minHeight: '100dvh' }}>
+      <div className="absolute inset-0" style={{ background: `linear-gradient(150deg, ${theme.veil}, ${theme.veil2 ?? theme.panel})` }}>
+        {still && <img src={still} alt="" aria-hidden className="h-full w-full object-cover" style={{ opacity: phase === 'opening' ? 0.5 : 0.28 }} />}
+      </div>
+
+      {phase === 'opening' && !reducedMotion && !mediaFailed && videoUrl && (
+        <motion.div initial={{ opacity: 0, scale: 1.035 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.55, ease: ease.soft }} className="absolute inset-0">
+          {animatedImage ? (
+            <img src={videoUrl} alt="" aria-hidden className="h-full w-full object-cover" />
+          ) : (
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              poster={still}
+              muted
+              playsInline
+              preload="auto"
+              aria-hidden
+              className="h-full w-full object-cover"
+              onEnded={() => onSkip?.()}
+              onError={() => { setMediaFailed(true); if (phase === 'opening') onSkip?.(); }}
+            />
+          )}
+        </motion.div>
+      )}
+
+      <div className="pointer-events-none absolute inset-0 z-[2]" style={{ background: `linear-gradient(180deg, rgba(0,0,0,${opacity * 0.55}), rgba(0,0,0,${opacity}) 100%)`, opacity: phase === 'opening' ? 1 : 0.45 }} />
+
+      <motion.div
+        className="absolute inset-0 z-10 flex flex-col items-center justify-center px-5 py-10"
+        initial={false}
+        animate={phase === 'opening' ? { opacity: 0, scale: 1.08, rotateX: -9, y: -24 } : { opacity: 1, scale: 1, rotateX: 0, y: 0 }}
+        transition={{ duration: reducedMotion ? 0.18 : 0.8, ease: ease.soft }}
+        style={{ perspective: 1200 }}
+      >
+        <div className="relative flex w-full max-w-[430px] flex-col items-center overflow-hidden border px-7 py-9 text-center shadow-[0_28px_90px_rgba(0,0,0,.2)] backdrop-blur-md sm:px-10 sm:py-11" style={{ minHeight: 'min(52dvh, 410px)', justifyContent: 'center', borderColor: `${theme.accent}88`, background: `color-mix(in srgb, ${theme.panel} 86%, transparent)`, color: theme.ink }}>
+          <div aria-hidden className="pointer-events-none absolute inset-[7px] border" style={{ borderColor: `${theme.accent}33` }} />
+          <p className="font-cinzel text-[9px] uppercase tracking-[.32em]" style={{ color: theme.soft }}>{theme.tagline || 'Invitación especial'}</p>
+          <div className="relative my-6 flex h-24 w-24 items-center justify-center rounded-full border shadow-[0_12px_32px_rgba(0,0,0,.16)]" style={{ borderColor: `${theme.accentText}66`, background: theme.accent, color: theme.accentText }}>
+            <span aria-hidden className="absolute inset-[5px] rounded-full border" style={{ borderColor: `${theme.accentText}55` }} />
+            <span className="relative font-playfair text-xl tracking-[.08em]">{initials}</span>
+          </div>
+          <h1 className="font-great leading-none" style={{ color: theme.script, fontSize: 'clamp(34px, min(10vw, 6.5dvh), 58px)', overflowWrap: 'anywhere' }}>{names}</h1>
+          {dateLine && <p className="mt-4 font-cinzel text-[10px] uppercase tracking-[.25em]" style={{ color: theme.soft }}>{dateLine}</p>}
+          <div className="mt-7"><EnterButton theme={theme} label={label} onEnter={onEnter} solid /></div>
+        </div>
+      </motion.div>
+
+      {phase === 'opening' && (
+        <div className="pointer-events-none absolute inset-x-6 bottom-7 z-20 mx-auto max-w-md">
+          <div className="mb-2 flex items-center justify-between font-cinzel text-[8px] uppercase tracking-[.22em] text-white/75"><span>Abriendo invitación</span><span>{Math.round(duration)} s</span></div>
+          <div className="h-px overflow-hidden bg-white/25"><motion.div className="h-full bg-white/85" initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ duration: reducedMotion ? 0.15 : duration, ease: 'linear' }} /></div>
+        </div>
+      )}
+
+      {showSkip && onSkip && (
+        <button type="button" onClick={event => { event.stopPropagation(); onSkip(); }} className="absolute right-4 top-4 z-30 rounded-full border border-white/35 bg-black/25 px-3 py-2 font-outfit text-[10px] font-semibold text-white/90 shadow backdrop-blur-md transition-colors hover:bg-black/40" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+          {skipLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function EntryScene(props: SceneProps) {
   switch (props.theme.scene) {
+    case 'cinematic': return <CinematicScene {...props} />;
     case 'passport': return <PassportScene {...props} />;
     case 'newspaper': return <NewspaperScene {...props} />;
     case 'arch': return <ArchScene {...props} />;

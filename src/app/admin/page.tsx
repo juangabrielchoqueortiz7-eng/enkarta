@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Invitation } from '@/lib/types';
+import { Invitation, parseConfig } from '@/lib/types';
 import ConfirmationsDashboard from '@/components/admin/ConfirmationsDashboard';
 import { collectionFor, publicTemplateName } from '@/lib/enkarta-collections';
 
@@ -123,7 +123,7 @@ export default function AdminPage() {
         inv.slug.toLowerCase().includes(q) ||
         (inv.names || '').toLowerCase().includes(q) ||
         inv.template.toLowerCase().includes(q) ||
-        publicTemplateName(inv.template).toLowerCase().includes(q)
+        publicTemplateName(inv.template, parseConfig(inv.builder_config).layout?.presetKey).toLowerCase().includes(q)
       );
     });
   }, [invitations, search, statusFilter]);
@@ -381,7 +381,7 @@ export default function AdminPage() {
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-outfit font-medium capitalize"
                               style={{ backgroundColor: `${templateColor(inv.template)}12`, color: templateColor(inv.template) }}>
                               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: templateColor(inv.template) }} />
-                              {publicTemplateName(inv.template)}
+                              {publicTemplateName(inv.template, parseConfig(inv.builder_config).layout?.presetKey)}
                             </span>
                           </td>
                           <td>

@@ -157,6 +157,18 @@ export const STARTER_COLLECTIONS = STARTER_COLLECTION_KEYS.map((key) => ENKARTA_
   EnkartaCollection & { key: StarterCollectionKey }
 >;
 
+/** Un diseño por bloques puede compartir base técnica sin exigir un nuevo enum SQL. */
+export const MARFIL_VIVO_DESIGN = {
+  key: 'marfil-vivo', baseTemplate: 'grazia', name: 'Marfil Vivo', series: 'Atelier', tag: 'Editorial vivo',
+  description: 'Marfil, oliva y fotografía con ritmo editorial',
+  artDirection: 'Una apertura luminosa, tipografía serena y capítulos con aire. Completamente editable por bloques.',
+  image: '/catalog/solar-original.png', accent: '#8B7651', ink: '#394437', premium: true, available: true,
+  demoKey: 'marfil-vivo',
+} as const;
+
+export const STARTER_DESIGNS = [MARFIL_VIVO_DESIGN, ...STARTER_COLLECTIONS];
+export type StarterDesignKey = (typeof STARTER_DESIGNS)[number]['key'];
+
 export function collectionFor(template?: string | null): EnkartaCollection {
   if (template && template in ENKARTA_COLLECTIONS) return ENKARTA_COLLECTIONS[template as InvitationTemplate];
   return {
@@ -166,6 +178,7 @@ export function collectionFor(template?: string | null): EnkartaCollection {
   };
 }
 
-export function publicTemplateName(template?: string | null): string {
+export function publicTemplateName(template?: string | null, presetKey?: string): string {
+  if (presetKey === MARFIL_VIVO_DESIGN.key) return MARFIL_VIVO_DESIGN.name;
   return collectionFor(template).name;
 }

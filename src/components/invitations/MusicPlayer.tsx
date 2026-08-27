@@ -29,7 +29,7 @@ export default function MusicPlayer({ src, color = '#1a1a1a' }: { src: string; c
 
   return (
     <>
-      <audio ref={audioRef} src={src} loop />
+      <audio ref={audioRef} src={src} preload="none" loop />
       <style>{`
         @keyframes ekEqBar { 0%,100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
         @keyframes ekMusicPulse { 0% { box-shadow: 0 0 0 0 ${color}55; } 70% { box-shadow: 0 0 0 12px ${color}00; } 100% { box-shadow: 0 0 0 0 ${color}00; } }

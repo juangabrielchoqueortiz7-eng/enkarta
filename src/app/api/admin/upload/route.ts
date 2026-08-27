@@ -12,8 +12,10 @@ const BUCKET = 'invitations';
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;   // 8 MB
 const MAX_SVG_BYTES = 1 * 1024 * 1024;     // 1 MB (vectores de Canva)
 const MAX_AUDIO_BYTES = 15 * 1024 * 1024;  // 15 MB
+const MAX_VIDEO_BYTES = 15 * 1024 * 1024;  // clips cortos optimizados
 const ALLOWED_IMAGE = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'];
 const ALLOWED_AUDIO = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a', 'audio/mp4'];
+const ALLOWED_VIDEO = ['video/mp4', 'video/webm'];
 
 let bucketReady = false;
 
@@ -24,7 +26,7 @@ async function ensureBucket() {
   if (!data) {
     await supabaseAdmin.storage.createBucket(BUCKET, {
       public: true,
-      fileSizeLimit: MAX_AUDIO_BYTES,
+      fileSizeLimit: Math.max(MAX_AUDIO_BYTES, MAX_VIDEO_BYTES),
     });
   }
   bucketReady = true;
@@ -55,14 +57,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No se recibió ningún archivo' }, { status: 400 });
     }
 
+    const isVideo = file.type.startsWith('video/');
     const isAudio = file.type.startsWith('audio/');
     const isSvg = file.type === 'image/svg+xml';
-    const allowed = isAudio ? ALLOWED_AUDIO : ALLOWED_IMAGE;
-    const maxBytes = isAudio ? MAX_AUDIO_BYTES : isSvg ? MAX_SVG_BYTES : MAX_IMAGE_BYTES;
+    const allowed = isVideo ? ALLOWED_VIDEO : isAudio ? ALLOWED_AUDIO : ALLOWED_IMAGE;
+    const maxBytes = isVideo ? MAX_VIDEO_BYTES : isAudio ? MAX_AUDIO_BYTES : isSvg ? MAX_SVG_BYTES : MAX_IMAGE_BYTES;
 
     if (!allowed.includes(file.type)) {
       return NextResponse.json(
-        { error: `Formato no permitido (${file.type || 'desconocido'}). Usa ${isAudio ? 'MP3/WAV/OGG' : 'JPG, PNG, WEBP, SVG o GIF'}.` },
+        { error: `Formato no permitido (${file.type || 'desconocido'}). Usa ${isVideo ? 'MP4 o WebM' : isAudio ? 'MP3/WAV/OGG' : 'JPG, PNG, WEBP, SVG o GIF'}.` },
         { status: 415 },
       );
     }

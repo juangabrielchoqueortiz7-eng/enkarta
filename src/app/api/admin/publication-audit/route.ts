@@ -2,6 +2,8 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/host-session';
+import { probeLocalPublicAsset } from '@/lib/public-assets';
+import { resourceBudgetBytes } from '@/lib/publication-audit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,7 +69,7 @@ async function remoteProbe(raw: string) {
 export async function POST(request: NextRequest) {
   if (!(await getAdminSession())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   const body = await request.json().catch(() => null) as { resources?: ProbeInput[] } | null;
-  const resources = Array.isArray(body?.resources) ? body!.resources.slice(0, 24) : [];
+  const resources = Array.isArray(body?.resources) ? body!.resources.filter((item): item is ProbeInput => !!item && typeof item === 'object').slice(0, 24) : [];
   const results = await Promise.all(resources.map(async resource => {
     const url = String(resource.url || '').trim();
     const base = { url, kind: String(resource.kind || 'link'), label: String(resource.label || 'Recurso').slice(0, 120), blockId: resource.blockId ? String(resource.blockId).slice(0, 120) : undefined };
@@ -79,6 +81,15 @@ export async function POST(request: NextRequest) {
     }
     if (/^(mailto:|tel:)/i.test(url)) return { ...base, ok: true, status: 200, durationMs: 0 };
     try {
+      if (/^\/(?!\/)/.test(url)) {
+        if (base.kind === 'link') return { ...base, ...(await remoteProbe(new URL(url, request.url).toString())) };
+        try { return { ...base, ...(await probeLocalPublicAsset(url)) }; }
+        catch (error) {
+          // Vercel puede servir public/ desde CDN sin incluirlo en la función.
+          if (process.env.VERCEL && (error as NodeJS.ErrnoException)?.code === 'ENOENT') return { ...base, ...(await remoteProbe(new URL(url, request.url).toString())) };
+          throw error;
+        }
+      }
       return { ...base, ...(await remoteProbe(url)) };
     } catch (error) {
       return { ...base, ok: false, error: error instanceof Error ? error.message : 'No se pudo verificar', durationMs: 0 };
@@ -90,11 +101,13 @@ export async function POST(request: NextRequest) {
     results,
     summary: {
       checked: results.length,
+      available: Array.isArray(body?.resources) ? body.resources.length : 0,
+      unknownSize: results.filter(item => item.kind !== 'link' && !('bytes' in item && typeof item.bytes === 'number')).length,
       failed: results.filter(item => !item.ok).length,
       totalBytes,
       averageResponseMs: durations.length ? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length) : 0,
       slow: results.filter(item => (item.durationMs || 0) > 1800).length,
-      heavy: results.filter(item => ('bytes' in item ? (item.bytes || 0) > 1_500_000 : false)).length,
+      heavy: results.filter(item => ('bytes' in item ? (item.bytes || 0) > resourceBudgetBytes(item.kind, item.url) : false)).length,
     },
   });
 }

@@ -7,7 +7,7 @@
 // EntryGate; this file only describes *what* each entrance looks like and how
 // to pull the couple/date out of each template's data shape.
 
-export type SceneKind = 'envelope' | 'passport' | 'newspaper' | 'arch' | 'luxe' | 'botanical' | 'curtain' | 'petals' | 'giftbox';
+export type SceneKind = 'envelope' | 'passport' | 'newspaper' | 'arch' | 'luxe' | 'botanical' | 'curtain' | 'petals' | 'giftbox' | 'cinematic';
 export type Ornament = 'orchid' | 'rose' | 'pampas' | 'leaf' | 'sage' | 'palm' | 'lavender' | 'none';
 
 export interface EntryTheme {

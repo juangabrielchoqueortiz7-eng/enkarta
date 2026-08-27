@@ -2,6 +2,7 @@ import type { Block, InvitationParsed } from './types';
 import { resolveFeatures } from './packages';
 import { auditDesignConsistency } from './design-audit';
 import { collectPublicationResources, publicationMetrics } from './publication-audit';
+import { resolveLayoutBindings } from './block-bindings';
 
 export interface BuilderIssue {
   severity: 'error' | 'warning';
@@ -22,7 +23,8 @@ function isHttpUrl(value: string | null | undefined) {
 }
 
 function enabledBlocks(data: InvitationParsed) {
-  return (data.config?.layout?.blocks ?? []).filter(block => block.enabled !== false);
+  const layout = data.config?.layout;
+  return (layout ? resolveLayoutBindings(layout, data).blocks : []).filter(block => block.enabled !== false);
 }
 
 function flattenBlocks(blocks: Block[]): Block[] {
@@ -53,6 +55,11 @@ export function validateInvitationBuilder(data: InvitationParsed): BuilderValida
   const blocks = flattenBlocks(topBlocks);
   const hasLayout = blocks.length > 0;
   const hasType = (type: string) => blocks.some(block => block.type === type);
+  const hasGalleryContent = Boolean(
+    cfg.galleryImages?.length
+    || data.gallery_url
+    || blocks.some(block => block.type === 'gallery' && Array.isArray(block.props?.images) && block.props.images.length > 0)
+  );
   const resources = collectPublicationResources(data);
   const metrics = publicationMetrics(data);
   const consistency = auditDesignConsistency(data);
@@ -66,22 +73,22 @@ export function validateInvitationBuilder(data: InvitationParsed): BuilderValida
   if (!data.ceremony_place?.trim() && !data.reception_place?.trim()) {
     issues.push({ severity: 'error', title: 'Falta al menos una ubicación', detail: 'Conviene tener ceremonia o recepción con lugar definido para no publicar una invitación vacía.' });
   }
-  if (hasLayout && !hasType('cover')) {
+  if (hasLayout && !blocks.some(block => ['cover', 'cinematicHero', 'passportHero'].includes(block.type))) {
     issues.push({ severity: 'warning', title: 'No hay portada en bloques', detail: 'La invitación por bloques quedó sin bloque de portada activo; puede sentirse abrupta al abrir.' });
   }
   if (hasLayout && !hasType('rsvp')) {
     issues.push({ severity: 'warning', title: 'No hay bloque de confirmación', detail: 'Si el cliente necesita respuestas, añade o reactiva un bloque RSVP.' });
   }
-  if (hasLayout && !blocks.some(block => block.type === 'eventCard' || block.type === 'itinerary')) {
+  if (hasLayout && !blocks.some(block => block.type === 'eventCard' || block.type === 'itinerary' || block.type === 'editorialDetails')) {
     issues.push({ severity: 'warning', title: 'No hay detalles del evento visibles', detail: 'Falta una tarjeta de ceremonia/recepción o un itinerario que ayude a ubicar al invitado.' });
   }
   if (feats.smartRsvp === false && hasLayout && hasType('rsvp') && !data.phone_whatsapp?.trim()) {
     issues.push({ severity: 'error', title: 'RSVP sin destino', detail: 'El botón de confirmar necesita un WhatsApp cuando la confirmación inteligente no está activa.' });
   }
-  if (feats.galleryMax === 0 && (cfg.galleryImages?.length || data.gallery_url)) {
+  if (feats.galleryMax === 0 && hasGalleryContent) {
     issues.push({ severity: 'warning', title: 'Galería cargada pero no incluida', detail: 'El paquete actual oculta la galería; esas fotos o enlaces no se verán.' });
   }
-  if (feats.galleryMax > 0 && hasLayout && hasType('gallery') && !(cfg.galleryImages?.length || data.gallery_url)) {
+  if (feats.galleryMax > 0 && hasLayout && hasType('gallery') && !hasGalleryContent) {
     issues.push({ severity: 'warning', title: 'Galería vacía', detail: 'Hay un bloque de galería activo, pero todavía no tiene fotos ni enlace compartido.' });
   }
   if (cfg.musicUrl && feats.music === false) {
@@ -104,6 +111,24 @@ export function validateInvitationBuilder(data: InvitationParsed): BuilderValida
   }
   if ((cfg.entry?.enabled ?? feats.entry) && !String(cfg.entry?.label ?? '').trim()) {
     issues.push({ severity: 'warning', title: 'Portada sin texto de entrada', detail: 'La pantalla de entrada está activa; conviene personalizar el texto del botón.' });
+  }
+  if ((cfg.entry?.enabled ?? feats.entry) && cfg.entry?.style === 'cinematic') {
+    if (!String(cfg.entry.videoUrl || '').trim()) {
+      issues.push({ severity: 'warning', category: 'contenido', title: 'Entrada cinematográfica sin video', detail: 'Sube un MP4/WebM corto. Mientras tanto se mostrará la foto de respaldo con una apertura sencilla.' });
+    }
+    if (/(?:youtube\.com|youtu\.be|vimeo\.com)/i.test(String(cfg.entry.videoUrl || ''))) {
+      issues.push({ severity: 'error', category: 'contenido', title: 'Video de entrada no directo', detail: 'La apertura cinematográfica necesita MP4, WebM, GIF o WebP; YouTube/Vimeo no permiten esta reproducción sincronizada.' });
+    }
+    if (!String(cfg.entry.poster || data.cover_image_url || '').trim()) {
+      issues.push({ severity: 'warning', category: 'rendimiento', title: 'Entrada sin poster', detail: 'Añade una foto vertical de respaldo para ahorro de datos, carga inicial y movimiento reducido.' });
+    }
+    const duration = cfg.entry.duration ?? 4;
+    if (duration < 2 || duration > 8) {
+      issues.push({ severity: 'warning', category: 'rendimiento', title: 'Duración de entrada poco recomendable', detail: 'Mantén la apertura entre 2 y 8 segundos para no retrasar el acceso al contenido.' });
+    }
+    if ((cfg.entry.showSkip ?? true) && typeof cfg.entry.skipLabel === 'string' && !cfg.entry.skipLabel.trim()) {
+      issues.push({ severity: 'warning', category: 'accesibilidad', title: 'Botón de omitir sin texto', detail: 'Escribe una etiqueta clara, por ejemplo “Omitir animación”.' });
+    }
   }
 
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug || '')) {
@@ -135,17 +160,63 @@ export function validateInvitationBuilder(data: InvitationParsed): BuilderValida
     if (block.type === 'image' && !String(props.url || '').trim()) {
       issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Imagen faltante', detail: 'El bloque de imagen está activo, pero todavía no tiene un archivo.' });
     }
+    const editorialImage = String(props.image || data.cover_image_url || cfg.galleryImages?.[0] || '').trim();
+    if (block.type === 'editorialChapter' && ['split', 'imageCover'].includes(String(props.variant || 'split')) && !editorialImage) {
+      issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Capítulo editorial sin fotografía', detail: 'Esta composición necesita una fotografía protagonista. Puedes subirla o elegir la variante Manifiesto/Carta.' });
+    }
+    if (block.type === 'editorialChapter' && !String(props.title || '').trim()) {
+      issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Capítulo editorial sin titular', detail: 'Añade un titular breve para conservar la jerarquía editorial de la sección.' });
+    }
+    if (block.type === 'editorialChapter' && editorialImage && !String(props.imageAlt || '').trim()) {
+      issues.push({ severity: 'warning', category: 'accesibilidad', blockId: block.id, title: 'Fotografía editorial sin descripción', detail: 'Describe la fotografía para invitados que utilizan lectores de pantalla.' });
+    }
+    if (block.type === 'editorialDetails' && (!Array.isArray(props.items) || props.items.length === 0)) {
+      issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Ficha editorial vacía', detail: 'Añade al menos un dato como fecha, lugar, vestimenta o confirmación.' });
+    }
+    if (block.type === 'cinematicHero' && !String(props.videoUrl || props.poster || '').trim()) {
+      issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Portada cinematográfica sin imagen', detail: 'Sube un video o al menos una foto de respaldo para que la portada tenga una escena protagonista.' });
+    }
+    if (block.type === 'cinematicHero' && /(?:youtube\.com|youtu\.be|vimeo\.com)/i.test(String(props.videoUrl || ''))) {
+      issues.push({ severity: 'error', category: 'contenido', blockId: block.id, title: 'La portada necesita un archivo directo', detail: 'YouTube y Vimeo funcionan en el bloque Video, pero una portada a pantalla completa necesita MP4, WebM, GIF o WebP.' });
+    }
+    if (block.type === 'cinematicHero' && String(props.videoUrl || props.poster || '').trim() && !String(props.mediaAlt || '').trim()) {
+      issues.push({ severity: 'warning', category: 'accesibilidad', blockId: block.id, title: 'Portada sin descripción visual', detail: 'Describe brevemente la escena para lectores de pantalla.' });
+    }
+    if (block.type === 'cinematicHero' && /\.(?:mp4|webm)(?:[?#]|$)/i.test(String(props.videoUrl || '')) && !String(props.poster || '').trim()) {
+      issues.push({ severity: 'warning', category: 'rendimiento', blockId: block.id, title: 'Portada sin foto de respaldo', detail: 'Añade un poster vertical para que nunca aparezca un fondo negro durante la carga o con ahorro de datos.' });
+    }
     if (block.type === 'beforeAfter' && (!String(props.before || '').trim() || !String(props.after || '').trim())) {
       issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Comparador incompleto', detail: 'El bloque antes/después necesita sus dos imágenes.' });
     }
     if (block.type === 'eventCard' && !String(props.place || props.title || '').trim()) {
       issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Tarjeta de evento vacía', detail: 'Añade el lugar o título que debe ver el invitado.' });
     }
+    if (block.type === 'itinerary' && (!Array.isArray(props.items) || props.items.length === 0)) {
+      issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Itinerario vacío', detail: 'Añade al menos una actividad o elimina este bloque para no dejar una sección sin contenido.' });
+    }
+    if (block.type === 'itinerary' && Array.isArray(props.items) && props.items.some(item => !String(item?.label || '').trim() || !String(item?.time || '').trim())) {
+      issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Actividad incompleta', detail: 'Cada paso del itinerario debería tener nombre y hora para que el recorrido sea fácil de entender.' });
+    }
+    if (block.type === 'gallery' && Array.isArray(props.images) && props.images.length > 0) {
+      const captions = Array.isArray(props.captions) ? props.captions : [];
+      if (!captions.some(caption => String(caption?.alt || '').trim())) {
+        issues.push({ severity: 'warning', category: 'accesibilidad', blockId: block.id, title: 'Galería sin descripciones', detail: 'Añade descripciones accesibles a las fotos más importantes para lectores de pantalla.' });
+      }
+    }
     if (block.type === 'image' && String(props.url || '').trim() && !String(props.alt || '').trim()) {
       issues.push({ severity: 'warning', category: 'accesibilidad', blockId: block.id, title: 'Imagen sin descripción', detail: 'Añade una descripción accesible al bloque de imagen.' });
     }
     if (block.type === 'video' && !String(props.url || '').trim()) {
       issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Video vacío', detail: 'El bloque de video está visible pero no tiene enlace.' });
+    }
+    if (block.type === 'video' && String(props.url || '').trim() && !String(props.title || '').trim()) {
+      issues.push({ severity: 'warning', category: 'accesibilidad', blockId: block.id, title: 'Video sin descripción', detail: 'Añade una descripción breve para lectores de pantalla y para identificar el recurso en el editor.' });
+    }
+    if (block.type === 'video' && props.autoplay === true && props.muted === false) {
+      issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Autoplay necesita silencio', detail: 'Los navegadores solo permiten reproducción automática sin sonido. Enkarta silenciará este video mientras autoplay esté activo.' });
+    }
+    if (block.type === 'video' && /\.(?:mp4|webm)(?:[?#]|$)/i.test(String(props.url || '')) && !String(props.poster || '').trim()) {
+      issues.push({ severity: 'warning', category: 'rendimiento', blockId: block.id, title: 'Video sin imagen de portada', detail: 'Añade un poster para evitar un cuadro negro mientras el clip termina de cargar.' });
     }
     if (block.type === 'map' && !String(props.query || '').trim()) {
       issues.push({ severity: 'warning', category: 'contenido', blockId: block.id, title: 'Mapa sin dirección', detail: 'El bloque de mapa necesita un lugar o dirección.' });
@@ -212,6 +283,9 @@ export function validateInvitationBuilder(data: InvitationParsed): BuilderValida
   });
   if (metrics.images > 30) {
     issues.push({ severity: 'warning', category: 'rendimiento', title: 'Demasiadas imágenes en una sola invitación', detail: `${metrics.images} imágenes pueden retrasar la primera carga. Conserva solo las necesarias o reparte la galería.` });
+  }
+  if (metrics.videos > 3) {
+    issues.push({ severity: 'warning', category: 'rendimiento', title: 'Demasiados videos', detail: `${metrics.videos} videos pueden consumir muchos datos móviles. Usa uno como protagonista y deja el resto con carga ligera.` });
   }
   if (metrics.approximateDocumentKb > 500) {
     issues.push({ severity: 'warning', category: 'rendimiento', title: 'Documento del diseño muy pesado', detail: `La configuración ocupa aproximadamente ${metrics.approximateDocumentKb} KB antes de cargar imágenes.` });

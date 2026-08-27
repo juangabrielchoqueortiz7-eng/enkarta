@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from 'react';
 import Lottie, { LottieRefCurrentProps } from 'lottie-react';
 import { loadLottieById, loadLottieByPath, applyIconColors, tintLottie } from '@/lib/lottie-utils';
+import { useMediaPreferences } from '@/lib/use-media-preferences';
+import { usePageMotion } from '@/lib/scroll-motion';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -66,22 +68,25 @@ export default function LottieIcon({
   const [animationData, setAnimationData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(!lazy);
+  const [inViewport, setInViewport] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const lottieRef = useRef<LottieRefCurrentProps>(null);
+  const { reducedMotion, saveData, pageVisible, ready } = useMediaPreferences();
+  const { armed } = usePageMotion();
+  const canAnimate = ready && inViewport && pageVisible && armed && !reducedMotion && !saveData;
 
   // Lazy load: observar cuando el ícono entra en el viewport
   useEffect(() => {
-    if (!lazy || isVisible) return;
     const el = containerRef.current;
     if (!el) return;
-
+    if (!('IntersectionObserver' in window)) { setIsVisible(true); setInViewport(true); return; }
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setIsVisible(true); },
-      { rootMargin: '100px' }
+      ([entry]) => { setInViewport(entry.isIntersecting); if (entry.isIntersecting) setIsVisible(true); },
+      { threshold: 0.01 }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [lazy, isVisible]);
+  }, []);
 
   // Cargar JSON solo cuando es visible
   useEffect(() => {
@@ -111,7 +116,7 @@ export default function LottieIcon({
       }
     };
 
-    load();
+    load().catch(() => { if (!cancelled) { setAnimationData(null); setIsLoading(false); } });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [icon, isVisible, JSON.stringify(colors), tint]);
@@ -123,13 +128,14 @@ export default function LottieIcon({
     }
   }, [speed, animationData]);
 
-  // Manejar playOnHover
+  // Nunca dejar animaciones infinitas trabajando fuera de pantalla.
   useEffect(() => {
-    if (!playOnHover || !lottieRef.current) return;
-    lottieRef.current.pause();
-  }, [playOnHover, animationData]);
+    if (!lottieRef.current) return;
+    if (canAnimate && autoplay && !playOnHover) lottieRef.current.play();
+    else lottieRef.current.pause();
+  }, [canAnimate, autoplay, playOnHover, animationData]);
 
-  const handleMouseEnter = () => { if (playOnHover) lottieRef.current?.play(); };
+  const handleMouseEnter = () => { if (playOnHover && canAnimate) lottieRef.current?.play(); };
   const handleMouseLeave = () => { if (playOnHover) lottieRef.current?.stop(); };
 
   // Placeholder mientras carga
@@ -141,7 +147,7 @@ export default function LottieIcon({
         style={{ width: size, height: size }}
       >
         <div
-          className="rounded-full border-2 border-gray-300 opacity-40 animate-pulse"
+          className={`rounded-full border-2 border-gray-300 opacity-40 ${isLoading && !reducedMotion ? 'animate-pulse' : ''}`}
           style={{ width: size * 0.6, height: size * 0.6 }}
         />
       </div>
@@ -160,10 +166,10 @@ export default function LottieIcon({
         lottieRef={lottieRef}
         animationData={animationData}
         loop={playOnHover ? false : loop}
-        autoplay={playOnHover ? false : autoplay}
+        autoplay={false}
         style={{ width: size, height: size }}
         rendererSettings={{ preserveAspectRatio: 'xMidYMid meet' }}
-        onDOMLoaded={() => { if (typeof speed === 'number') lottieRef.current?.setSpeed(speed); }}
+        onDOMLoaded={() => { if (typeof speed === 'number') lottieRef.current?.setSpeed(speed); if (canAnimate && autoplay && !playOnHover) lottieRef.current?.play(); }}
       />
     </div>
   );

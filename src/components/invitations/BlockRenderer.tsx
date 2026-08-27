@@ -14,6 +14,7 @@ import type {
 import PageDecor from './decorations';
 import { BLOCKS } from './blocks/registry';
 import { BlockDesignProvider, BlockThemeProvider, resolveBlockTheme, useBlockTheme } from './blocks/theme';
+import { resolveInvitationVisualSystem } from './blocks/visual-system';
 import { SeamFx, type SeamFxKind } from './seam-fx';
 import { BlockEditProvider, BlockDataProvider } from './blocks/editable';
 import MusicPlayer from './MusicPlayer';
@@ -37,6 +38,8 @@ interface Props {
   musicUrl?: string;
   /** slug de la invitación (para el formulario de confirmación RSVP). */
   slug?: string;
+  /** Las muestras simulan RSVP sin hacer escrituras en el servidor. */
+  demo?: boolean;
   /** Invitado activo para bloques privados, QR y estados personalizados. */
   guest?: Guest;
   /** Hay portada ("sobre"): no animar hasta que el invitado entre. */
@@ -245,7 +248,7 @@ function readableInk(band: string, t: BlockTheme): string {
 }
 
 function blockBg(b: Block, t: BlockTheme): string | null {
-  if (b.type === 'story' || b.type === 'passportHero' || b.type === 'passportTicket') return null;
+  if (b.type === 'story' || b.type === 'cinematicHero' || b.type === 'passportHero' || b.type === 'passportTicket') return null;
   const s = b.style ?? {};
   if (s.bgKind === 'solid') return s.bg || null;
   if (s.bgKind === 'soft') return softBand(t);
@@ -266,6 +269,7 @@ function FloatingLiveBlock({ block, layout }: { block: Block; layout?: BlockView
 
 function BlockView({ block, seam, tokens }: { block: Block; tokens?: TemplateTokens; seam?: SeamInfo }) {
   const t = useBlockTheme();
+  const visual = resolveInvitationVisualSystem(t, tokens);
   const m = usePageMotion();
   const def = BLOCKS[block.type];
   const s = block.style ?? {};
@@ -301,19 +305,22 @@ function BlockView({ block, seam, tokens }: { block: Block; tokens?: TemplateTok
     : shadowPreset === 'strong' ? '0 26px 75px rgba(26,20,14,0.24)'
     : shadowPreset === 'glow' ? `0 0 42px color-mix(in srgb, ${t.primary} 34%, transparent)`
     : undefined;
+  const responsivePadTop = typeof s.padTop === 'number' ? padTop : `clamp(${Math.round(basePad * 0.78)}px, 9vw, ${basePad}px)`;
+  const responsivePadBottom = typeof s.padBottom === 'number' ? padBottom : `clamp(${Math.round(basePad * 0.78)}px, 9vw, ${basePad}px)`;
+  const responsiveInset = sectionInset > 0 ? `clamp(${Math.min(16, sectionInset)}px, 5vw, ${sectionInset}px)` : 0;
   if (!def) return null;
   const Comp = def.Component;
 
   // Las escenas inmersivas van a sangre completa y gestionan su propia sección.
-  if (block.type === 'story' || block.type === 'passportHero' || block.type === 'passportTicket') return <Comp block={block} />;
+  if (block.type === 'story' || block.type === 'cinematicHero' || block.type === 'passportHero' || block.type === 'passportTicket') return <Comp block={block} />;
 
   const sectionStyle: React.CSSProperties = {
     background: bg,
     color,
-    paddingTop: padTop,
-    paddingBottom: padBottom,
-    paddingLeft: sectionInset,
-    paddingRight: sectionInset,
+    paddingTop: responsivePadTop,
+    paddingBottom: responsivePadBottom,
+    paddingLeft: responsiveInset,
+    paddingRight: responsiveInset,
     textAlign: align,
     position: 'relative',
     scrollSnapAlign: m.scrollFlow === 'free' ? undefined : (s.fullHeight ? 'start' : 'center'),
@@ -340,7 +347,7 @@ function BlockView({ block, seam, tokens }: { block: Block; tokens?: TemplateTok
         : undefined,
     border: typeof s.borderWidth === 'number'
       ? (s.borderWidth > 0 ? `${s.borderWidth}px solid ${s.borderColor || t.line}` : undefined)
-      : surface === 'card' || surface === 'glass' ? `1px solid ${t.line}` : undefined,
+      : surface === 'card' || surface === 'glass' ? visual.border : undefined,
     boxShadow: shadow,
     opacity: s.contentOpacity,
     backdropFilter: surface === 'glass' ? 'blur(18px)' : surface === 'card' ? 'blur(10px)' : undefined,
@@ -375,7 +382,7 @@ function LiveBlock({ block, layout, tokens, seam }: { block: Block; layout?: Blo
   if (block.enabled === false || layout?.hidden) return null;
   // Las escenas inmersivas NO se envuelven en ScrollReveal ni transform: un
   // ancestro transformado rompería sticky/parallax y reduciría la portada.
-  if (block.type === 'story' || block.type === 'passportHero' || block.type === 'passportTicket') {
+  if (block.type === 'story' || block.type === 'cinematicHero' || block.type === 'passportHero' || block.type === 'passportTicket') {
     return (
       <div style={{ scrollSnapAlign: m.scrollFlow === 'free' ? undefined : 'start', scrollSnapStop: m.scrollFlow === 'cinematic' ? 'always' : undefined }}>
         <BlockView block={block} tokens={tokens} />
@@ -643,7 +650,7 @@ function FooterBar({ seam }: { seam?: SeamInfo }) {
 }
 
 export default function BlockRenderer({
-  layout, theme, nightTheme, nightDefault, motion, decor, tokens, musicUrl, slug, guest, gated, editor, selectedId, selectedIds, onSelectBlock, onTransform, onEditProp, onPatchBlock, onDuplicateBlock, onDeleteBlock, onCopyBlockStyle, onPasteBlockStyle, hasStyleClipboard, previewScale = 1, scrollRoot, viewportMode,
+  layout, theme, nightTheme, nightDefault, motion, decor, tokens, musicUrl, slug, guest, demo, gated, editor, selectedId, selectedIds, onSelectBlock, onTransform, onEditProp, onPatchBlock, onDuplicateBlock, onDeleteBlock, onCopyBlockStyle, onPasteBlockStyle, hasStyleClipboard, previewScale = 1, scrollRoot, viewportMode,
 }: Props) {
   const hasNight = !!nightTheme && Object.keys(nightTheme).length > 0;
   const [night, setNight] = useState(!!nightDefault && hasNight);
@@ -661,6 +668,7 @@ export default function BlockRenderer({
   }, [viewportMode]);
 
   const bt = resolveBlockTheme(night && hasNight ? nightTheme : theme);
+  const visual = resolveInvitationVisualSystem(bt, tokens);
   const isPassport = layout?.basePreset === 'passport' || layout?.presetKey === 'passport';
   const allBlocks = layout?.blocks ?? [];
   // Los bloques apagados no pintan nada en lectura: fuera también de la cadena
@@ -706,18 +714,26 @@ export default function BlockRenderer({
     '--ek-type-subtitle': typeScale.subtitle ?? 1,
     '--ek-type-body': typeScale.body ?? 1,
     '--ek-type-label': typeScale.label ?? 1,
+    '--ek-radius-card': `${visual.cardRadius}px`,
+    '--ek-radius-field': `${visual.fieldRadius}px`,
+    '--ek-radius-button': `${visual.buttonRadius}px`,
+    '--ek-radius-media': `${visual.mediaRadius}px`,
+    '--ek-content-width': `${tokens?.contentWidth ?? 680}px`,
+    '--ek-shadow-card': visual.cardShadow ?? 'none',
+    '--ek-color-focus': bt.accent,
   } as React.CSSProperties;
 
   return (
     <BlockThemeProvider value={bt}>
       <BlockDesignProvider value={tokens ?? {}}>
-      <BlockDataProvider value={{ slug, guest }}>
+      <BlockDataProvider value={{ slug, guest, demo }}>
         <PageMotionProvider value={motion} gated={gated} scrollRoot={scrollRoot}>
           <ScrollExperience color={bt.primary} disabled={!!editor}>
           <div
             // overflow-x-clip (no -hidden): hidden crearía un scrollport y
             // rompería el position:sticky del bloque "historia fija".
             className="ek-invite relative w-full min-h-screen overflow-x-clip transition-colors duration-500"
+            data-ek-visual-system="v2"
             style={{
               background: bt.bg,
               color: bt.text,

@@ -14,9 +14,9 @@ const GROUPS: Record<VisualGroup, { label: string; bg: string; ink: string; bord
 };
 
 const TYPE_GROUP: Partial<Record<BlockType, VisualGroup>> = {
-  cover: 'content', heading: 'content', text: 'content', quote: 'content', parents: 'content', story: 'content', timeline: 'content', monogram: 'content',
+  cover: 'content', heading: 'content', text: 'content', quote: 'content', editorialChapter: 'content', editorialDetails: 'content', parents: 'content', story: 'content', timeline: 'content', monogram: 'content',
   countdown: 'event', dateBadge: 'event', eventCard: 'event', itinerary: 'event', calendar: 'event', map: 'event', lodging: 'event', tableFinder: 'event',
-  image: 'media', gallery: 'media', video: 'media', beforeAfter: 'media',
+  image: 'media', gallery: 'media', video: 'media', cinematicHero: 'media', beforeAfter: 'media',
   rsvp: 'action', accessPass: 'action', button: 'action', guestbook: 'action', gift: 'action', hashtag: 'action', dressCode: 'action',
   divider: 'decor', spacer: 'decor', ornament: 'decor', element: 'decor',
   group: 'layout', passportHero: 'layout', passportTicket: 'layout',

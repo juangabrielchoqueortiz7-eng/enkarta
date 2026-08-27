@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { InvitationParsed, InvitationTemplate, InvitationPackage } from '@/lib/types';
+import { BuilderConfig, InvitationParsed, InvitationTemplate, InvitationPackage } from '@/lib/types';
 import { PACKAGE_PRESETS, PACKAGE_LABELS, resolveFeatures } from '@/lib/packages';
 import type { BuilderValidation } from '@/lib/builder-validation';
 import { ENKARTA_COLLECTIONS } from '@/lib/enkarta-collections';
 import PublicationAuditPanel from '../PublicationAuditPanel';
+import ImageUploader from '../ImageUploader';
 
 interface Props {
   data: InvitationParsed;
@@ -276,7 +277,8 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
         const entry = cfg.entry ?? {};
         const enabled = entry.enabled ?? resolveFeatures(cfg).entry;
         const base = `enkarta.com/i/${data.slug}`;
-        const setEntry = (patch: { enabled?: boolean; label?: string }) =>
+        const style = entry.style ?? 'template';
+        const setEntry = (patch: Partial<NonNullable<BuilderConfig['entry']>>) =>
           onChange({ config: { ...cfg, entry: { ...entry, ...patch } } });
         return (
           <div className="border-t border-gray-100 pt-5">
@@ -296,14 +298,74 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
             </label>
 
             {enabled && (
-              <div className="mt-3">
-                <label className="block text-xs text-gray-500 font-outfit mb-1">Texto del botón</label>
-                <input
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit"
-                  value={entry.label ?? ''}
-                  onChange={e => setEntry({ label: e.target.value })}
-                  placeholder="Ver invitación"
-                />
+              <div className="mt-3 space-y-4">
+                <div>
+                  <label className="mb-2 block text-xs text-gray-500 font-outfit">Estilo de entrada</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { value: 'template', icon: '✉️', label: 'De la plantilla', hint: 'Sobre o escena original' },
+                      { value: 'cinematic', icon: '🎞️', label: 'Sobre cinematográfico', hint: 'Video corto de apertura' },
+                    ] as const).map(option => (
+                      <button key={option.value} type="button" onClick={() => setEntry({ style: option.value })} className={`rounded-2xl border p-3 text-left transition-all ${style === option.value ? 'border-enkarta-gold bg-enkarta-gold/5 shadow-sm' : 'border-gray-200 bg-white hover:border-enkarta-gold/40'}`}>
+                        <span className="text-xl" aria-hidden>{option.icon}</span>
+                        <span className="mt-1 block text-xs font-semibold text-gray-700 font-outfit">{option.label}</span>
+                        <span className="mt-0.5 block text-[10px] leading-tight text-gray-400 font-outfit">{option.hint}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {style === 'cinematic' && (
+                  <div className="space-y-4 rounded-2xl border border-[#eadfce] bg-[#fbf8f3] p-3">
+                    <div>
+                      <p className="text-xs font-semibold text-[#6e5c43] font-outfit">Clip de apertura</p>
+                      <p className="mt-1 text-[10px] leading-relaxed text-[#91816d] font-outfit">Al tocar el sello se reproduce el clip y después aparece la invitación. La música comienza con el mismo gesto.</p>
+                    </div>
+                    <ImageUploader
+                      kind="video"
+                      value={entry.videoUrl ?? ''}
+                      onChange={videoUrl => setEntry({ videoUrl })}
+                      folder="entry"
+                      ownerId={data.id}
+                      aspect="portrait"
+                      maxBytes={6 * 1024 * 1024}
+                      maxDurationSeconds={8}
+                      hint="Usa MP4/WebM vertical de 3–5 s y menos de 6 MB. GIF/WebP también son compatibles."
+                    />
+                    <ImageUploader
+                      value={entry.poster ?? ''}
+                      onChange={poster => setEntry({ poster })}
+                      folder="entry-posters"
+                      ownerId={data.id}
+                      aspect="portrait"
+                      hint="Foto vertical de respaldo: evita pantallas negras y se usa cuando el dispositivo reduce movimiento."
+                    />
+                    <div>
+                      <div className="mb-1 flex items-center justify-between text-[10px] font-outfit"><span className="text-gray-500">Duración máxima</span><span className="font-semibold text-enkarta-gold">{entry.duration ?? 4} s</span></div>
+                      <input type="range" min={2} max={8} step={0.5} value={entry.duration ?? 4} onChange={e => setEntry({ duration: parseFloat(e.target.value) })} className="w-full accent-enkarta-gold" />
+                    </div>
+                    <div>
+                      <div className="mb-1 flex items-center justify-between text-[10px] font-outfit"><span className="text-gray-500">Oscurecimiento</span><span className="font-semibold text-enkarta-gold">{entry.overlay ?? 42}%</span></div>
+                      <input type="range" min={0} max={80} step={1} value={entry.overlay ?? 42} onChange={e => setEntry({ overlay: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
+                    </div>
+                    <label className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-3">
+                      <span><span className="block text-xs text-gray-700 font-outfit">Permitir omitir</span><span className="block text-[10px] text-gray-400 font-outfit">El invitado puede entrar inmediatamente</span></span>
+                      <input type="checkbox" checked={entry.showSkip ?? true} onChange={e => setEntry({ showSkip: e.target.checked })} className="h-4 w-4 accent-enkarta-gold" />
+                    </label>
+                    {(entry.showSkip ?? true) && <input className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-enkarta-gold font-outfit" value={entry.skipLabel ?? ''} onChange={e => setEntry({ skipLabel: e.target.value })} placeholder="Omitir animación" />}
+                    <a href={`/i/${data.slug}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center justify-center rounded-xl bg-[#3f382f] px-4 text-[10px] font-semibold uppercase tracking-[.12em] text-white shadow-sm transition-colors hover:bg-[#2f2923] font-outfit">Probar entrada en pantalla completa ↗</a>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs text-gray-500 font-outfit mb-1">Texto del botón</label>
+                  <input
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit"
+                    value={entry.label ?? ''}
+                    onChange={e => setEntry({ label: e.target.value })}
+                    placeholder="Ver invitación"
+                  />
+                </div>
               </div>
             )}
 

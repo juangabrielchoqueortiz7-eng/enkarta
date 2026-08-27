@@ -47,7 +47,7 @@ function buildScope(inv: InvitationParsed) {
   const activeGuest = cfg.activeGuest;
   const [groom, bride] = splitNames(inv.names);
   const dp = dateParts(inv.event_date);
-  const isoDate = `${(inv.event_date ?? new Date().toISOString().slice(0, 10))}T${inv.ceremony_time ?? '16:00'}:00`;
+  const isoDate = `${(inv.event_date ?? new Date().toISOString().slice(0, 10)).slice(0, 10)}T${(inv.ceremony_time || '16:00').slice(0, 5)}:00`;
   const bank = parseBank(inv.bank_account);
   const dress = dressParts(inv.dress_code);
   const galleryImages = Array.isArray(cfg.galleryImages) ? cfg.galleryImages : [];
@@ -83,6 +83,7 @@ function buildScope(inv: InvitationParsed) {
     },
     event: {
       isoDate,
+      itinerary: inv.itinerary ?? [],
       city: (cfg.city as string) || '',
       date: { ...dp, label: `${dp.day} · ${dp.month} · ${dp.year}` },
       ceremony: {
@@ -107,6 +108,11 @@ function buildScope(inv: InvitationParsed) {
       giftMessage: inv.gift_message || 'Tu presencia es nuestro mejor regalo.',
       dress,
       bank,
+      editorialDetails: [
+        { label: 'Cuándo', value: `${dp.weekday}, ${dp.day} de ${dp.month}`, note: `Ceremonia · ${inv.ceremony_time ? `${inv.ceremony_time} h` : '16:00 h'}` },
+        { label: 'Dónde', value: inv.ceremony_place || 'Lugar de la celebración', note: inv.ceremony_address || (cfg.city as string) || 'Dirección por confirmar' },
+        { label: 'Vestimenta', value: inv.dress_code || 'Formal', note: inv.no_kids ? 'Celebración reservada para adultos.' : 'Todos son bienvenidos.' },
+      ],
     },
     media: {
       coverImage,
@@ -125,7 +131,10 @@ function buildScope(inv: InvitationParsed) {
 }
 
 const DEFAULT_BINDINGS: Partial<Record<BlockType, Record<string, string>>> = {
+  cinematicHero: { groom: 'couple.groom', bride: 'couple.bride', tagline: 'couple.tagline', poster: 'media.coverImage', dateLabel: 'event.date.label' },
   cover: { groom: 'couple.groom', bride: 'couple.bride', tagline: 'couple.tagline', image: 'media.coverImage' },
+  editorialChapter: { image: 'media.coverImage' },
+  editorialDetails: { items: 'content.editorialDetails' },
   passportHero: { groom: 'couple.groom', bride: 'couple.bride', image: 'media.coverImage', dateLabel: 'event.date.label' },
   passportTicket: { guestName: 'guest.name', passesLabel: 'guest.passesLabel' },
   accessPass: { title: 'guest.statusLabel' },
@@ -229,6 +238,17 @@ export function resolveLayoutBindings(layout: PageLayout, inv: InvitationParsed)
     ...layout,
     blocks: layout.blocks.filter(block => matchesVisibility(block, inv)).map(block => resolveBlock(block, scope, inv)),
   };
+}
+
+/** Values shown by the inspector. Keep inline {{tokens}} intact for editing. */
+export function resolveBlockEditorProps(block: Block, inv: InvitationParsed): Block['props'] {
+  const props = { ...block.props };
+  const scope = buildScope(inv);
+  for (const [key, path] of Object.entries(block.bindings ?? {})) {
+    const value = getByPath(scope, path);
+    if (value !== undefined) props[key] = value;
+  }
+  return props;
 }
 
 export function detachBinding<T extends { bindings?: Record<string, string> }>(target: T, key: string): T {

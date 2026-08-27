@@ -657,7 +657,7 @@ export default function InvitationBuilder({ initialData }: Props) {
               <h1 className="font-playfair text-base text-enkarta-dark leading-tight truncate">
                 {data.names || 'Nueva invitación'}
               </h1>
-              <p className="text-[11px] text-gray-400 font-outfit truncate">{publicTemplateName(data.template)} · {data.type}</p>
+              <p className="text-[11px] text-gray-400 font-outfit truncate">{publicTemplateName(data.template, data.config?.layout?.presetKey)} · {data.type}</p>
             </div>
           </div>
 

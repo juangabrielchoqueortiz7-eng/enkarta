@@ -56,21 +56,21 @@ export const TEMPLATE_TOKEN_DEFAULTS: Record<string, TemplateTokens> = {
   // MISMO reparto de formas que usan las plantillas premium en sus secciones
   // (ver el skill enkarta-invitations), para que una invitación por bloques
   // herede el acabado de la plantilla de la que partió.
-  azure:      { contentWidth: 700, sectionInset: 24, sectionRadius: 28, spacing: 'airy', surface: 'soft', seam: 'arch' },
-  primicia:   { contentWidth: 760, sectionInset: 26, sectionRadius: 12, spacing: 'normal', surface: 'flat', seam: 'bevel' },
-  passport:   { contentWidth: 760, sectionInset: 24, sectionRadius: 0, spacing: 'airy', surface: 'flat', seam: 'wave' },
-  paradise:   { contentWidth: 720, sectionInset: 24, sectionRadius: 26, spacing: 'airy', surface: 'soft', seam: 'wave' },
-  obsidiana:  { contentWidth: 700, sectionInset: 28, sectionRadius: 22, spacing: 'normal', surface: 'card', seam: 'bevel' },
-  dolcevita:  { contentWidth: 710, sectionInset: 24, sectionRadius: 24, spacing: 'normal', surface: 'soft', seam: 'scallop' },
-  grazia:     { contentWidth: 700, sectionInset: 26, sectionRadius: 18, spacing: 'airy', surface: 'soft', seam: 'bevel' },
-  carmesi_v2: { contentWidth: 700, sectionInset: 24, sectionRadius: 24, spacing: 'normal', surface: 'card', seam: 'curve' },
-  napoly:     { contentWidth: 700, sectionInset: 24, sectionRadius: 22, spacing: 'normal', surface: 'soft', seam: 'curve' },
-  euforia:    { contentWidth: 720, sectionInset: 24, sectionRadius: 24, spacing: 'normal', surface: 'soft', seam: 'wave' },
-  rosegold:   { contentWidth: 700, sectionInset: 24, sectionRadius: 28, spacing: 'airy', surface: 'soft', seam: 'scallop' },
-  allegria:   { contentWidth: 760, sectionInset: 22, sectionRadius: 14, spacing: 'compact', surface: 'flat', seam: 'arch' },
+  azure:      { contentWidth: 700, sectionInset: 24, sectionRadius: 28, mediaRadius: 24, spacing: 'airy', surface: 'soft', buttonStyle: 'solid', cardBorder: 'hairline', seam: 'arch' },
+  primicia:   { contentWidth: 760, sectionInset: 26, sectionRadius: 12, mediaRadius: 8, spacing: 'normal', surface: 'flat', buttonStyle: 'outline', cardBorder: 'hairline', seam: 'bevel' },
+  passport:   { contentWidth: 760, sectionInset: 24, sectionRadius: 0, mediaRadius: 4, spacing: 'airy', surface: 'flat', buttonStyle: 'solid', cardBorder: 'accent', seam: 'wave' },
+  paradise:   { contentWidth: 720, sectionInset: 24, sectionRadius: 26, mediaRadius: 24, spacing: 'airy', surface: 'soft', buttonStyle: 'solid', cardBorder: 'hairline', seam: 'wave' },
+  obsidiana:  { contentWidth: 700, sectionInset: 28, sectionRadius: 22, mediaRadius: 16, spacing: 'normal', surface: 'card', buttonStyle: 'solid', cardBorder: 'accent', seam: 'bevel' },
+  dolcevita:  { contentWidth: 710, sectionInset: 24, sectionRadius: 24, mediaRadius: 22, spacing: 'normal', surface: 'soft', buttonStyle: 'soft', cardBorder: 'hairline', seam: 'scallop' },
+  grazia:     { contentWidth: 700, sectionInset: 26, sectionRadius: 18, mediaRadius: 14, spacing: 'airy', surface: 'soft', buttonStyle: 'outline', cardBorder: 'hairline', seam: 'bevel' },
+  carmesi_v2: { contentWidth: 700, sectionInset: 24, sectionRadius: 24, mediaRadius: 20, spacing: 'normal', surface: 'card', buttonStyle: 'solid', cardBorder: 'accent', seam: 'curve' },
+  napoly:     { contentWidth: 700, sectionInset: 24, sectionRadius: 22, mediaRadius: 20, spacing: 'normal', surface: 'soft', buttonStyle: 'soft', cardBorder: 'hairline', seam: 'curve' },
+  euforia:    { contentWidth: 720, sectionInset: 24, sectionRadius: 24, mediaRadius: 22, spacing: 'normal', surface: 'soft', buttonStyle: 'solid', cardBorder: 'hairline', seam: 'wave' },
+  rosegold:   { contentWidth: 700, sectionInset: 24, sectionRadius: 28, mediaRadius: 26, spacing: 'airy', surface: 'soft', buttonStyle: 'soft', cardBorder: 'hairline', seam: 'scallop' },
+  allegria:   { contentWidth: 760, sectionInset: 22, sectionRadius: 14, mediaRadius: 8, spacing: 'compact', surface: 'flat', buttonStyle: 'outline', cardBorder: 'hairline', seam: 'arch' },
   // Faltaban: caían al preset de azure. Ahora traen el suyo.
-  esmeralda:  { contentWidth: 700, sectionInset: 24, sectionRadius: 12, spacing: 'airy', surface: 'flat', seam: 'arch' },
-  provence:   { contentWidth: 720, sectionInset: 24, sectionRadius: 22, spacing: 'airy', surface: 'card', seam: 'arch' },
+  esmeralda:  { contentWidth: 700, sectionInset: 24, sectionRadius: 12, mediaRadius: 8, spacing: 'airy', surface: 'flat', buttonStyle: 'outline', cardBorder: 'hairline', seam: 'arch' },
+  provence:   { contentWidth: 720, sectionInset: 24, sectionRadius: 22, mediaRadius: 18, spacing: 'airy', surface: 'card', buttonStyle: 'solid', cardBorder: 'hairline', seam: 'arch' },
 };
 
 export function decorForTemplate(template: string): TemplateDecor | undefined {

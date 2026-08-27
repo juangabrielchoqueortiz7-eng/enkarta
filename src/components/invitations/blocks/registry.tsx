@@ -6,11 +6,13 @@
 // controles automáticamente (sin escribir un editor a medida por tipo).
 
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useReducedMotion } from 'framer-motion';
 import type { Block, BlockType, BlockLayout } from '@/lib/types';
-import { useBlockDesign, useBlockTheme } from './theme';
+import { useBlockTheme } from './theme';
+import { useInvitationVisualSystem } from './visual-system';
 import { Editable, useBlockData, useBlockEdit } from './editable';
-import { useCountdown, CopyBtn, PhotoGrid, EventIcon, OrchidSprig, Odometer, Tilt, type GalleryLayout } from '../shared';
+import { useCountdown, CopyBtn, PhotoGrid, EventIcon, OrchidSprig, Odometer, Tilt, type GalleryCaption, type GalleryLayout } from '../shared';
 import { RevealDraw, PinnedStory } from '@/lib/scroll-motion';
 import { PetalBurst } from '../effects';
 import { renderElement, getElement, type ElementPalette } from './elements-library';
@@ -19,6 +21,7 @@ import { sanitizeSvg } from '@/lib/sanitize-svg';
 import { PassportHeroBlock, PassportTicketBlock } from './passport-scenes';
 import { imageAspect, imageColorOverlayStyle, imageFilter, imageFrameStyle, imageTemperatureStyle, imageTransform, imageViewportStyle } from '@/lib/image-effects';
 import QrCard from '../QrCard';
+import NativeMedia, { isEmbeddedVideoUrl } from './native-media';
 
 // ── Lectura de props con defaults ─────────────────────────────────────────────
 const str = (b: Block, k: string, d = '') => (typeof b.props[k] === 'string' ? (b.props[k] as string) : d);
@@ -68,7 +71,7 @@ function typoStyle(b: Block, role: TypeRole = 'body'): React.CSSProperties {
 
 // ── Field schema (para el editor genérico) ────────────────────────────────────
 export type FieldKind =
-  | 'text' | 'textarea' | 'color' | 'image' | 'images' | 'icon'
+  | 'text' | 'textarea' | 'color' | 'image' | 'images' | 'video' | 'icon'
   | 'number' | 'switch' | 'select' | 'list' | 'focal' | 'divider';
 
 export interface FieldDef {
@@ -78,8 +81,11 @@ export interface FieldDef {
   options?: { value: string; label: string }[];
   itemFields?: FieldDef[]; // para kind 'list'
   placeholder?: string;
+  hint?: string;
+  previewAspect?: 'portrait' | 'square' | 'landscape' | 'wide';
   min?: number;
   max?: number;
+  step?: number;
 }
 
 export interface BlockDef {
@@ -94,29 +100,18 @@ export interface BlockDef {
 // Así una invitación editorial conserva esquinas precisas y una romántica usa
 // curvas amplias, sin que cada bloque parezca pertenecer a un producto distinto.
 function useInvitationShape() {
-  const tokens = useBlockDesign();
-  const source = tokens.sectionRadius ?? 18;
-  const mood = source <= 12 ? 'editorial' : source >= 24 ? 'rounded' : 'balanced';
-  const cardRadius = tokens.cardRadius ?? (mood === 'editorial' ? Math.max(7, source) : mood === 'rounded' ? Math.min(30, source) : Math.max(14, source));
-  const fieldRadius = tokens.fieldRadius ?? (mood === 'editorial' ? 8 : mood === 'rounded' ? 16 : 12);
-  const buttonRadius = tokens.buttonRadius ?? (mood === 'editorial' ? 8 : mood === 'rounded' ? 999 : 14);
-  return { mood, cardRadius, fieldRadius, buttonRadius, shadow: tokens.shadow ?? 'soft' };
+  return useInvitationVisualSystem();
 }
 
 // ── Botón decorativo compartido ───────────────────────────────────────────────
 function Pill({ href, children, filled }: { href?: string; children: React.ReactNode; filled?: boolean }) {
-  const t = useBlockTheme();
   const shape = useInvitationShape();
-  const buttonShadow = shape.shadow === 'none' ? undefined
-    : shape.shadow === 'strong' ? `0 16px 40px color-mix(in srgb, ${t.primary} 34%, transparent)`
-    : shape.shadow === 'medium' ? `0 12px 30px color-mix(in srgb, ${t.primary} 25%, transparent)`
-    : `0 9px 24px color-mix(in srgb, ${t.primary} 18%, transparent)`;
   const style: React.CSSProperties = filled
-    ? { background: t.primary, color: t.onPrimary, borderRadius: shape.buttonRadius, boxShadow: buttonShadow }
-    : { border: `1px solid ${t.line}`, color: t.primary, borderRadius: shape.buttonRadius, background: `color-mix(in srgb, ${t.surface} 82%, ${t.bg})` };
+    ? shape.primaryButton
+    : shape.secondaryButton;
   return (
     <a href={href || '#'} target="_blank" rel="noreferrer"
-      className={`inline-flex min-h-11 items-center justify-center px-7 py-2.5 font-cinzel uppercase tracking-[0.16em] text-[11px] transition-all hover:-translate-y-px hover:opacity-95 ek-shine ${filled ? 'ek-shine-auto' : ''}`}
+      className={`ek-cta inline-flex min-h-11 items-center justify-center px-7 py-2.5 font-cinzel uppercase tracking-[0.16em] text-[11px] transition-all hover:-translate-y-px hover:opacity-95 ek-shine ${filled ? 'ek-shine-auto' : ''}`}
       style={style}>
       {children}
     </a>
@@ -124,8 +119,112 @@ function Pill({ href, children, filled }: { href?: string; children: React.React
 }
 
 // ── Componentes de bloque ─────────────────────────────────────────────────────
+const CinematicHeroBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const t = useBlockTheme();
+  const { editing } = useBlockEdit();
+  const reducedMotion = useReducedMotion();
+  const videoUrl = str(block, 'videoUrl');
+  const poster = str(block, 'poster');
+  const focal = str(block, 'focal', '50% 50%');
+  const mediaAlt = str(block, 'mediaAlt', 'La pareja celebrando su historia');
+  const position = str(block, 'position', 'bottom');
+  const align = str(block, 'align', 'center') as 'left' | 'center' | 'right';
+  const namesLayout = str(block, 'namesLayout', 'stacked');
+  const heroHeight = str(block, 'height', 'screen');
+  const nameSize = Math.max(42, Math.min(120, num(block, 'nameSize', 78)));
+  const overlayColor = str(block, 'overlayColor', '#17120f');
+  const overlayStrength = Math.max(0, Math.min(90, num(block, 'overlayStrength', 58)));
+  const gradient = str(block, 'gradient', 'bottom');
+  const textColor = str(block, 'textColor', '#ffffff');
+  const accentColor = str(block, 'accentColor', '#e8d8b9');
+  const minHeight = editing ? 620 : heroHeight === 'compact' ? '72svh' : heroHeight === 'tall' ? '86svh' : '100svh';
+  const justifyContent = position === 'top' ? 'flex-start' : position === 'center' ? 'center' : 'flex-end';
+  const alignItems = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
+  const titleFont = str(block, 'nameFont', 'script');
+  const titleClass = titleFont === 'serif' ? 'font-playfair' : titleFont === 'caps' ? 'font-cinzel uppercase tracking-[.08em]' : 'font-great';
+  const dense = `color-mix(in srgb, ${overlayColor} ${overlayStrength}%, transparent)`;
+  const veil = gradient === 'none' ? 'none'
+    : gradient === 'full' ? `linear-gradient(180deg, ${dense} 0%, transparent 42%, ${dense} 100%)`
+    : gradient === 'soft' ? `linear-gradient(155deg, ${dense} 0%, transparent 58%), linear-gradient(0deg, ${dense}, transparent 55%)`
+    : `linear-gradient(0deg, ${dense} 0%, color-mix(in srgb, ${overlayColor} ${Math.round(overlayStrength * 0.45)}%, transparent) 38%, transparent 72%)`;
+  const hasPlayableVideo = !!videoUrl && !isEmbeddedVideoUrl(videoUrl);
+  const nameStyle: React.CSSProperties = {
+    color: textColor,
+    fontSize: `clamp(46px, 12vw, ${nameSize}px)`,
+    lineHeight: titleFont === 'script' ? 0.78 : 0.98,
+    textShadow: '0 3px 28px rgba(0,0,0,.32)',
+  };
+
+  return (
+    <section
+      data-ek-section={block.id}
+      className="ek-cinematic-hero group relative isolate w-full overflow-hidden"
+      style={{ minHeight, background: t.primaryDeep, color: textColor }}
+    >
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        {hasPlayableVideo ? (
+          <NativeMedia
+            source={videoUrl}
+            poster={poster}
+            alt={mediaAlt}
+            autoplay={bool(block, 'autoplay', true)}
+            loop={bool(block, 'loop', true)}
+            muted
+            controls={false}
+            speed={num(block, 'speed', 1)}
+            preload="metadata"
+            fit="cover"
+            focal={focal}
+            loading="eager"
+            className="h-full w-full"
+          />
+        ) : poster ? (
+          <Image src={poster} alt={mediaAlt} fill sizes="100vw" priority className="object-cover" style={{ objectPosition: focal }} />
+        ) : (
+          <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 68% 18%, ${t.primary} 0%, transparent 35%), linear-gradient(145deg, ${t.primaryDeep}, ${t.primary})` }} />
+        )}
+      </div>
+
+      {veil !== 'none' && <div aria-hidden className="pointer-events-none absolute inset-0 z-[1]" style={{ background: veil }} />}
+      {bool(block, 'fadeToPage', true) && <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-[14%]" style={{ background: `linear-gradient(to bottom, transparent, ${t.bg})` }} />}
+
+      <div
+        className="pointer-events-none absolute inset-0 z-10 flex flex-col px-7 py-16 sm:px-12 sm:py-20"
+        style={{ justifyContent, alignItems, textAlign: align }}
+      >
+        <div className={`${editing ? 'pointer-events-auto' : 'pointer-events-none'} w-full max-w-[720px]`} style={{ marginLeft: align === 'right' ? 'auto' : undefined, marginRight: align === 'left' ? 'auto' : undefined }}>
+          {str(block, 'eyebrow') && (
+            <Editable as="p" k="eyebrow" value={str(block, 'eyebrow', 'Nuestra boda')} effect="cascade" className="font-cinzel text-[10px] font-semibold uppercase tracking-[.28em] sm:text-xs" style={{ color: accentColor, textShadow: '0 2px 14px rgba(0,0,0,.4)' }} />
+          )}
+          <div className={`mt-4 ${namesLayout === 'inline' ? 'flex flex-wrap items-baseline gap-x-3 gap-y-1' : 'flex flex-col'} ${align === 'center' ? 'items-center justify-center' : align === 'right' ? 'items-end justify-end' : 'items-start justify-start'}`}>
+            <Editable as="h1" k="groom" value={str(block, 'groom', 'Annie')} effect="write" className={titleClass} style={nameStyle} />
+            <span className="font-cormorant text-2xl italic sm:text-3xl" style={{ color: accentColor, textShadow: '0 2px 14px rgba(0,0,0,.35)' }}>&amp;</span>
+            <Editable as="h1" k="bride" value={str(block, 'bride', 'Miguel')} effect="write" className={titleClass} style={nameStyle} />
+          </div>
+          {str(block, 'tagline') && <Editable as="p" k="tagline" value={str(block, 'tagline', 'Nos casamos')} className="mt-5 font-cormorant text-lg italic sm:text-xl" style={{ color: textColor, textShadow: '0 2px 18px rgba(0,0,0,.45)' }} />}
+          {str(block, 'dateLabel') && (
+            <div className={`mt-5 flex items-center gap-3 font-cinzel text-[10px] uppercase tracking-[.22em] sm:text-xs ${align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'}`} style={{ color: accentColor }}>
+              <span className="h-px w-8 bg-current opacity-70" /><Editable k="dateLabel" value={str(block, 'dateLabel', '12 · Octubre · 2026')} /><span className="h-px w-8 bg-current opacity-70" />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {editing && videoUrl && isEmbeddedVideoUrl(videoUrl) && (
+        <div className="absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-full bg-amber-50 px-3 py-1.5 text-[10px] font-semibold text-amber-800 shadow font-outfit">Esta portada necesita un MP4, WebM, GIF o WebP directo</div>
+      )}
+      {bool(block, 'showScrollCue', true) && (
+        <div aria-hidden className={`pointer-events-none absolute bottom-5 left-1/2 z-20 -translate-x-1/2 ${reducedMotion ? '' : 'animate-bounce'}`} style={{ color: accentColor }}>
+          <div className="flex flex-col items-center gap-1 opacity-80"><span className="font-cinzel text-[8px] uppercase tracking-[.25em]">Descubre</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
+        </div>
+      )}
+    </section>
+  );
+};
+
 const CoverBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const visual = useInvitationShape();
   const image = str(block, 'image');
   return (
     <div className="flex flex-col items-center">
@@ -134,7 +233,7 @@ const CoverBlock: React.FC<{ block: Block }> = ({ block }) => {
       <Editable as="h1" k="bride" effect="write" value={str(block, 'bride', 'Marcos')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={{ color: t.primary, fontSize: fluidType(block, 44, 13, 76), ...typoStyle(block, 'title') }} />
       <Editable as="p" k="tagline" effect="cascade" value={str(block, 'tagline', 'Nos casamos')} className="font-cinzel uppercase tracking-[0.22em] mt-5" style={{ color: t.muted, fontSize: scaledPx(block, 12, 'label') }} />
       {image && (
-        <div className="mt-8 w-full overflow-hidden rounded-2xl shadow-sm" style={{ maxWidth: 480, border: `1px solid ${t.line}` }}>
+        <div className="mt-8 w-full overflow-hidden" style={{ maxWidth: 480, ...visual.media }}>
           <img src={image} alt="" decoding="async" fetchPriority="high" className="w-full object-cover" style={{ maxHeight: 600, objectPosition: str(block, 'focal', '50% 50%') }} />
         </div>
       )}
@@ -230,7 +329,7 @@ const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
         <div style={gridStyle}>
           {units.map(([n, l]) => (
             <div key={l} className="flex min-w-0 flex-col items-center gap-2">
-              <div className="flex aspect-square w-full max-w-[78px] items-center justify-center rounded-full" style={{ border: `1.5px solid ${t.primary}`, background: `radial-gradient(circle, color-mix(in srgb, ${t.primary} 9%, transparent), transparent 68%)`, boxShadow: `0 10px 28px color-mix(in srgb, ${t.primary} 10%, transparent)` }}>
+              <div className="flex aspect-square w-full max-w-[78px] items-center justify-center rounded-full" style={{ border: `1.5px solid ${t.primary}`, background: `radial-gradient(circle, color-mix(in srgb, ${t.primary} 9%, transparent), transparent 68%)`, boxShadow: shape.cardShadow }}>
                 <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: numberSize(n, 34, 27) }}><Odometer value={n} /></span>
               </div>
               <span className="font-cinzel uppercase tracking-[0.14em]" style={{ color: t.muted, fontSize: scaledPx(block, 9, 'label') }}>{l}</span>
@@ -262,7 +361,7 @@ const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
       {title}
       <div style={gridStyle}>
         {units.map(([n, l]) => (
-          <div key={l} className="flex min-w-0 flex-col items-center px-1 py-3.5" style={{ borderRadius: shape.cardRadius, border: `1px solid ${t.line}`, background: `linear-gradient(145deg, color-mix(in srgb, ${t.bg} 72%, white), color-mix(in srgb, ${t.primary} 7%, ${t.bg}))`, boxShadow: '0 12px 34px rgba(34,27,18,.065)' }}>
+          <div key={l} className="flex min-w-0 flex-col items-center px-1 py-3.5" style={{ ...shape.card, background: `linear-gradient(145deg, color-mix(in srgb, ${t.surface} 86%, ${t.bg}), color-mix(in srgb, ${t.primary} 7%, ${t.bg}))` }}>
             <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: numberSize(n, 36, 28) }}><Odometer value={n} /></span>
             <span className="mt-2 font-cinzel uppercase tracking-[0.12em]" style={{ color: t.muted, fontSize: scaledPx(block, 9, 'label') }}>{l}</span>
           </div>
@@ -278,7 +377,7 @@ const DateBadgeBlock: React.FC<{ block: Block }> = ({ block }) => {
   return (
     <div className="flex items-center justify-center gap-4">
       <span className="font-cinzel uppercase tracking-[0.2em]" style={{ color: t.muted, fontSize: scaledPx(block, 13, 'label') }}>{str(block, 'weekday', 'Sábado')}</span>
-      <div className="flex flex-col items-center justify-center w-24 h-28 flex-shrink-0" style={{ border: `1px solid ${t.line}`, borderRadius: shape.mood === 'rounded' ? 999 : shape.cardRadius, background: `color-mix(in srgb, ${t.bg} 86%, white)` }}>
+      <div className="flex flex-col items-center justify-center w-24 h-28 flex-shrink-0" style={{ ...shape.card, borderRadius: shape.mood === 'rounded' ? 999 : shape.cardRadius }}>
         {str(block, 'city') && <span className="font-cinzel uppercase tracking-widest" style={{ color: t.muted, fontSize: scaledPx(block, 8, 'label') }}>{str(block, 'city')}</span>}
         <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: scaledPx(block, 46, 'title') }}>{str(block, 'day', '04')}</span>
         <span className="font-cinzel tracking-widest" style={{ color: t.muted, fontSize: scaledPx(block, 10, 'label') }}>{str(block, 'year', '2026')}</span>
@@ -321,22 +420,76 @@ const DressCodeBlock: React.FC<{ block: Block }> = ({ block }) => {
 const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
   const shape = useInvitationShape();
-  const items = list<{ time?: string; label?: string; icon?: string; iconColors?: any; iconSpeed?: number }>(block, 'items');
+  const items = list<{ time?: string; label?: string; place?: string; note?: string; duration?: string; icon?: string; iconColors?: any; iconSpeed?: number }>(block, 'items');
   const layout = str(block, 'layout', 'timeline');
+  const showNumbers = bool(block, 'showNumbers', false);
+  const showConnectors = bool(block, 'showConnectors', true);
   const iconFor = (it: (typeof items)[number], size = 42) => (
     <span className="inline-flex flex-shrink-0 items-center justify-center" style={{ width: size, height: size }}>
       <EventIcon name={it.icon || 'rings'} className="h-full w-full" stroke={it.iconColors?.__tint || t.primary} lottieColors={it.iconColors} speed={it.iconSpeed} />
     </span>
   );
-  const cardStyle: React.CSSProperties = { borderRadius: shape.cardRadius, border: `1px solid ${t.line}`, background: `color-mix(in srgb, ${t.bg} 78%, white)`, boxShadow: '0 10px 28px rgba(34,27,18,.05)' };
+  const cardStyle: React.CSSProperties = shape.card;
+  const itemDetails = (it: (typeof items)[number], align: 'left' | 'center' | 'right' = 'left') => (
+    <>
+      {it.place && <p className="mt-1 font-outfit text-[12px] leading-snug" style={{ color: t.muted, textAlign: align }}>{it.place}</p>}
+      {(it.note || it.duration) && (
+        <p className="mt-1.5 font-outfit text-[10px] uppercase leading-snug tracking-[0.12em]" style={{ color: t.primary, textAlign: align }}>
+          {[it.duration, it.note].filter(Boolean).join(' · ')}
+        </p>
+      )}
+    </>
+  );
 
-  const content = layout === 'cards' ? (
+  const content = layout === 'editorial' ? (
+    <div className="mx-auto max-w-xl text-left">
+      {items.map((it, i) => (
+        <div key={i} className="grid grid-cols-[66px_1fr] gap-4 py-5 sm:grid-cols-[88px_1fr] sm:gap-6" style={{ borderTop: `1px solid ${t.line}` }}>
+          <div className="pt-0.5">
+            <p className="font-cinzel text-[12px] tracking-[0.12em]" style={{ color: t.primary }}>{it.time}</p>
+            {showNumbers && <p className="mt-3 font-playfair text-[28px] leading-none opacity-25" style={{ color: t.primary }}>{String(i + 1).padStart(2, '0')}</p>}
+          </div>
+          <div className="flex min-w-0 gap-3">
+            {iconFor(it, 38)}
+            <div className="min-w-0 flex-1">
+              <p className="font-playfair leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 19, 'body') }}>{it.label}</p>
+              {itemDetails(it)}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : layout === 'route' ? (
+    <div className="relative mx-auto max-w-xl py-2 text-left">
+      {showConnectors && <span aria-hidden className="absolute bottom-8 left-1/2 top-8 w-px -translate-x-1/2" style={{ background: t.line }} />}
+      <div className="space-y-4">
+        {items.map((it, i) => {
+          const left = i % 2 === 0;
+          return (
+            <div key={i} className="relative grid grid-cols-[minmax(0,1fr)_46px_minmax(0,1fr)] items-center">
+              <div className={`${left ? 'col-start-1 text-right' : 'col-start-3 text-left'} min-w-0 px-2 py-3 sm:px-4`} style={cardStyle}>
+                <p className="font-cinzel text-[11px] tracking-[0.1em]" style={{ color: t.primary }}>{it.time}</p>
+                <p className="mt-1 font-cormorant text-[16px] leading-tight sm:text-[18px]" style={{ color: t.text }}>{it.label}</p>
+                {itemDetails(it, left ? 'right' : 'left')}
+              </div>
+              <span className="relative z-[1] col-start-2 row-start-1 mx-auto flex h-10 w-10 items-center justify-center rounded-full" style={{ background: t.bg, border: `1px solid ${t.line}`, boxShadow: `0 0 0 5px ${t.bg}` }}>
+                {showNumbers
+                  ? <span className="font-cinzel text-[11px]" style={{ color: t.primary }}>{String(i + 1).padStart(2, '0')}</span>
+                  : iconFor(it, 26)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  ) : layout === 'cards' ? (
     <div className="mx-auto grid max-w-xl grid-cols-2 gap-3">
       {items.map((it, i) => (
         <div key={i} className="flex min-w-0 flex-col items-center px-3 py-4 text-center" style={cardStyle}>
           {iconFor(it, 44)}
           <p className="mt-2 font-cormorant leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 16, 'body') }}>{it.label}</p>
           <p className="mt-1 font-cinzel tracking-[0.08em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') }}>{it.time}</p>
+          {itemDetails(it, 'center')}
         </div>
       ))}
     </div>
@@ -345,10 +498,11 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
       {items.map((it, i) => (
         <div key={i} className="flex min-w-[72%] snap-center items-center gap-3 px-4 py-4" style={cardStyle}>
           {iconFor(it, 48)}
-          <span className="min-w-0">
+          <div className="min-w-0">
             <span className="block font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 17, 'body') }}>{it.label}</span>
             <span className="mt-0.5 block font-cinzel tracking-[0.1em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') }}>{it.time}</span>
-          </span>
+            {itemDetails(it)}
+          </div>
         </div>
       ))}
     </div>
@@ -357,7 +511,10 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
       {items.map((it, i) => (
         <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ borderTop: i ? `1px solid ${t.line}` : undefined }}>
           {iconFor(it, 38)}
-          <p className="min-w-0 flex-1 font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 16, 'body') }}>{it.label}</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 16, 'body') }}>{it.label}</p>
+            {itemDetails(it)}
+          </div>
           <p className="flex-shrink-0 font-cinzel tracking-[0.08em]" style={{ color: t.primary, fontSize: scaledPx(block, 12, 'label') }}>{it.time}</p>
         </div>
       ))}
@@ -366,11 +523,12 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
     <div className="mx-auto max-w-lg text-left">
       {items.map((it, i) => (
         <div key={i} className="relative flex gap-4 pb-5 last:pb-0">
-          {i < items.length - 1 && <span className="absolute left-[24px] top-[49px] bottom-0 w-px" style={{ background: t.line }} />}
+          {showConnectors && i < items.length - 1 && <span className="absolute left-[24px] top-[49px] bottom-0 w-px" style={{ background: t.line }} />}
           <span className="relative z-[1] flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full" style={{ background: `color-mix(in srgb, ${t.primary} 10%, ${t.bg})`, border: `1px solid ${t.line}` }}>{iconFor(it, 32)}</span>
           <div className="min-w-0 flex-1 pt-0.5">
             <p className="font-cormorant leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 18, 'body') }}>{it.label}</p>
             <p className="mt-1 font-cinzel tracking-[0.1em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') }}>{it.time}</p>
+            {itemDetails(it)}
           </div>
         </div>
       ))}
@@ -393,14 +551,14 @@ const GiftBlock: React.FC<{ block: Block }> = ({ block }) => {
       <h2 className="font-great" style={{ color: t.primary, fontSize: fluidType(block, 32, 6, 48, 'title') }}>{str(block, 'title', 'Sugerencia de Regalo')}</h2>
       {str(block, 'message') && <p className="font-cormorant mt-3 mb-8 mx-auto" style={{ color: 'inherit', maxWidth: 480, fontSize: scaledPx(block, 17, 'body') }}>{str(block, 'message')}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
-        <Tilt className="p-6 text-left" style={{ background: t.primaryDeep, color: t.onPrimary, borderRadius: shape.cardRadius, boxShadow: '0 18px 42px rgba(22,18,12,.12)' }}>
+        <Tilt className="p-6 text-left" style={{ ...shape.card, background: t.primaryDeep, color: t.onPrimary }}>
           <p className="font-cinzel uppercase tracking-[0.16em] text-[12px] opacity-80">Transferencia bancaria</p>
           <p className="font-cinzel font-bold mt-3">{str(block, 'bank', 'Banco')}</p>
           <p className="font-cormorant mt-1 text-[15px]">{str(block, 'account', '000-0000')} <CopyBtn value={str(block, 'account')} color={t.onPrimary} /></p>
           {str(block, 'holder') && <p className="font-cinzel text-[12px] tracking-wide mt-2 opacity-80">{str(block, 'holder')}</p>}
         </Tilt>
         {str(block, 'qrUrl') && (
-          <Tilt className="p-6 flex flex-col items-center justify-center" style={{ border: `1px solid ${t.line}`, borderRadius: shape.cardRadius, background: `color-mix(in srgb, ${t.bg} 84%, white)` }}>
+          <Tilt className="p-6 flex flex-col items-center justify-center" style={shape.card}>
             <p className="font-cinzel uppercase tracking-[0.16em] text-[12px] mb-3" style={{ color: t.muted }}>Transferencia QR</p>
             <img src={str(block, 'qrUrl')} alt="QR" className="w-36 h-36 rounded-lg" />
           </Tilt>
@@ -412,12 +570,40 @@ const GiftBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 const GalleryBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const shape = useInvitationShape();
+  const { editing } = useBlockEdit();
   const layout = (str(block, 'layout', 'grid') as GalleryLayout);
+  const images = list<string>(block, 'images');
+  const captions = list<GalleryCaption>(block, 'captions');
+  const wide = ['carousel', 'coverflow', 'editorial', 'filmstrip'].includes(layout);
   return (
-    <div className="flex flex-col items-center">
-      {str(block, 'message') && <p className="font-cormorant mb-6 mx-auto" style={{ color: t.muted, maxWidth: 420, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
-      <PhotoGrid images={list<string>(block, 'images')} layout={layout} className={layout === 'carousel' || layout === 'coverflow' ? 'w-full' : 'max-w-lg mx-auto'} />
-      {str(block, 'shareUrl') && <div className="mt-6"><Pill href={str(block, 'shareUrl')}>Compartir fotos</Pill></div>}
+    <div className="flex w-full flex-col items-center">
+      {(str(block, 'eyebrow') || str(block, 'title')) && (
+        <header className="mx-auto mb-7 max-w-xl text-center">
+          {str(block, 'eyebrow') && <p className="font-outfit text-[10px] uppercase tracking-[0.24em]" style={{ color: t.primary }}>{str(block, 'eyebrow')}</p>}
+          {str(block, 'title') && <h2 className="mt-2 font-playfair" style={{ color: t.text, fontSize: fluidType(block, 28, 5, 42, 'title') }}>{str(block, 'title')}</h2>}
+        </header>
+      )}
+      {str(block, 'message') && <p className="font-cormorant mb-7 mx-auto" style={{ color: t.muted, maxWidth: 460, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
+      {images.length > 0 ? (
+        <PhotoGrid
+          images={images}
+          captions={captions}
+          layout={layout}
+          radius={shape.mediaRadius}
+          lightbox={bool(block, 'lightbox', true)}
+          showCaptions={bool(block, 'showCaptions', true)}
+          showCounter={bool(block, 'showCounter', true)}
+          className={wide ? 'w-full' : 'max-w-lg mx-auto'}
+        />
+      ) : editing ? (
+        <div className="mx-auto flex min-h-52 w-full max-w-lg flex-col items-center justify-center px-6 py-10 text-center" style={{ ...shape.card, borderStyle: 'dashed' }}>
+          <span className="text-3xl" aria-hidden>🖼️</span>
+          <p className="mt-3 font-playfair text-lg" style={{ color: t.text }}>Tu historia en fotografías</p>
+          <p className="mt-1 font-outfit text-xs leading-relaxed" style={{ color: t.muted }}>Sube varias fotos y ordénalas. Luego elige una composición editorial, mosaico o carrusel.</p>
+        </div>
+      ) : null}
+      {str(block, 'shareUrl') && <div className="mt-7"><Pill href={str(block, 'shareUrl')}>{str(block, 'shareLabel', 'Compartir fotos')}</Pill></div>}
     </div>
   );
 };
@@ -463,13 +649,14 @@ const StoryBlock: React.FC<{ block: Block }> = ({ block }) => {
 function RsvpForm({ block }: { block: Block }) {
   const t = useBlockTheme();
   const shape = useInvitationShape();
-  const { slug, guest } = useBlockData();
+  const { slug, guest, demo } = useBlockData();
   const { editing } = useBlockEdit();
   const [name, setName] = useState(guest?.name ?? '');
   const [attending, setAttending] = useState<'yes' | 'no'>(guest?.status === 'declined' ? 'no' : 'yes');
   const [passes, setPasses] = useState(guest?.confirmedPasses ?? 1);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const [done, setDone] = useState(Boolean(guest && guest.status !== 'pending'));
 
   useEffect(() => {
@@ -479,47 +666,57 @@ function RsvpForm({ block }: { block: Block }) {
     setDone(Boolean(guest && guest.status !== 'pending'));
   }, [guest]);
 
-  const field: React.CSSProperties = { background: `color-mix(in srgb, ${t.bg} 76%, white)`, border: `1px solid ${t.line}`, color: t.text, borderRadius: shape.fieldRadius, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none', boxShadow: '0 5px 18px rgba(30,24,16,.035)' };
+  const field: React.CSSProperties = { ...shape.field, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none' };
 
   if (done) {
     return (
-      <div className="text-center">
+      <div className="text-center" role="status" aria-live="polite">
         {attending === 'yes' && <PetalBurst color={t.primary} />}
         <p className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.primary, fontSize: 16 }}>{attending === 'yes' ? '¡Asistencia confirmada! 🤍' : 'Gracias por avisarnos'}</p>
         <p className="font-cormorant mt-2" style={{ color: t.muted }}>{attending === 'yes' ? `${passes} ${passes === 1 ? 'lugar reservado' : 'lugares reservados'}.` : 'Lamentamos que no puedas acompañarnos.'}</p>
+        {(demo || editing) && <p className="mt-3 font-outfit text-xs" style={{ color: t.muted }}>Modo de muestra: no se envió ninguna respuesta.</p>}
       </div>
     );
   }
 
   const submit = async () => {
-    if (!name.trim()) return;
-    if (editing) { setDone(true); return; } // vista previa en el editor
-    if (!slug) return;
+    if (busy) return;
+    setError('');
+    if (!name.trim()) { setError('Escribe tu nombre para confirmar.'); return; }
+    if (attending === 'yes' && (!Number.isInteger(passes) || passes < 1 || passes > (guest?.passes ?? 20))) { setError('Revisa el número de personas.'); return; }
+    if (editing || demo) { setDone(true); return; }
+    if (!slug) { setError('La confirmación no está disponible en esta vista.'); return; }
     setBusy(true);
     try {
-      await fetch(guest?.publicId ? '/api/guests/confirm' : '/api/rsvp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(guest?.publicId ? { slug, publicId: guest.publicId, confirmName: name, attending, passes, message: msg } : { slug, name, attending, passes, message: msg }) });
+      const response = await fetch(guest?.publicId ? '/api/guests/confirm' : '/api/rsvp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(guest?.publicId ? { slug, publicId: guest.publicId, confirmName: name.trim(), attending, passes, message: msg } : { slug, name: name.trim(), attending, passes, message: msg }) });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error || 'No se pudo guardar tu respuesta. Inténtalo de nuevo.');
+      }
       setDone(true);
-    } catch { /* sin conexión */ }
-    setBusy(false);
+    } catch (cause) {
+      setError(cause instanceof TypeError ? 'No hay conexión. Tu respuesta no se ha enviado; vuelve a intentarlo.' : cause instanceof Error ? cause.message : 'No se pudo enviar tu respuesta.');
+    } finally { setBusy(false); }
   };
 
   return (
     <div className="mx-auto text-left" style={{ maxWidth: 380 }}>
       <h3 className="font-cinzel uppercase tracking-[0.16em] text-center mb-5" style={{ color: t.muted, fontSize: 15 }}>{str(block, 'message', 'Confirma tu asistencia')}</h3>
       <div className="space-y-3 font-cormorant">
-        {!guest?.publicId && <input style={field} placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />}
-        <select style={field} value={attending} onChange={e => setAttending(e.target.value as 'yes' | 'no')}>
+        {!guest?.publicId && <input style={field} aria-label="Tu nombre" autoComplete="name" placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />}
+        <select style={field} aria-label="¿Asistirás?" value={attending} onChange={e => setAttending(e.target.value as 'yes' | 'no')}>
           <option value="yes">Sí, asistiré</option>
           <option value="no">No podré asistir</option>
         </select>
         {attending === 'yes' && (
           <div className="flex items-center gap-3">
             <span style={{ color: t.muted, fontSize: 15 }}>N.º de personas</span>
-            <input style={{ ...field, width: 90 }} type="number" min={1} max={guest?.passes ?? 20} value={passes} onChange={e => setPasses(parseInt(e.target.value) || 1)} />
+            <input style={{ ...field, width: 90 }} aria-label="Número de personas" type="number" min={1} max={guest?.passes ?? 20} value={passes} onChange={e => setPasses(parseInt(e.target.value) || 1)} />
           </div>
         )}
-        <textarea style={{ ...field, minHeight: 70 }} placeholder="Mensaje para los novios (opcional)" value={msg} onChange={e => setMsg(e.target.value)} />
-        <button onClick={submit} disabled={busy} className="w-full font-cinzel uppercase tracking-[0.16em] text-[12px] py-3 transition-all hover:-translate-y-px hover:opacity-95 disabled:opacity-50 ek-shine ek-shine-auto" style={{ background: t.primary, color: t.onPrimary, borderRadius: shape.buttonRadius, boxShadow: `0 9px 24px color-mix(in srgb, ${t.primary} 20%, transparent)` }}>
+        <textarea style={{ ...field, minHeight: 70 }} aria-label="Mensaje para los novios" placeholder="Mensaje para los novios (opcional)" value={msg} onChange={e => setMsg(e.target.value)} />
+        {error && <p role="alert" className="font-outfit text-sm text-red-700">{error}</p>}
+        <button onClick={submit} disabled={busy} className="ek-cta w-full font-cinzel uppercase tracking-[0.16em] text-[12px] py-3 transition-all hover:-translate-y-px hover:opacity-95 disabled:opacity-50 ek-shine ek-shine-auto" style={shape.primaryButton}>
           {busy ? 'Enviando…' : str(block, 'buttonLabel', 'Confirmar asistencia')}
         </button>
       </div>
@@ -541,6 +738,7 @@ const RsvpBlock: React.FC<{ block: Block }> = ({ block }) => {
 /** Pase individual como bloque nativo: nombre, cupos, mesa, código y QR real. */
 const AccessPassBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const visual = useInvitationShape();
   const { guest } = useBlockData();
   const { editing } = useBlockEdit();
   const title = str(block, 'title', 'Tu pase personal');
@@ -548,7 +746,7 @@ const AccessPassBlock: React.FC<{ block: Block }> = ({ block }) => {
 
   if (!guest) {
     return (
-      <div className="mx-auto max-w-sm rounded-[24px] border border-dashed px-6 py-8 text-center" style={{ borderColor: t.line, background: `color-mix(in srgb, ${t.bg} 82%, white)` }}>
+      <div className="mx-auto max-w-sm border border-dashed px-6 py-8 text-center" style={{ ...visual.card, borderStyle: 'dashed' }}>
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl text-2xl" style={{ background: `color-mix(in srgb, ${t.primary} 12%, white)` }}>▦</div>
         <p className="mt-4 font-cinzel text-sm uppercase tracking-[0.15em]" style={{ color: t.text }}>{title}</p>
         <p className="mt-2 font-cormorant text-lg" style={{ color: t.muted }}>{editing ? 'Selecciona un invitado en la pestaña Invitados para ver su pase.' : 'Este pase está disponible únicamente desde un enlace personal.'}</p>
@@ -558,7 +756,7 @@ const AccessPassBlock: React.FC<{ block: Block }> = ({ block }) => {
 
   if (!guest.accessToken && !editing) {
     return (
-      <div className="mx-auto max-w-sm rounded-[24px] border px-6 py-8 text-center" style={{ borderColor: t.line, background: '#fff' }}>
+      <div className="mx-auto max-w-sm px-6 py-8 text-center" style={visual.card}>
         <p className="font-cinzel text-sm uppercase tracking-[0.15em]" style={{ color: t.primary }}>{title}</p>
         <p className="mt-3 font-cormorant text-lg" style={{ color: t.muted }}>Tu código QR aparecerá aquí después de confirmar tu asistencia.</p>
       </div>
@@ -583,6 +781,7 @@ const AccessPassBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 const ImageBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const visual = useInvitationShape();
   const url = str(block, 'url');
   if (!url) return <p className="font-outfit text-sm" style={{ color: t.muted }}>Selecciona una imagen…</p>;
   const settings = block.props;
@@ -590,8 +789,11 @@ const ImageBlock: React.FC<{ block: Block }> = ({ block }) => {
   const cropped = Boolean(aspect);
   const temperatureStyle = imageTemperatureStyle(settings);
   const overlayStyle = imageColorOverlayStyle(settings);
+  const frameStyle = imageFrameStyle(settings);
+  const plainFrame = str(block, 'mask', 'none') === 'none';
+  const storedRadius = num(block, 'rounded', 16);
   return (
-    <div className="mx-auto w-full" style={imageFrameStyle(settings)}>
+    <div className="mx-auto w-full" style={plainFrame ? { ...visual.media, ...frameStyle, borderRadius: storedRadius === 16 ? visual.mediaRadius : storedRadius } : frameStyle}>
       <div style={{ ...imageViewportStyle(settings), aspectRatio: aspect, maxHeight: num(block, 'maxHeight', 0) || undefined }}>
         <img
           src={url}
@@ -786,7 +988,8 @@ const ElementBlock: React.FC<{ block: Block }> = ({ block }) => {
   );
 };
 
-// Video embebido (YouTube / Vimeo): pega el enlace normal y se convierte a embed.
+// Video: conserva los embeds existentes de YouTube/Vimeo y añade archivos
+// directos MP4/WebM y animaciones GIF/WebP para escenas cinematográficas.
 function toEmbedUrl(raw: string): string {
   const u = raw.trim();
   let m = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/.exec(u);
@@ -795,12 +998,53 @@ function toEmbedUrl(raw: string): string {
   if (m) return `https://player.vimeo.com/video/${m[1]}`;
   return u;
 }
+
+const VIDEO_ASPECTS: Record<string, string | undefined> = {
+  wide: '16 / 9', portrait: '9 / 16', square: '1 / 1', cinema: '21 / 9', original: undefined,
+};
+
 const VideoBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const visual = useInvitationShape();
   const url = str(block, 'url');
-  if (!url) return <p className="font-outfit text-sm" style={{ color: t.muted }}>Pega un enlace de YouTube o Vimeo…</p>;
+  if (!url) return <p className="font-outfit text-sm" style={{ color: t.muted }}>Sube un MP4/WebM, una animación WebP/GIF o pega YouTube/Vimeo…</p>;
+  const storedRadius = Math.max(0, num(block, 'rounded', 16));
+  const rounded = storedRadius === 16 ? visual.mediaRadius : storedRadius;
+  const maxWidth = Math.max(240, num(block, 'maxWidth', 680));
+  const aspect = VIDEO_ASPECTS[str(block, 'aspect', 'wide')] ?? undefined;
+  const overlay = Math.max(0, Math.min(80, num(block, 'overlay', 0))) / 100;
+  const shellStyle: React.CSSProperties = {
+    maxWidth,
+    borderRadius: rounded,
+    border: visual.border,
+    aspectRatio: aspect,
+    background: '#0c0c0c',
+    boxShadow: visual.cardShadow,
+  };
+
+  if (!isEmbeddedVideoUrl(url)) {
+    return (
+      <div className="group relative mx-auto w-full overflow-hidden" style={shellStyle}>
+        <NativeMedia
+          source={url}
+          poster={str(block, 'poster')}
+          alt={str(block, 'title', 'Video de la invitación')}
+          autoplay={bool(block, 'autoplay', true)}
+          loop={bool(block, 'loop', true)}
+          muted={bool(block, 'muted', true)}
+          controls={bool(block, 'controls', false)}
+          speed={num(block, 'speed', 1)}
+          preload={str(block, 'preload', 'metadata') as 'none' | 'metadata' | 'auto'}
+          fit={str(block, 'fit', 'cover') === 'contain' ? 'contain' : 'cover'}
+          focal={str(block, 'focal', '50% 50%')}
+          className="block h-full w-full"
+        />
+        {overlay > 0 && <span aria-hidden className="pointer-events-none absolute inset-0 z-[1] bg-black" style={{ opacity: overlay }} />}
+      </div>
+    );
+  }
   return (
-    <div className="mx-auto w-full overflow-hidden" style={{ maxWidth: 560, borderRadius: num(block, 'rounded', 16), border: `1px solid ${t.line}`, aspectRatio: '16 / 9' }}>
+    <div className="mx-auto w-full overflow-hidden" style={{ ...shellStyle, aspectRatio: aspect || '16 / 9' }}>
       <iframe
         src={toEmbedUrl(url)}
         title={str(block, 'title', 'Video')}
@@ -816,13 +1060,14 @@ const VideoBlock: React.FC<{ block: Block }> = ({ block }) => {
 // Mapa de Google embebido: escribe el lugar o pega la dirección.
 const MapBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const visual = useInvitationShape();
   const q = str(block, 'query');
   if (!q) return <p className="font-outfit text-sm" style={{ color: t.muted }}>Escribe el lugar o la dirección…</p>;
   const zoom = num(block, 'zoom', 15);
   return (
     <div className="mx-auto w-full">
       {str(block, 'title') && <h3 className="font-cinzel uppercase tracking-[0.16em] mb-4" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'subtitle') }}>{str(block, 'title')}</h3>}
-      <div className="overflow-hidden" style={{ maxWidth: 560, margin: '0 auto', borderRadius: num(block, 'rounded', 16), border: `1px solid ${t.line}`, aspectRatio: '4 / 3' }}>
+      <div className="overflow-hidden" style={{ maxWidth: 560, margin: '0 auto', ...visual.media, borderRadius: num(block, 'rounded', 16) === 16 ? visual.mediaRadius : num(block, 'rounded', 16), aspectRatio: '4 / 3' }}>
         <iframe
           src={`https://www.google.com/maps?q=${encodeURIComponent(q)}&z=${zoom}&output=embed`}
           title={str(block, 'title', 'Mapa')}
@@ -846,6 +1091,215 @@ const QuoteBlock: React.FC<{ block: Block }> = ({ block }) => {
         <p className="font-cinzel uppercase tracking-[0.2em] mt-4" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>— {str(block, 'author')}</p>
       )}
     </div>
+  );
+};
+
+// Capítulo editorial: una composición completa para contar, presentar o cerrar
+// una historia. Sus cuatro variantes comparten jerarquía y se reordenan solas
+// en móvil; el usuario solo cambia contenido y dirección de arte.
+const EDITORIAL_ASPECT: Record<string, string> = {
+  portrait: '4 / 5', landscape: '16 / 10', square: '1 / 1', tall: '3 / 4',
+};
+
+function EditorialEyebrow({ block, inverse = false }: { block: Block; inverse?: boolean }) {
+  const t = useBlockTheme();
+  const value = str(block, 'eyebrow');
+  if (!value) return null;
+  return (
+    <Editable
+      as="p"
+      k="eyebrow"
+      value={value}
+      className="font-cinzel text-[10px] font-semibold uppercase tracking-[0.24em]"
+      style={{ color: inverse ? 'rgba(255,255,255,.78)' : t.muted }}
+    />
+  );
+}
+
+const EditorialChapterBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const t = useBlockTheme();
+  const visual = useInvitationShape();
+  const { editing } = useBlockEdit();
+  const variant = str(block, 'variant', 'split');
+  const image = str(block, 'image');
+  const focal = str(block, 'focal', '50% 50%');
+  const number = str(block, 'number', '01');
+  const title = str(block, 'title', 'Nuestra historia comienza aquí');
+  const body = str(block, 'body', 'Hay momentos que cambian el ritmo de la vida. Este es uno de ellos y queremos compartirlo contigo.');
+  const note = str(block, 'note');
+  const imageSide = str(block, 'imageSide', 'left');
+  const aspect = EDITORIAL_ASPECT[str(block, 'imageAspect', 'portrait')] || EDITORIAL_ASPECT.portrait;
+  const actionUrl = str(block, 'actionUrl');
+  const actionLabel = str(block, 'actionLabel');
+
+  const titleNode = (inverse = false) => (
+    <Editable
+      as="h2"
+      k="title"
+      effect="cascadeWords"
+      value={title}
+      className="mt-3 font-playfair font-medium leading-[1.04]"
+      style={{ color: inverse ? '#fff' : t.primary, fontSize: fluidType(block, 34, 6.2, 58, 'title') }}
+    />
+  );
+  const bodyNode = (inverse = false) => (
+    <Editable
+      as="p"
+      k="body"
+      value={body}
+      className="mt-5 whitespace-pre-line font-cormorant"
+      style={{ color: inverse ? 'rgba(255,255,255,.88)' : 'inherit', fontSize: scaledPx(block, 18, 'body'), lineHeight: 1.72 }}
+    />
+  );
+  const noteNode = (inverse = false) => note ? (
+    <Editable
+      as="p"
+      k="note"
+      value={note}
+      className="mt-6 font-cinzel text-[10px] uppercase tracking-[0.18em]"
+      style={{ color: inverse ? 'rgba(255,255,255,.68)' : t.muted }}
+    />
+  ) : null;
+  const emptyImage = editing ? (
+    <span className="absolute inset-0 grid place-items-center px-6 text-center font-outfit text-xs" style={{ color: t.muted, background: `linear-gradient(145deg, ${t.surface}, color-mix(in srgb, ${t.primary} 9%, ${t.bg}))` }}>Selecciona la imagen de este capítulo</span>
+  ) : null;
+
+  if (variant === 'imageCover') {
+    return (
+      <article className="relative mx-auto min-h-[540px] w-full overflow-hidden sm:min-h-[620px]" style={{ ...visual.media, maxWidth: 920 }}>
+        {image ? <Image src={image} alt={str(block, 'imageAlt')} fill sizes="(max-width: 640px) 100vw, 920px" className="object-cover" style={{ objectPosition: focal }} /> : emptyImage}
+        <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/5" aria-hidden />
+        <div className="absolute inset-x-0 bottom-0 z-[1] p-7 text-left sm:max-w-[72%] sm:p-12">
+          <EditorialEyebrow block={block} inverse />
+          {titleNode(true)}
+          {bodyNode(true)}
+          {noteNode(true)}
+          {actionUrl && actionLabel && <div className="mt-7"><Pill href={actionUrl} filled>{actionLabel}</Pill></div>}
+        </div>
+      </article>
+    );
+  }
+
+  if (variant === 'statement') {
+    return (
+      <article className="mx-auto grid max-w-[820px] grid-cols-[auto_1fr] gap-5 text-left sm:gap-10">
+        <span className="font-playfair text-[54px] leading-none sm:text-[86px]" style={{ color: t.primary, opacity: 0.2 }} aria-hidden>{number}</span>
+        <div className="min-w-0 border-l pl-5 sm:pl-9" style={{ borderColor: t.line }}>
+          <EditorialEyebrow block={block} />
+          {titleNode()}
+          {bodyNode()}
+          {noteNode()}
+          {actionUrl && actionLabel && <div className="mt-7"><Pill href={actionUrl}>{actionLabel}</Pill></div>}
+        </div>
+      </article>
+    );
+  }
+
+  if (variant === 'letter') {
+    return (
+      <article className="relative mx-auto max-w-[700px] overflow-hidden p-7 text-left sm:p-12" style={visual.card}>
+        <span className="absolute left-0 top-0 h-1 w-full" style={{ background: `linear-gradient(90deg, ${t.primary}, ${t.accent}, transparent)` }} aria-hidden />
+        <div className="flex items-center justify-between gap-5">
+          <EditorialEyebrow block={block} />
+          <span className="font-playfair text-3xl" style={{ color: t.primary, opacity: 0.22 }} aria-hidden>{number}</span>
+        </div>
+        {titleNode()}
+        {bodyNode()}
+        {noteNode()}
+        {actionUrl && actionLabel && <div className="mt-7"><Pill href={actionUrl} filled>{actionLabel}</Pill></div>}
+      </article>
+    );
+  }
+
+  const imageOrder = imageSide === 'right' ? 'sm:order-2' : 'sm:order-1';
+  const copyOrder = imageSide === 'right' ? 'sm:order-1' : 'sm:order-2';
+  return (
+    <article className="mx-auto grid max-w-[940px] items-center gap-8 text-left sm:grid-cols-2 sm:gap-12">
+      <figure className={`relative order-1 min-h-[260px] overflow-hidden ${imageOrder}`} style={{ ...visual.media, aspectRatio: aspect }}>
+        {image ? <Image src={image} alt={str(block, 'imageAlt')} fill sizes="(max-width: 640px) 100vw, 470px" className="object-cover" style={{ objectPosition: focal }} /> : emptyImage}
+        {note && <figcaption className="absolute inset-x-3 bottom-3 rounded-lg bg-black/45 px-3 py-2 text-center font-cinzel text-[9px] uppercase tracking-[.16em] text-white backdrop-blur-sm">{note}</figcaption>}
+      </figure>
+      <div className={`order-2 min-w-0 ${copyOrder}`}>
+        <div className="flex items-center gap-3"><span className="font-playfair text-2xl" style={{ color: t.primary, opacity: 0.28 }}>{number}</span><span className="h-px flex-1" style={{ background: t.line }} /></div>
+        <div className="mt-5"><EditorialEyebrow block={block} /></div>
+        {titleNode()}
+        {bodyNode()}
+        {actionUrl && actionLabel && <div className="mt-7"><Pill href={actionUrl}>{actionLabel}</Pill></div>}
+      </div>
+    </article>
+  );
+};
+
+type EditorialDetail = { label?: string; value?: string; note?: string };
+
+const EditorialDetailsBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const t = useBlockTheme();
+  const visual = useInvitationShape();
+  const items = list<EditorialDetail>(block, 'items');
+  const layout = str(block, 'layout', 'ledger');
+  const title = str(block, 'title', 'Información esencial');
+  const footer = str(block, 'footer');
+
+  const header = (
+    <div className="mb-7 text-left sm:mb-9">
+      {str(block, 'eyebrow') && <p className="font-cinzel text-[10px] uppercase tracking-[.22em]" style={{ color: t.muted }}>{str(block, 'eyebrow')}</p>}
+      <Editable as="h2" k="title" effect="cascadeWords" value={title} className="mt-2 font-playfair font-medium leading-tight" style={{ color: t.primary, fontSize: fluidType(block, 30, 5.5, 46, 'title') }} />
+    </div>
+  );
+
+  if (layout === 'cards') {
+    return (
+      <article className="mx-auto max-w-[880px]">
+        {header}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item, index) => (
+            <div key={`${item.label}-${index}`} className="min-w-0 p-5 text-left" style={visual.card}>
+              <span className="font-playfair text-2xl" style={{ color: t.primary, opacity: 0.22 }}>{String(index + 1).padStart(2, '0')}</span>
+              <p className="mt-4 font-cinzel text-[10px] uppercase tracking-[.18em]" style={{ color: t.muted }}>{item.label}</p>
+              <p className="mt-2 whitespace-pre-line font-playfair leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 21, 'subtitle') }}>{item.value}</p>
+              {item.note && <p className="mt-2 whitespace-pre-line font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), lineHeight: 1.55 }}>{item.note}</p>}
+            </div>
+          ))}
+        </div>
+        {footer && <p className="mx-auto mt-6 max-w-xl font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{footer}</p>}
+      </article>
+    );
+  }
+
+  if (layout === 'columns') {
+    return (
+      <article className="mx-auto max-w-[900px]">
+        {header}
+        <div className="grid grid-cols-1 border-y sm:grid-cols-2 lg:grid-cols-3" style={{ borderColor: t.line }}>
+          {items.map((item, index) => (
+            <div key={`${item.label}-${index}`} className="min-w-0 border-t px-5 py-6 text-left first:border-t-0 sm:border-l sm:border-t-0 sm:first:border-l-0" style={{ borderColor: t.line }}>
+              <p className="font-cinzel text-[10px] uppercase tracking-[.18em]" style={{ color: t.muted }}>{item.label}</p>
+              <p className="mt-2 whitespace-pre-line font-playfair" style={{ color: t.primary, fontSize: scaledPx(block, 20, 'subtitle'), lineHeight: 1.2 }}>{item.value}</p>
+              {item.note && <p className="mt-2 whitespace-pre-line font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), lineHeight: 1.5 }}>{item.note}</p>}
+            </div>
+          ))}
+        </div>
+        {footer && <p className="mt-5 text-left font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{footer}</p>}
+      </article>
+    );
+  }
+
+  return (
+    <article className="mx-auto max-w-[760px]">
+      {header}
+      <div className="border-t" style={{ borderColor: t.line }}>
+        {items.map((item, index) => (
+          <div key={`${item.label}-${index}`} className="grid grid-cols-1 gap-1 border-b py-5 text-left sm:grid-cols-[minmax(120px,.7fr)_1fr] sm:gap-8" style={{ borderColor: t.line }}>
+            <p className="font-cinzel text-[10px] uppercase tracking-[.18em]" style={{ color: t.muted }}>{item.label}</p>
+            <div className="min-w-0">
+              <p className="whitespace-pre-line font-playfair" style={{ color: t.primary, fontSize: scaledPx(block, 21, 'subtitle'), lineHeight: 1.2 }}>{item.value}</p>
+              {item.note && <p className="mt-1.5 whitespace-pre-line font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), lineHeight: 1.5 }}>{item.note}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+      {footer && <p className="mt-5 text-left font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{footer}</p>}
+    </article>
   );
 };
 
@@ -878,7 +1332,7 @@ const LodgingBlock: React.FC<{ block: Block }> = ({ block }) => {
   const shape = useInvitationShape();
   const image = str(block, 'image');
   return (
-    <div className="mx-auto overflow-hidden text-center" style={{ maxWidth: 440, borderRadius: shape.cardRadius, border: `1px solid ${t.line}`, background: `color-mix(in srgb, ${t.bg} 84%, white)`, boxShadow: '0 16px 45px rgba(31,24,16,.07)' }}>
+    <div className="mx-auto overflow-hidden text-center" style={{ maxWidth: 440, ...shape.card }}>
       {image && (
         <div className="relative overflow-hidden" style={{ aspectRatio: '16 / 9' }}>
           <img src={image} alt="" className="h-full w-full object-cover" style={{ objectPosition: str(block, 'focal', '50% 50%') }} />
@@ -1001,10 +1455,11 @@ const TimelineBlock: React.FC<{ block: Block }> = ({ block }) => {
   );
 };
 function TimelineCard({ it, t }: { it: { year?: string; title?: string; text?: string; image?: string }; t: ReturnType<typeof useBlockTheme> }) {
+  const visual = useInvitationShape();
   return (
     <div className="inline-block w-full">
       {it.image && (
-        <div className="mb-3 overflow-hidden rounded-xl" style={{ aspectRatio: '4 / 3', border: `1px solid ${t.line}` }}>
+        <div className="mb-3 overflow-hidden" style={{ ...visual.media, aspectRatio: '4 / 3' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={it.image} alt="" loading="lazy" className="h-full w-full object-cover" />
         </div>
@@ -1019,6 +1474,7 @@ function TimelineCard({ it, t }: { it: { year?: string; title?: string; text?: s
 // Antes / después: deslizador que revela una foto sobre otra.
 function BeforeAfterBlock({ block }: { block: Block }) {
   const t = useBlockTheme();
+  const visual = useInvitationShape();
   const before = str(block, 'before');
   const after = str(block, 'after');
   const [pos, setPos] = useState(50);
@@ -1033,8 +1489,8 @@ function BeforeAfterBlock({ block }: { block: Block }) {
     <div className="mx-auto" style={{ maxWidth: 460 }}>
       <div
         ref={ref}
-        className="relative w-full select-none overflow-hidden rounded-xl"
-        style={{ aspectRatio: '4 / 5', border: `1px solid ${t.line}`, cursor: 'ew-resize', touchAction: 'none' }}
+        className="relative w-full select-none overflow-hidden"
+        style={{ ...visual.media, aspectRatio: '4 / 5', cursor: 'ew-resize', touchAction: 'none' }}
         onPointerDown={e => { dragging.current = true; (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); move(e.clientX); }}
         onPointerMove={e => { if (dragging.current) move(e.clientX); }}
         onPointerUp={() => { dragging.current = false; }}
@@ -1075,7 +1531,7 @@ function TableFinderBlock({ block }: { block: Block }) {
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<null | { name: string; tableNo: string; passes: number }[]>(null);
   const [err, setErr] = useState('');
-  const field: React.CSSProperties = { background: `color-mix(in srgb, ${t.bg} 76%, white)`, border: `1px solid ${t.line}`, color: t.text, borderRadius: shape.fieldRadius, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none' };
+  const field: React.CSSProperties = { ...shape.field, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none' };
 
   const search = async () => {
     if (q.trim().length < 2 || busy) return;
@@ -1101,14 +1557,14 @@ function TableFinderBlock({ block }: { block: Block }) {
       <div className="flex gap-2">
         <input style={field} placeholder="Escribe tu nombre" value={q}
           onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') search(); }} />
-        <button onClick={search} disabled={busy} className="font-cinzel uppercase tracking-[0.14em] text-[12px] px-5 transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{ background: t.primary, color: t.onPrimary, borderRadius: shape.buttonRadius, flexShrink: 0 }}>
+        <button onClick={search} disabled={busy} className="ek-cta font-cinzel uppercase tracking-[0.14em] text-[12px] px-5 transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ ...shape.primaryButton, flexShrink: 0 }}>
           {busy ? '…' : 'Buscar'}
         </button>
       </div>
       {err && <p className="font-cormorant mt-4" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{err}</p>}
       {res && res.map((m, i) => (
-        <div key={i} className="mt-4 px-6 py-5" style={{ background: `color-mix(in srgb, ${t.bg} 76%, white)`, border: `1px solid ${t.line}`, borderRadius: shape.cardRadius }}>
+        <div key={i} className="mt-4 px-6 py-5" style={shape.card}>
           <p className="font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{m.name}, tu lugar es la</p>
           <p className="font-playfair font-bold my-1" style={{ color: t.primary, fontSize: scaledPx(block, 40, 'title'), lineHeight: 1 }}>Mesa {m.tableNo}</p>
           {m.passes > 0 && <p className="font-cinzel uppercase tracking-[0.14em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>{m.passes} {m.passes === 1 ? 'lugar' : 'lugares'}</p>}
@@ -1128,7 +1584,7 @@ function GuestbookBlock({ block }: { block: Block }) {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [entries, setEntries] = useState<{ id: string; name: string; message: string; at: string }[]>([]);
-  const field: React.CSSProperties = { background: `color-mix(in srgb, ${t.bg} 76%, white)`, border: `1px solid ${t.line}`, color: t.text, borderRadius: shape.fieldRadius, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none' };
+  const field: React.CSSProperties = { ...shape.field, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none' };
 
   useEffect(() => {
     if (editing || !slug) {
@@ -1161,15 +1617,15 @@ function GuestbookBlock({ block }: { block: Block }) {
         <input style={field} placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />
         <textarea style={{ ...field, minHeight: 80 }} placeholder="Escribe tu saludo para los novios…" value={msg} onChange={e => setMsg(e.target.value)} />
         <button onClick={send} disabled={busy || !name.trim() || !msg.trim()}
-          className="w-full font-cinzel uppercase tracking-[0.16em] text-[12px] py-3 transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{ background: t.primary, color: t.onPrimary, borderRadius: shape.buttonRadius, boxShadow: `0 9px 24px color-mix(in srgb, ${t.primary} 20%, transparent)` }}>
+          className="ek-cta w-full font-cinzel uppercase tracking-[0.16em] text-[12px] py-3 transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={shape.primaryButton}>
           {busy ? 'Enviando…' : str(block, 'buttonLabel', 'Firmar el libro')}
         </button>
       </div>
       {entries.length > 0 && (
         <div className="mt-8 space-y-3 text-left">
           {entries.map(e => (
-            <div key={e.id} className="px-5 py-4" style={{ background: `color-mix(in srgb, ${t.bg} 76%, white)`, border: `1px solid ${t.line}`, borderRadius: shape.cardRadius }}>
+            <div key={e.id} className="px-5 py-4" style={shape.card}>
               <p className="font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 17, 'body'), lineHeight: 1.5 }}>&ldquo;{e.message}&rdquo;</p>
               <p className="font-cinzel uppercase tracking-[0.16em] mt-2" style={{ color: t.primary, fontSize: scaledPx(block, 11, 'label') }}>— {e.name}</p>
             </div>
@@ -1219,6 +1675,43 @@ const GroupBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 // ── Registro ──────────────────────────────────────────────────────────────────
 export const BLOCKS: Record<BlockType, BlockDef> = {
+  cinematicHero: {
+    label: 'Portada cinematográfica', icon: '🎞️', Component: CinematicHeroBlock,
+    defaultProps: {
+      videoUrl: '', poster: '', mediaAlt: '', focal: '50% 50%', autoplay: true, loop: true, speed: 1,
+      eyebrow: 'Nuestra boda', groom: 'Annie', bride: 'Miguel', tagline: 'Nos casamos', dateLabel: '12 · Octubre · 2026',
+      nameFont: 'script', nameSize: 78, namesLayout: 'stacked', position: 'bottom', align: 'center', height: 'screen',
+      textColor: '#ffffff', accentColor: '#e8d8b9', overlayColor: '#17120f', overlayStrength: 58, gradient: 'bottom',
+      fadeToPage: true, showScrollCue: true,
+    },
+    fields: [
+      { key: 'videoUrl', label: 'Video de portada', kind: 'video', previewAspect: 'portrait', hint: 'Sube un MP4/WebM vertical de 3–12 s y menos de 6 MB. También admite GIF o WebP animado; no uses YouTube/Vimeo como fondo.' },
+      { key: 'poster', label: 'Foto de respaldo', kind: 'image', previewAspect: 'portrait', hint: 'Recomendada vertical, con el mismo encuadre del video. Se verá durante la carga y con movimiento reducido.' },
+      { key: 'mediaAlt', label: 'Descripción de la escena', kind: 'text', placeholder: 'Ej: Los novios caminando por la playa' },
+      { key: 'focal', label: 'Encuadre del video o foto', kind: 'focal' },
+      { key: 'autoplay', label: 'Reproducir automáticamente', kind: 'switch' },
+      { key: 'loop', label: 'Repetir en bucle', kind: 'switch' },
+      { key: 'speed', label: 'Velocidad', kind: 'number', min: 0.25, max: 2, step: 0.25 },
+      { key: 'eyebrow', label: 'Texto superior', kind: 'text' },
+      { key: 'groom', label: 'Nombre 1', kind: 'text' },
+      { key: 'bride', label: 'Nombre 2', kind: 'text' },
+      { key: 'tagline', label: 'Frase', kind: 'text' },
+      { key: 'dateLabel', label: 'Fecha visible', kind: 'text' },
+      { key: 'nameFont', label: 'Tipografía de nombres', kind: 'select', options: [{ value: 'script', label: 'Manuscrita' }, { value: 'serif', label: 'Serif editorial' }, { value: 'caps', label: 'Mayúsculas' }] },
+      { key: 'nameSize', label: 'Tamaño máximo de nombres', kind: 'number', min: 42, max: 120 },
+      { key: 'namesLayout', label: 'Organización de nombres', kind: 'select', options: [{ value: 'stacked', label: 'Uno debajo del otro' }, { value: 'inline', label: 'En una línea flexible' }] },
+      { key: 'position', label: 'Posición vertical', kind: 'select', options: [{ value: 'top', label: 'Arriba' }, { value: 'center', label: 'Centro' }, { value: 'bottom', label: 'Abajo' }] },
+      { key: 'align', label: 'Alineación', kind: 'select', options: [{ value: 'left', label: 'Izquierda' }, { value: 'center', label: 'Centro' }, { value: 'right', label: 'Derecha' }] },
+      { key: 'height', label: 'Altura', kind: 'select', options: [{ value: 'screen', label: 'Pantalla completa' }, { value: 'tall', label: 'Alta (86%)' }, { value: 'compact', label: 'Compacta (72%)' }] },
+      { key: 'textColor', label: 'Color del texto', kind: 'color' },
+      { key: 'accentColor', label: 'Color de acento', kind: 'color' },
+      { key: 'gradient', label: 'Degradado', kind: 'select', options: [{ value: 'bottom', label: 'Desde abajo' }, { value: 'full', label: 'Cinematográfico completo' }, { value: 'soft', label: 'Diagonal suave' }, { value: 'none', label: 'Sin degradado' }] },
+      { key: 'overlayColor', label: 'Color del degradado', kind: 'color' },
+      { key: 'overlayStrength', label: 'Intensidad del degradado (%)', kind: 'number', min: 0, max: 90 },
+      { key: 'fadeToPage', label: 'Fundir con la siguiente sección', kind: 'switch' },
+      { key: 'showScrollCue', label: 'Mostrar indicador de desplazamiento', kind: 'switch' },
+    ],
+  },
   cover: {
     label: 'Portada', icon: '💍', Component: CoverBlock,
     defaultProps: { groom: 'Lorena', bride: 'Marcos', tagline: 'Nos casamos', image: '', focal: '50% 50%' },
@@ -1340,20 +1833,34 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
   },
   itinerary: {
     label: 'Itinerario', icon: '🗓️', Component: ItineraryBlock,
-    defaultProps: { title: 'Itinerario', layout: 'timeline', items: [{ time: '16:00', label: 'Ceremonia', icon: 'church' }, { time: '18:00', label: 'Recepción', icon: 'cheers' }, { time: '20:00', label: 'Fiesta', icon: 'dance' }] },
+    defaultProps: {
+      title: 'Itinerario', layout: 'timeline', showNumbers: false, showConnectors: true,
+      items: [
+        { time: '16:00', label: 'Ceremonia', place: 'Iglesia principal', note: 'Llegar 15 min antes', icon: 'church' },
+        { time: '18:00', label: 'Recepción', place: 'Salón de eventos', note: 'Cóctel de bienvenida', icon: 'cheers' },
+        { time: '20:00', label: 'Fiesta', place: 'Pista principal', note: 'A celebrar', icon: 'dance' },
+      ],
+    },
     fields: [
       { key: 'title', label: 'Título', kind: 'text' },
       { key: 'layout', label: 'Organización en celular', kind: 'select', options: [
         { value: 'timeline', label: 'Línea vertical' },
+        { value: 'editorial', label: 'Agenda editorial' },
+        { value: 'route', label: 'Ruta alternada' },
         { value: 'cards', label: 'Tarjetas en 2 columnas' },
         { value: 'compact', label: 'Lista compacta' },
         { value: 'carousel', label: 'Carrusel deslizable' },
       ] },
+      { key: 'showNumbers', label: 'Numeración (agenda editorial y recorrido)', kind: 'switch' },
+      { key: 'showConnectors', label: 'Mostrar línea de recorrido', kind: 'switch' },
       {
         key: 'items', label: 'Pasos', kind: 'list', itemFields: [
           { key: 'icon', label: 'Icono', kind: 'icon' },
           { key: 'label', label: 'Nombre', kind: 'text' },
           { key: 'time', label: 'Hora', kind: 'text' },
+          { key: 'place', label: 'Lugar', kind: 'text', placeholder: 'Ej. Jardín principal' },
+          { key: 'duration', label: 'Duración', kind: 'text', placeholder: 'Ej. 45 min' },
+          { key: 'note', label: 'Nota breve', kind: 'textarea', placeholder: 'Ej. Llegar 15 minutos antes' },
         ],
       },
     ],
@@ -1372,16 +1879,33 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
   },
   gallery: {
     label: 'Galería', icon: '🖼️', Component: GalleryBlock,
-    defaultProps: { message: 'Comparte con nosotros tus fotos del evento.', images: [], shareUrl: '', layout: 'grid' },
+    defaultProps: {
+      eyebrow: 'Nuestra historia', title: 'Momentos que atesoramos', message: 'Un recorrido por los recuerdos que nos trajeron hasta aquí.',
+      images: [], captions: [], shareUrl: '', shareLabel: 'Compartir fotos', layout: 'editorial', lightbox: true, showCaptions: true, showCounter: true,
+    },
     fields: [
+      { key: 'eyebrow', label: 'Antetítulo', kind: 'text' },
+      { key: 'title', label: 'Título', kind: 'text' },
       { key: 'message', label: 'Mensaje', kind: 'textarea' },
       { key: 'layout', label: 'Estilo de galería', kind: 'select', options: [
+        { value: 'editorial', label: 'Editorial protagonista' }, { value: 'filmstrip', label: 'Historia deslizable' },
         { value: 'grid', label: 'Cuadrícula' }, { value: 'masonry', label: 'Mosaico (Pinterest)' },
         { value: 'polaroid', label: 'Polaroids inclinadas' }, { value: 'carousel', label: 'Carrusel horizontal' },
         { value: 'coverflow', label: 'Carrusel 3D (coverflow)' },
       ] },
       { key: 'images', label: 'Fotos', kind: 'images' },
+      {
+        key: 'captions', label: 'Textos de las fotos (en el mismo orden)', kind: 'list', itemFields: [
+          { key: 'title', label: 'Título', kind: 'text', placeholder: 'Ej. Nuestro primer viaje' },
+          { key: 'caption', label: 'Pie de foto', kind: 'textarea', placeholder: 'Una frase breve que cuente este momento' },
+          { key: 'alt', label: 'Descripción accesible', kind: 'text', placeholder: 'Describe lo que aparece en la foto' },
+        ],
+      },
+      { key: 'showCaptions', label: 'Mostrar textos de las fotos', kind: 'switch' },
+      { key: 'showCounter', label: 'Mostrar numeración', kind: 'switch' },
+      { key: 'lightbox', label: 'Abrir fotos a pantalla completa', kind: 'switch' },
       { key: 'shareUrl', label: 'Enlace para compartir', kind: 'text' },
+      { key: 'shareLabel', label: 'Texto del botón', kind: 'text' },
     ],
   },
   monogram: {
@@ -1543,12 +2067,28 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     ],
   },
   video: {
-    label: 'Video', icon: '🎬', Component: VideoBlock,
-    defaultProps: { url: '', title: '', rounded: 16 },
+    label: 'Video cinematográfico', icon: '🎬', Component: VideoBlock,
+    defaultProps: { url: '', poster: '', title: '', aspect: 'wide', fit: 'cover', focal: '50% 50%', autoplay: true, loop: true, muted: true, controls: false, speed: 1, preload: 'metadata', overlay: 0, maxWidth: 680, rounded: 16 },
     fields: [
-      { key: 'url', label: 'Enlace (YouTube / Vimeo)', kind: 'text', placeholder: 'https://youtu.be/…' },
-      { key: 'title', label: 'Título (accesibilidad)', kind: 'text' },
-      { key: 'rounded', label: 'Redondeo (px)', kind: 'number', min: 0, max: 40 },
+      { key: 'url', label: 'Video o animación', kind: 'video', previewAspect: 'wide', hint: 'Recomendado: MP4 H.264 o WebM, 3–12 s y menos de 6 MB. También admite GIF/WebP animado y enlaces de YouTube/Vimeo.' },
+      { key: 'poster', label: 'Imagen de portada mientras carga', kind: 'image' },
+      { key: 'title', label: 'Descripción accesible', kind: 'text', placeholder: 'Ej: Los novios caminando por la playa' },
+      { key: 'aspect', label: 'Formato', kind: 'select', options: [
+        { value: 'wide', label: 'Horizontal 16:9' }, { value: 'portrait', label: 'Vertical 9:16' },
+        { value: 'square', label: 'Cuadrado 1:1' }, { value: 'cinema', label: 'Panorámico 21:9' },
+        { value: 'original', label: 'Proporción original' },
+      ] },
+      { key: 'fit', label: 'Ajuste', kind: 'select', options: [{ value: 'cover', label: 'Cubrir el espacio' }, { value: 'contain', label: 'Mostrar completo' }] },
+      { key: 'focal', label: 'Punto focal', kind: 'focal' },
+      { key: 'autoplay', label: 'Reproducir automáticamente', kind: 'switch' },
+      { key: 'loop', label: 'Repetir en bucle', kind: 'switch' },
+      { key: 'muted', label: 'Silenciar audio', kind: 'switch' },
+      { key: 'controls', label: 'Mostrar controles', kind: 'switch' },
+      { key: 'speed', label: 'Velocidad', kind: 'number', min: 0.25, max: 2, step: 0.25 },
+      { key: 'preload', label: 'Precarga', kind: 'select', options: [{ value: 'metadata', label: 'Ligera (recomendada)' }, { value: 'none', label: 'Solo al verlo' }, { value: 'auto', label: 'Prioritaria' }] },
+      { key: 'overlay', label: 'Oscurecimiento (%)', kind: 'number', min: 0, max: 80 },
+      { key: 'maxWidth', label: 'Ancho máximo (px)', kind: 'number', min: 240, max: 1200 },
+      { key: 'rounded', label: 'Redondeo (px)', kind: 'number', min: 0, max: 60 },
     ],
   },
   map: {
@@ -1567,6 +2107,58 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     fields: [
       { key: 'text', label: 'Texto', kind: 'textarea' },
       { key: 'author', label: 'Autor / referencia', kind: 'text' },
+    ],
+  },
+  editorialChapter: {
+    label: 'Capítulo editorial', icon: '▤', Component: EditorialChapterBlock,
+    defaultProps: {
+      variant: 'split', number: '01', eyebrow: 'Nuestra historia',
+      title: 'Nuestra historia comienza aquí',
+      body: 'Hay momentos que cambian el ritmo de la vida. Este es uno de ellos y queremos compartirlo contigo.',
+      note: '', image: '', imageAlt: '', focal: '50% 50%', imageSide: 'left', imageAspect: 'portrait', actionLabel: '', actionUrl: '',
+    },
+    fields: [
+      { key: 'variant', label: 'Composición', kind: 'select', options: [
+        { value: 'split', label: 'Retrato + relato' }, { value: 'statement', label: 'Manifiesto tipográfico' },
+        { value: 'imageCover', label: 'Foto editorial a sangre' }, { value: 'letter', label: 'Carta elegante' },
+      ] },
+      { key: 'number', label: 'Número o distintivo', kind: 'text', placeholder: '01' },
+      { key: 'eyebrow', label: 'Antetítulo', kind: 'text', placeholder: 'NUESTRA HISTORIA' },
+      { key: 'title', label: 'Titular', kind: 'textarea' },
+      { key: 'body', label: 'Relato', kind: 'textarea' },
+      { key: 'note', label: 'Nota o pie de foto', kind: 'text' },
+      { key: 'image', label: 'Fotografía', kind: 'image', previewAspect: 'portrait' },
+      { key: 'focal', label: 'Encuadre', kind: 'focal' },
+      { key: 'imageAlt', label: 'Descripción accesible', kind: 'text', placeholder: 'Ej: La pareja caminando al atardecer' },
+      { key: 'imageSide', label: 'Foto en escritorio', kind: 'select', options: [{ value: 'left', label: 'A la izquierda' }, { value: 'right', label: 'A la derecha' }] },
+      { key: 'imageAspect', label: 'Proporción de foto', kind: 'select', options: [
+        { value: 'portrait', label: 'Retrato 4:5' }, { value: 'tall', label: 'Vertical 3:4' },
+        { value: 'landscape', label: 'Horizontal 16:10' }, { value: 'square', label: 'Cuadrada 1:1' },
+      ] },
+      { key: 'actionLabel', label: 'Texto del enlace (opcional)', kind: 'text' },
+      { key: 'actionUrl', label: 'Destino del enlace', kind: 'text', placeholder: 'https://…' },
+    ],
+  },
+  editorialDetails: {
+    label: 'Ficha editorial', icon: '☷', Component: EditorialDetailsBlock,
+    defaultProps: {
+      eyebrow: 'Todo lo que necesitas saber', title: 'Información esencial', layout: 'ledger', footer: '',
+      items: [
+        { label: 'Cuándo', value: 'Sábado, 4 de julio', note: 'Ceremonia · 16:00 h' },
+        { label: 'Dónde', value: 'Lugar de la celebración', note: 'Ciudad · Dirección' },
+        { label: 'Vestimenta', value: 'Formal', note: 'Agradecemos reservar el blanco para la novia.' },
+      ],
+    },
+    fields: [
+      { key: 'eyebrow', label: 'Antetítulo', kind: 'text' },
+      { key: 'title', label: 'Título', kind: 'text' },
+      { key: 'layout', label: 'Organización', kind: 'select', options: [
+        { value: 'ledger', label: 'Lista editorial' }, { value: 'columns', label: 'Columnas limpias' }, { value: 'cards', label: 'Tarjetas numeradas' },
+      ] },
+      { key: 'items', label: 'Datos', kind: 'list', itemFields: [
+        { key: 'label', label: 'Etiqueta', kind: 'text' }, { key: 'value', label: 'Dato principal', kind: 'textarea' }, { key: 'note', label: 'Nota', kind: 'textarea' },
+      ] },
+      { key: 'footer', label: 'Nota final (opcional)', kind: 'textarea' },
     ],
   },
   parents: {
@@ -1629,14 +2221,14 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
 
 /** Orden de la paleta "Añadir bloque" (lista plana, por compatibilidad). */
 export const BLOCK_PALETTE: BlockType[] = [
-  'cover', 'passportHero', 'passportTicket', 'monogram', 'heading', 'text', 'quote', 'image', 'video', 'countdown', 'dateBadge', 'calendar',
+  'cinematicHero', 'cover', 'passportHero', 'passportTicket', 'monogram', 'heading', 'text', 'quote', 'editorialChapter', 'editorialDetails', 'image', 'video', 'countdown', 'dateBadge', 'calendar',
   'eventCard', 'map', 'dressCode', 'itinerary', 'timeline', 'story', 'parents', 'lodging', 'gift', 'gallery', 'beforeAfter',
   'rsvp', 'accessPass', 'tableFinder', 'guestbook', 'hashtag', 'button', 'ornament', 'group', 'divider', 'spacer',
 ];
 
 /** Paleta agrupada por categorías (para el panel de añadir bloques). */
 export const PALETTE_GROUPS: { label: string; types: BlockType[] }[] = [
-  { label: 'Esenciales',  types: ['heading', 'text', 'quote', 'monogram', 'image', 'video', 'cover', 'passportHero', 'passportTicket'] },
+  { label: 'Esenciales',  types: ['cinematicHero', 'heading', 'text', 'quote', 'editorialChapter', 'editorialDetails', 'monogram', 'image', 'video', 'cover', 'passportHero', 'passportTicket'] },
   { label: 'El evento',   types: ['eventCard', 'dateBadge', 'countdown', 'itinerary', 'map', 'calendar'] },
   { label: 'Fotos',       types: ['gallery', 'timeline', 'story', 'beforeAfter'] },
   { label: 'Invitados',   types: ['rsvp', 'accessPass', 'tableFinder', 'guestbook', 'dressCode', 'parents', 'lodging', 'gift', 'hashtag'] },
@@ -1689,6 +2281,12 @@ function block(type: BlockType, props: Record<string, unknown> = {}, children?: 
   return b;
 }
 
+function sectionBlock(type: BlockType, props: Record<string, unknown>, style: Block['style']): Block {
+  const b = block(type, props);
+  b.style = { ...(b.style ?? {}), ...style };
+  return b;
+}
+
 export interface SectionPreset {
   key: string;
   label: string;
@@ -1700,10 +2298,15 @@ export interface SectionPreset {
 }
 
 /** Orden de los apartados en el panel "Secciones listas". */
-export const SECTION_GROUPS = ['Inicio', 'El evento', 'Fotos y recuerdos', 'Invitados', 'XV Años', 'Otros eventos'] as const;
+export const SECTION_GROUPS = ['Inicio', 'Editorial', 'El evento', 'Fotos y recuerdos', 'Invitados', 'XV Años', 'Otros eventos'] as const;
 
 export const SECTION_PRESETS: SectionPreset[] = [
   // ── Inicio ──────────────────────────────────────────────────────────────────
+  {
+    key: 'cover-cinematic', label: 'Portada cinematográfica', icon: '🎞️', group: 'Inicio',
+    desc: 'Video vertical, nombres, fecha y degradado a pantalla completa',
+    create: () => [block('cinematicHero', {})],
+  },
   {
     key: 'cover-photo', label: 'Portada con foto', icon: '💍', group: 'Inicio',
     desc: 'Foto de fondo con los nombres + la fecha',
@@ -1740,6 +2343,75 @@ export const SECTION_PRESETS: SectionPreset[] = [
     ],
   },
 
+  // ── Editorial ───────────────────────────────────────────────────────────────
+  {
+    key: 'editorial-opening', label: 'Manifiesto de apertura', icon: '01', group: 'Editorial',
+    desc: 'Gran titular numerado con ritmo de revista',
+    create: () => [sectionBlock('editorialChapter', {
+      variant: 'statement', number: '01', eyebrow: 'Una historia para recordar',
+      title: 'Hay días que merecen contarse de una forma especial',
+      body: 'Este es uno de ellos. Queremos abrir estas páginas contigo y celebrar todo lo que nos trajo hasta aquí.',
+      note: 'Gracias por ser parte de nuestra historia.', image: '', actionLabel: '', actionUrl: '',
+    }, { maxWidth: 920, padTop: 72, padBottom: 72 })],
+  },
+  {
+    key: 'editorial-portrait', label: 'Retrato y relato', icon: '▥', group: 'Editorial',
+    desc: 'Fotografía vertical junto a un capítulo narrativo',
+    create: () => [sectionBlock('editorialChapter', {
+      variant: 'split', number: '02', eyebrow: 'Nuestro camino',
+      title: 'Todo comenzó con una conversación que no queríamos terminar',
+      body: 'Después llegaron los viajes, las sobremesas y la certeza de que queríamos construir la vida en el mismo lugar.',
+      note: 'Nuestro lugar favorito: juntos', image: '', imageSide: 'left', imageAspect: 'portrait', actionLabel: '', actionUrl: '',
+    }, { maxWidth: 980, padTop: 64, padBottom: 64 })],
+  },
+  {
+    key: 'editorial-photo-chapter', label: 'Capítulo fotográfico', icon: '▣', group: 'Editorial',
+    desc: 'Fotografía protagonista con titular superpuesto',
+    create: () => [sectionBlock('editorialChapter', {
+      variant: 'imageCover', number: '03', eyebrow: 'El siguiente capítulo',
+      title: 'Nuestra mejor aventura está por comenzar',
+      body: 'Guarda esta fecha y acompáñanos a escribir una página que nunca vamos a olvidar.',
+      note: '', image: '', imageAspect: 'landscape', actionLabel: '', actionUrl: '',
+    }, { maxWidth: 980, padX: 16, padTop: 56, padBottom: 56 })],
+  },
+  {
+    key: 'editorial-letter', label: 'Carta a los invitados', icon: '✉', group: 'Editorial',
+    desc: 'Carta elegante para un mensaje personal',
+    create: () => [sectionBlock('editorialChapter', {
+      variant: 'letter', number: '✦', eyebrow: 'Para ti',
+      title: 'Queremos compartir este momento contigo',
+      body: 'Tu compañía ha sido parte de nuestra historia. Por eso, nada nos haría más ilusión que verte allí cuando demos este nuevo paso.\n\nGracias por celebrar, reír y emocionarte a nuestro lado.',
+      note: 'Con cariño, nosotros', image: '', actionLabel: '', actionUrl: '',
+    }, { maxWidth: 780, bgKind: 'soft', padTop: 68, padBottom: 68 })],
+  },
+  {
+    key: 'editorial-facts', label: 'Ficha del evento', icon: '☷', group: 'Editorial',
+    desc: 'Fecha, lugar y vestimenta en una ficha limpia',
+    create: () => [sectionBlock('editorialDetails', {
+      eyebrow: 'Guía de la celebración', title: 'Todo lo que necesitas saber', layout: 'ledger',
+      items: [
+        { label: 'Cuándo', value: 'Sábado, 4 de julio', note: 'Ceremonia · 16:00 h' },
+        { label: 'Dónde', value: 'Lugar de la celebración', note: 'Ciudad · Dirección completa' },
+        { label: 'Vestimenta', value: 'Formal', note: 'Agradecemos reservar el blanco para la novia.' },
+        { label: 'Confirmación', value: 'Antes del 4 de junio', note: 'Confirma desde esta misma invitación.' },
+      ],
+      footer: 'Si necesitas ayuda con algún detalle, escríbenos. Queremos que disfrutes el día tanto como nosotros.',
+    }, { maxWidth: 880, padTop: 64, padBottom: 64 })],
+  },
+  {
+    key: 'editorial-closing', label: 'Cierre editorial', icon: '∞', group: 'Editorial',
+    desc: 'Mensaje final, confirmación y despedida',
+    create: () => [
+      sectionBlock('editorialChapter', {
+        variant: 'statement', number: '∞', eyebrow: 'Nos vemos muy pronto',
+        title: 'El día será inolvidable porque tú estarás allí',
+        body: 'Confirma tu asistencia y prepárate para celebrar con nosotros.',
+        note: '', image: '', actionLabel: '', actionUrl: '',
+      }, { maxWidth: 900, bgKind: 'soft', padTop: 70, padBottom: 52 }),
+      sectionBlock('rsvp', { mode: 'form', message: 'Confirma tu asistencia', buttonLabel: 'Sí, quiero acompañarlos' }, { maxWidth: 620, bgKind: 'soft', padTop: 36, padBottom: 72 }),
+    ],
+  },
+
   // ── El evento ───────────────────────────────────────────────────────────────
   {
     key: 'events', label: 'Ceremonia y recepción', icon: '⛪', group: 'El evento',
@@ -1754,18 +2426,33 @@ export const SECTION_PRESETS: SectionPreset[] = [
   },
   {
     key: 'schedule', label: 'Itinerario del día', icon: '🗓️', group: 'El evento',
-    desc: 'Título + horario paso a paso',
+    desc: 'Agenda editorial con hora, lugar y notas útiles',
     create: () => [
-      block('heading', { text: 'El gran día', font: 'script' }),
-      block('itinerary', {
-        title: '', items: [
-          { time: '16:00', label: 'Ceremonia', icon: 'church' },
-          { time: '17:30', label: 'Cóctel de bienvenida', icon: 'cheers' },
-          { time: '19:00', label: 'Cena', icon: 'dinner' },
-          { time: '21:00', label: 'Primer baile', icon: 'dance' },
-          { time: '23:00', label: 'Fiesta', icon: 'party' },
+      sectionBlock('itinerary', {
+        title: 'El gran día', layout: 'editorial', showNumbers: true, showConnectors: true,
+        items: [
+          { time: '16:00', label: 'Ceremonia', place: 'Iglesia principal', note: 'Llegar 15 min antes', icon: 'church' },
+          { time: '17:30', label: 'Cóctel de bienvenida', place: 'Jardín', duration: '60 min', icon: 'cheers' },
+          { time: '19:00', label: 'Cena', place: 'Salón principal', icon: 'dinner' },
+          { time: '21:00', label: 'Primer baile', place: 'Pista central', icon: 'dance' },
+          { time: '23:00', label: 'Fiesta', note: 'Hasta que el cuerpo aguante', icon: 'party' },
         ],
-      }),
+      }, { maxWidth: 760, bgKind: 'none', padTop: 72, padBottom: 72 }),
+    ],
+  },
+  {
+    key: 'schedule-route', label: 'Ruta de la celebración', icon: '⌁', group: 'El evento',
+    desc: 'Recorrido alternado y visual pensado para celular',
+    create: () => [
+      sectionBlock('itinerary', {
+        title: 'Nuestro recorrido', layout: 'route', showNumbers: false, showConnectors: true,
+        items: [
+          { time: '16:00', label: 'Ceremonia', place: 'Capilla del jardín', icon: 'church' },
+          { time: '17:30', label: 'Brindis', place: 'Terraza', note: 'Te esperamos con una copa', icon: 'cheers' },
+          { time: '19:00', label: 'Cena', place: 'Salón principal', icon: 'dinner' },
+          { time: '21:30', label: 'A bailar', place: 'Pista central', icon: 'dance' },
+        ],
+      }, { maxWidth: 760, bgKind: 'soft', padTop: 72, padBottom: 72 }),
     ],
   },
   {
@@ -1800,11 +2487,23 @@ export const SECTION_PRESETS: SectionPreset[] = [
   },
   {
     key: 'gallery', label: 'Galería de fotos', icon: '🖼️', group: 'Fotos y recuerdos',
-    desc: 'Mosaico de fotos + hashtag para compartir',
+    desc: 'Mosaico editorial con foto protagonista y relatos',
     create: () => [
-      block('heading', { text: 'Nuestros momentos', font: 'script' }),
-      block('gallery', { layout: 'masonry', message: 'Un pequeño recorrido por los momentos que nos trajeron hasta aquí.' }),
+      sectionBlock('gallery', {
+        eyebrow: 'Nuestra historia', title: 'Momentos que atesoramos', layout: 'editorial',
+        message: 'Un pequeño recorrido por los momentos que nos trajeron hasta aquí.', showCaptions: true, showCounter: true,
+      }, { maxWidth: 980, bgKind: 'none', padTop: 72, padBottom: 64 }),
       block('hashtag', {}),
+    ],
+  },
+  {
+    key: 'gallery-filmstrip', label: 'Historia en fotografías', icon: '🎞️', group: 'Fotos y recuerdos',
+    desc: 'Secuencia deslizable con pies de foto y visor completo',
+    create: () => [
+      sectionBlock('gallery', {
+        eyebrow: 'Capítulos de nosotros', title: 'Una historia para recordar', layout: 'filmstrip',
+        message: 'Desliza para recorrer nuestros momentos favoritos.', showCaptions: true, showCounter: true,
+      }, { maxWidth: 1080, bgKind: 'soft', padTop: 72, padBottom: 72 }),
     ],
   },
   {

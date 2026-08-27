@@ -222,6 +222,30 @@ input[type="color"]::-webkit-color-swatch {
    sin problema en navegadores que no los soportan. */
 .ek-invite h1, .ek-invite h2, .ek-invite h3, .ek-invite h4 { text-wrap: balance; }
 .ek-invite p { text-wrap: pretty; }
+.ek-invite [data-ek-section] { isolation: isolate; }
+.ek-invite :where(img, video, iframe) { max-inline-size: 100%; }
+.ek-invite :where(input, select, textarea) {
+  font: inherit;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+.ek-invite :where(input, select, textarea):focus {
+  border-color: var(--ek-color-focus, currentColor) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ek-color-focus, currentColor) 16%, transparent) !important;
+}
+.ek-invite :where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--ek-color-focus, currentColor);
+  outline-offset: 3px;
+}
+.ek-invite .ek-cta {
+  min-block-size: 44px;
+  max-inline-size: 100%;
+  text-align: center;
+  text-wrap: balance;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 420px) {
+  .ek-invite .ek-cta { padding-inline: 22px; letter-spacing: 0.12em; }
+}
 /* Utilidades sueltas por si se quieren aplicar puntualmente. */
 .ek-balance { text-wrap: balance; }
 .ek-pretty  { text-wrap: pretty; }

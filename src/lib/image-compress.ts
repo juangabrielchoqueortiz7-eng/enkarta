@@ -5,9 +5,21 @@
 export async function compressImage(file: File, maxEdge = 1600, quality = 0.85): Promise<File> {
   if (typeof window === 'undefined' || typeof createImageBitmap === 'undefined') return file;
   if (!file.type.startsWith('image/')) return file;
-  // SVG (vectorial) y GIF (animado) no se tocan.
+  // SVG y GIF no se tocan. Un WebP puede ser animado; si contiene los chunks
+  // ANIM/ANMF tampoco se re-encodea porque el canvas conservaría solo un frame.
   if (file.type === 'image/svg+xml' || file.type === 'image/gif') return file;
   try {
+    if (file.type === 'image/webp') {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const hasChunk = (name: string) => {
+        const code = Array.from(name).map(char => char.charCodeAt(0));
+        for (let i = 0; i <= bytes.length - code.length; i++) {
+          if (code.every((value, offset) => bytes[i + offset] === value)) return true;
+        }
+        return false;
+      };
+      if (hasChunk('ANIM') || hasChunk('ANMF')) return file;
+    }
     const bitmap = await createImageBitmap(file);
     const { width, height } = bitmap;
     const scale = Math.min(1, maxEdge / Math.max(width, height));

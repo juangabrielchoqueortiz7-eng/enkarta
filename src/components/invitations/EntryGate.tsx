@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ease } from '@/lib/motion';
 import { themeFor, type EntryTheme } from './entry/config';
 import { EntryScene } from './entry/scenes';
@@ -16,6 +16,13 @@ interface Props {
   dateLine?: string;
   coverImage?: string;
   label?: string;            // texto del botón
+  scene?: EntryTheme['scene'];
+  entryVideoUrl?: string;
+  entryPoster?: string;
+  entryDuration?: number;
+  entryOverlay?: number;
+  showSkip?: boolean;
+  skipLabel?: string;
   // Overrides opcionales desde config.theme (cuando el usuario personaliza la paleta)
   accent?: string;
   bg?: string;
@@ -31,11 +38,17 @@ interface Props {
  */
 export default function EntryGate({
   children, template, names, initials, dateLine, coverImage,
-  label = 'Ingresar a mi invitación', accent, bg, text,
+  label = 'Ingresar a mi invitación', scene, entryVideoUrl, entryPoster,
+  entryDuration = 4, entryOverlay = 42, showSkip = true,
+  skipLabel = 'Omitir animación', accent, bg, text,
 }: Props) {
   const [phase, setPhase] = useState<'idle' | 'opening'>('idle');
   const [gone, setGone] = useState(false);
+  const [exitReady, setExitReady] = useState(false);
   const openingRef = useRef(false);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revealDispatchedRef = useRef(false);
+  const reducedMotion = useReducedMotion();
 
   // Bloquea el scroll del fondo mientras la portada está visible.
   useEffect(() => {
@@ -44,17 +57,41 @@ export default function EntryGate({
     return () => { document.body.style.overflow = ''; };
   }, [gone]);
 
+  useEffect(() => () => {
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+  }, []);
+
   const base = themeFor(template);
   const theme: EntryTheme = {
     ...base,
+    scene: scene || base.scene,
     veil: bg || base.veil,
     veil2: bg || base.veil2,
     ink: text || base.ink,
     accent: accent || base.accent,
     script: accent || base.script,
   };
+  const cinematic = theme.scene === 'cinematic';
+  const cinematicDuration = Math.max(2, Math.min(8, entryDuration));
+  const cinematicWait = entryVideoUrl ? cinematicDuration : 0.9;
 
-  const enter = () => {
+  const armContent = () => {
+    if (revealDispatchedRef.current) return;
+    revealDispatchedRef.current = true;
+    window.dispatchEvent(new CustomEvent('enkarta:enter'));
+  };
+
+  const enter = (skip = false) => {
+    // Durante un clip ya iniciado, el botón "Omitir" adelanta la salida sin
+    // repetir analítica ni volver a arrancar la música.
+    if (openingRef.current && phase === 'opening') {
+      if (skip && cinematic) {
+        if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+        armContent();
+        setExitReady(true);
+      }
+      return;
+    }
     // El botón vive dentro de una portada que también es clicable. El ref evita
     // que el mismo gesto burbujee y dispare dos veces analítica, música y timers
     // antes de que React alcance a reflejar el nuevo `phase`.
@@ -75,12 +112,13 @@ export default function EntryGate({
       return !!audio;
     };
     if (!playAudio()) setTimeout(playAudio, 250);
-    // "Arma" las transiciones de scroll/3D justo cuando el sobre empieza a
-    // desvanecerse, para que las secciones se revelen al levantarse la portada
-    // (y no antes, ocultas detrás de ella).
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('enkarta:enter'));
-    }, 1100);
+    // "Arma" las transiciones justo cuando la portada empieza a desvanecerse.
+    // En la entrada cinematográfica el tiempo coincide con el clip configurado.
+    const revealAfter = skip || reducedMotion ? 80 : cinematic ? cinematicWait * 1000 : 1100;
+    revealTimerRef.current = setTimeout(() => {
+      armContent();
+      setExitReady(true);
+    }, revealAfter);
   };
 
   return (
@@ -93,7 +131,7 @@ export default function EntryGate({
             key="entry-gate"
             data-entry-gate
             data-entry-scene={theme.scene}
-            onClick={enter}
+            onClick={() => enter(false)}
             className={`fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden text-center ${phase === 'idle' ? 'cursor-pointer' : ''}`}
             style={{
               background: `linear-gradient(160deg, ${theme.veil} 0%, ${theme.veil2 ?? theme.veil} 100%)`,
@@ -108,10 +146,10 @@ export default function EntryGate({
               overscrollBehavior: 'none',
             }}
             initial={{ opacity: 1 }}
-            animate={{ opacity: phase === 'opening' ? 0 : 1 }}
-            transition={{ duration: 0.7, ease: ease.soft, delay: phase === 'opening' ? 1.05 : 0 }}
-            onAnimationComplete={() => { if (phase === 'opening') setGone(true); }}
-            aria-hidden={phase !== 'idle'}
+            animate={{ opacity: exitReady ? 0 : 1 }}
+            transition={{ duration: reducedMotion ? 0.18 : 0.7, ease: ease.soft }}
+            onAnimationComplete={() => { if (exitReady) setGone(true); }}
+            aria-hidden={phase !== 'idle' && !cinematic}
           >
             <EntryScene
               theme={theme}
@@ -119,9 +157,16 @@ export default function EntryGate({
               initials={initials}
               dateLine={dateLine}
               coverImage={coverImage}
+              videoUrl={entryVideoUrl}
+              poster={entryPoster || coverImage}
+              duration={cinematicWait}
+              overlay={entryOverlay}
+              showSkip={showSkip}
+              skipLabel={skipLabel}
               label={label}
               phase={phase}
-              onEnter={enter}
+              onEnter={() => enter(false)}
+              onSkip={() => enter(true)}
             />
           </motion.div>
         )}

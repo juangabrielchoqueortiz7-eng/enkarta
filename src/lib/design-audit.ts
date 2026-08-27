@@ -58,7 +58,7 @@ export function auditDesignConsistency(data: InvitationParsed): DesignAuditResul
   // el auditor cuenta los seis tokens que la persona realmente decide.
   const semantic = cfg.theme ? [cfg.theme.bg, cfg.theme.text, cfg.theme.primary, cfg.theme.accent, cfg.theme.surface, cfg.theme.line] : [];
   [data.color_primary, data.color_secondary, data.color_accent, ...semantic].forEach(value => addColor(colors, value));
-  [cfg.tokens?.sectionRadius, cfg.tokens?.cardRadius, cfg.tokens?.buttonRadius, cfg.tokens?.fieldRadius].forEach(value => addNumber(radii, value));
+  [cfg.tokens?.sectionRadius, cfg.tokens?.cardRadius, cfg.tokens?.buttonRadius, cfg.tokens?.fieldRadius, cfg.tokens?.mediaRadius].forEach(value => addNumber(radii, value));
   [cfg.tokens?.sectionInset].forEach(value => addNumber(spacing, value));
   cfg.layout?.blocks.forEach(block => inspectBlock(block, colors, radii, spacing, fonts));
 
@@ -80,6 +80,9 @@ export function auditDesignConsistency(data: InvitationParsed): DesignAuditResul
 function cleanBlock(block: Block): Block {
   const props = { ...block.props };
   textStyleKeys.forEach(key => { delete props[key]; });
+  // Los marcos estándar vuelven al radio global. Las máscaras (arco,
+  // polaroid, orgánica…) conservan su silueta porque no dependen de `rounded`.
+  delete props.rounded;
   const style = { ...(block.style ?? {}) };
   delete style.text;
   delete style.padTop;

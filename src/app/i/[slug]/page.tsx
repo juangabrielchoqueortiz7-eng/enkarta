@@ -223,7 +223,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
       {privatePreview && !capture && <div className="fixed left-1/2 top-3 z-[200] -translate-x-1/2 rounded-full border border-violet-200 bg-white/95 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-violet-700 shadow-lg backdrop-blur font-outfit">Vista privada del borrador{sample === '1' ? ' · invitado de prueba' : ' · no publicada'}</div>}
       {privatePreview && capture && <PreviewCaptureController position={capture} />}
       {hasBlocks ? (
-        <BlockRenderer layout={resolveLayoutBindings(config.layout!, parsed)} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} guest={guest ?? undefined} gated={entryEnabled} />
+        <BlockRenderer layout={resolveLayoutBindings(config.layout!, parsed)} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} guest={guest ?? undefined} demo={privatePreview} gated={entryEnabled} />
       ) : (
         <PageMotionProvider value={config.motion} gated={entryEnabled}>
           {templateEl}
@@ -246,6 +246,13 @@ export default async function InvitationPage({ params, searchParams }: Props) {
         dateLine={deriveDateLine(parsed.event_date)}
         coverImage={parsed.cover_image_url ?? undefined}
         label={config.entry?.label || 'Ingresar a mi invitación'}
+        scene={config.entry?.style === 'cinematic' ? 'cinematic' : undefined}
+        entryVideoUrl={config.entry?.videoUrl}
+        entryPoster={config.entry?.poster}
+        entryDuration={config.entry?.duration}
+        entryOverlay={config.entry?.overlay}
+        showSkip={config.entry?.showSkip ?? true}
+        skipLabel={config.entry?.skipLabel || 'Omitir animación'}
         bg={config.theme?.bg}
         text={config.theme?.text}
         accent={config.theme?.primary}

@@ -133,6 +133,13 @@ export default function StylePanel({ data, onChange }: Props) {
   const audit = useMemo(() => auditDesignConsistency(data), [data]);
   const seamBand = theme.primary || data.color_primary;
   const seamPaper = theme.bg || data.color_secondary;
+  const previewBorder = tokens.cardBorder === 'none' ? '1px solid transparent' : `1px solid ${tokens.cardBorder === 'accent' ? theme.primary : theme.line}`;
+  const previewShadow = tokens.shadow === 'none' ? 'none' : tokens.shadow === 'strong' ? '0 18px 38px #261d1628' : tokens.shadow === 'medium' ? '0 13px 30px #261d161d' : '0 8px 22px #261d1612';
+  const previewButton = tokens.buttonStyle === 'outline'
+    ? { background: 'transparent', color: theme.primary, border: `1px solid ${theme.primary}` }
+    : tokens.buttonStyle === 'soft'
+      ? { background: `color-mix(in srgb, ${theme.primary} 12%, ${theme.surface})`, color: theme.primary, border: `1px solid color-mix(in srgb, ${theme.primary} 26%, transparent)` }
+      : { background: theme.primary, color: theme.onPrimary, border: '1px solid transparent' };
 
   const setFont = (key: 'fontScript' | 'fontHeading' | 'fontBody', value: string) =>
     onChange({ config: { ...cfg, [key]: value || undefined } });
@@ -254,9 +261,11 @@ export default function StylePanel({ data, onChange }: Props) {
         <p className="mt-1 text-xs font-outfit text-[#938a80]">Un solo lenguaje para tarjetas, botones, campos, sombras y espacios.</p>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Densidad</span><select className={inputCls} value={tokens.spacing ?? 'normal'} onChange={event => setTokens({ spacing: event.target.value as TemplateTokens['spacing'] })}><option value="compact">Compacta</option><option value="normal">Balanceada</option><option value="airy">Amplia</option></select></label>
-          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Acabado</span><select className={inputCls} value={tokens.surface ?? 'flat'} onChange={event => setTokens({ surface: event.target.value as TemplateTokens['surface'] })}><option value="flat">Plano</option><option value="soft">Suave</option><option value="card">Tarjeta</option></select></label>
+          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Acabado</span><select className={inputCls} value={tokens.surface ?? 'flat'} onChange={event => setTokens({ surface: event.target.value as TemplateTokens['surface'] })}><option value="flat">Plano</option><option value="soft">Suave</option><option value="card">Tarjeta</option><option value="glass">Cristal</option></select></label>
           <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Sombra</span><select className={inputCls} value={tokens.shadow ?? 'soft'} onChange={event => setTokens({ shadow: event.target.value as TemplateTokens['shadow'] })}><option value="none">Sin sombra</option><option value="soft">Suave</option><option value="medium">Media</option><option value="strong">Profunda</option></select></label>
           <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Ancho · {tokens.contentWidth ?? 680}px</span><input type="range" min={560} max={820} step={10} value={tokens.contentWidth ?? 680} onChange={event => setTokens({ contentWidth: Number(event.target.value) })} className="w-full accent-enkarta-gold" /></label>
+          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Botones</span><select className={inputCls} value={tokens.buttonStyle ?? 'solid'} onChange={event => setTokens({ buttonStyle: event.target.value as TemplateTokens['buttonStyle'] })}><option value="solid">Sólidos</option><option value="outline">Contorno</option><option value="soft">Tinte suave</option></select></label>
+          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Bordes</span><select className={inputCls} value={tokens.cardBorder ?? 'hairline'} onChange={event => setTokens({ cardBorder: event.target.value as TemplateTokens['cardBorder'] })}><option value="none">Sin borde</option><option value="hairline">Línea sutil</option><option value="accent">Con acento</option></select></label>
         </div>
         <div className="mt-4 space-y-3">
           {[
@@ -264,6 +273,7 @@ export default function StylePanel({ data, onChange }: Props) {
             { key: 'cardRadius' as const, label: 'Tarjetas', min: 0, max: 40 },
             { key: 'buttonRadius' as const, label: 'Botones', min: 0, max: 50 },
             { key: 'fieldRadius' as const, label: 'Campos', min: 0, max: 28 },
+            { key: 'mediaRadius' as const, label: 'Fotos y video', min: 0, max: 40 },
           ].map(item => (
             <label key={item.key} className="block"><span className="mb-1 flex justify-between text-[10px] font-outfit text-[#756d64]"><span>Radio de {item.label.toLowerCase()}</span><strong>{tokens[item.key] ?? 0}px</strong></span><input type="range" min={item.min} max={item.max} step={2} value={tokens[item.key] ?? 0} onChange={event => setTokens({ [item.key]: Number(event.target.value) })} className="w-full accent-enkarta-gold" /></label>
           ))}
@@ -272,6 +282,17 @@ export default function StylePanel({ data, onChange }: Props) {
         <div className="mt-4 grid grid-cols-[1fr_1.4fr] gap-3 rounded-xl border border-[#eee8e1] p-3">
           <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Color de iconos</span><input type="color" value={cfg.iconColor || theme.primary || '#b8975a'} onChange={event => onChange({ config: { ...cfg, iconColor: event.target.value } })} className="h-10 w-full cursor-pointer rounded-lg border border-[#e5dfd7] p-1" /></label>
           <label><span className="mb-1 flex justify-between text-[10px] font-outfit text-[#756d64]"><span>Tamaño de iconos</span><strong>{Math.round((cfg.iconScale ?? 1) * 100)}%</strong></span><input type="range" min={0.7} max={1.4} step={0.05} value={cfg.iconScale ?? 1} onChange={event => onChange({ config: { ...cfg, iconScale: Number(event.target.value) } })} className="mt-2 w-full accent-enkarta-gold" /></label>
+        </div>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-[#ebe5dd] p-4" style={{ background: theme.bg }}>
+          <div className="mx-auto max-w-[260px] text-center">
+            <p className="text-[8px] font-semibold uppercase tracking-[.22em]" style={{ color: theme.muted }}>Vista del sistema</p>
+            <div className="mt-3 p-4" style={{ background: theme.surface, color: theme.text, border: previewBorder, borderRadius: tokens.cardRadius ?? 18, boxShadow: previewShadow }}>
+              <span className="mx-auto block h-12 w-full bg-gradient-to-br from-black/5 to-black/10" style={{ borderRadius: tokens.mediaRadius ?? tokens.cardRadius ?? 16 }} />
+              <p className="mt-3 text-base" style={{ color: theme.primary, fontFamily: `'${cfg.fontHeading || DEFAULT_FAMILY.heading}'` }}>Nuestra celebración</p>
+              <p className="mt-1 text-[10px]" style={{ color: theme.muted, fontFamily: `'${cfg.fontBody || DEFAULT_FAMILY.body}'` }}>Tarjetas, medios y acciones coordinados.</p>
+              <span className="mt-3 inline-flex min-h-8 items-center px-4 text-[8px] font-semibold uppercase tracking-[.12em]" style={{ ...previewButton, borderRadius: tokens.buttonRadius ?? 12 }}>Confirmar</span>
+            </div>
+          </div>
         </div>
       </section>
 

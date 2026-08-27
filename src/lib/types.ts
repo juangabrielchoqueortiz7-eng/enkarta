@@ -46,6 +46,9 @@ export interface Sponsor {
 export interface ItineraryItem {
   time: string;
   label: string;
+  place?: string;
+  note?: string;
+  duration?: string;
   /** Ruta del ícono Lottie (ej: /lottie/boda/marriage.json) o nombre SVG clásico (ej: church) */
   icon?: string;
   /** Colores editados del ícono Lottie: { '#origen': '#nuevo' | 'transparent' } */
@@ -166,11 +169,25 @@ export interface BuilderConfig {
   // ── Documento por bloques (constructor visual). Si existe, manda sobre la plantilla legacy. ──
   layout?: PageLayout;
   // ── Pantalla de entrada / "sobre" (2 enlaces) ──
-  entry?: { enabled?: boolean; label?: string };
+  entry?: InvitationEntryConfig;
   /** Mensaje configurable para compartir por WhatsApp. Soporta {nombre} y {link}. */
   whatsappTemplate?: string;
   // Permite añadir claves nuevas sin tocar el tipo
   [key: string]: unknown;
+}
+
+export interface InvitationEntryConfig {
+  enabled?: boolean;
+  label?: string;
+  /** `template` conserva la escena propia del diseño; `cinematic` usa video. */
+  style?: 'template' | 'cinematic';
+  videoUrl?: string;
+  poster?: string;
+  /** Segundos que el clip permanece visible después de pulsar entrar. */
+  duration?: number;
+  overlay?: number;
+  showSkip?: boolean;
+  skipLabel?: string;
 }
 
 /** Paquetes comerciales de Enkarta (ver tabla comparativa de la landing). */
@@ -223,11 +240,17 @@ export interface TemplateTokens {
   cardRadius?: number;
   buttonRadius?: number;
   fieldRadius?: number;
+  /** Radio único para fotos, mapas y video; evita marcos incompatibles. */
+  mediaRadius?: number;
   spacing?: 'compact' | 'normal' | 'airy';
   /** Multiplicador global del ritmo de espacios (0.8–1.25). */
   spacingScale?: number;
-  surface?: 'flat' | 'soft' | 'card';
+  surface?: 'flat' | 'soft' | 'card' | 'glass';
   shadow?: 'none' | 'soft' | 'medium' | 'strong';
+  /** Tratamiento global de los CTA de la invitación. */
+  buttonStyle?: 'solid' | 'outline' | 'soft';
+  /** Intensidad común de los bordes de tarjetas y campos. */
+  cardBorder?: 'none' | 'hairline' | 'accent';
   /** Escala tipográfica semántica, independiente de las familias elegidas. */
   typeScale?: {
     title?: number;
@@ -359,6 +382,7 @@ export interface PageMotion {
 
 export type BlockType =
   | 'cover'      // portada interna: nombres script (+ foto opcional)
+  | 'cinematicHero' // portada inmersiva con video/foto y texto superpuesto
   | 'passportHero' // portada de viaje dividida: foto + mapa/ruta animada
   | 'passportTicket' // banda ondulada de pases / invitado estilo pasaporte
   | 'heading'    // título (script / mayúsculas / serif)
@@ -381,6 +405,8 @@ export type BlockType =
   | 'video'      // video embebido (YouTube / Vimeo)
   | 'map'        // mapa de Google embebido
   | 'quote'      // versículo / cita con autor
+  | 'editorialChapter' // capítulo editorial: retrato, manifiesto, carta o foto a sangre
+  | 'editorialDetails' // ficha editorial de datos clave en lista o tarjetas
   | 'parents'    // padres y padrinos (lista de roles + nombres)
   | 'lodging'    // sugerencia de hospedaje (tarjeta con foto + enlace)
   | 'hashtag'    // hashtag del evento
