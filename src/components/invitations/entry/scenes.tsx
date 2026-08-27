@@ -27,7 +27,7 @@ export interface SceneProps {
  * botón de entrar por debajo del corte. A 812px de alto sale ~28px, o sea lo
  * mismo de siempre; solo aprieta cuando la pantalla es baja de verdad.
  */
-const SCENE_GAP = 'clamp(16px, 3.4vh, 28px)';
+const SCENE_GAP = 'clamp(14px, 2.8dvh, 26px)';
 
 // ── Small shared primitives ───────────────────────────────────────────────────
 function Tagline({ theme }: { theme: EntryTheme }) {
@@ -48,13 +48,19 @@ function Tagline({ theme }: { theme: EntryTheme }) {
 /** Couple names (script) + date caps — shared block below most motifs. */
 function NamesBlock({ theme, names, dateLine, serif }: { theme: EntryTheme; names: string; dateLine?: string; serif?: boolean }) {
   return (
-    <div className="text-center">
+    <div className="text-center" style={{ maxWidth: 'min(88vw, 420px)' }}>
       <h1 className={serif ? 'font-playfair font-semibold leading-tight' : 'font-great leading-none'}
-        style={{ color: theme.script, fontSize: serif ? 'clamp(30px,7vw,46px)' : 'clamp(40px,10vw,64px)' }}>
+        style={{
+          color: theme.script,
+          overflowWrap: 'anywhere',
+          fontSize: serif
+            ? 'clamp(28px, min(7vw, 5.5dvh), 46px)'
+            : 'clamp(34px, min(10vw, 7dvh), 64px)',
+        }}>
         {names}
       </h1>
       {dateLine && (
-        <p className="font-cinzel mt-3 uppercase" style={{ color: theme.soft, letterSpacing: '0.3em', fontSize: 12 }}>
+        <p className="font-cinzel mx-auto mt-3 uppercase" style={{ color: theme.soft, letterSpacing: '0.3em', fontSize: 12, maxWidth: 'min(84vw, 360px)', overflowWrap: 'anywhere' }}>
           {dateLine}
         </p>
       )}
@@ -214,52 +220,53 @@ function EnvelopeScene({ theme, initials, label, phase, onEnter }: SceneProps) {
 
       {/* Único elemento interactivo: el lacre. Es un botón de verdad para que
           funcione con teclado y lectores de pantalla aunque no parezca uno. */}
-      <motion.div
-        className="absolute left-1/2 top-1/2 z-10 flex flex-col items-center"
-        style={{ transform: 'translate(-50%, -50%)' }}
-        // initial={false}: el lacre es el ÚNICO elemento interactivo de la
-        // portada, así que nunca puede depender de que la animación llegue a
-        // correr. Con initial opacity 0 se quedaba invisible en cualquier
-        // situación que congele el bucle de animación (pestaña en segundo
-        // plano, por ejemplo) y la invitación no se podía abrir.
-        initial={false}
-        animate={opening ? { opacity: 0, scale: 1.06 } : { opacity: 1, scale: 1 }}
-        transition={{ duration: opening ? 0.45 : 1.1, ease: ease.soft }}
-      >
-        {theme.tagline && (
-          <p
-            className="font-cinzel uppercase"
-            style={{ color: theme.soft, letterSpacing: '0.34em', fontSize: 10, marginBottom: 18 }}
+      <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+        <motion.div
+          className="flex flex-col items-center"
+          // initial={false}: el lacre es el ÚNICO elemento interactivo de la
+          // portada, así que nunca puede depender de que la animación llegue a
+          // correr. Con initial opacity 0 se quedaba invisible en cualquier
+          // situación que congele el bucle de animación (pestaña en segundo
+          // plano, por ejemplo) y la invitación no se podía abrir.
+          initial={false}
+          animate={opening ? { opacity: 0, scale: 1.06 } : { opacity: 1, scale: 1 }}
+          transition={{ duration: opening ? 0.45 : 1.1, ease: ease.soft }}
+        >
+          {theme.tagline && (
+            <p
+              className="font-cinzel uppercase"
+              style={{ color: theme.soft, letterSpacing: '0.34em', fontSize: 10, marginBottom: 18 }}
+            >
+              {theme.tagline}
+            </p>
+          )}
+          <motion.button
+            onClick={onEnter}
+            aria-label={label}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
+            className="cursor-pointer"
+            style={{ background: 'none', border: 0, padding: 0, lineHeight: 0 }}
           >
-            {theme.tagline}
-          </p>
-        )}
-        <motion.button
-          onClick={onEnter}
-          aria-label={label}
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.97 }}
-          className="cursor-pointer"
-          style={{ background: 'none', border: 0, padding: 0, lineHeight: 0 }}
-        >
-          <SealPressed
-            initials={initials}
-            wax={theme.accent}
-            waxDeep={darken(theme.accent, 0.45)}
-            ink={darken(theme.accent, 0.68)}
-            size={132}
-          />
-        </motion.button>
-        <motion.svg
-          width="20" height="12" viewBox="0 0 24 14" fill="none"
-          stroke={theme.soft} strokeWidth="1.3" style={{ marginTop: 20 }}
-          animate={reduce ? {} : { y: [0, 5, 0] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-          aria-hidden
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4l8 7 8-7" />
-        </motion.svg>
-      </motion.div>
+            <SealPressed
+              initials={initials}
+              wax={theme.accent}
+              waxDeep={darken(theme.accent, 0.45)}
+              ink={darken(theme.accent, 0.68)}
+              size={132}
+            />
+          </motion.button>
+          <motion.svg
+            width="20" height="12" viewBox="0 0 24 14" fill="none"
+            stroke={theme.soft} strokeWidth="1.3" style={{ marginTop: 20 }}
+            animate={reduce ? {} : { y: [0, 5, 0] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+            aria-hidden
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4l8 7 8-7" />
+          </motion.svg>
+        </motion.div>
+      </div>
     </div>
   );
 }
@@ -270,7 +277,7 @@ function PassportScene({ theme, names, initials, dateLine, label, phase, onEnter
   const reduce = useReducedMotion();
   const opening = phase === 'opening' && !reduce;
   return (
-    <motion.div className="relative z-10 flex flex-col items-center px-6" style={{ gap: SCENE_GAP }}
+    <motion.div className="relative z-10 flex w-full flex-col items-center px-6" style={{ gap: SCENE_GAP }}
       variants={{ show: { transition: { staggerChildren: 0.14 } } }} initial="hidden" animate="show">
       <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Tagline theme={theme} /></motion.div>
       <motion.div variants={reveal} transition={{ duration: 0.8, ease: ease.soft }} style={{ perspective: 1500 }}>
@@ -279,7 +286,7 @@ function PassportScene({ theme, names, initials, dateLine, label, phase, onEnter
           style={{
             // El término en vh solo entra en pantallas cortas: a 812px de alto
             // 42vh son 341px y gana el tope de 300px de siempre.
-            width: 'min(78vw, 300px, 42vh)', aspectRatio: '2 / 2.7', background: theme.panel,
+            width: 'min(78vw, 300px, 39dvh)', aspectRatio: '2 / 2.7', background: theme.panel,
             transformOrigin: 'left center', transformStyle: 'preserve-3d', borderRadius: 12,
             border: `2px solid ${theme.accent}`, boxShadow: '0 30px 60px -20px rgba(0,0,0,0.6)', padding: '26px 22px',
           }}
@@ -310,7 +317,7 @@ function NewspaperScene({ theme, names, dateLine, label, phase, onEnter }: Scene
   const reduce = useReducedMotion();
   const opening = phase === 'opening' && !reduce;
   return (
-    <motion.div className="relative z-10 flex flex-col items-center gap-7 px-6"
+    <motion.div className="relative z-10 flex w-full flex-col items-center px-6" style={{ gap: SCENE_GAP }}
       variants={{ show: { transition: { staggerChildren: 0.14 } } }} initial="hidden" animate="show">
       <motion.div variants={reveal} transition={{ duration: 0.8, ease: ease.soft }} style={{ perspective: 1500 }}>
         <motion.div
@@ -343,7 +350,7 @@ function ArchScene({ theme, names, dateLine, coverImage, label, phase, onEnter }
   const reduce = useReducedMotion();
   const opening = phase === 'opening' && !reduce;
   return (
-    <motion.div className="relative z-10 flex flex-col items-center px-6" style={{ gap: SCENE_GAP }}
+    <motion.div className="relative z-10 flex w-full flex-col items-center px-6" style={{ gap: SCENE_GAP }}
       variants={{ show: { transition: { staggerChildren: 0.14 } } }} initial="hidden" animate="show">
       <motion.div variants={reveal} transition={{ duration: 0.7, ease: ease.soft }}><Tagline theme={theme} /></motion.div>
       <motion.div
@@ -351,7 +358,7 @@ function ArchScene({ theme, names, dateLine, coverImage, label, phase, onEnter }
         className="relative flex flex-col items-center justify-end text-center overflow-hidden"
         style={{
           // Ver PassportScene: el término en vh solo manda en pantallas cortas.
-          width: 'min(80vw, 320px, 41vh)', aspectRatio: '3 / 4.2',
+          width: 'min(80vw, 320px, 38dvh)', aspectRatio: '3 / 4.2',
           borderRadius: '50% 50% 10px 10px / 32% 32% 4px 4px',
           border: `1.5px solid ${theme.accent}`, boxShadow: '0 30px 60px -22px rgba(0,0,0,0.55)',
           backgroundColor: '#2c3a1c',
@@ -377,11 +384,11 @@ function LuxeScene({ theme, names, initials, dateLine, label, phase, onEnter }: 
   const reduce = useReducedMotion();
   const opening = phase === 'opening' && !reduce;
   return (
-    <motion.div className="relative z-10 flex flex-col items-center gap-8 px-6"
+    <motion.div className="relative z-10 flex w-full flex-col items-center px-6" style={{ gap: SCENE_GAP }}
       variants={{ show: { transition: { staggerChildren: 0.16 } } }} initial="hidden" animate="show">
       <motion.div
         className="relative flex flex-col items-center justify-center text-center"
-        style={{ width: 'min(82vw, 340px)', aspectRatio: '3 / 3.6', border: `1px solid ${theme.accent}55`, padding: 28 }}
+        style={{ width: 'min(82vw, 340px, 42dvh)', aspectRatio: '3 / 3.6', border: `1px solid ${theme.accent}55`, padding: 'clamp(20px, 4dvh, 28px)' }}
         animate={opening ? { opacity: 0, scale: 1.06 } : { opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: ease.soft }}
       >
         {/* gold corner ticks */}
@@ -495,7 +502,7 @@ function BotanicalScene({ theme, names, initials, dateLine, label, onEnter }: Sc
         <Sprig kind="orchid" color={theme.accent} className="absolute -bottom-4 -right-4 w-[42vw] max-w-[260px]" style={{ transform: 'scale(-1)' }} />
       </div>
 
-      <motion.div className="relative z-10 flex flex-col items-center gap-6 px-6"
+      <motion.div className="relative z-10 flex w-full flex-col items-center px-6" style={{ gap: SCENE_GAP }}
         variants={{ show: { transition: { staggerChildren: 0.16 } } }} initial="hidden" animate="show">
         <motion.div variants={reveal} transition={t}><Monogram a={a} b={b} color={theme.script} soft={theme.accent} /></motion.div>
         <motion.div variants={reveal} transition={t} className="text-center">
@@ -630,12 +637,13 @@ function CurtainScene({ theme, names, initials, dateLine, label, phase, onEnter 
         transition={{ duration: opening ? 0.5 : 0.9, ease: ease.soft, delay: opening ? 0 : 0.25 }}
       >
         <div
-          className="relative flex flex-col items-center gap-4 text-center"
+          className="relative flex flex-col items-center text-center"
           style={{
             // El relleno superior es generoso a propósito: más arriba la
             // arcada se estrecha y el texto se saldría por los lados.
             width: 'min(82vw, 340px)',
-            padding: '58px 22px 30px',
+            gap: 'clamp(12px, 2.2dvh, 16px)',
+            padding: 'clamp(38px, 7dvh, 58px) 22px clamp(22px, 3.6dvh, 30px)',
             background: `linear-gradient(170deg, ${theme.panel}, ${theme.panel}e6)`,
             borderRadius: '150px 150px 6px 6px / 110px 110px 6px 6px',
             border: `1px solid ${theme.script}66`,
@@ -716,7 +724,8 @@ function PetalsScene({ theme, names, initials, dateLine, label, onEnter }: Scene
       <FallingPetals color={theme.accent} />
       <CornerSprigs theme={theme} />
       <motion.div
-        className="relative z-10 flex flex-col items-center gap-6 px-6"
+        className="relative z-10 flex w-full flex-col items-center px-6"
+        style={{ gap: SCENE_GAP }}
         variants={{ show: { transition: { staggerChildren: 0.16 } } }}
         initial="hidden" animate="show"
       >
@@ -775,7 +784,7 @@ function GiftboxScene({ theme, names, initials, dateLine, label, phase, onEnter 
 
   return (
     <motion.div
-      className="relative z-10 flex flex-col items-center px-6"
+      className="relative z-10 flex w-full flex-col items-center px-6"
       style={{ gap: SCENE_GAP }}
       variants={{ show: { transition: { staggerChildren: 0.14 } } }}
       initial="hidden" animate="show"
@@ -785,7 +794,7 @@ function GiftboxScene({ theme, names, initials, dateLine, label, phase, onEnter 
       <motion.div variants={reveal} transition={{ duration: 0.8, ease: ease.soft }} style={{ perspective: 1200 }}>
         {/* Esta escena lleva un bloque de nombres extra bajo la caja, así que es
             la que más apila: el tope en vh entra antes que en las otras dos. */}
-        <div className="relative" style={{ width: 'min(66vw, 240px, 34vh)', aspectRatio: '1 / 1.02' }}>
+        <div className="relative" style={{ width: 'min(66vw, 240px, 34dvh)', aspectRatio: '1 / 1.02' }}>
           {/* Cuerpo de la caja */}
           <div
             className="absolute left-0 right-0 bottom-0 overflow-hidden"
@@ -815,14 +824,16 @@ function GiftboxScene({ theme, names, initials, dateLine, label, phase, onEnter 
           />
 
           {/* Iniciales que asoman al destapar */}
-          <motion.div
-            className="absolute left-1/2 top-[30%] -translate-x-1/2 font-great whitespace-nowrap"
-            style={{ color: theme.script, fontSize: 42, zIndex: 2, textShadow: '0 2px 10px rgba(0,0,0,0.25)' }}
-            animate={opening ? { y: '-46%', opacity: 1 } : { y: '10%', opacity: 0 }}
-            transition={{ duration: 0.75, delay: opening ? 0.3 : 0, ease: ease.soft }}
-          >
-            {initials}
-          </motion.div>
+          <div className="absolute left-1/2 top-[30%] z-[2] -translate-x-1/2">
+            <motion.div
+              className="font-great whitespace-nowrap"
+              style={{ color: theme.script, fontSize: 42, textShadow: '0 2px 10px rgba(0,0,0,0.25)' }}
+              animate={opening ? { y: '-46%', opacity: 1 } : { y: '10%', opacity: 0 }}
+              transition={{ duration: 0.75, delay: opening ? 0.3 : 0, ease: ease.soft }}
+            >
+              {initials}
+            </motion.div>
+          </div>
 
           {/* Tapa: se levanta, gira y se va */}
           <motion.div

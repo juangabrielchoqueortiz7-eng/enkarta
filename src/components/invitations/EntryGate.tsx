@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ease } from '@/lib/motion';
 import { themeFor, type EntryTheme } from './entry/config';
@@ -35,6 +35,7 @@ export default function EntryGate({
 }: Props) {
   const [phase, setPhase] = useState<'idle' | 'opening'>('idle');
   const [gone, setGone] = useState(false);
+  const openingRef = useRef(false);
 
   // Bloquea el scroll del fondo mientras la portada está visible.
   useEffect(() => {
@@ -54,17 +55,17 @@ export default function EntryGate({
   };
 
   const enter = () => {
-    if (phase !== 'idle') return;
+    // El botón vive dentro de una portada que también es clicable. El ref evita
+    // que el mismo gesto burbujee y dispare dos veces analítica, música y timers
+    // antes de que React alcance a reflejar el nuevo `phase`.
+    if (openingRef.current || phase !== 'idle') return;
+    openingRef.current = true;
     emitInvitationAnalytics('entry_open');
     setPhase('opening');
-    // Pantalla completa inmersiva (móvil y escritorio). Debe llamarse de forma
-    // síncrona dentro del gesto del usuario o el navegador la rechaza. En
-    // iPhone (Safari iOS) la API no existe para elementos: se ignora sin error.
-    try {
-      const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
-      if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-      else el.webkitRequestFullscreen?.();
-    } catch { /* sin soporte de fullscreen */ }
+    // No forzamos `requestFullscreen`: el cambio de viewport a mitad de la
+    // animación hacía que las escenas calculadas con vw/vh saltaran de tamaño
+    // y se vieran deformadas, especialmente dentro de previews y en Android.
+    // La portada ya ocupa el viewport visual con 100dvh.
     // Inicia la música de forma SÍNCRONA dentro del gesto: iOS/Safari rechazan
     // play() diferido con setTimeout. Reintento corto por si el elemento aún
     // no estaba montado en el primer frame.
@@ -90,9 +91,22 @@ export default function EntryGate({
         {!gone && (
           <motion.div
             key="entry-gate"
+            data-entry-gate
+            data-entry-scene={theme.scene}
             onClick={enter}
             className={`fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden text-center ${phase === 'idle' ? 'cursor-pointer' : ''}`}
-            style={{ background: `linear-gradient(160deg, ${theme.veil} 0%, ${theme.veil2 ?? theme.veil} 100%)`, color: theme.ink }}
+            style={{
+              background: `linear-gradient(160deg, ${theme.veil} 0%, ${theme.veil2 ?? theme.veil} 100%)`,
+              color: theme.ink,
+              boxSizing: 'border-box',
+              height: '100dvh',
+              minHeight: '100svh',
+              paddingTop: 'max(12px, env(safe-area-inset-top))',
+              paddingRight: 'max(12px, env(safe-area-inset-right))',
+              paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
+              paddingLeft: 'max(12px, env(safe-area-inset-left))',
+              overscrollBehavior: 'none',
+            }}
             initial={{ opacity: 1 }}
             animate={{ opacity: phase === 'opening' ? 0 : 1 }}
             transition={{ duration: 0.7, ease: ease.soft, delay: phase === 'opening' ? 1.05 : 0 }}

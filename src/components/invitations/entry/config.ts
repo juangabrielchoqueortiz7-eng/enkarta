@@ -161,7 +161,8 @@ export const DEFAULT_THEME: EntryTheme = {
 };
 
 export function themeFor(template?: string): EntryTheme {
-  return (template && ENTRY_THEMES[template]) || DEFAULT_THEME;
+  const key = template?.toLowerCase() === 'carmesi_v2' ? 'carmesi' : template?.toLowerCase();
+  return (key && ENTRY_THEMES[key]) || DEFAULT_THEME;
 }
 
 // ── Extract couple / date / cover from each template's data shape ─────────────
