@@ -9,6 +9,9 @@
 
 import { Reorder } from 'framer-motion';
 import { InvitationParsed, BuilderConfig, Block, BlockType, BlockLayout, BlockViewportLayout, ScrollPreset, LAYOUT_VERSION } from '@/lib/types';
+import DesignModeControl from '../DesignModeControl';
+import { hasInvitationVisualSystem } from '@/lib/marfil-visual-system';
+import { restoreBlockCollectionStyle } from '@/lib/collection-design';
 import { BLOCKS, PALETTE_GROUPS, SECTION_PRESETS, CHILD_PALETTE, createBlock, createOverlayGroup, cloneBlock, FONT_OPTIONS, type FieldDef, type SectionPreset } from '@/components/invitations/blocks/registry';
 import { layoutForTemplate } from '@/lib/layout-presets';
 import { themeForTemplate, motionForTemplate, tokensForTemplate } from '@/lib/template-themes';
@@ -242,6 +245,9 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
   const cfg: BuilderConfig = data.config ?? {};
   const layout = cfg.layout;
   const blocks = layout?.blocks ?? [];
+  const guided = cfg.designMode === 'guided' && hasInvitationVisualSystem(cfg.tokens);
+  const [showOtherSections, setShowOtherSections] = useState(false);
+  const modeControl = hasInvitationVisualSystem(cfg.tokens) ? <DesignModeControl guided={guided} onChange={value => onChange({ config: { ...cfg, designMode: value ? 'guided' : 'free' } })} /> : null;
 
   // Búsqueda en la paleta de bloques.
   const [paletteQuery, setPaletteQuery] = useState('');
@@ -318,6 +324,10 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
   const selectedSources = selectedBlocks.length ? selectedBlocks : blocks.filter(b => b.id === selectedId);
   const insertPreset = (preset: SectionPreset, replace = false) => {
     let created = attachDefaultBindings(preset.create());
+    if (guided) {
+      const inheritStyle = (block: Block): Block => ({ ...restoreBlockCollectionStyle(block), ...(block.children ? { children: block.children.map(inheritStyle) } : {}) });
+      created = created.map(inheritStyle);
+    }
     if (replace && selectedSources.length) {
       created = transferSectionContent(created, selectedSources);
       const ids = new Set(selectedSources.map(block => block.id));
@@ -343,6 +353,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
   const visibleSectionPresets = SECTION_PRESETS
     .filter(preset => {
       const meta = sectionCatalogMeta(preset.key, preset.group);
+      if (guided && !showOtherSections && !isSectionRecommended(meta, data.template)) return false;
       if (sectionMoment !== 'Todas' && meta.moment !== sectionMoment) return false;
       if (sectionStyle !== 'Todos' && !meta.styles.includes(sectionStyle)) return false;
       if (!normalizedSectionQuery) return true;
@@ -662,6 +673,12 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
         </div>
 
         {/* Contenido */}
+        {modeControl}
+        {inspectorTab === 'design' && hasInvitationVisualSystem(cfg.tokens) && <div className="rounded-2xl border border-[#e6e0d5] bg-white p-3 font-outfit">
+          <p className="text-xs leading-relaxed text-[#6c655b]">Los colores, las fuentes y los acabados se heredan de la colección. Tus ajustes individuales tienen prioridad.</p>
+          <button type="button" onClick={() => patchBlock(selected.id, restoreBlockCollectionStyle(selected))} className="mt-2 min-h-10 rounded-lg border border-[#cfc5b5] px-3 text-xs text-[#4d5944]">Restaurar tipografía y acabado</button>
+          <p className="mt-1 text-[10px] text-[#7b746b]">Conserva contenido y posición. Puedes revertirlo con Deshacer.</p>
+        </div>}
         {inspectorTab === 'content' && <div className={`${editorCardCls} space-y-3`}>
           <h4 className={editorSectionTitleCls}>Contenido del bloque</h4>
           {selected.bindings && Object.keys(selected.bindings).length > 0 && (
@@ -756,7 +773,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
         </details>}
 
         {/* Tipografía (bloques de texto) */}
-        {inspectorTab === 'design' && ['cover', 'heading', 'text', 'quote', 'hashtag'].includes(selected.type) && (
+        {inspectorTab === 'design' && !guided && ['cover', 'heading', 'text', 'quote', 'hashtag'].includes(selected.type) && (
           <div className={`${editorCardCls} space-y-3`}>
             <h4 className={editorSectionTitleCls}>Tipografía</h4>
             <Labeled label="Fuente">
@@ -1214,6 +1231,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
       </div>
 
       {/* Galería visual de secciones: momento narrativo + estilo + preview real. */}
+      {modeControl}
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Secciones listas</h4>
@@ -1221,6 +1239,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
         </div>
 
         <div className="relative">
+          {guided && <label className="mb-3 flex min-h-10 items-center gap-2 text-xs font-outfit text-[#6c655b]"><input type="checkbox" checked={showOtherSections} onChange={event => setShowOtherSections(event.target.checked)} />Mostrar también otros estilos</label>}
           <svg className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#a69b8f]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m0 0A7.5 7.5 0 105.2 5.2a7.5 7.5 0 0010.6 10.6z" /></svg>
           <input value={sectionQuery} onChange={event => setSectionQuery(event.target.value)} placeholder="Buscar portada, itinerario, fotos…"
             className="h-10 w-full rounded-xl border border-[#ded8d0] bg-white pl-9 pr-3 text-[11px] text-[#4c443c] outline-none transition-all placeholder:text-[#aaa096] focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/10 font-outfit" />

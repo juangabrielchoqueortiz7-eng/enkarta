@@ -8,7 +8,8 @@ import { contentToLayout } from '@/lib/layout-presets';
 import { themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import type { PageMotionPreset, TemplateDecor, ParticleShape, CornerStyle, InvitationTemplate } from '@/lib/types';
 import { ENKARTA_COLLECTIONS, MARFIL_VIVO_DESIGN } from '@/lib/enkarta-collections';
-import { marfilVivoDemo } from '@/lib/marfil-vivo';
+import { invitationDemo, STARTER_TEMPLATE_KEYS, type StarterTemplateKey } from '@/lib/template-starters';
+import FontScope from '@/components/invitations/FontScope';
 import { resolveLayoutBindings } from '@/lib/block-bindings';
 import { entryPropsFor } from '@/components/invitations/entry/config';
 import { DEFAULT_MUSIC_URL, TRACK } from '@/lib/music';
@@ -16,7 +17,7 @@ import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaS
 
 interface Props {
   params: Promise<{ template: string }>;
-  searchParams: Promise<{ n?: string; m?: string; full?: string; mo?: string; blocks?: string; fp?: string; cs?: string; seam?: string; fx?: string; flow?: string; prog?: string; tempo?: string; px?: string }>;
+  searchParams: Promise<{ n?: string; m?: string; full?: string; mo?: string; blocks?: string; fp?: string; cs?: string; seam?: string; fx?: string; flow?: string; prog?: string; tempo?: string; px?: string; preview?: string; classic?: string }>;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -112,17 +113,22 @@ const DEMO_MUSIC: Record<string, string> = {
 
 export default async function MuestraPage({ params, searchParams }: Props) {
   const { template } = await params;
-  const { n, m, full, mo, blocks, fp, cs, seam, fx, flow, prog, tempo, px } = await searchParams;
+  const { n, m, full, mo, blocks, fp, cs, seam, fx, flow, prog, tempo, px, preview, classic } = await searchParams;
   let key = template.toLowerCase();
   if (key === 'carmesi_v2') key = 'carmesi';
 
-  if (key === 'marfil-vivo') {
-    const demo = marfilVivoDemo();
+  const starterKey = key === 'carmesi' ? 'carmesi_v2' : key;
+  if (STARTER_TEMPLATE_KEYS.includes(starterKey as StarterTemplateKey) && (classic !== '1' || key === 'marfil-vivo')) {
+    const demo = invitationDemo(starterKey as StarterTemplateKey);
     if (m) demo.guest_name = m;
+    if (n && Number.isFinite(parseInt(n, 10))) demo.guest_passes = Math.max(1, Math.min(20, parseInt(n, 10)));
     const config = demo.config;
-    const content = <BlockRenderer layout={resolveLayoutBindings(config.layout!, demo)} theme={config.theme} tokens={config.tokens} motion={config.motion} decor={config.decor} gated={full !== '1'} demo />;
-    if (full === '1') return content;
-    return <EntryGate template="grazia" names={demo.names!} initials="E & M" dateLine={demo.event_date!} coverImage={demo.cover_image_url!} label={config.entry?.label} bg={config.theme?.bg} accent={config.theme?.primary} text={config.theme?.text}>{content}</EntryGate>;
+    const resolved = resolveLayoutBindings(config.layout!, demo);
+    const layout = preview === '1' ? { ...resolved, blocks: resolved.blocks.slice(0, 1).map(block => ({ ...block, animation: { preset: 'none' as const } })) } : resolved;
+    const content = <FontScope config={config}><BlockRenderer layout={layout} theme={config.theme} tokens={config.tokens} motion={preview === '1' ? { preset: 'none', progress: 'none' } : config.motion} decor={config.decor} musicUrl={preview === '1' ? undefined : config.musicUrl} gated={full !== '1' && preview !== '1'} previewOnly={preview === '1'} demo /></FontScope>;
+    if (full === '1' || preview === '1' || config.entry?.enabled === false) return content;
+    const initials = demo.names!.split(/\s*&\s*|\s+y\s+/i).map(name => name[0]).join(' & ');
+    return <FontScope config={config}><EntryGate template={demo.template} names={demo.names!} initials={initials} dateLine={demo.event_date!} coverImage={demo.cover_image_url!} label={config.entry?.label} scene={config.entry?.style === 'cinematic' ? 'cinematic' : undefined} entryVideoUrl={config.entry?.videoUrl} entryPoster={config.entry?.poster} entryDuration={config.entry?.duration} entryOverlay={config.entry?.overlay} showSkip={config.entry?.showSkip ?? true} skipLabel={config.entry?.skipLabel} bg={config.theme?.bg} accent={config.theme?.primary} text={config.theme?.text}>{content}</EntryGate></FontScope>;
   }
 
   const sample = SAMPLES[key];

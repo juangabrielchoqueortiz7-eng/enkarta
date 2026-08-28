@@ -64,6 +64,8 @@ export interface ItineraryItem {
  * campos nuevos desde el builder.
  */
 export interface BuilderConfig {
+  /** Guided editing changes the controls offered, never existing content. */
+  designMode?: 'guided' | 'free';
   // ── Comunes / Azure ──
   city?: string;
   welcomeTitle?: string;
@@ -234,6 +236,8 @@ export interface TemplateTheme {
 
 /** Tokens de composición por modelo para mantener consistencia al editar. */
 export interface TemplateTokens {
+  /** Sistema visual versionado y opt-in; documentos anteriores conservan su aspecto. */
+  visualProfile?: 'marfil-v1' | 'collection-v1';
   contentWidth?: number;
   sectionInset?: number;
   sectionRadius?: number;

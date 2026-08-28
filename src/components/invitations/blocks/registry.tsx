@@ -11,6 +11,7 @@ import { useReducedMotion } from 'framer-motion';
 import type { Block, BlockType, BlockLayout } from '@/lib/types';
 import { useBlockTheme } from './theme';
 import { useInvitationVisualSystem } from './visual-system';
+import { useBlockTypography } from './typography';
 import { Editable, useBlockData, useBlockEdit } from './editable';
 import { useCountdown, CopyBtn, PhotoGrid, EventIcon, OrchidSprig, Odometer, Tilt, type GalleryCaption, type GalleryLayout } from '../shared';
 import { RevealDraw, PinnedStory } from '@/lib/scroll-motion';
@@ -22,6 +23,7 @@ import { PassportHeroBlock, PassportTicketBlock } from './passport-scenes';
 import { imageAspect, imageColorOverlayStyle, imageFilter, imageFrameStyle, imageTemperatureStyle, imageTransform, imageViewportStyle } from '@/lib/image-effects';
 import QrCard from '../QrCard';
 import NativeMedia, { isEmbeddedVideoUrl } from './native-media';
+import { isEmptyOptionalBlock } from '@/lib/collection-design';
 
 // ── Lectura de props con defaults ─────────────────────────────────────────────
 const str = (b: Block, k: string, d = '') => (typeof b.props[k] === 'string' ? (b.props[k] as string) : d);
@@ -53,6 +55,8 @@ function fluidType(b: Block, min: number, vw: number, max: number, role: TypeRol
 }
 function typoStyle(b: Block, role: TypeRole = 'body'): React.CSSProperties {
   const s: React.CSSProperties = {};
+  const families: Record<string, string> = { great: '"Great Vibes", cursive', cinzel: 'Cinzel, serif', cormorant: '"Cormorant Garamond", serif', playfair: '"Playfair Display", serif', outfit: 'Outfit, sans-serif' };
+  const family = str(b, 'family'); if (families[family]) s.fontFamily = families[family];
   const size = num(b, 'size', 0); if (size) s.fontSize = scaledPx(b, size, role);
   const color = str(b, 'textColor'); if (color) s.color = color;
   const w = str(b, 'weight'); if (w) s.fontWeight = w as React.CSSProperties['fontWeight'];
@@ -121,6 +125,7 @@ function Pill({ href, children, filled }: { href?: string; children: React.React
 // ── Componentes de bloque ─────────────────────────────────────────────────────
 const CinematicHeroBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const type = useBlockTypography(block);
   const { editing } = useBlockEdit();
   const reducedMotion = useReducedMotion();
   const videoUrl = str(block, 'videoUrl');
@@ -153,11 +158,14 @@ const CinematicHeroBlock: React.FC<{ block: Block }> = ({ block }) => {
     fontSize: `clamp(46px, 12vw, ${nameSize}px)`,
     lineHeight: titleFont === 'script' ? 0.78 : 0.98,
     textShadow: '0 3px 28px rgba(0,0,0,.32)',
+    ...(titleFont === 'serif' ? type('display') : {}),
+    ...(type('display').fontFamily ? { fontSize: `clamp(42px, 12cqw, ${nameSize}px)` } : {}),
   };
 
   return (
     <section
       data-ek-section={block.id}
+      data-ek-block-type="cinematicHero"
       className="ek-cinematic-hero group relative isolate w-full overflow-hidden"
       style={{ minHeight, background: t.primaryDeep, color: textColor }}
     >
@@ -189,21 +197,21 @@ const CinematicHeroBlock: React.FC<{ block: Block }> = ({ block }) => {
       {bool(block, 'fadeToPage', true) && <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-[14%]" style={{ background: `linear-gradient(to bottom, transparent, ${t.bg})` }} />}
 
       <div
-        className="pointer-events-none absolute inset-0 z-10 flex flex-col px-7 py-16 sm:px-12 sm:py-20"
+        className="pointer-events-none absolute inset-0 z-10 flex flex-col px-7 py-16 invite-sm:px-12 invite-sm:py-20"
         style={{ justifyContent, alignItems, textAlign: align }}
       >
         <div className={`${editing ? 'pointer-events-auto' : 'pointer-events-none'} w-full max-w-[720px]`} style={{ marginLeft: align === 'right' ? 'auto' : undefined, marginRight: align === 'left' ? 'auto' : undefined }}>
           {str(block, 'eyebrow') && (
-            <Editable as="p" k="eyebrow" value={str(block, 'eyebrow', 'Nuestra boda')} effect="cascade" className="font-cinzel text-[10px] font-semibold uppercase tracking-[.28em] sm:text-xs" style={{ color: accentColor, textShadow: '0 2px 14px rgba(0,0,0,.4)' }} />
+            <Editable as="p" k="eyebrow" value={str(block, 'eyebrow', 'Nuestra boda')} effect="cascade" className="font-cinzel text-[10px] font-semibold uppercase tracking-[.28em] invite-sm:text-xs" style={{ color: accentColor, textShadow: '0 2px 14px rgba(0,0,0,.4)', ...type('label') }} />
           )}
           <div className={`mt-4 ${namesLayout === 'inline' ? 'flex flex-wrap items-baseline gap-x-3 gap-y-1' : 'flex flex-col'} ${align === 'center' ? 'items-center justify-center' : align === 'right' ? 'items-end justify-end' : 'items-start justify-start'}`}>
             <Editable as="h1" k="groom" value={str(block, 'groom', 'Annie')} effect="write" className={titleClass} style={nameStyle} />
-            <span className="font-cormorant text-2xl italic sm:text-3xl" style={{ color: accentColor, textShadow: '0 2px 14px rgba(0,0,0,.35)' }}>&amp;</span>
+            <span className="font-cormorant text-2xl italic invite-sm:text-3xl" style={{ color: accentColor, textShadow: '0 2px 14px rgba(0,0,0,.35)', ...type('number') }}>&amp;</span>
             <Editable as="h1" k="bride" value={str(block, 'bride', 'Miguel')} effect="write" className={titleClass} style={nameStyle} />
           </div>
-          {str(block, 'tagline') && <Editable as="p" k="tagline" value={str(block, 'tagline', 'Nos casamos')} className="mt-5 font-cormorant text-lg italic sm:text-xl" style={{ color: textColor, textShadow: '0 2px 18px rgba(0,0,0,.45)' }} />}
+          {str(block, 'tagline') && <Editable as="p" k="tagline" value={str(block, 'tagline', 'Nos casamos')} className="mt-5 font-cormorant text-lg italic invite-sm:text-xl" style={{ color: textColor, textShadow: '0 2px 18px rgba(0,0,0,.45)', ...type('note') }} />}
           {str(block, 'dateLabel') && (
-            <div className={`mt-5 flex items-center gap-3 font-cinzel text-[10px] uppercase tracking-[.22em] sm:text-xs ${align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'}`} style={{ color: accentColor }}>
+            <div className={`mt-5 flex items-center gap-3 font-cinzel text-[10px] uppercase tracking-[.22em] invite-sm:text-xs ${align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'}`} style={{ color: accentColor, ...type('time') }}>
               <span className="h-px w-8 bg-current opacity-70" /><Editable k="dateLabel" value={str(block, 'dateLabel', '12 · Octubre · 2026')} /><span className="h-px w-8 bg-current opacity-70" />
             </div>
           )}
@@ -215,7 +223,7 @@ const CinematicHeroBlock: React.FC<{ block: Block }> = ({ block }) => {
       )}
       {bool(block, 'showScrollCue', true) && (
         <div aria-hidden className={`pointer-events-none absolute bottom-5 left-1/2 z-20 -translate-x-1/2 ${reducedMotion ? '' : 'animate-bounce'}`} style={{ color: accentColor }}>
-          <div className="flex flex-col items-center gap-1 opacity-80"><span className="font-cinzel text-[8px] uppercase tracking-[.25em]">Descubre</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
+          <div className="flex flex-col items-center gap-1 opacity-80"><span className="font-cinzel text-[8px] uppercase tracking-[.25em]" style={type('label')}>Descubre</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
         </div>
       )}
     </section>
@@ -223,15 +231,17 @@ const CinematicHeroBlock: React.FC<{ block: Block }> = ({ block }) => {
 };
 
 const CoverBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const visual = useInvitationShape();
   const image = str(block, 'image');
+  const namesStyle = { color: t.primary, ...type('display'), fontSize: type('display').fontFamily ? 'clamp(44px, 13cqw, 76px)' : fluidType(block, 44, 13, 76), ...typoStyle(block, 'title') };
   return (
     <div className="flex flex-col items-center">
-      <Editable as="h1" k="groom" effect="write" value={str(block, 'groom', 'Lorena')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={{ color: t.primary, fontSize: fluidType(block, 44, 13, 76), ...typoStyle(block, 'title') }} />
-      <span className="font-cormorant my-1" style={{ color: t.muted, fontSize: scaledPx(block, 24, 'subtitle') }}>&amp;</span>
-      <Editable as="h1" k="bride" effect="write" value={str(block, 'bride', 'Marcos')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={{ color: t.primary, fontSize: fluidType(block, 44, 13, 76), ...typoStyle(block, 'title') }} />
-      <Editable as="p" k="tagline" effect="cascade" value={str(block, 'tagline', 'Nos casamos')} className="font-cinzel uppercase tracking-[0.22em] mt-5" style={{ color: t.muted, fontSize: scaledPx(block, 12, 'label') }} />
+      <Editable as="h1" k="groom" effect="write" value={str(block, 'groom', 'Lorena')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={namesStyle} />
+      <span className="font-cormorant my-1" style={{ color: t.muted, fontSize: scaledPx(block, 24, 'subtitle') , ...type('subtitle') }}>&amp;</span>
+      <Editable as="h1" k="bride" effect="write" value={str(block, 'bride', 'Marcos')} className={`${famClass(block) || 'font-great'} leading-[0.9]`} style={namesStyle} />
+      <Editable as="p" k="tagline" effect="cascade" value={str(block, 'tagline', 'Nos casamos')} className="font-cinzel uppercase tracking-[0.22em] mt-5" style={{ color: t.muted, fontSize: scaledPx(block, 12, 'label') , ...type('label') }} />
       {image && (
         <div className="mt-8 w-full overflow-hidden" style={{ maxWidth: 480, ...visual.media }}>
           <img src={image} alt="" decoding="async" fetchPriority="high" className="w-full object-cover" style={{ maxHeight: 600, objectPosition: str(block, 'focal', '50% 50%') }} />
@@ -242,6 +252,7 @@ const CoverBlock: React.FC<{ block: Block }> = ({ block }) => {
 };
 
 const HeadingBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const text = str(block, 'text', 'Título');
   const font = str(block, 'font', 'caps');
@@ -249,17 +260,19 @@ const HeadingBlock: React.FC<{ block: Block }> = ({ block }) => {
   const fc = famClass(block);
   const role: TypeRole = font === 'caps' ? 'subtitle' : 'title';
   const ts = typoStyle(block, role);
-  if (font === 'script') return <Editable as="h2" k="text" effect="write" value={text} className={fc || 'font-great'} style={{ color: t.primary, fontSize: size ? scaledPx(block, size, role) : fluidType(block, 34, 7, 52, role), ...ts }} />;
-  if (font === 'serif') return <Editable as="h2" k="text" effect="cascadeWords" value={text} className={fc || 'font-playfair'} style={{ color: t.primary, fontSize: size ? scaledPx(block, size, role) : fluidType(block, 24, 5, 36, role), ...ts }} />;
-  return <Editable as="h2" k="text" effect="cascade" value={text} className={fc || 'font-cinzel uppercase tracking-[0.18em]'} style={{ color: t.muted, fontSize: size ? scaledPx(block, size, role) : fluidType(block, 14, 3, 18, role), ...ts }} />;
+  if (font === 'script') return <Editable as="h2" k="text" effect="write" value={text} className={fc || 'font-great'} style={{ color: t.primary, fontSize: size ? scaledPx(block, size, role) : fluidType(block, 34, 7, 52, role), ...type('title'), ...ts }} />;
+  if (font === 'serif') return <Editable as="h2" k="text" effect="cascadeWords" value={text} className={fc || 'font-playfair'} style={{ color: t.primary, fontSize: size ? scaledPx(block, size, role) : fluidType(block, 24, 5, 36, role), ...type('title'), ...ts }} />;
+  return <Editable as="h2" k="text" effect="cascade" value={text} className={fc || 'font-cinzel uppercase tracking-[0.18em]'} style={{ color: t.muted, fontSize: size ? scaledPx(block, size, role) : fluidType(block, 14, 3, 18, role), ...type('title'), ...ts }} />;
 };
 
-const TextBlock: React.FC<{ block: Block }> = ({ block }) => (
-  <Editable as="p" k="text" value={str(block, 'text', 'Escribe aquí tu mensaje…')} className={`${famClass(block) || 'font-cormorant'} ${bool(block, 'italic') ? 'italic' : ''}`} style={{ color: 'inherit', fontSize: scaledPx(block, 18, 'body'), lineHeight: 1.75, opacity: 0.96, ...typoStyle(block, 'body') }} />
-);
+const TextBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
+  return <Editable as="p" k="text" value={str(block, 'text', 'Escribe aquí tu mensaje…')} className={`${famClass(block) || 'font-cormorant'} ${bool(block, 'italic') ? 'italic' : ''}`} style={{ color: 'inherit', fontSize: scaledPx(block, 18, 'body'), lineHeight: 1.75, opacity: 0.96, ...type('body'), ...typoStyle(block, 'body'), ...(bool(block, 'italic') ? { fontStyle: 'italic' } : {}) }} />;
+};
 
 // Dígito con volteo 3D al cambiar (estilo tablero de aeropuerto/reloj flip).
 function FlipDigit({ value, compact = false }: { value: string; compact?: boolean }) {
+  const type = useBlockTypography();
   const t = useBlockTheme();
   const reduced = useReducedMotion();
   const [display, setDisplay] = useState(value);
@@ -281,7 +294,7 @@ function FlipDigit({ value, compact = false }: { value: string; compact?: boolea
         boxShadow: 'inset 0 -1px 0 rgba(255,255,255,0.08), 0 6px 14px -6px rgba(0,0,0,0.5)',
         transformStyle: 'preserve-3d', transition: 'transform .28s ease',
         transform: flipping ? 'rotateX(-90deg)' : 'rotateX(0deg)',
-      }}
+       ...type('subtitle') }}
     >
       {/* Línea media del flip */}
       <span className="pointer-events-none absolute left-0 right-0 top-1/2 h-px" style={{ background: 'rgba(0,0,0,0.35)' }} />
@@ -292,13 +305,14 @@ function FlipDigit({ value, compact = false }: { value: string; compact?: boolea
 
 const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const type = useBlockTypography(block);
   const shape = useInvitationShape();
   const { days, hours, mins, secs } = useCountdown(str(block, 'isoDate', new Date().toISOString()));
   const storedDisplay = str(block, 'display', 'cards');
   const display = storedDisplay === 'plain' ? 'minimal' : storedDisplay;
   const units: [number, string][] = [[days, 'Días'], [hours, 'Horas'], [mins, 'Min'], ...(bool(block, 'showSeconds', true) ? [[secs, 'Seg'] as [number, string]] : [])];
   const gridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: `repeat(${units.length}, minmax(0, 1fr))`, gap: 'clamp(6px, 2vw, 12px)', maxWidth: 560, margin: '0 auto' };
-  const title = <p className="mb-5 font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 17, 'body') }}>{str(block, 'label', 'Solo faltan')}</p>;
+  const title = <p className="mb-5 font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 17, 'body'), ...type('note') }}>{str(block, 'label', 'Solo faltan')}</p>;
   const numberSize = (value: number, regular: number, compact: number) => scaledPx(block, value >= 100 ? compact : regular, 'subtitle');
 
   if (display === 'flip') {
@@ -313,7 +327,7 @@ const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
                 <span className="flex max-w-full gap-0.5">
                   {s.split('').map((digit, index) => <FlipDigit key={`${l}-${index}`} value={digit} compact={s.length > 2} />)}
                 </span>
-                <span className="font-cinzel uppercase tracking-widest" style={{ color: t.muted, fontSize: scaledPx(block, 10, 'label') }}>{l}</span>
+                <span className="font-cinzel uppercase tracking-widest" style={{ color: t.muted, fontSize: scaledPx(block, 10, 'label'), ...type('label') }}>{l}</span>
               </div>
             );
           })}
@@ -330,9 +344,9 @@ const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
           {units.map(([n, l]) => (
             <div key={l} className="flex min-w-0 flex-col items-center gap-2">
               <div className="flex aspect-square w-full max-w-[78px] items-center justify-center rounded-full" style={{ border: `1.5px solid ${t.primary}`, background: `radial-gradient(circle, color-mix(in srgb, ${t.primary} 9%, transparent), transparent 68%)`, boxShadow: shape.cardShadow }}>
-                <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: numberSize(n, 34, 27) }}><Odometer value={n} /></span>
+                <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: numberSize(n, 34, 27), ...type('number') }}><Odometer value={n} /></span>
               </div>
-              <span className="font-cinzel uppercase tracking-[0.14em]" style={{ color: t.muted, fontSize: scaledPx(block, 9, 'label') }}>{l}</span>
+              <span className="font-cinzel uppercase tracking-[0.14em]" style={{ color: t.muted, fontSize: scaledPx(block, 9, 'label'), ...type('label') }}>{l}</span>
             </div>
           ))}
         </div>
@@ -347,8 +361,8 @@ const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
         <div style={{ ...gridStyle, gap: 0 }}>
           {units.map(([n, l], index) => (
             <div key={l} className="flex min-w-0 flex-col items-center px-1.5" style={{ borderLeft: index ? `1px solid ${t.line}` : undefined }}>
-              <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: numberSize(n, 39, 29) }}><Odometer value={n} /></span>
-              <span className="mt-2 font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: scaledPx(block, 9, 'label') }}>{l}</span>
+              <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: numberSize(n, 39, 29), ...type('number') }}><Odometer value={n} /></span>
+              <span className="mt-2 font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: scaledPx(block, 9, 'label'), ...type('label') }}>{l}</span>
             </div>
           ))}
         </div>
@@ -362,8 +376,8 @@ const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
       <div style={gridStyle}>
         {units.map(([n, l]) => (
           <div key={l} className="flex min-w-0 flex-col items-center px-1 py-3.5" style={{ ...shape.card, background: `linear-gradient(145deg, color-mix(in srgb, ${t.surface} 86%, ${t.bg}), color-mix(in srgb, ${t.primary} 7%, ${t.bg}))` }}>
-            <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: numberSize(n, 36, 28) }}><Odometer value={n} /></span>
-            <span className="mt-2 font-cinzel uppercase tracking-[0.12em]" style={{ color: t.muted, fontSize: scaledPx(block, 9, 'label') }}>{l}</span>
+            <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: numberSize(n, 36, 28), ...type('number') }}><Odometer value={n} /></span>
+            <span className="mt-2 font-cinzel uppercase tracking-[0.12em]" style={{ color: t.muted, fontSize: scaledPx(block, 9, 'label'), ...type('label') }}>{l}</span>
           </div>
         ))}
       </div>
@@ -372,44 +386,47 @@ const CountdownBlock: React.FC<{ block: Block }> = ({ block }) => {
 };
 
 const DateBadgeBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const shape = useInvitationShape();
   return (
     <div className="flex items-center justify-center gap-4">
-      <span className="font-cinzel uppercase tracking-[0.2em]" style={{ color: t.muted, fontSize: scaledPx(block, 13, 'label') }}>{str(block, 'weekday', 'Sábado')}</span>
+      <span className="font-cinzel uppercase tracking-[0.2em]" style={{ color: t.muted, fontSize: scaledPx(block, 13, 'label') , ...type('label') }}>{str(block, 'weekday', 'Sábado')}</span>
       <div className="flex flex-col items-center justify-center w-24 h-28 flex-shrink-0" style={{ ...shape.card, borderRadius: shape.mood === 'rounded' ? 999 : shape.cardRadius }}>
-        {str(block, 'city') && <span className="font-cinzel uppercase tracking-widest" style={{ color: t.muted, fontSize: scaledPx(block, 8, 'label') }}>{str(block, 'city')}</span>}
-        <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: scaledPx(block, 46, 'title') }}>{str(block, 'day', '04')}</span>
-        <span className="font-cinzel tracking-widest" style={{ color: t.muted, fontSize: scaledPx(block, 10, 'label') }}>{str(block, 'year', '2026')}</span>
+        {str(block, 'city') && <span className="font-cinzel uppercase tracking-widest" style={{ color: t.muted, fontSize: scaledPx(block, 8, 'label') , ...type('label') }}>{str(block, 'city')}</span>}
+        <span className="font-playfair font-bold leading-none" style={{ color: t.primary, fontSize: scaledPx(block, 46, 'title') , ...type('number') }}>{str(block, 'day', '04')}</span>
+        <span className="font-cinzel tracking-widest" style={{ color: t.muted, fontSize: scaledPx(block, 10, 'label') , ...type('label') }}>{str(block, 'year', '2026')}</span>
       </div>
-      <span className="font-cinzel uppercase tracking-[0.2em]" style={{ color: t.muted, fontSize: scaledPx(block, 13, 'label') }}>{str(block, 'month', 'Julio')}</span>
+      <span className="font-cinzel uppercase tracking-[0.2em]" style={{ color: t.muted, fontSize: scaledPx(block, 13, 'label') , ...type('label') }}>{str(block, 'month', 'Julio')}</span>
     </div>
   );
 };
 
 const EventCardBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   return (
     <div className="flex flex-col items-center">
       <span className="inline-flex w-12 h-12 mb-3">
         <EventIcon name={str(block, 'icon', 'church')} className="w-12 h-12" stroke={t.primary} lottieColors={block.props.iconColors as any} speed={block.props.iconSpeed as any} />
       </span>
-      <h3 className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'subtitle') }}>{str(block, 'title', 'Ceremonia')}</h3>
-      <p className="font-playfair font-bold mt-2" style={{ color: t.primary, fontSize: scaledPx(block, 30, 'title') }}>{str(block, 'time', '16:00 h')}</p>
-      <p className="font-cormorant mt-1" style={{ color: 'inherit', fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'place', 'Lugar del evento')}</p>
-      {str(block, 'address') && <p className="font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'body') }}>{str(block, 'address')}</p>}
+      <h3 className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'subtitle') , ...type('subtitle') }}>{str(block, 'title', 'Ceremonia')}</h3>
+      <p className="font-playfair font-bold mt-2" style={{ color: t.primary, fontSize: scaledPx(block, 30, 'title') , ...type('title') }}>{str(block, 'time', '16:00 h')}</p>
+      <p className="font-cormorant mt-1" style={{ color: 'inherit', fontSize: scaledPx(block, 16, 'body') , ...type('body') }}>{str(block, 'place', 'Lugar del evento')}</p>
+      {str(block, 'address') && <p className="font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'body') , ...type('body') }}>{str(block, 'address')}</p>}
       {str(block, 'mapsUrl') && <div className="mt-4"><Pill href={str(block, 'mapsUrl')}>Ver ubicación</Pill></div>}
     </div>
   );
 };
 
 const DressCodeBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   return (
     <div className="flex flex-col items-center">
       <span className="inline-flex w-12 h-12 mb-3"><EventIcon name={str(block, 'icon', 'dress')} className="w-12 h-12" stroke={t.primary} /></span>
-      <h3 className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'subtitle') }}>{str(block, 'title', 'Código de vestimenta')}</h3>
-      <div className="font-cormorant mt-3" style={{ color: 'inherit', fontSize: scaledPx(block, 17, 'body') }}>
+      <h3 className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'subtitle') , ...type('subtitle') }}>{str(block, 'title', 'Código de vestimenta')}</h3>
+      <div className="font-cormorant mt-3" style={{ color: 'inherit', fontSize: scaledPx(block, 17, 'body') , ...type('body') }}>
         <p><span className="font-semibold">Hombres:</span> <span style={{ color: t.muted }}>{str(block, 'men', 'Formal')}</span></p>
         <p><span className="font-semibold">Damas:</span> <span style={{ color: t.muted }}>{str(block, 'women', 'Formal')}</span></p>
       </div>
@@ -419,6 +436,7 @@ const DressCodeBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const type = useBlockTypography(block);
   const shape = useInvitationShape();
   const items = list<{ time?: string; label?: string; place?: string; note?: string; duration?: string; icon?: string; iconColors?: any; iconSpeed?: number }>(block, 'items');
   const layout = str(block, 'layout', 'timeline');
@@ -432,9 +450,9 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
   const cardStyle: React.CSSProperties = shape.card;
   const itemDetails = (it: (typeof items)[number], align: 'left' | 'center' | 'right' = 'left') => (
     <>
-      {it.place && <p className="mt-1 font-outfit text-[12px] leading-snug" style={{ color: t.muted, textAlign: align }}>{it.place}</p>}
+      {it.place && <p className="mt-1 font-outfit text-[12px] leading-snug" style={{ color: t.muted, textAlign: align, ...type('note') }}>{it.place}</p>}
       {(it.note || it.duration) && (
-        <p className="mt-1.5 font-outfit text-[10px] uppercase leading-snug tracking-[0.12em]" style={{ color: t.primary, textAlign: align }}>
+        <p className="mt-1.5 font-outfit text-[10px] uppercase leading-snug tracking-[0.12em]" style={{ color: t.primary, textAlign: align, ...type('note') }}>
           {[it.duration, it.note].filter(Boolean).join(' · ')}
         </p>
       )}
@@ -444,15 +462,15 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
   const content = layout === 'editorial' ? (
     <div className="mx-auto max-w-xl text-left">
       {items.map((it, i) => (
-        <div key={i} className="grid grid-cols-[66px_1fr] gap-4 py-5 sm:grid-cols-[88px_1fr] sm:gap-6" style={{ borderTop: `1px solid ${t.line}` }}>
+        <div key={i} className="grid grid-cols-[66px_1fr] gap-4 py-5 invite-sm:grid-cols-[88px_1fr] invite-sm:gap-6" style={{ borderTop: `1px solid ${t.line}` }}>
           <div className="pt-0.5">
-            <p className="font-cinzel text-[12px] tracking-[0.12em]" style={{ color: t.primary }}>{it.time}</p>
+            <p className="font-cinzel text-[12px] tracking-[0.12em]" style={{ color: t.primary, ...type('time') }}>{it.time}</p>
             {showNumbers && <p className="mt-3 font-playfair text-[28px] leading-none opacity-25" style={{ color: t.primary }}>{String(i + 1).padStart(2, '0')}</p>}
           </div>
           <div className="flex min-w-0 gap-3">
             {iconFor(it, 38)}
             <div className="min-w-0 flex-1">
-              <p className="font-playfair leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 19, 'body') }}>{it.label}</p>
+              <p className="font-playfair leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 19, 'body'), ...type('subtitle') }}>{it.label}</p>
               {itemDetails(it)}
             </div>
           </div>
@@ -467,9 +485,9 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
           const left = i % 2 === 0;
           return (
             <div key={i} className="relative grid grid-cols-[minmax(0,1fr)_46px_minmax(0,1fr)] items-center">
-              <div className={`${left ? 'col-start-1 text-right' : 'col-start-3 text-left'} min-w-0 px-2 py-3 sm:px-4`} style={cardStyle}>
+              <div className={`${left ? 'col-start-1 text-right' : 'col-start-3 text-left'} min-w-0 px-2 py-3 invite-sm:px-4`} style={cardStyle}>
                 <p className="font-cinzel text-[11px] tracking-[0.1em]" style={{ color: t.primary }}>{it.time}</p>
-                <p className="mt-1 font-cormorant text-[16px] leading-tight sm:text-[18px]" style={{ color: t.text }}>{it.label}</p>
+                <p className="mt-1 font-cormorant text-[16px] leading-tight invite-sm:text-[18px]" style={{ color: t.text }}>{it.label}</p>
                 {itemDetails(it, left ? 'right' : 'left')}
               </div>
               <span className="relative z-[1] col-start-2 row-start-1 mx-auto flex h-10 w-10 items-center justify-center rounded-full" style={{ background: t.bg, border: `1px solid ${t.line}`, boxShadow: `0 0 0 5px ${t.bg}` }}>
@@ -487,8 +505,8 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
       {items.map((it, i) => (
         <div key={i} className="flex min-w-0 flex-col items-center px-3 py-4 text-center" style={cardStyle}>
           {iconFor(it, 44)}
-          <p className="mt-2 font-cormorant leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 16, 'body') }}>{it.label}</p>
-          <p className="mt-1 font-cinzel tracking-[0.08em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') }}>{it.time}</p>
+          <p className="mt-2 font-cormorant leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 16, 'body') , ...type('body') }}>{it.label}</p>
+          <p className="mt-1 font-cinzel tracking-[0.08em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') , ...type('label') }}>{it.time}</p>
           {itemDetails(it, 'center')}
         </div>
       ))}
@@ -499,8 +517,8 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
         <div key={i} className="flex min-w-[72%] snap-center items-center gap-3 px-4 py-4" style={cardStyle}>
           {iconFor(it, 48)}
           <div className="min-w-0">
-            <span className="block font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 17, 'body') }}>{it.label}</span>
-            <span className="mt-0.5 block font-cinzel tracking-[0.1em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') }}>{it.time}</span>
+            <span className="block font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 17, 'body') , ...type('body') }}>{it.label}</span>
+            <span className="mt-0.5 block font-cinzel tracking-[0.1em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') , ...type('label') }}>{it.time}</span>
             {itemDetails(it)}
           </div>
         </div>
@@ -512,10 +530,10 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
         <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ borderTop: i ? `1px solid ${t.line}` : undefined }}>
           {iconFor(it, 38)}
           <div className="min-w-0 flex-1">
-            <p className="font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 16, 'body') }}>{it.label}</p>
+            <p className="font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 16, 'body') , ...type('body') }}>{it.label}</p>
             {itemDetails(it)}
           </div>
-          <p className="flex-shrink-0 font-cinzel tracking-[0.08em]" style={{ color: t.primary, fontSize: scaledPx(block, 12, 'label') }}>{it.time}</p>
+          <p className="flex-shrink-0 font-cinzel tracking-[0.08em]" style={{ color: t.primary, fontSize: scaledPx(block, 12, 'label') , ...type('label') }}>{it.time}</p>
         </div>
       ))}
     </div>
@@ -526,8 +544,8 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
           {showConnectors && i < items.length - 1 && <span className="absolute left-[24px] top-[49px] bottom-0 w-px" style={{ background: t.line }} />}
           <span className="relative z-[1] flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full" style={{ background: `color-mix(in srgb, ${t.primary} 10%, ${t.bg})`, border: `1px solid ${t.line}` }}>{iconFor(it, 32)}</span>
           <div className="min-w-0 flex-1 pt-0.5">
-            <p className="font-cormorant leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 18, 'body') }}>{it.label}</p>
-            <p className="mt-1 font-cinzel tracking-[0.1em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') }}>{it.time}</p>
+            <p className="font-cormorant leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 18, 'body') , ...type('body') }}>{it.label}</p>
+            <p className="mt-1 font-cinzel tracking-[0.1em]" style={{ color: t.primary, fontSize: scaledPx(block, 13, 'label') , ...type('label') }}>{it.time}</p>
             {itemDetails(it)}
           </div>
         </div>
@@ -537,20 +555,21 @@ const ItineraryBlock: React.FC<{ block: Block }> = ({ block }) => {
 
   return (
     <div>
-      {str(block, 'title') && <h2 className="mb-8 font-great" style={{ color: t.primary, fontSize: fluidType(block, 32, 6, 48, 'title') }}>{str(block, 'title')}</h2>}
+      {str(block, 'title') && <h2 className="mb-8 font-great" style={{ color: t.primary, fontSize: fluidType(block, 32, 6, 48, 'title'), ...type('title') }}>{str(block, 'title')}</h2>}
       {content}
     </div>
   );
 };
 
 const GiftBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const shape = useInvitationShape();
   return (
     <div>
-      <h2 className="font-great" style={{ color: t.primary, fontSize: fluidType(block, 32, 6, 48, 'title') }}>{str(block, 'title', 'Sugerencia de Regalo')}</h2>
-      {str(block, 'message') && <p className="font-cormorant mt-3 mb-8 mx-auto" style={{ color: 'inherit', maxWidth: 480, fontSize: scaledPx(block, 17, 'body') }}>{str(block, 'message')}</p>}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
+      <h2 className="font-great" style={{ color: t.primary, fontSize: fluidType(block, 32, 6, 48, 'title') , ...type('title') }}>{str(block, 'title', 'Sugerencia de Regalo')}</h2>
+      {str(block, 'message') && <p className="font-cormorant mt-3 mb-8 mx-auto" style={{ color: 'inherit', maxWidth: 480, fontSize: scaledPx(block, 17, 'body') , ...type('body') }}>{str(block, 'message')}</p>}
+      <div className="grid grid-cols-1 invite-sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
         <Tilt className="p-6 text-left" style={{ ...shape.card, background: t.primaryDeep, color: t.onPrimary }}>
           <p className="font-cinzel uppercase tracking-[0.16em] text-[12px] opacity-80">Transferencia bancaria</p>
           <p className="font-cinzel font-bold mt-3">{str(block, 'bank', 'Banco')}</p>
@@ -570,6 +589,7 @@ const GiftBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 const GalleryBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const type = useBlockTypography(block);
   const shape = useInvitationShape();
   const { editing } = useBlockEdit();
   const layout = (str(block, 'layout', 'grid') as GalleryLayout);
@@ -580,11 +600,11 @@ const GalleryBlock: React.FC<{ block: Block }> = ({ block }) => {
     <div className="flex w-full flex-col items-center">
       {(str(block, 'eyebrow') || str(block, 'title')) && (
         <header className="mx-auto mb-7 max-w-xl text-center">
-          {str(block, 'eyebrow') && <p className="font-outfit text-[10px] uppercase tracking-[0.24em]" style={{ color: t.primary }}>{str(block, 'eyebrow')}</p>}
-          {str(block, 'title') && <h2 className="mt-2 font-playfair" style={{ color: t.text, fontSize: fluidType(block, 28, 5, 42, 'title') }}>{str(block, 'title')}</h2>}
+          {str(block, 'eyebrow') && <p className="font-outfit text-[10px] uppercase tracking-[0.24em]" style={{ color: t.primary, ...type('label') }}>{str(block, 'eyebrow')}</p>}
+          {str(block, 'title') && <h2 className="mt-2 font-playfair" style={{ color: type('title').fontFamily ? t.primary : t.text, fontSize: fluidType(block, 28, 5, 42, 'title'), ...type('title') }}>{str(block, 'title')}</h2>}
         </header>
       )}
-      {str(block, 'message') && <p className="font-cormorant mb-7 mx-auto" style={{ color: t.muted, maxWidth: 460, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
+      {str(block, 'message') && <p className="font-cormorant mb-7 mx-auto" style={{ color: t.muted, maxWidth: 460, fontSize: scaledPx(block, 16, 'body'), ...type('note') }}>{str(block, 'message')}</p>}
       {images.length > 0 ? (
         <PhotoGrid
           images={images}
@@ -648,6 +668,7 @@ const StoryBlock: React.FC<{ block: Block }> = ({ block }) => {
 // Formulario de confirmación digital: guarda la respuesta vía /api/rsvp.
 function RsvpForm({ block }: { block: Block }) {
   const t = useBlockTheme();
+  const type = useBlockTypography(block);
   const shape = useInvitationShape();
   const { slug, guest, demo } = useBlockData();
   const { editing } = useBlockEdit();
@@ -666,15 +687,15 @@ function RsvpForm({ block }: { block: Block }) {
     setDone(Boolean(guest && guest.status !== 'pending'));
   }, [guest]);
 
-  const field: React.CSSProperties = { ...shape.field, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none' };
+  const field: React.CSSProperties = { ...shape.field, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none', ...type('field') };
 
   if (done) {
     return (
       <div className="text-center" role="status" aria-live="polite">
         {attending === 'yes' && <PetalBurst color={t.primary} />}
-        <p className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.primary, fontSize: 16 }}>{attending === 'yes' ? '¡Asistencia confirmada! 🤍' : 'Gracias por avisarnos'}</p>
-        <p className="font-cormorant mt-2" style={{ color: t.muted }}>{attending === 'yes' ? `${passes} ${passes === 1 ? 'lugar reservado' : 'lugares reservados'}.` : 'Lamentamos que no puedas acompañarnos.'}</p>
-        {(demo || editing) && <p className="mt-3 font-outfit text-xs" style={{ color: t.muted }}>Modo de muestra: no se envió ninguna respuesta.</p>}
+        <p className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.primary, fontSize: 16, ...type('subtitle') }}>{attending === 'yes' ? '¡Asistencia confirmada! 🤍' : 'Gracias por avisarnos'}</p>
+        <p className="font-cormorant mt-2" style={{ color: t.muted, ...type('note') }}>{attending === 'yes' ? `${passes} ${passes === 1 ? 'lugar reservado' : 'lugares reservados'}.` : 'Lamentamos que no puedas acompañarnos.'}</p>
+        {(demo || editing) && <p className="mt-3 font-outfit text-xs" style={{ color: t.muted, ...type('note') }}>Modo de muestra: no se envió ninguna respuesta.</p>}
       </div>
     );
   }
@@ -701,8 +722,8 @@ function RsvpForm({ block }: { block: Block }) {
 
   return (
     <div className="mx-auto text-left" style={{ maxWidth: 380 }}>
-      <h3 className="font-cinzel uppercase tracking-[0.16em] text-center mb-5" style={{ color: t.muted, fontSize: 15 }}>{str(block, 'message', 'Confirma tu asistencia')}</h3>
-      <div className="space-y-3 font-cormorant">
+      <h3 className="font-cinzel uppercase tracking-[0.16em] text-center mb-5" style={{ color: type('title').fontFamily ? t.primary : t.muted, fontSize: 15, ...type('title') }}>{str(block, 'message', 'Confirma tu asistencia')}</h3>
+      <div className="space-y-3 font-cormorant" style={type('field')}>
         {!guest?.publicId && <input style={field} aria-label="Tu nombre" autoComplete="name" placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />}
         <select style={field} aria-label="¿Asistirás?" value={attending} onChange={e => setAttending(e.target.value as 'yes' | 'no')}>
           <option value="yes">Sí, asistiré</option>
@@ -710,7 +731,7 @@ function RsvpForm({ block }: { block: Block }) {
         </select>
         {attending === 'yes' && (
           <div className="flex items-center gap-3">
-            <span style={{ color: t.muted, fontSize: 15 }}>N.º de personas</span>
+            <span style={{ color: t.muted, fontSize: 15, ...type('note') }}>N.º de personas</span>
             <input style={{ ...field, width: 90 }} aria-label="Número de personas" type="number" min={1} max={guest?.passes ?? 20} value={passes} onChange={e => setPasses(parseInt(e.target.value) || 1)} />
           </div>
         )}
@@ -726,10 +747,11 @@ function RsvpForm({ block }: { block: Block }) {
 
 const RsvpBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const type = useBlockTypography(block);
   if (str(block, 'mode', 'whatsapp') === 'form') return <RsvpForm block={block} />;
   return (
     <div className="flex flex-col items-center">
-      <h3 className="font-cinzel uppercase tracking-[0.16em] mx-auto" style={{ color: t.muted, maxWidth: 420, fontSize: '15px', lineHeight: 1.6 }}>{str(block, 'message', 'Confirma tu asistencia')}</h3>
+      <h3 className="font-cinzel uppercase tracking-[0.16em] mx-auto" style={{ color: type('title').fontFamily ? t.primary : t.muted, maxWidth: 420, fontSize: '15px', lineHeight: 1.6, ...type('title') }}>{str(block, 'message', 'Confirma tu asistencia')}</h3>
       <div className="mt-6"><Pill href={str(block, 'whatsappUrl')} filled>{str(block, 'buttonLabel', 'Confirmar asistencia')}</Pill></div>
     </div>
   );
@@ -844,6 +866,7 @@ function calFmt(iso: string, addHours = 0): string {
 }
 const CalendarBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const type = useBlockTypography(block);
   const iso = str(block, 'isoDate') || new Date().toISOString();
   const title = str(block, 'title', 'Nuestra celebración');
   const location = str(block, 'location', '');
@@ -855,7 +878,7 @@ const CalendarBlock: React.FC<{ block: Block }> = ({ block }) => {
   return (
     <div className="flex flex-col items-center gap-2">
       <Pill href={gcal} filled>{str(block, 'label', 'Añadir a mi calendario')}</Pill>
-      <a href={icsHref} download="evento.ics" className="font-cormorant text-sm underline" style={{ color: t.muted }}>Apple / Outlook (.ics)</a>
+      <a href={icsHref} download="evento.ics" className="font-cormorant text-sm underline" style={{ color: t.muted, ...type('note') }}>Apple / Outlook (.ics)</a>
     </div>
   );
 };
@@ -1059,6 +1082,7 @@ const VideoBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 // Mapa de Google embebido: escribe el lugar o pega la dirección.
 const MapBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const visual = useInvitationShape();
   const q = str(block, 'query');
@@ -1066,7 +1090,7 @@ const MapBlock: React.FC<{ block: Block }> = ({ block }) => {
   const zoom = num(block, 'zoom', 15);
   return (
     <div className="mx-auto w-full">
-      {str(block, 'title') && <h3 className="font-cinzel uppercase tracking-[0.16em] mb-4" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'subtitle') }}>{str(block, 'title')}</h3>}
+      {str(block, 'title') && <h3 className="font-cinzel uppercase tracking-[0.16em] mb-4" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'subtitle') , ...type('subtitle') }}>{str(block, 'title')}</h3>}
       <div className="overflow-hidden" style={{ maxWidth: 560, margin: '0 auto', ...visual.media, borderRadius: num(block, 'rounded', 16) === 16 ? visual.mediaRadius : num(block, 'rounded', 16), aspectRatio: '4 / 3' }}>
         <iframe
           src={`https://www.google.com/maps?q=${encodeURIComponent(q)}&z=${zoom}&output=embed`}
@@ -1082,13 +1106,14 @@ const MapBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 // Versículo / cita con autor (con comillas decorativas).
 const QuoteBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   return (
     <div className="mx-auto" style={{ maxWidth: 480 }}>
-      <span aria-hidden className="font-playfair block leading-none" style={{ color: t.primary, fontSize: scaledPx(block, 54, 'title'), opacity: 0.35 }}>&ldquo;</span>
-      <Editable as="p" k="text" value={str(block, 'text', 'El amor es paciente, el amor es bondadoso…')} className={`${famClass(block) || 'font-cormorant'} italic -mt-5`} style={{ color: 'inherit', fontSize: scaledPx(block, 19, 'body'), lineHeight: 1.8, ...typoStyle(block, 'body') }} />
+      <span aria-hidden className="font-playfair block leading-none" style={{ color: t.primary, fontSize: scaledPx(block, 54, 'title'), opacity: 0.35 , ...type('number') }}>&ldquo;</span>
+      <Editable as="p" k="text" value={str(block, 'text', 'El amor es paciente, el amor es bondadoso…')} className={`${famClass(block) || 'font-cormorant'} italic -mt-5`} style={{ color: 'inherit', fontSize: scaledPx(block, 19, 'body'), lineHeight: 1.8, ...type('body'), ...typoStyle(block, 'body') }} />
       {str(block, 'author') && (
-        <p className="font-cinzel uppercase tracking-[0.2em] mt-4" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>— {str(block, 'author')}</p>
+        <p className="font-cinzel uppercase tracking-[0.2em] mt-4" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') , ...type('label') }}>— {str(block, 'author')}</p>
       )}
     </div>
   );
@@ -1103,6 +1128,7 @@ const EDITORIAL_ASPECT: Record<string, string> = {
 
 function EditorialEyebrow({ block, inverse = false }: { block: Block; inverse?: boolean }) {
   const t = useBlockTheme();
+  const type = useBlockTypography(block);
   const value = str(block, 'eyebrow');
   if (!value) return null;
   return (
@@ -1111,13 +1137,14 @@ function EditorialEyebrow({ block, inverse = false }: { block: Block; inverse?: 
       k="eyebrow"
       value={value}
       className="font-cinzel text-[10px] font-semibold uppercase tracking-[0.24em]"
-      style={{ color: inverse ? 'rgba(255,255,255,.78)' : t.muted }}
+      style={{ color: inverse ? 'rgba(255,255,255,.78)' : t.muted, ...type('label') }}
     />
   );
 }
 
 const EditorialChapterBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const type = useBlockTypography(block);
   const visual = useInvitationShape();
   const { editing } = useBlockEdit();
   const variant = str(block, 'variant', 'split');
@@ -1139,7 +1166,7 @@ const EditorialChapterBlock: React.FC<{ block: Block }> = ({ block }) => {
       effect="cascadeWords"
       value={title}
       className="mt-3 font-playfair font-medium leading-[1.04]"
-      style={{ color: inverse ? '#fff' : t.primary, fontSize: fluidType(block, 34, 6.2, 58, 'title') }}
+      style={{ color: inverse ? '#fff' : t.primary, fontSize: fluidType(block, 34, 6.2, 58, 'title'), ...type('title') }}
     />
   );
   const bodyNode = (inverse = false) => (
@@ -1148,7 +1175,7 @@ const EditorialChapterBlock: React.FC<{ block: Block }> = ({ block }) => {
       k="body"
       value={body}
       className="mt-5 whitespace-pre-line font-cormorant"
-      style={{ color: inverse ? 'rgba(255,255,255,.88)' : 'inherit', fontSize: scaledPx(block, 18, 'body'), lineHeight: 1.72 }}
+      style={{ color: inverse ? 'rgba(255,255,255,.88)' : 'inherit', fontSize: scaledPx(block, 18, 'body'), lineHeight: 1.72, ...type('body') }}
     />
   );
   const noteNode = (inverse = false) => note ? (
@@ -1157,7 +1184,7 @@ const EditorialChapterBlock: React.FC<{ block: Block }> = ({ block }) => {
       k="note"
       value={note}
       className="mt-6 font-cinzel text-[10px] uppercase tracking-[0.18em]"
-      style={{ color: inverse ? 'rgba(255,255,255,.68)' : t.muted }}
+      style={{ color: inverse ? 'rgba(255,255,255,.68)' : t.muted, ...type('note') }}
     />
   ) : null;
   const emptyImage = editing ? (
@@ -1166,10 +1193,10 @@ const EditorialChapterBlock: React.FC<{ block: Block }> = ({ block }) => {
 
   if (variant === 'imageCover') {
     return (
-      <article className="relative mx-auto min-h-[540px] w-full overflow-hidden sm:min-h-[620px]" style={{ ...visual.media, maxWidth: 920 }}>
+      <article className="relative mx-auto min-h-[540px] w-full overflow-hidden invite-sm:min-h-[620px]" style={{ ...visual.media, maxWidth: 920 }}>
         {image ? <Image src={image} alt={str(block, 'imageAlt')} fill sizes="(max-width: 640px) 100vw, 920px" className="object-cover" style={{ objectPosition: focal }} /> : emptyImage}
         <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/5" aria-hidden />
-        <div className="absolute inset-x-0 bottom-0 z-[1] p-7 text-left sm:max-w-[72%] sm:p-12">
+        <div className="absolute inset-x-0 bottom-0 z-[1] p-7 text-left invite-sm:max-w-[72%] invite-sm:p-12">
           <EditorialEyebrow block={block} inverse />
           {titleNode(true)}
           {bodyNode(true)}
@@ -1182,9 +1209,9 @@ const EditorialChapterBlock: React.FC<{ block: Block }> = ({ block }) => {
 
   if (variant === 'statement') {
     return (
-      <article className="mx-auto grid max-w-[820px] grid-cols-[auto_1fr] gap-5 text-left sm:gap-10">
-        <span className="font-playfair text-[54px] leading-none sm:text-[86px]" style={{ color: t.primary, opacity: 0.2 }} aria-hidden>{number}</span>
-        <div className="min-w-0 border-l pl-5 sm:pl-9" style={{ borderColor: t.line }}>
+      <article className={`mx-auto grid max-w-[820px] gap-5 text-left invite-sm:gap-10 ${type('body').fontFamily ? 'grid-cols-1 invite-sm:grid-cols-[auto_1fr]' : 'grid-cols-[auto_1fr]'}`}>
+        <span className="font-playfair text-[54px] leading-none invite-sm:text-[86px]" style={{ color: t.primary, opacity: 0.2 }} aria-hidden>{number}</span>
+        <div className={`min-w-0 border-l invite-sm:pl-9 ${type('body').fontFamily ? 'pl-4' : 'pl-5'}`} style={{ borderColor: t.line }}>
           <EditorialEyebrow block={block} />
           {titleNode()}
           {bodyNode()}
@@ -1197,7 +1224,7 @@ const EditorialChapterBlock: React.FC<{ block: Block }> = ({ block }) => {
 
   if (variant === 'letter') {
     return (
-      <article className="relative mx-auto max-w-[700px] overflow-hidden p-7 text-left sm:p-12" style={visual.card}>
+      <article className="relative mx-auto max-w-[700px] overflow-hidden p-7 text-left invite-sm:p-12" style={visual.card}>
         <span className="absolute left-0 top-0 h-1 w-full" style={{ background: `linear-gradient(90deg, ${t.primary}, ${t.accent}, transparent)` }} aria-hidden />
         <div className="flex items-center justify-between gap-5">
           <EditorialEyebrow block={block} />
@@ -1211,13 +1238,13 @@ const EditorialChapterBlock: React.FC<{ block: Block }> = ({ block }) => {
     );
   }
 
-  const imageOrder = imageSide === 'right' ? 'sm:order-2' : 'sm:order-1';
-  const copyOrder = imageSide === 'right' ? 'sm:order-1' : 'sm:order-2';
+  const imageOrder = imageSide === 'right' ? 'invite-sm:order-2' : 'invite-sm:order-1';
+  const copyOrder = imageSide === 'right' ? 'invite-sm:order-1' : 'invite-sm:order-2';
   return (
-    <article className="mx-auto grid max-w-[940px] items-center gap-8 text-left sm:grid-cols-2 sm:gap-12">
+    <article className="mx-auto grid max-w-[940px] items-center gap-8 text-left invite-sm:grid-cols-2 invite-sm:gap-12">
       <figure className={`relative order-1 min-h-[260px] overflow-hidden ${imageOrder}`} style={{ ...visual.media, aspectRatio: aspect }}>
         {image ? <Image src={image} alt={str(block, 'imageAlt')} fill sizes="(max-width: 640px) 100vw, 470px" className="object-cover" style={{ objectPosition: focal }} /> : emptyImage}
-        {note && <figcaption className="absolute inset-x-3 bottom-3 rounded-lg bg-black/45 px-3 py-2 text-center font-cinzel text-[9px] uppercase tracking-[.16em] text-white backdrop-blur-sm">{note}</figcaption>}
+        {note && <figcaption className="absolute inset-x-3 bottom-3 rounded-lg bg-black/45 px-3 py-2 text-center font-cinzel text-[9px] uppercase tracking-[.16em] text-white backdrop-blur-sm" style={type('note')}>{note}</figcaption>}
       </figure>
       <div className={`order-2 min-w-0 ${copyOrder}`}>
         <div className="flex items-center gap-3"><span className="font-playfair text-2xl" style={{ color: t.primary, opacity: 0.28 }}>{number}</span><span className="h-px flex-1" style={{ background: t.line }} /></div>
@@ -1234,6 +1261,7 @@ type EditorialDetail = { label?: string; value?: string; note?: string };
 
 const EditorialDetailsBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();
+  const type = useBlockTypography(block);
   const visual = useInvitationShape();
   const items = list<EditorialDetail>(block, 'items');
   const layout = str(block, 'layout', 'ledger');
@@ -1241,9 +1269,9 @@ const EditorialDetailsBlock: React.FC<{ block: Block }> = ({ block }) => {
   const footer = str(block, 'footer');
 
   const header = (
-    <div className="mb-7 text-left sm:mb-9">
-      {str(block, 'eyebrow') && <p className="font-cinzel text-[10px] uppercase tracking-[.22em]" style={{ color: t.muted }}>{str(block, 'eyebrow')}</p>}
-      <Editable as="h2" k="title" effect="cascadeWords" value={title} className="mt-2 font-playfair font-medium leading-tight" style={{ color: t.primary, fontSize: fluidType(block, 30, 5.5, 46, 'title') }} />
+    <div className="mb-7 text-left invite-sm:mb-9">
+      {str(block, 'eyebrow') && <p className="font-cinzel text-[10px] uppercase tracking-[.22em]" style={{ color: t.muted, ...type('label') }}>{str(block, 'eyebrow')}</p>}
+      <Editable as="h2" k="title" effect="cascadeWords" value={title} className="mt-2 font-playfair font-medium leading-tight" style={{ color: t.primary, fontSize: fluidType(block, 30, 5.5, 46, 'title'), ...type('title') }} />
     </div>
   );
 
@@ -1251,17 +1279,17 @@ const EditorialDetailsBlock: React.FC<{ block: Block }> = ({ block }) => {
     return (
       <article className="mx-auto max-w-[880px]">
         {header}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 invite-sm:grid-cols-2 invite-lg:grid-cols-3">
           {items.map((item, index) => (
             <div key={`${item.label}-${index}`} className="min-w-0 p-5 text-left" style={visual.card}>
               <span className="font-playfair text-2xl" style={{ color: t.primary, opacity: 0.22 }}>{String(index + 1).padStart(2, '0')}</span>
-              <p className="mt-4 font-cinzel text-[10px] uppercase tracking-[.18em]" style={{ color: t.muted }}>{item.label}</p>
-              <p className="mt-2 whitespace-pre-line font-playfair leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 21, 'subtitle') }}>{item.value}</p>
-              {item.note && <p className="mt-2 whitespace-pre-line font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), lineHeight: 1.55 }}>{item.note}</p>}
+              <p className="mt-4 font-cinzel text-[10px] uppercase tracking-[.18em]" style={{ color: t.muted, ...type('label') }}>{item.label}</p>
+              <p className="mt-2 whitespace-pre-line font-playfair leading-tight" style={{ color: t.text, fontSize: scaledPx(block, 21, 'subtitle'), ...type('subtitle') }}>{item.value}</p>
+              {item.note && <p className="mt-2 whitespace-pre-line font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), lineHeight: 1.55, ...type('note') }}>{item.note}</p>}
             </div>
           ))}
         </div>
-        {footer && <p className="mx-auto mt-6 max-w-xl font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{footer}</p>}
+        {footer && <p className="mx-auto mt-6 max-w-xl font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), ...type('note') }}>{footer}</p>}
       </article>
     );
   }
@@ -1270,16 +1298,16 @@ const EditorialDetailsBlock: React.FC<{ block: Block }> = ({ block }) => {
     return (
       <article className="mx-auto max-w-[900px]">
         {header}
-        <div className="grid grid-cols-1 border-y sm:grid-cols-2 lg:grid-cols-3" style={{ borderColor: t.line }}>
+        <div className="grid grid-cols-1 border-y invite-sm:grid-cols-2 invite-lg:grid-cols-3" style={{ borderColor: t.line }}>
           {items.map((item, index) => (
-            <div key={`${item.label}-${index}`} className="min-w-0 border-t px-5 py-6 text-left first:border-t-0 sm:border-l sm:border-t-0 sm:first:border-l-0" style={{ borderColor: t.line }}>
-              <p className="font-cinzel text-[10px] uppercase tracking-[.18em]" style={{ color: t.muted }}>{item.label}</p>
-              <p className="mt-2 whitespace-pre-line font-playfair" style={{ color: t.primary, fontSize: scaledPx(block, 20, 'subtitle'), lineHeight: 1.2 }}>{item.value}</p>
-              {item.note && <p className="mt-2 whitespace-pre-line font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), lineHeight: 1.5 }}>{item.note}</p>}
+            <div key={`${item.label}-${index}`} className="min-w-0 border-t px-5 py-6 text-left first:border-t-0 invite-sm:border-l invite-sm:border-t-0 invite-sm:first:border-l-0" style={{ borderColor: t.line }}>
+              <p className="font-cinzel text-[10px] uppercase tracking-[.18em]" style={{ color: t.muted, ...type('label') }}>{item.label}</p>
+              <p className="mt-2 whitespace-pre-line font-playfair" style={{ color: t.primary, fontSize: scaledPx(block, 20, 'subtitle'), lineHeight: 1.2, ...type('subtitle') }}>{item.value}</p>
+              {item.note && <p className="mt-2 whitespace-pre-line font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), lineHeight: 1.5, ...type('note') }}>{item.note}</p>}
             </div>
           ))}
         </div>
-        {footer && <p className="mt-5 text-left font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{footer}</p>}
+        {footer && <p className="mt-5 text-left font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), ...type('note') }}>{footer}</p>}
       </article>
     );
   }
@@ -1289,35 +1317,36 @@ const EditorialDetailsBlock: React.FC<{ block: Block }> = ({ block }) => {
       {header}
       <div className="border-t" style={{ borderColor: t.line }}>
         {items.map((item, index) => (
-          <div key={`${item.label}-${index}`} className="grid grid-cols-1 gap-1 border-b py-5 text-left sm:grid-cols-[minmax(120px,.7fr)_1fr] sm:gap-8" style={{ borderColor: t.line }}>
-            <p className="font-cinzel text-[10px] uppercase tracking-[.18em]" style={{ color: t.muted }}>{item.label}</p>
+          <div key={`${item.label}-${index}`} className="grid grid-cols-1 gap-1 border-b py-5 text-left invite-sm:grid-cols-[minmax(120px,.7fr)_1fr] invite-sm:gap-8" style={{ borderColor: t.line }}>
+            <p className="font-cinzel text-[10px] uppercase tracking-[.18em]" style={{ color: t.muted, ...type('label') }}>{item.label}</p>
             <div className="min-w-0">
-              <p className="whitespace-pre-line font-playfair" style={{ color: t.primary, fontSize: scaledPx(block, 21, 'subtitle'), lineHeight: 1.2 }}>{item.value}</p>
-              {item.note && <p className="mt-1.5 whitespace-pre-line font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), lineHeight: 1.5 }}>{item.note}</p>}
+              <p className="whitespace-pre-line font-playfair" style={{ color: t.primary, fontSize: scaledPx(block, 21, 'subtitle'), lineHeight: 1.2, ...type('subtitle') }}>{item.value}</p>
+              {item.note && <p className="mt-1.5 whitespace-pre-line font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), lineHeight: 1.5, ...type('note') }}>{item.note}</p>}
             </div>
           </div>
         ))}
       </div>
-      {footer && <p className="mt-5 text-left font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{footer}</p>}
+      {footer && <p className="mt-5 text-left font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body'), ...type('note') }}>{footer}</p>}
     </article>
   );
 };
 
 // Padres y padrinos: columnas de rol + nombres.
 const ParentsBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const items = list<{ role?: string; names?: string }>(block, 'items');
   return (
     <div>
-      {str(block, 'title') && <h2 className="font-great mb-2" style={{ color: t.primary, fontSize: fluidType(block, 30, 6, 44, 'title') }}>{str(block, 'title')}</h2>}
-      {str(block, 'message') && <p className="font-cormorant italic mb-6 mx-auto" style={{ color: t.muted, maxWidth: 420, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
-      <div className={`grid gap-7 max-w-2xl mx-auto ${items.length >= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} grid-cols-1`}>
+      {str(block, 'title') && <h2 className="font-great mb-2" style={{ color: t.primary, fontSize: fluidType(block, 30, 6, 44, 'title') , ...type('title') }}>{str(block, 'title')}</h2>}
+      {str(block, 'message') && <p className="font-cormorant italic mb-6 mx-auto" style={{ color: t.muted, maxWidth: 420, fontSize: scaledPx(block, 16, 'body') , ...type('body') }}>{str(block, 'message')}</p>}
+      <div className={`grid gap-7 max-w-2xl mx-auto ${items.length >= 3 ? 'invite-sm:grid-cols-3' : 'invite-sm:grid-cols-2'} grid-cols-1`}>
         {items.map((it, i) => (
           <div key={i} className="flex flex-col items-center">
-            <p className="font-cinzel uppercase tracking-[0.18em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>{it.role}</p>
+            <p className="font-cinzel uppercase tracking-[0.18em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') , ...type('label') }}>{it.role}</p>
             <div className="h-px w-10 my-2.5" style={{ background: t.line }} />
             {(it.names ?? '').split('\n').filter(Boolean).map((n, j) => (
-              <p key={j} className="font-cormorant" style={{ color: 'inherit', fontSize: scaledPx(block, 18, 'body'), lineHeight: 1.6 }}>{n}</p>
+              <p key={j} className="font-cormorant" style={{ color: 'inherit', fontSize: scaledPx(block, 18, 'body'), lineHeight: 1.6 , ...type('body') }}>{n}</p>
             ))}
           </div>
         ))}
@@ -1328,6 +1357,7 @@ const ParentsBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 // Sugerencia de hospedaje: tarjeta con foto, descripción y enlace.
 const LodgingBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const shape = useInvitationShape();
   const image = str(block, 'image');
@@ -1339,10 +1369,10 @@ const LodgingBlock: React.FC<{ block: Block }> = ({ block }) => {
         </div>
       )}
       <div className="px-6 py-6">
-        <p className="font-cinzel uppercase tracking-[0.18em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>{str(block, 'title', 'Sugerencia de hospedaje')}</p>
-        <h3 className="font-playfair font-bold mt-2" style={{ color: t.primary, fontSize: scaledPx(block, 24, 'subtitle') }}>{str(block, 'name', 'Hotel')}</h3>
-        {str(block, 'desc') && <p className="font-cormorant mt-2" style={{ color: 'inherit', fontSize: scaledPx(block, 16, 'body'), lineHeight: 1.65 }}>{str(block, 'desc')}</p>}
-        {str(block, 'phone') && <p className="font-cormorant mt-1" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>Tel: {str(block, 'phone')}</p>}
+        <p className="font-cinzel uppercase tracking-[0.18em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') , ...type('label') }}>{str(block, 'title', 'Sugerencia de hospedaje')}</p>
+        <h3 className="font-playfair font-bold mt-2" style={{ color: t.primary, fontSize: scaledPx(block, 24, 'subtitle') , ...type('subtitle') }}>{str(block, 'name', 'Hotel')}</h3>
+        {str(block, 'desc') && <p className="font-cormorant mt-2" style={{ color: 'inherit', fontSize: scaledPx(block, 16, 'body'), lineHeight: 1.65 , ...type('body') }}>{str(block, 'desc')}</p>}
+        {str(block, 'phone') && <p className="font-cormorant mt-1" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') , ...type('body') }}>Tel: {str(block, 'phone')}</p>}
         {str(block, 'url') && <div className="mt-4"><Pill href={str(block, 'url')}>{str(block, 'buttonLabel', 'Ver hotel')}</Pill></div>}
       </div>
     </div>
@@ -1351,12 +1381,13 @@ const LodgingBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 // Hashtag del evento: para que los invitados etiqueten sus fotos.
 const HashtagBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const tag = str(block, 'tag', '#NuestraBoda').replace(/^#?/, '#');
   return (
     <div className="flex flex-col items-center">
-      {str(block, 'message') && <p className="font-cormorant italic mb-3 mx-auto" style={{ color: t.muted, maxWidth: 380, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
-      <p className={famClass(block) || 'font-great'} style={{ color: t.primary, fontSize: fluidType(block, 28, 7, 46, 'title'), ...typoStyle(block, 'title') }}>{tag}</p>
+      {str(block, 'message') && <p className="font-cormorant italic mb-3 mx-auto" style={{ color: t.muted, maxWidth: 380, fontSize: scaledPx(block, 16, 'body') , ...type('body') }}>{str(block, 'message')}</p>}
+      <p className={famClass(block) || 'font-great'} style={{ color: t.primary, fontSize: fluidType(block, 28, 7, 46, 'title'), ...type('title'), ...typoStyle(block, 'title') }}>{tag}</p>
       <div className="h-px w-24 mt-3" style={{ background: t.line }} />
     </div>
   );
@@ -1364,6 +1395,7 @@ const HashtagBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 // Monograma: iniciales dentro de una corona que se "dibuja" sola (stroke-dashoffset).
 const MonogramBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const color = str(block, 'color') || t.primary;
   const a = str(block, 'initialA', 'A');
@@ -1410,7 +1442,7 @@ const MonogramBlock: React.FC<{ block: Block }> = ({ block }) => {
         <text x="122" y="118" textAnchor="middle" fill={color} style={{ fontFamily: 'var(--ek-font-script, "Great Vibes")', fontSize: 64, opacity: 0, animation: 'ekMonoFade .8s 1.5s ease forwards' }}>{b}</text>
       </svg>
       {str(block, 'date') && (
-        <p className="mt-2 text-center font-cinzel uppercase tracking-[0.3em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>{str(block, 'date')}</p>
+        <p className="mt-2 text-center font-cinzel uppercase tracking-[0.3em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') , ...type('label') }}>{str(block, 'date')}</p>
       )}
     </div>
   );
@@ -1418,32 +1450,33 @@ const MonogramBlock: React.FC<{ block: Block }> = ({ block }) => {
 
 // Timeline "Nuestra historia": hitos alternados con foto + año + texto.
 const TimelineBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const items = list<{ year?: string; title?: string; text?: string; image?: string }>(block, 'items');
   return (
     <div>
-      {str(block, 'title') && <h2 className="font-great mb-10" style={{ color: t.primary, fontSize: fluidType(block, 32, 6, 48, 'title') }}>{str(block, 'title')}</h2>}
+      {str(block, 'title') && <h2 className="font-great mb-10" style={{ color: t.primary, fontSize: fluidType(block, 32, 6, 48, 'title') , ...type('title') }}>{str(block, 'title')}</h2>}
       <div className="relative mx-auto max-w-2xl">
         {/* Línea central */}
-        <div className="absolute bottom-0 left-[7px] top-0 w-px sm:left-1/2 sm:-translate-x-1/2" style={{ background: t.line }} aria-hidden />
+        <div className="absolute bottom-0 left-[7px] top-0 w-px invite-sm:left-1/2 invite-sm:-translate-x-1/2" style={{ background: t.line }} aria-hidden />
         <div className="space-y-10">
           {items.map((it, i) => {
             const left = i % 2 === 0;
             return (
-              <div key={i} className="relative grid grid-cols-[16px_1fr] items-start gap-4 sm:grid-cols-[1fr_16px_1fr] sm:items-center">
+              <div key={i} className="relative grid grid-cols-[16px_1fr] items-start gap-4 invite-sm:grid-cols-[1fr_16px_1fr] invite-sm:items-center">
                 {/* Lado izquierdo: solo en desktop cuando toca */}
-                <div className={`hidden sm:block sm:pr-8 sm:text-right ${left ? '' : 'sm:invisible'}`}>
+                <div className={`hidden invite-sm:block invite-sm:pr-8 invite-sm:text-right ${left ? '' : 'invite-sm:invisible'}`}>
                   {left && <TimelineCard it={it} t={t} />}
                 </div>
                 {/* Punto */}
-                <div className="flex justify-center pt-1.5 sm:pt-0">
+                <div className="flex justify-center pt-1.5 invite-sm:pt-0">
                   <span className="h-3.5 w-3.5 rounded-full ring-4" style={{ background: t.primary, '--tw-ring-color': t.bg } as React.CSSProperties} />
                 </div>
                 {/* Lado derecho en desktop; contenido único en móvil */}
-                <div className={`sm:pl-8 sm:text-left ${left ? 'sm:invisible' : ''}`}>
+                <div className={`invite-sm:pl-8 invite-sm:text-left ${left ? 'invite-sm:invisible' : ''}`}>
                   {(!left || true) && (
                     // En móvil siempre se muestra aquí; en desktop solo cuando va a la derecha.
-                    <div className={left ? 'sm:hidden' : ''}><TimelineCard it={it} t={t} /></div>
+                    <div className={left ? 'invite-sm:hidden' : ''}><TimelineCard it={it} t={t} /></div>
                   )}
                 </div>
               </div>
@@ -1455,6 +1488,7 @@ const TimelineBlock: React.FC<{ block: Block }> = ({ block }) => {
   );
 };
 function TimelineCard({ it, t }: { it: { year?: string; title?: string; text?: string; image?: string }; t: ReturnType<typeof useBlockTheme> }) {
+  const type = useBlockTypography();
   const visual = useInvitationShape();
   return (
     <div className="inline-block w-full">
@@ -1464,15 +1498,16 @@ function TimelineCard({ it, t }: { it: { year?: string; title?: string; text?: s
           <img src={it.image} alt="" loading="lazy" className="h-full w-full object-cover" />
         </div>
       )}
-      {it.year && <p className="font-playfair font-bold" style={{ color: t.primary, fontSize: semanticPx(22, 'subtitle') }}>{it.year}</p>}
-      {it.title && <p className="font-cinzel uppercase tracking-[0.14em] mt-0.5" style={{ color: t.muted, fontSize: semanticPx(13, 'label') }}>{it.title}</p>}
-      {it.text && <p className="font-cormorant mt-1.5" style={{ color: 'inherit', fontSize: semanticPx(16, 'body'), lineHeight: 1.6 }}>{it.text}</p>}
+      {it.year && <p className="font-playfair font-bold" style={{ color: t.primary, fontSize: semanticPx(22, 'subtitle') , ...type('subtitle') }}>{it.year}</p>}
+      {it.title && <p className="font-cinzel uppercase tracking-[0.14em] mt-0.5" style={{ color: t.muted, fontSize: semanticPx(13, 'label') , ...type('label') }}>{it.title}</p>}
+      {it.text && <p className="font-cormorant mt-1.5" style={{ color: 'inherit', fontSize: semanticPx(16, 'body'), lineHeight: 1.6 , ...type('body') }}>{it.text}</p>}
     </div>
   );
 }
 
 // Antes / después: deslizador que revela una foto sobre otra.
 function BeforeAfterBlock({ block }: { block: Block }) {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const visual = useInvitationShape();
   const before = str(block, 'before');
@@ -1506,7 +1541,7 @@ function BeforeAfterBlock({ block }: { block: Block }) {
           </span>
         </div>
       </div>
-      {str(block, 'caption') && <p className="mt-3 text-center font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{str(block, 'caption')}</p>}
+      {str(block, 'caption') && <p className="mt-3 text-center font-cormorant italic" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') , ...type('body') }}>{str(block, 'caption')}</p>}
     </div>
   );
 }
@@ -1523,6 +1558,7 @@ function useCallbackPos(ref: React.RefObject<HTMLElement>, setPos: (n: number) =
 
 // Buscador de mesa: el invitado escribe su nombre y ve su número de mesa.
 function TableFinderBlock({ block }: { block: Block }) {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const shape = useInvitationShape();
   const { slug } = useBlockData();
@@ -1552,8 +1588,8 @@ function TableFinderBlock({ block }: { block: Block }) {
 
   return (
     <div className="mx-auto" style={{ maxWidth: 420 }}>
-      <h2 className="font-great" style={{ color: t.primary, fontSize: fluidType(block, 30, 6, 44, 'title') }}>{str(block, 'title', 'Encuentra tu mesa')}</h2>
-      {str(block, 'message') && <p className="font-cormorant mt-2 mb-5 mx-auto" style={{ color: t.muted, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
+      <h2 className="font-great" style={{ color: t.primary, fontSize: fluidType(block, 30, 6, 44, 'title') , ...type('title') }}>{str(block, 'title', 'Encuentra tu mesa')}</h2>
+      {str(block, 'message') && <p className="font-cormorant mt-2 mb-5 mx-auto" style={{ color: t.muted, fontSize: scaledPx(block, 16, 'body') , ...type('body') }}>{str(block, 'message')}</p>}
       <div className="flex gap-2">
         <input style={field} placeholder="Escribe tu nombre" value={q}
           onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') search(); }} />
@@ -1562,12 +1598,12 @@ function TableFinderBlock({ block }: { block: Block }) {
           {busy ? '…' : 'Buscar'}
         </button>
       </div>
-      {err && <p className="font-cormorant mt-4" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{err}</p>}
+      {err && <p className="font-cormorant mt-4" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') , ...type('body') }}>{err}</p>}
       {res && res.map((m, i) => (
         <div key={i} className="mt-4 px-6 py-5" style={shape.card}>
-          <p className="font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') }}>{m.name}, tu lugar es la</p>
-          <p className="font-playfair font-bold my-1" style={{ color: t.primary, fontSize: scaledPx(block, 40, 'title'), lineHeight: 1 }}>Mesa {m.tableNo}</p>
-          {m.passes > 0 && <p className="font-cinzel uppercase tracking-[0.14em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') }}>{m.passes} {m.passes === 1 ? 'lugar' : 'lugares'}</p>}
+          <p className="font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 15, 'body') , ...type('body') }}>{m.name}, tu lugar es la</p>
+          <p className="font-playfair font-bold my-1" style={{ color: t.primary, fontSize: scaledPx(block, 40, 'title'), lineHeight: 1 , ...type('number') }}>Mesa {m.tableNo}</p>
+          {m.passes > 0 && <p className="font-cinzel uppercase tracking-[0.14em]" style={{ color: t.muted, fontSize: scaledPx(block, 11, 'label') , ...type('label') }}>{m.passes} {m.passes === 1 ? 'lugar' : 'lugares'}</p>}
         </div>
       ))}
     </div>
@@ -1576,6 +1612,7 @@ function TableFinderBlock({ block }: { block: Block }) {
 
 // Libro de mensajes: muro de saludos que los invitados dejan en vivo.
 function GuestbookBlock({ block }: { block: Block }) {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const shape = useInvitationShape();
   const { slug } = useBlockData();
@@ -1611,8 +1648,8 @@ function GuestbookBlock({ block }: { block: Block }) {
 
   return (
     <div className="mx-auto" style={{ maxWidth: 520 }}>
-      <h2 className="font-great" style={{ color: t.primary, fontSize: fluidType(block, 30, 6, 46, 'title') }}>{str(block, 'title', 'Déjanos un mensaje')}</h2>
-      {str(block, 'message') && <p className="font-cormorant mt-2 mb-5 mx-auto" style={{ color: t.muted, fontSize: scaledPx(block, 16, 'body') }}>{str(block, 'message')}</p>}
+      <h2 className="font-great" style={{ color: t.primary, fontSize: fluidType(block, 30, 6, 46, 'title') , ...type('title') }}>{str(block, 'title', 'Déjanos un mensaje')}</h2>
+      {str(block, 'message') && <p className="font-cormorant mt-2 mb-5 mx-auto" style={{ color: t.muted, fontSize: scaledPx(block, 16, 'body') , ...type('body') }}>{str(block, 'message')}</p>}
       <div className="space-y-2.5 text-left">
         <input style={field} placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />
         <textarea style={{ ...field, minHeight: 80 }} placeholder="Escribe tu saludo para los novios…" value={msg} onChange={e => setMsg(e.target.value)} />
@@ -1626,8 +1663,8 @@ function GuestbookBlock({ block }: { block: Block }) {
         <div className="mt-8 space-y-3 text-left">
           {entries.map(e => (
             <div key={e.id} className="px-5 py-4" style={shape.card}>
-              <p className="font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 17, 'body'), lineHeight: 1.5 }}>&ldquo;{e.message}&rdquo;</p>
-              <p className="font-cinzel uppercase tracking-[0.16em] mt-2" style={{ color: t.primary, fontSize: scaledPx(block, 11, 'label') }}>— {e.name}</p>
+              <p className="font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 17, 'body'), lineHeight: 1.5 , ...type('body') }}>&ldquo;{e.message}&rdquo;</p>
+              <p className="font-cinzel uppercase tracking-[0.16em] mt-2" style={{ color: t.primary, fontSize: scaledPx(block, 11, 'label') , ...type('label') }}>— {e.name}</p>
             </div>
           ))}
         </div>
@@ -1648,10 +1685,12 @@ function childTransform(c: Block): React.CSSProperties {
 // Grupo: columnas (lado a lado) o superpuesto (capas centradas, para poner texto
 // sobre una imagen — p. ej. los nombres dentro de un marco/corona).
 const GroupBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
+  const { editing } = useBlockEdit();
   const children = block.children ?? [];
   const render = (c: Block, extra?: React.CSSProperties) => {
     const Def = BLOCKS[c.type];
-    if (!Def || c.enabled === false) return null;
+    if (!Def || c.enabled === false || (!editing && type('body').fontFamily && isEmptyOptionalBlock(c))) return null;
     const Comp = Def.Component;
     return <div key={c.id} style={{ ...childTransform(c), ...extra }}><Comp block={c} /></div>;
   };
@@ -1667,7 +1706,7 @@ const GroupBlock: React.FC<{ block: Block }> = ({ block }) => {
 
   const cols = Math.max(1, Math.min(4, num(block, 'columns', 2)));
   return (
-    <div className="grid gap-5 items-start" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
+    <div className="ek-group-columns grid gap-5 items-start" style={{ '--ek-group-cols': cols, ...(type('body').fontFamily ? {} : { gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }) } as React.CSSProperties}>
       {children.map((c) => render(c))}
     </div>
   );

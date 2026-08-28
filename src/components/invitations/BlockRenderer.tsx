@@ -15,6 +15,9 @@ import PageDecor from './decorations';
 import { BLOCKS } from './blocks/registry';
 import { BlockDesignProvider, BlockThemeProvider, resolveBlockTheme, useBlockTheme } from './blocks/theme';
 import { resolveInvitationVisualSystem } from './blocks/visual-system';
+import { useBlockTypography } from './blocks/typography';
+import { hasInvitationVisualSystem, MARFIL_SPACE, resolveInvitationTypography } from '@/lib/marfil-visual-system';
+import { isEmptyOptionalBlock } from '@/lib/collection-design';
 import { SeamFx, type SeamFxKind } from './seam-fx';
 import { BlockEditProvider, BlockDataProvider } from './blocks/editable';
 import MusicPlayer from './MusicPlayer';
@@ -40,6 +43,8 @@ interface Props {
   slug?: string;
   /** Las muestras simulan RSVP sin hacer escrituras en el servidor. */
   demo?: boolean;
+  /** Read-only catalogue crop: no footer or audio. */
+  previewOnly?: boolean;
   /** Invitado activo para bloques privados, QR y estados personalizados. */
   guest?: Guest;
   /** Hay portada ("sobre"): no animar hasta que el invitado entre. */
@@ -284,7 +289,7 @@ function BlockView({ block, seam, tokens }: { block: Block; tokens?: TemplateTok
   const isDark = s.bgKind === 'primary' || isImg;
   const align = s.align ?? 'center';
   const spacingScale = Math.max(0.75, Math.min(1.35, tokens?.spacingScale ?? 1));
-  const rawBasePad = tokens?.spacing === 'compact' ? 34 : tokens?.spacing === 'airy' ? 68 : 48;
+  const rawBasePad = tokens?.spacing === 'compact' ? 34 : tokens?.spacing === 'airy' ? (hasInvitationVisualSystem(tokens) ? MARFIL_SPACE.section : 68) : 48;
   const basePad = Math.round(rawBasePad * spacingScale);
   const padTop = s.padTop ?? basePad;
   const padBottom = s.padBottom ?? basePad;
@@ -307,7 +312,7 @@ function BlockView({ block, seam, tokens }: { block: Block; tokens?: TemplateTok
     : undefined;
   const responsivePadTop = typeof s.padTop === 'number' ? padTop : `clamp(${Math.round(basePad * 0.78)}px, 9vw, ${basePad}px)`;
   const responsivePadBottom = typeof s.padBottom === 'number' ? padBottom : `clamp(${Math.round(basePad * 0.78)}px, 9vw, ${basePad}px)`;
-  const responsiveInset = sectionInset > 0 ? `clamp(${Math.min(16, sectionInset)}px, 5vw, ${sectionInset}px)` : 0;
+  const responsiveInset = sectionInset > 0 ? `clamp(${Math.min(hasInvitationVisualSystem(tokens) ? 20 : 16, sectionInset)}px, 5vw, ${sectionInset}px)` : 0;
   if (!def) return null;
   const Comp = def.Component;
 
@@ -360,7 +365,7 @@ function BlockView({ block, seam, tokens }: { block: Block; tokens?: TemplateTok
   const seamH = seam && padTop >= 28 ? Math.min(padTop - 8, 64) : 0;
 
   return (
-    <section data-ek-section={block.id} style={sectionStyle}>
+    <section data-ek-section={block.id} data-ek-block-type={block.type} style={sectionStyle}>
       {isImg && s.overlay ? <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${s.overlay})` }} aria-hidden /> : null}
       {/* zIndex 1 (y no el z-[2] por defecto de Seam): así queda por encima del
           velo de la imagen de fondo pero nunca por delante del contenido. */}
@@ -638,11 +643,13 @@ function EditorBlock({
 
 function FooterBar({ seam }: { seam?: SeamInfo }) {
   const t = useBlockTheme();
+  const type = useBlockTypography();
+  const noteType = type('note');
   return (
     <footer className="relative pb-8 pt-14 text-center" style={{ background: t.primaryDeep }}>
       {seam && <SeamFx fx={seam.fx} from={seam.from} shape={seam.shape} hairline={seam.hairline} height={44} />}
       <p className="font-great text-2xl" style={{ color: '#fff' }}>Enkarta</p>
-      <p className="font-cormorant text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
+      <p className="font-cormorant text-sm mt-1" style={{ color: noteType.fontFamily ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)', ...noteType, paddingInline: noteType.fontFamily ? 24 : undefined }}>
         ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Contáctanos</a>
       </p>
     </footer>
@@ -650,7 +657,7 @@ function FooterBar({ seam }: { seam?: SeamInfo }) {
 }
 
 export default function BlockRenderer({
-  layout, theme, nightTheme, nightDefault, motion, decor, tokens, musicUrl, slug, guest, demo, gated, editor, selectedId, selectedIds, onSelectBlock, onTransform, onEditProp, onPatchBlock, onDuplicateBlock, onDeleteBlock, onCopyBlockStyle, onPasteBlockStyle, hasStyleClipboard, previewScale = 1, scrollRoot, viewportMode,
+  layout, theme, nightTheme, nightDefault, motion, decor, tokens, musicUrl, slug, guest, demo, previewOnly, gated, editor, selectedId, selectedIds, onSelectBlock, onTransform, onEditProp, onPatchBlock, onDuplicateBlock, onDeleteBlock, onCopyBlockStyle, onPasteBlockStyle, hasStyleClipboard, previewScale = 1, scrollRoot, viewportMode,
 }: Props) {
   const hasNight = !!nightTheme && Object.keys(nightTheme).length > 0;
   const [night, setNight] = useState(!!nightDefault && hasNight);
@@ -668,6 +675,7 @@ export default function BlockRenderer({
   }, [viewportMode]);
 
   const bt = resolveBlockTheme(night && hasNight ? nightTheme : theme);
+  const isMarfil = hasInvitationVisualSystem(tokens);
   const visual = resolveInvitationVisualSystem(bt, tokens);
   const isPassport = layout?.basePreset === 'passport' || layout?.presetKey === 'passport';
   const allBlocks = layout?.blocks ?? [];
@@ -679,7 +687,7 @@ export default function BlockRenderer({
     return aOrder - bOrder || a.index - b.index;
   };
   const indexed = allBlocks.map((block, index) => ({ block, index }));
-  const blocks = indexed.filter(item => !isFloating(item.block) && (editor || item.block.enabled !== false)).sort(byViewportOrder).map(item => item.block);
+  const blocks = indexed.filter(item => !isFloating(item.block) && (editor || (item.block.enabled !== false && (!isMarfil || !isEmptyOptionalBlock(item.block))))).sort(byViewportOrder).map(item => item.block);
   const floating = indexed.filter(item => isFloating(item.block)).sort(byViewportOrder).map(item => item.block);
 
   // ── Cadena de costuras ──
@@ -720,7 +728,7 @@ export default function BlockRenderer({
     '--ek-radius-media': `${visual.mediaRadius}px`,
     '--ek-content-width': `${tokens?.contentWidth ?? 680}px`,
     '--ek-shadow-card': visual.cardShadow ?? 'none',
-    '--ek-color-focus': bt.accent,
+    '--ek-color-focus': isMarfil ? bt.primary : bt.accent,
   } as React.CSSProperties;
 
   return (
@@ -734,12 +742,15 @@ export default function BlockRenderer({
             // rompería el position:sticky del bloque "historia fija".
             className="ek-invite relative w-full min-h-screen overflow-x-clip transition-colors duration-500"
             data-ek-visual-system="v2"
+            data-ek-visual-profile={tokens?.visualProfile}
             style={{
               background: bt.bg,
               color: bt.text,
               overflowX: 'clip',
               width: '100%',
               ...kitCssVars,
+              ...(previewOnly ? { height: '100svh', overflow: 'hidden' } : {}),
+              ...(isMarfil ? { ...resolveInvitationTypography(tokens, 'body'), containerType: 'inline-size' as const } : {}),
               ...(isPassport ? {
                 backgroundImage: `radial-gradient(${bt.primary}12 1px, transparent 1px), linear-gradient(92deg, transparent 48%, ${bt.primary}08 50%, transparent 52%)`,
                 backgroundSize: '18px 18px, 100% 420px',
@@ -747,7 +758,7 @@ export default function BlockRenderer({
             }}
             onClick={editor ? () => onSelectBlock?.('', false) : undefined}
           >
-            <PageDecor decor={decor} color={bt.primary} />
+            {isMarfil ? <div className="ek-scoped-decor pointer-events-none absolute inset-0 overflow-clip" style={{ contain: 'paint' }}><PageDecor decor={decor} color={bt.primary} /></div> : <PageDecor decor={decor} color={bt.primary} />}
             <div className="relative" style={{ zIndex: 10 }}>
               {blocks.map((b, i) => {
                 const currentLayout = resolvedLayout(b.layout, viewport);
@@ -757,7 +768,7 @@ export default function BlockRenderer({
                   ? <EditorBlock key={b.id} block={{ ...currentBlock, layout: currentLayout ? { ...(b.layout ?? {}), ...currentLayout } : b.layout }} selected={(selectedIds ?? (selectedId ? [selectedId] : [])).includes(b.id)} primary={selectedId === b.id} onSelect={onSelectBlock} onTransform={onTransform} onEditProp={onEditProp} onPatchBlock={onPatchBlock} onDuplicateBlock={onDuplicateBlock} onDeleteBlock={onDeleteBlock} onCopyBlockStyle={onCopyBlockStyle} onPasteBlockStyle={onPasteBlockStyle} hasStyleClipboard={hasStyleClipboard} scale={previewScale} seam={seam} tokens={tokens} />
                   : <LiveBlock key={b.id} block={currentBlock} layout={currentLayout} tokens={tokens} seam={seam} />;
               })}
-              <FooterBar seam={footerSeam} />
+              {!previewOnly && <FooterBar seam={footerSeam} />}
             </div>
             {floating.length > 0 && (
               <div className="absolute inset-0" style={{ zIndex: 20, pointerEvents: 'none' }}>
@@ -786,7 +797,7 @@ export default function BlockRenderer({
                 )}
               </button>
             )}
-            {musicUrl && !editor && <MusicPlayer src={musicUrl} color={bt.primary} />}
+            {musicUrl && !editor && !previewOnly && <MusicPlayer src={musicUrl} color={bt.primary} />}
           </div>
           </ScrollExperience>
         </PageMotionProvider>

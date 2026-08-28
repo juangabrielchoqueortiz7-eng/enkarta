@@ -34,7 +34,7 @@ export const DESIGN_KITS: DesignKit[] = [
     eventTypes: ['boda', 'bautizo'], templates: ['grazia', 'provence', 'dolcevita'],
     colors: ['#F7F4EC', '#30392F', '#4B5942', '#A38A58', '#FFFCF6', '#D8D3C4'],
     theme: MARFIL_THEME, tokens: MARFIL_TOKENS,
-    fonts: { fontScript: 'Great Vibes', fontHeading: 'Playfair Display', fontBody: 'Cormorant Garamond' },
+    fonts: { fontScript: 'Great Vibes', fontHeading: 'Playfair Display', fontBody: 'Outfit' },
     decor: { background: 'solid', texture: 'none', corners: { on: false }, floating: { on: false }, dividers: 'line', loader: 'none' },
     motion: { preset: 'minimal', intensity: 0.55, tempo: 'balanced', scrollFlow: 'free', progress: 'line', parallax: 0 },
     elements: { iconColor: '#4B5942', iconScale: 1 },
@@ -125,11 +125,12 @@ export function applyDesignKitPatch(data: InvitationParsed, kit: DesignKit): Par
     config: {
       ...cfg,
       ...kit.fonts,
+      designMode: kit.official ? 'guided' : cfg.designMode,
       designKitId: kit.id,
       iconColor: kit.elements.iconColor,
       iconScale: kit.elements.iconScale,
       theme: { ...kit.theme },
-      tokens: { ...kit.tokens, typeScale: { ...kit.tokens.typeScale } },
+      tokens: { ...kit.tokens, ...(kit.official ? { visualProfile: kit.tokens.visualProfile ?? 'collection-v1' as const } : {}), typeScale: { ...kit.tokens.typeScale } },
       decor: {
         ...kit.decor,
         corners: kit.decor.corners ? { ...kit.decor.corners } : undefined,

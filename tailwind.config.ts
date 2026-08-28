@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from 'tailwindcss/plugin';
 
 const config: Config = {
   content: [
@@ -103,7 +104,16 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [plugin(({ addVariant }) => {
+    // New invitation profiles respond to their canvas, including the editor.
+    // Legacy invitations retain their viewport-based breakpoints.
+    for (const [name, width] of [['sm', 640], ['md', 768], ['lg', 1024]] as const) {
+      addVariant(`invite-${name}`, [
+        `@container invitation (min-width: ${width}px) { & }`,
+        `@media (min-width: ${width}px) { .ek-invite:not([data-ek-visual-profile]) & }`,
+      ]);
+    }
+  })],
 };
 
 export default config;

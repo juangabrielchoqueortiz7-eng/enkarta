@@ -1,4 +1,5 @@
 import type { BuilderConfig } from '@/lib/types';
+import { hasInvitationVisualSystem } from './marfil-visual-system';
 
 /**
  * Tipografía editable por invitación.
@@ -59,6 +60,7 @@ export const FONT_CATALOG: Record<FontRole, FontOption[]> = {
     { family: 'Cardo',              gf: 'Cardo:ital,wght@0,400;0,700;1,400',                  fallback: 'serif' },
   ],
   body: [
+    { family: 'Outfit',             gf: 'Outfit:wght@300;400;500;600;700',                      fallback: 'sans-serif' },
     { family: 'Cormorant Garamond', gf: 'Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400', fallback: 'serif' },
     { family: 'Lora',               gf: 'Lora:ital,wght@0,400;0,500;0,600;1,400',               fallback: 'serif' },
     { family: 'EB Garamond',        gf: 'EB+Garamond:ital,wght@0,400;0,600;1,400',              fallback: 'serif' },
@@ -104,7 +106,7 @@ export interface ResolvedFonts {
 }
 
 /** Resuelve config.fontScript/fontHeading/fontBody a variables CSS + URL de carga. */
-export function resolveFonts(config?: Pick<BuilderConfig, 'fontScript' | 'fontHeading' | 'fontBody'> | null): ResolvedFonts {
+export function resolveFonts(config?: Pick<BuilderConfig, 'fontScript' | 'fontHeading' | 'fontBody' | 'tokens'> | null): ResolvedFonts {
   const vars: Record<string, string> = {};
   const toLoad: string[] = [];
   const roles: [FontRole, string | undefined, string][] = [
@@ -114,7 +116,7 @@ export function resolveFonts(config?: Pick<BuilderConfig, 'fontScript' | 'fontHe
   ];
   for (const [role, family, cssVar] of roles) {
     const opt = findFont(family);
-    if (!opt || opt.family === DEFAULT_FAMILY[role]) continue;
+    if (!opt || (opt.family === DEFAULT_FAMILY[role] && !hasInvitationVisualSystem(config?.tokens))) continue;
     vars[cssVar] = `'${opt.family}', ${opt.fallback}`;
     toLoad.push(opt.family);
   }

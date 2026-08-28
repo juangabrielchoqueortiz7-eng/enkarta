@@ -7,6 +7,10 @@ import type { IconCustomization } from './types';
 import type { ParticleShape, SeamShape } from '@/lib/types';
 import { ScrollReveal } from '@/lib/scroll-motion';
 import { captionsForImages, type GalleryCaption } from '@/lib/gallery';
+import { useBlockTypography } from './blocks/typography';
+import { useBlockDesign, useBlockIconTheme } from './blocks/theme';
+import { hasInvitationVisualSystem } from '@/lib/marfil-visual-system';
+import { EditorialEventIcon, EDITORIAL_ICON_NAMES } from './blocks/editorial-icons';
 export type { GalleryCaption } from '@/lib/gallery';
 
 // ── Contacto de Enkarta (footer de todas las plantillas) ─────────────────────
@@ -33,9 +37,9 @@ export const TYPE = {
 // Tres alturas estándar (padding vertical responsive) para un ritmo editorial
 // consistente, en vez del batiburrillo actual py-8/10/12/14/16.
 export const SECTION = {
-  tight: 'py-10 sm:py-12',
-  base:  'py-14 sm:py-16',
-  roomy: 'py-16 sm:py-20',
+  tight: 'py-10 invite-sm:py-12',
+  base:  'py-14 invite-sm:py-16',
+  roomy: 'py-16 invite-sm:py-20',
 } as const;
 
 // ── Costuras entre secciones ("capas") ────────────────────────────────────────
@@ -479,7 +483,7 @@ export function Lightbox({
         <button
           onClick={e => { e.stopPropagation(); go(-1); }}
           aria-label="Anterior"
-          className="absolute left-2 sm:left-5 z-10 flex h-12 w-12 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
+          className="absolute left-2 invite-sm:left-5 z-10 flex h-12 w-12 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 6l-6 6 6 6" /></svg>
         </button>
@@ -511,7 +515,7 @@ export function Lightbox({
         <button
           onClick={e => { e.stopPropagation(); go(1); }}
           aria-label="Siguiente"
-          className="absolute right-2 sm:right-5 z-10 flex h-12 w-12 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
+          className="absolute right-2 invite-sm:right-5 z-10 flex h-12 w-12 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6l6 6-6 6" /></svg>
         </button>
@@ -681,9 +685,9 @@ export function MasonryGallery({
   if (variant === 'grid') {
     return (
       <>
-        <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${className}`}>
+        <div className={`grid grid-cols-2 gap-3 invite-sm:grid-cols-3 ${className}`}>
           {images.map((src, i) => (
-            <div key={`${src}-${i}`} onClick={() => lb.openAt(i)} className={`group relative overflow-hidden rounded-2xl ${i % 3 === 1 ? 'sm:translate-y-6' : ''}`} style={{ aspectRatio: aspect, cursor: 'zoom-in' }}>
+            <div key={`${src}-${i}`} onClick={() => lb.openAt(i)} className={`group relative overflow-hidden rounded-2xl ${i % 3 === 1 ? 'invite-sm:translate-y-6' : ''}`} style={{ aspectRatio: aspect, cursor: 'zoom-in' }}>
               <FadeImg src={src} className="h-full w-full object-cover group-hover:scale-105" />
               <ZoomHint />
             </div>
@@ -697,7 +701,7 @@ export function MasonryGallery({
   const polaroid = variant === 'polaroid';
   return (
     <>
-      <div className={`columns-2 gap-4 sm:columns-3 ${className}`}>
+      <div className={`columns-2 gap-4 invite-sm:columns-3 ${className}`}>
         {images.map((src, i) => (
           <div
             key={`${src}-${i}`}
@@ -741,6 +745,7 @@ export function PhotoGrid({
   /** Numera las fotografías dentro de la composición. */
   showCounter?: boolean;
 }) {
+  const type = useBlockTypography();
   const [open, setOpen] = useState<number | null>(null);
   const captions = captionsForImages(images ?? [], sourceCaptions);
   const stripRef = useRef<HTMLDivElement>(null);
@@ -788,7 +793,7 @@ export function PhotoGrid({
     setActive(next);
   };
   const navigation = images.length > 1 && scrollable ? (
-    <nav aria-label="Navegación de galería" className="mt-3 flex w-full items-center justify-center gap-4 font-outfit text-xs">
+    <nav aria-label="Navegación de galería" className="mt-3 flex w-full items-center justify-center gap-4 font-outfit text-xs" style={type('time')}>
       <button type="button" onClick={() => move(-1)} disabled={active === 0} aria-label="Foto anterior" className="h-11 w-11 rounded-full border disabled:opacity-25" style={{ borderColor: 'color-mix(in srgb, currentColor 20%, transparent)' }}>←</button>
       <span className="min-w-14 text-center tracking-[0.15em]">{Math.min(active + 1, images.length)} / {images.length}</span>
       <button type="button" onClick={() => move(1)} disabled={active >= images.length - 1} aria-label="Foto siguiente" className="h-11 w-11 rounded-full border disabled:opacity-25" style={{ borderColor: 'color-mix(in srgb, currentColor 20%, transparent)' }}>→</button>
@@ -797,14 +802,14 @@ export function PhotoGrid({
   const captionNode = (i: number, overlay = false, counterOnly = false) => (
     <>
       {showCounter && (
-        <span className={`font-outfit text-[10px] tracking-[0.16em] ${overlay ? 'absolute left-3 top-3 z-[2] rounded-full bg-black/35 px-2 py-1 text-white backdrop-blur-sm' : 'block opacity-50'}`}>
+        <span className={`font-outfit text-[10px] tracking-[0.16em] ${overlay ? 'absolute left-3 top-3 z-[2] rounded-full bg-black/35 px-2 py-1 text-white backdrop-blur-sm' : 'block opacity-50'}`} style={type('label')}>
           {String(i + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}
         </span>
       )}
       {!counterOnly && hasCaption(i) && (
         <figcaption className={overlay ? 'absolute inset-x-0 bottom-0 z-[2] bg-gradient-to-t from-black/75 via-black/35 to-transparent px-4 pb-4 pt-12 text-left text-white' : 'px-1 pt-3 text-left'}>
-          {captions?.[i]?.title && <span className="block font-playfair text-[17px] leading-tight">{captions[i]?.title}</span>}
-          {captions?.[i]?.caption && <span className={`mt-1 block font-outfit text-[11px] leading-relaxed ${overlay ? 'text-white/75' : 'opacity-60'}`}>{captions[i]?.caption}</span>}
+          {captions?.[i]?.title && <span className="block font-playfair text-[17px] leading-tight" style={type('subtitle')}>{captions[i]?.title}</span>}
+          {captions?.[i]?.caption && <span className={`mt-1 block font-outfit text-[11px] leading-relaxed ${overlay ? 'text-white/75' : 'opacity-60'}`} style={type('note')}>{captions[i]?.caption}</span>}
         </figcaption>
       )}
     </>
@@ -819,16 +824,16 @@ export function PhotoGrid({
   if (layout === 'editorial') {
     return (
       <>
-        <div className={`grid grid-cols-2 gap-2 sm:grid-cols-12 ${className}`} style={{ pointerEvents: 'auto' }}>
+        <div className={`grid grid-cols-2 gap-2 invite-sm:grid-cols-12 ${className}`} style={{ pointerEvents: 'auto' }}>
           {images.map((src, i) => {
             const featured = i === 0;
             const tail = images.length - 3;
             const mobileSpan = i === images.length - 1 && images.length % 2 === 0 ? 'col-span-2' : 'col-span-1';
-            const classes = images.length === 1 ? 'col-span-2 aspect-[4/3] sm:col-span-12 sm:aspect-[16/10]'
-              : images.length === 2 ? 'col-span-2 aspect-[4/5] sm:col-span-6'
-              : featured ? 'col-span-2 aspect-[4/5] sm:col-span-7 sm:row-span-2'
-              : i < 3 ? `${mobileSpan} aspect-[4/3] sm:col-span-5 sm:aspect-auto`
-              : `${mobileSpan} aspect-[4/3] ${tail % 3 === 1 && i === images.length - 1 ? 'sm:col-span-12 sm:aspect-[16/9]' : tail % 3 === 2 && i >= images.length - 2 ? 'sm:col-span-6' : 'sm:col-span-4'}`;
+            const classes = images.length === 1 ? 'col-span-2 aspect-[4/3] invite-sm:col-span-12 invite-sm:aspect-[16/10]'
+              : images.length === 2 ? 'col-span-2 aspect-[4/5] invite-sm:col-span-6'
+              : featured ? 'col-span-2 aspect-[4/5] invite-sm:col-span-7 invite-sm:row-span-2'
+              : i < 3 ? `${mobileSpan} aspect-[4/3] invite-sm:col-span-5 invite-sm:aspect-auto`
+              : `${mobileSpan} aspect-[4/3] ${tail % 3 === 1 && i === images.length - 1 ? 'invite-sm:col-span-12 invite-sm:aspect-[16/9]' : tail % 3 === 2 && i >= images.length - 2 ? 'invite-sm:col-span-6' : 'invite-sm:col-span-4'}`;
             return (
               <figure key={`${src}-${i}`} {...accessible(i)} onClick={click(i)} className={`group relative min-w-0 overflow-hidden bg-black/5 ${classes}`} style={{ borderRadius: radius, cursor }}>
                 <GalleryPhoto src={src} alt={captions?.[i]?.alt || captions?.[i]?.title || ''} className="group-hover:scale-105 motion-reduce:transform-none" />
@@ -849,16 +854,16 @@ export function PhotoGrid({
       <>
         <div ref={stripRef} onScroll={syncActive} className={`flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 ${className}`} style={{ pointerEvents: 'auto', scrollbarWidth: 'none' }}>
           {images.map((src, i) => (
-            <figure key={`${src}-${i}`} {...accessible(i)} onClick={click(i)} className="group min-w-0 shrink-0 snap-center" style={{ width: 'min(82vw, 340px)', cursor }}>
-              <div className="relative overflow-hidden bg-black/5" style={{ borderRadius: radius, aspectRatio: i % 3 === 1 ? '4 / 3' : '4 / 5' }}>
+            <figure key={`${src}-${i}`} {...accessible(i)} onClick={click(i)} className="group min-w-0 shrink-0 snap-center" style={{ width: type('body').fontFamily ? 'min(86%, 340px)' : 'min(82vw, 340px)', cursor }}>
+              <div className="relative overflow-hidden bg-black/5" style={{ borderRadius: radius, aspectRatio: type('body').fontFamily ? '4 / 5' : i % 3 === 1 ? '4 / 3' : '4 / 5' }}>
                 <GalleryPhoto src={src} alt={captions?.[i]?.alt || captions?.[i]?.title || ''} className="group-hover:scale-105 motion-reduce:transform-none" />
                 {showCounter && captionNode(i, true, true)}
                 {lightbox && <ZoomHint />}
               </div>
               {hasCaption(i) && (
                 <figcaption className="px-1 pt-3 text-left">
-                  {captions?.[i]?.title && <span className="block font-playfair text-[17px] leading-tight">{captions[i]?.title}</span>}
-                  {captions?.[i]?.caption && <span className="mt-1 block font-outfit text-[11px] leading-relaxed opacity-60">{captions[i]?.caption}</span>}
+                  {captions?.[i]?.title && <span className="block font-playfair text-[17px] leading-tight" style={type('subtitle')}>{captions[i]?.title}</span>}
+                  {captions?.[i]?.caption && <span className="mt-1 block font-outfit text-[11px] leading-relaxed" style={{ opacity: type('note').fontFamily ? 0.85 : 0.6, ...type('note') }}>{captions[i]?.caption}</span>}
                 </figcaption>
               )}
             </figure>
@@ -936,7 +941,7 @@ export function PhotoGrid({
   // Grid (por defecto): cuadrícula cuadrada.
   return (
     <>
-      <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 ${className}`} style={{ pointerEvents: 'auto' }}>
+      <div className={`grid grid-cols-2 invite-sm:grid-cols-3 gap-2 ${className}`} style={{ pointerEvents: 'auto' }}>
         {images.map((src, i) => (
           <figure key={`${src}-${i}`} {...accessible(i)} onClick={click(i)} className="group relative overflow-hidden bg-black/5" style={{ borderRadius: radius, aspectRatio: '1 / 1', cursor }}>
             <GalleryPhoto src={src} alt={captions?.[i]?.alt || captions?.[i]?.title || ''} className="group-hover:scale-105 motion-reduce:transform-none" />
@@ -1163,6 +1168,14 @@ export function EventIcon({ name, className = '', stroke = 'currentColor', lotti
   sec?: string;
 }) {
   // Resuelve la personalización del panel (icono, colores, velocidad y color por sección).
+  const design = useBlockDesign();
+  const iconTheme = useBlockIconTheme();
+  className = `${className} ek-event-icon`;
+  // Individual tints/palette overrides take precedence over the global collection ink.
+  if (iconTheme.color && !tint && !lottieColors && !custom?.iconColor) {
+    stroke = iconTheme.color;
+    tint = iconTheme.color;
+  }
   if (custom) {
     if (sec && custom.icons?.[sec]) name = custom.icons[sec];
     if (sec && lottieColors == null) lottieColors = custom.iconColorsMap?.[sec];
@@ -1184,6 +1197,9 @@ export function EventIcon({ name, className = '', stroke = 'currentColor', lotti
   // Los iconos animados conservan sus colores propios; sólo se recolorean si el
   // usuario edita colores concretos (lottieColors) o pide un tinte explícito (tint).
   const lottieTint = tint;
+  if (hasInvitationVisualSystem(design) && EDITORIAL_ICON_NAMES.includes(name)) {
+    return <EditorialEventIcon name={name} color={tint || stroke} className={className} />;
+  }
   // Icono propio subido por el usuario (PNG/SVG/JPG) → renderizar como imagen
   if (name && (/\.(png|jpe?g|svg|webp|gif)(\?|$)/i.test(name) || (/^https?:\/\//.test(name) && !name.endsWith('.json')))) {
     // eslint-disable-next-line @next/next/no-img-element

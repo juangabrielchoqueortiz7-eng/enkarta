@@ -7,6 +7,7 @@ import type { Block } from '@/lib/types';
 import { usePageMotion } from '@/lib/scroll-motion';
 import { Editable } from './editable';
 import { useBlockTheme } from './theme';
+import { useBlockTypography } from './typography';
 
 const str = (b: Block, key: string, fallback = '') =>
   typeof b.props[key] === 'string' ? (b.props[key] as string) : fallback;
@@ -77,14 +78,16 @@ function RouteMap({ color, origin, destination }: { color: string; origin: strin
 }
 
 export const PassportHeroBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
   const t = useBlockTheme();
   const m = usePageMotion();
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, container: m.scrollRoot, offset: ['start start', 'end start'] });
-  const imageY = useTransform(scrollYProgress, [0, 1], ['0%', reduced ? '0%' : '14%']);
-  const imageScale = useTransform(scrollYProgress, [0, 1], [1.04, reduced ? 1.04 : 1.14]);
-  const artY = useTransform(scrollYProgress, [0, 1], ['0%', reduced ? '0%' : '-6%']);
+  const still = reduced || m.parallax === 0;
+  const imageY = useTransform(scrollYProgress, [0, 1], ['0%', still ? '0%' : '14%']);
+  const imageScale = useTransform(scrollYProgress, [0, 1], [1.04, still ? 1.04 : 1.14]);
+  const artY = useTransform(scrollYProgress, [0, 1], ['0%', still ? '0%' : '-6%']);
   const image = str(block, 'image');
   const groom = str(block, 'groom', 'Robert');
   const bride = str(block, 'bride', 'Isabella');
@@ -111,36 +114,36 @@ export const PassportHeroBlock: React.FC<{ block: Block }> = ({ block }) => {
             <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 32% 28%, ${t.primary} 0, transparent 24%), linear-gradient(145deg, ${t.primaryDeep}, ${t.primary})` }} />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/5 to-black/20" />
-          <div className="absolute left-6 top-6 flex items-center gap-3 text-white/90 sm:left-9 sm:top-8">
+          <div className="absolute left-6 top-6 flex items-center gap-3 text-white/90 invite-sm:left-9 invite-sm:top-8">
             <span className="h-px w-8 bg-current" />
-            <Editable k="eyebrow" value={str(block, 'eyebrow', 'Nuestra próxima aventura')} className="font-cinzel text-[10px] uppercase tracking-[.24em]" />
+            <Editable k="eyebrow" value={str(block, 'eyebrow', 'Nuestra próxima aventura')} className="font-cinzel text-[10px] uppercase tracking-[.24em]" style={type('label')} />
           </div>
-          <div className="absolute bottom-10 left-7 right-7 flex items-end justify-between text-white sm:bottom-14 sm:left-10 sm:right-10">
+          <div className="absolute bottom-10 left-7 right-7 flex items-end justify-between text-white invite-sm:bottom-14 invite-sm:left-10 invite-sm:right-10">
             <div>
-              <p className="font-cormorant text-sm italic opacity-80">Save the date</p>
-              <Editable k="dateLabel" value={str(block, 'dateLabel', '26 · 12 · 2026')} className="font-cinzel text-base tracking-[.18em] sm:text-xl" />
+              <p className="font-cormorant text-sm italic opacity-80" style={type('note')}>Save the date</p>
+              <Editable k="dateLabel" value={str(block, 'dateLabel', '26 · 12 · 2026')} className="font-cinzel text-base tracking-[.18em] invite-sm:text-xl" style={type('time')} />
             </div>
-            <span className="hidden rounded-full border border-white/60 px-3 py-1 font-cinzel text-[9px] uppercase tracking-[.2em] backdrop-blur-sm sm:inline-flex">Boarding</span>
+            <span className="hidden rounded-full border border-white/60 px-3 py-1 font-cinzel text-[9px] uppercase tracking-[.2em] backdrop-blur-sm invite-sm:inline-flex">Boarding</span>
           </div>
         </div>
 
-        <motion.div className="ek-passport-art relative flex items-center justify-center overflow-hidden px-5 py-16 sm:px-10" style={{ y: artY, color: t.text }}>
+        <motion.div className="ek-passport-art relative flex items-center justify-center overflow-hidden px-5 py-16 invite-sm:px-10" style={{ y: artY, color: t.text }}>
           <div className="absolute inset-0 opacity-70" style={{ backgroundImage: `radial-gradient(${t.primary}22 1px, transparent 1px), linear-gradient(118deg, transparent 68%, ${t.primary}0a 68%)`, backgroundSize: '16px 16px, 100% 100%' }} />
           <RouteMap color={t.primary} origin={origin} destination={destination} />
           <div className="relative z-10 flex w-full max-w-[620px] flex-col items-center text-center">
             <PassportMark color={t.primary} />
             <Editable as="p" k="tagline" value={str(block, 'tagline', 'Pasaporte a nuestra boda')} className="mt-3 font-cinzel text-[10px] uppercase tracking-[.28em]" style={{ color: t.muted }} />
             <div className="my-5 h-px w-20" style={{ background: t.line }} />
-            <Editable as="h1" k="groom" value={groom} className="font-great leading-[.78]" style={{ color: t.primary, fontSize: 'clamp(52px,7vw,104px)' }} />
+            <Editable as="h1" k="groom" value={groom} className="font-great leading-[.78]" style={{ color: t.primary, fontSize: type('display').fontFamily ? 'clamp(42px, 10cqw, 82px)' : 'clamp(52px,7vw,104px)', ...type('display') }} />
             <span className="my-1 font-cormorant text-xl italic" style={{ color: t.muted }}>&amp;</span>
-            <Editable as="h1" k="bride" value={bride} className="font-great leading-[.78]" style={{ color: t.primary, fontSize: 'clamp(52px,7vw,104px)' }} />
+            <Editable as="h1" k="bride" value={bride} className="font-great leading-[.78]" style={{ color: t.primary, fontSize: type('display').fontFamily ? 'clamp(42px, 10cqw, 82px)' : 'clamp(52px,7vw,104px)', ...type('display') }} />
             <div className="mt-8 flex items-center gap-4 font-cinzel text-[9px] uppercase tracking-[.2em]" style={{ color: t.muted }}>
               <span>{origin}</span><span className="h-px w-10" style={{ background: t.line }} /><span>{destination}</span>
             </div>
           </div>
         </motion.div>
       </div>
-      <svg viewBox="0 0 1200 70" preserveAspectRatio="none" className="pointer-events-none absolute -bottom-px left-0 z-20 h-9 w-full sm:h-14" aria-hidden>
+      <svg viewBox="0 0 1200 70" preserveAspectRatio="none" className="pointer-events-none absolute -bottom-px left-0 z-20 h-9 w-full invite-sm:h-14" aria-hidden>
         <path d="M0 36C180 70 340 5 560 34s368 48 640 4v32H0Z" fill={t.bg} />
       </svg>
     </section>
@@ -148,30 +151,32 @@ export const PassportHeroBlock: React.FC<{ block: Block }> = ({ block }) => {
 };
 
 export const PassportTicketBlock: React.FC<{ block: Block }> = ({ block }) => {
+  const type = useBlockTypography(block);
+  const reduced = useReducedMotion();
   const t = useBlockTheme();
   const m = usePageMotion();
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, container: m.scrollRoot, offset: ['start end', 'end start'] });
-  const drift = useTransform(scrollYProgress, [0, 1], ['-3%', '4%']);
+  const drift = useTransform(scrollYProgress, [0, 1], reduced || m.parallax === 0 ? ['0%', '0%'] : ['-3%', '4%']);
 
   return (
-    <section id="passport-ticket" ref={ref} data-ek-section={block.id} className="relative overflow-hidden py-14 sm:py-20" style={{ background: t.bg, scrollSnapAlign: m.scrollFlow === 'free' ? undefined : 'center' }}>
+    <section id="passport-ticket" ref={ref} data-ek-section={block.id} className="relative overflow-hidden py-14 invite-sm:py-20" style={{ background: t.bg, scrollSnapAlign: m.scrollFlow === 'free' ? undefined : 'center' }}>
       <motion.div className="pointer-events-none absolute inset-0 opacity-[.07]" style={{ y: drift, backgroundImage: `radial-gradient(${t.primary} 1.2px, transparent 1.2px)`, backgroundSize: '14px 14px' }} />
-      <svg viewBox="0 0 1200 92" preserveAspectRatio="none" className="relative -mb-px h-14 w-full sm:h-20" aria-hidden>
+      <svg viewBox="0 0 1200 92" preserveAspectRatio="none" className="relative -mb-px h-14 w-full invite-sm:h-20" aria-hidden>
         <path d="M0 67C210 106 332 9 586 47s391 61 614 11v34H0Z" fill={t.primaryDeep} />
       </svg>
-      <div className="relative px-6 py-14 text-center sm:py-20" style={{ background: t.primaryDeep, color: t.onPrimary }}>
+      <div className="relative px-6 py-14 text-center invite-sm:py-20" style={{ background: t.primaryDeep, color: t.onPrimary }}>
         <div className="mx-auto max-w-2xl">
-          <Editable as="p" k="callout" value={str(block, 'callout', 'Prepara tus maletas y acompáñanos en esta aventura.')} className="font-cormorant text-xl leading-relaxed sm:text-2xl" />
-          <Editable as="p" k="question" value={str(block, 'question', '¿Te unes?')} effect="write" className="mt-1 font-great text-4xl sm:text-5xl" />
+          <Editable as="p" k="callout" value={str(block, 'callout', 'Prepara tus maletas y acompáñanos en esta aventura.')} className="font-cormorant text-xl leading-relaxed invite-sm:text-2xl" style={type('body')} />
+          <Editable as="p" k="question" value={str(block, 'question', '¿Te unes?')} effect="write" className="mt-1 font-great text-4xl invite-sm:text-5xl" style={type('title')} />
           <div className="mx-auto my-9 flex max-w-lg items-center gap-4 opacity-60"><span className="h-px flex-1 bg-current" /><span>♥</span><span className="h-px flex-1 bg-current" /></div>
           <p className="font-cinzel text-[10px] uppercase tracking-[.22em] opacity-70">Hemos reservado</p>
-          <Editable as="p" k="passesLabel" value={str(block, 'passesLabel', '2 pases')} className="mt-3 font-great text-4xl sm:text-5xl" />
+          <Editable as="p" k="passesLabel" value={str(block, 'passesLabel', '2 pases')} className="mt-3 font-great text-4xl invite-sm:text-5xl" style={type('title')} />
           <p className="mt-3 font-cormorant text-base opacity-80">en honor de</p>
-          <Editable as="p" k="guestName" value={str(block, 'guestName', 'Invitado especial')} effect="cascadeWords" className="mt-3 font-cormorant text-2xl sm:text-3xl" />
+          <Editable as="p" k="guestName" value={str(block, 'guestName', 'Invitado especial')} effect="cascadeWords" className="mt-3 font-cormorant text-2xl invite-sm:text-3xl" style={type('subtitle')} />
         </div>
       </div>
-      <svg viewBox="0 0 1200 92" preserveAspectRatio="none" className="relative -mt-px h-14 w-full rotate-180 sm:h-20" aria-hidden>
+      <svg viewBox="0 0 1200 92" preserveAspectRatio="none" className="relative -mt-px h-14 w-full rotate-180 invite-sm:h-20" aria-hidden>
         <path d="M0 67C210 106 332 9 586 47s391 61 614 11v34H0Z" fill={t.primaryDeep} />
       </svg>
     </section>

@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
+import CollectionPreview from '@/components/invitations/CollectionPreview';
 import { useRouter } from 'next/navigation';
-import { STARTER_DESIGNS, type StarterDesignKey } from '@/lib/enkarta-collections';
+import { type StarterDesignKey } from '@/lib/enkarta-collections';
+import { collectionCatalog } from '@/lib/collection-catalog';
 
-const TEMPLATES = STARTER_DESIGNS;
+const TEMPLATES = collectionCatalog();
 type TemplateKey = StarterDesignKey;
 
 export default function NewInvitationPicker() {
@@ -81,38 +82,12 @@ export default function NewInvitationPicker() {
                     : 'border-[#8b7d5f]/15 shadow-[0_8px_28px_rgba(62,51,34,0.06)] hover:-translate-y-1 hover:border-[#b8975a]/40 hover:shadow-[0_20px_55px_rgba(105,78,29,0.13)]'
                 }`}
               >
-                <button
-                  type="button"
-                  onClick={() => createFrom(template.key)}
-                  disabled={!!creating}
-                  className="relative block w-full overflow-hidden text-left disabled:cursor-wait"
-                  aria-label={`Usar la invitación ${template.name}`}
-                >
-                  <div className="relative aspect-[4/3] overflow-hidden" style={{ backgroundColor: `${template.accent}16` }}>
-                    <Image
-                      src={template.image}
-                      alt={`Invitación ${template.name}`}
-                      fill
-                      sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 360px"
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.035]"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-black/5" />
-                    <span className="absolute left-4 top-4 rounded-full border border-white/30 bg-black/25 px-2.5 py-1 font-outfit text-[10px] font-medium uppercase tracking-[0.14em] text-white backdrop-blur-md">
-                      {template.tag}
-                    </span>
-                    <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-                      <p className="font-playfair text-2xl leading-none">{template.name}</p>
-                      <p className="mt-1 font-outfit text-[9px] font-medium uppercase tracking-[0.18em] text-white/60">Colección {template.series}</p>
-                      <p className="mt-1.5 font-outfit text-xs text-white/75">{template.description}</p>
-                    </div>
-                    {isCreating && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#17120d]/75 text-white backdrop-blur-sm">
-                        <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        <span className="font-outfit text-xs font-medium">Preparando el editor…</span>
-                      </div>
-                    )}
-                  </div>
-                </button>
+                <CollectionPreview name={template.name} image={template.image} demoPath={template.demoPath} bg={template.bg} />
+                <div className="border-t border-[#e6e0d5] px-4 pt-4">
+                  <p className="font-outfit text-[10px] uppercase tracking-[.14em] text-[#85765f]">{template.tag}</p>
+                  <h2 className="mt-1 font-playfair text-2xl text-[#373b31]">{template.name}</h2>
+                  <p className="mt-1 min-h-10 font-outfit text-xs leading-relaxed text-[#716d62]">{template.description}</p>
+                </div>
 
                 <div className="flex items-center gap-2 p-3">
                   <a

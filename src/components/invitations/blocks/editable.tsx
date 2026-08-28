@@ -12,6 +12,8 @@
 import React, { createContext, useContext } from 'react';
 import { WriteOn, CascadeText } from '@/lib/scroll-motion';
 import type { Guest } from '@/lib/types';
+import { useBlockDesign } from './theme';
+import { hasInvitationVisualSystem } from '@/lib/marfil-visual-system';
 
 interface BlockEdit {
   editing: boolean;
@@ -44,6 +46,9 @@ export function Editable({
   effect?: 'write' | 'cascade' | 'cascadeWords';
 }) {
   const ed = useBlockEdit();
+  const design = useBlockDesign();
+  // Collection layouts already reveal the whole section. Avoid a second letter-by-letter animation.
+  if (hasInvitationVisualSystem(design)) effect = undefined;
   if (!ed.editing) {
     if (effect === 'write') return <Tag className={className} style={style}><WriteOn>{value}</WriteOn></Tag>;
     if (effect === 'cascade') return <Tag className={className} style={style}><CascadeText text={value} /></Tag>;

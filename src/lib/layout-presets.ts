@@ -33,7 +33,7 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', '
 
 function splitNames(names: string | null): [string, string] {
   if (!names) return ['Novia', 'Novio'];
-  const parts = names.split(/\s*[&y]\s*/i);
+  const parts = names.split(/\s*&\s*|\s+y\s+/i);
   return [parts[0]?.trim() || 'Novia', parts[1]?.trim() || 'Novio'];
 }
 
@@ -82,7 +82,8 @@ export function invitationToLayout(inv: InvitationParsed): PageLayout {
   const cfg = inv.config ?? {};
   const [groom, bride] = splitNames(inv.names);
   const dp = dateParts(inv.event_date);
-  const iso = `${(inv.event_date ?? new Date().toISOString().slice(0, 10))}T${inv.ceremony_time ?? '16:00'}:00`;
+  const time = inv.ceremony_time?.match(/^([01]\d|2[0-3]):[0-5]\d/)?.[0] ?? '16:00';
+  const iso = `${(inv.event_date ?? new Date().toISOString().slice(0, 10))}T${time}:00`;
   const bank = parseBank(inv.bank_account);
   const dress = (inv.dress_code ?? '').includes('|')
     ? { men: inv.dress_code!.split('|')[0].trim(), women: inv.dress_code!.split('|')[1].trim() }
@@ -203,9 +204,9 @@ export function invitationToLayout(inv: InvitationParsed): PageLayout {
     women: 'content.dress.women',
   }));
 
-  const items = (inv.itinerary ?? []).map(it => ({ time: it.time, label: it.label, icon: it.icon || 'rings', iconColors: it.iconColors, iconSpeed: it.iconSpeed }));
+  const items = (inv.itinerary ?? []).map(it => ({ ...it, icon: it.icon || 'rings' }));
   if (items.length) {
-    blocks.push(blk('itinerary', { title: 'Itinerario', items }));
+    blocks.push(blk('itinerary', { title: 'Itinerario', items }, undefined, { items: 'event.itinerary' }));
   }
 
   blocks.push(blk('gift', {

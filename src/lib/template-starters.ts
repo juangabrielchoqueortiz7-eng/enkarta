@@ -16,6 +16,9 @@ import { DEFAULT_MUSIC_URL } from '@/lib/music';
 import { decorForTemplate, motionForTemplate, themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import { STARTER_DESIGNS, type StarterDesignKey, type StarterCollectionKey } from '@/lib/enkarta-collections';
 import { marfilVivoStarter } from '@/lib/marfil-vivo';
+import { collectionDesign, curateCollectionLayout } from '@/lib/collection-design';
+import { invitationToLayout } from '@/lib/layout-presets';
+import type { InvitationParsed } from '@/lib/types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -80,8 +83,7 @@ function whatsappNumber(value: unknown): string | null {
 
 /**
  * Copia los datos de la muestra construida a una nueva fila editable. El
- * builder abre la plantilla original (sin convertirla a bloques), por lo que
- * el administrador ve desde el primer instante la invitación completa.
+ * builder y catálogo comparten el mismo documento nativo. No modifica filas existentes.
  */
 export function invitationStarter(template: StarterTemplateKey) {
   if (template === 'marfil-vivo') return marfilVivoStarter();
@@ -98,9 +100,10 @@ export function invitationStarter(template: StarterTemplateKey) {
     decor: sample.decor ?? decorForTemplate(template),
     tokens: sample.tokens ?? tokensForTemplate(template),
     musicUrl: sample.musicUrl ?? DEFAULT_MUSIC_URL,
+    ...collectionDesign(template),
   }));
 
-  return {
+  const starter = {
     status: 'draft' as const,
     template,
     type: 'boda' as const,
@@ -130,5 +133,18 @@ export function invitationStarter(template: StarterTemplateKey) {
     color_accent: config.theme?.text ?? '#2C2519',
     phone_whatsapp: whatsappNumber(sample.whatsapp ?? sample.rsvp?.whatsappUrl),
     builder_config: config,
+  };
+  config.layout = curateCollectionLayout(invitationToLayout({ ...starter, config } as InvitationParsed), template);
+  return starter;
+}
+
+/** Read-only sample with the exact content used by "Usar y editar". */
+export function invitationDemo(template: StarterTemplateKey): InvitationParsed {
+  const starter = invitationStarter(template);
+  return {
+    ...starter, id: `demo-${template}`, slug: template === 'carmesi_v2' ? 'carmesi' : template,
+    config: starter.builder_config, builder_config: JSON.stringify(starter.builder_config),
+    is_active: true, expires_at: null, views_count: 0, host_email: null, host_password_hash: null,
+    rsvp_deadline: null, whatsapp_template: null, created_at: new Date().toISOString(), phone_raw: null,
   };
 }

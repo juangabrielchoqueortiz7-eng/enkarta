@@ -14,6 +14,8 @@ import {
 } from '@/lib/design-kits';
 import { deleteUserDesignKit, listUserDesignKits, saveUserDesignKit } from '@/lib/user-design-kits';
 import { auditDesignConsistency, cleanInvitationDesign } from '@/lib/design-audit';
+import { hasInvitationVisualSystem } from '@/lib/marfil-visual-system';
+import DesignModeControl from '../DesignModeControl';
 
 interface Props {
   data: InvitationParsed;
@@ -111,6 +113,7 @@ function KitCard({ kit, active, recommended, onApply, onDelete }: {
 export default function StylePanel({ data, onChange }: Props) {
   useCatalogFonts();
   const cfg: BuilderConfig = data.config ?? {};
+  const guided = cfg.designMode === 'guided' && hasInvitationVisualSystem(cfg.tokens);
   const baseTheme = themeForTemplate(data.template);
   const theme: TemplateTheme = { ...baseTheme, ...(cfg.theme ?? {}) };
   const defaultTokens = tokensForTemplate(data.template);
@@ -168,6 +171,7 @@ export default function StylePanel({ data, onChange }: Props) {
 
   return (
     <div className="space-y-4 p-4 pb-8">
+      {hasInvitationVisualSystem(cfg.tokens) && <DesignModeControl guided={guided} onChange={value => onChange({ config: { ...cfg, designMode: value ? 'guided' : 'free' } })} />}
       <section className={cardCls}>
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -224,16 +228,16 @@ export default function StylePanel({ data, onChange }: Props) {
 
       <section className={cardCls}>
         <h4 className={titleCls}>Sistema tipográfico</h4>
-        <p className="mt-1 text-xs font-outfit leading-relaxed text-[#938a80]">Tres familias coordinadas y cuatro tamaños globales para conservar jerarquía.</p>
+        <p className="mt-1 text-xs font-outfit leading-relaxed text-[#938a80]">{guided ? 'Dos familias de colección y cuatro tamaños globales. Activa Edición libre para cambiar fuentes individuales.' : 'Familias coordinadas y cuatro tamaños globales para conservar jerarquía.'}</p>
         <div className="mt-4 space-y-2.5">
-          {FONT_ROLES.map(({ role, key, label, desc, preview, previewSize }) => {
+          {FONT_ROLES.filter(item => !guided || item.role !== 'script').map(({ role, key, label, desc, preview, previewSize }) => {
             const value = (cfg[key] as string | undefined) ?? '';
             const family = value || DEFAULT_FAMILY[role];
             return (
               <div key={key} className="rounded-xl border border-[#ede8e1] bg-[#fbfaf8] p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div><p className="text-xs font-outfit font-medium text-[#554e46]">{label}</p><p className="text-[9px] font-outfit text-[#9c938a]">{desc}</p></div>
-                  <select value={value} onChange={event => setFont(key, event.target.value)} className="max-w-[148px] rounded-lg border border-[#e3ddd5] bg-white px-2 py-1.5 text-[10px] font-outfit text-[#655d54] outline-none focus:border-enkarta-gold">
+                  <select aria-label={`Fuente ${label}`} disabled={guided} value={value} onChange={event => setFont(key, event.target.value)} className="max-w-[148px] rounded-lg border border-[#e3ddd5] bg-white px-2 py-1.5 text-[10px] font-outfit text-[#655d54] outline-none focus:border-enkarta-gold disabled:bg-[#f1eee8]">
                     <option value="">Original ({DEFAULT_FAMILY[role]})</option>
                     {FONT_CATALOG[role].filter(font => font.family !== DEFAULT_FAMILY[role]).map(font => <option key={font.family} value={font.family}>{font.family}</option>)}
                   </select>
@@ -263,7 +267,7 @@ export default function StylePanel({ data, onChange }: Props) {
           <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Densidad</span><select className={inputCls} value={tokens.spacing ?? 'normal'} onChange={event => setTokens({ spacing: event.target.value as TemplateTokens['spacing'] })}><option value="compact">Compacta</option><option value="normal">Balanceada</option><option value="airy">Amplia</option></select></label>
           <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Acabado</span><select className={inputCls} value={tokens.surface ?? 'flat'} onChange={event => setTokens({ surface: event.target.value as TemplateTokens['surface'] })}><option value="flat">Plano</option><option value="soft">Suave</option><option value="card">Tarjeta</option><option value="glass">Cristal</option></select></label>
           <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Sombra</span><select className={inputCls} value={tokens.shadow ?? 'soft'} onChange={event => setTokens({ shadow: event.target.value as TemplateTokens['shadow'] })}><option value="none">Sin sombra</option><option value="soft">Suave</option><option value="medium">Media</option><option value="strong">Profunda</option></select></label>
-          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Ancho · {tokens.contentWidth ?? 680}px</span><input type="range" min={560} max={820} step={10} value={tokens.contentWidth ?? 680} onChange={event => setTokens({ contentWidth: Number(event.target.value) })} className="w-full accent-enkarta-gold" /></label>
+          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Ancho · {tokens.contentWidth ?? 680}px</span><input type="range" min={560} max={1200} step={10} value={tokens.contentWidth ?? 680} onChange={event => setTokens({ contentWidth: Number(event.target.value) })} className="w-full accent-enkarta-gold" /></label>
           <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Botones</span><select className={inputCls} value={tokens.buttonStyle ?? 'solid'} onChange={event => setTokens({ buttonStyle: event.target.value as TemplateTokens['buttonStyle'] })}><option value="solid">Sólidos</option><option value="outline">Contorno</option><option value="soft">Tinte suave</option></select></label>
           <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Bordes</span><select className={inputCls} value={tokens.cardBorder ?? 'hairline'} onChange={event => setTokens({ cardBorder: event.target.value as TemplateTokens['cardBorder'] })}><option value="none">Sin borde</option><option value="hairline">Línea sutil</option><option value="accent">Con acento</option></select></label>
         </div>
@@ -280,7 +284,10 @@ export default function StylePanel({ data, onChange }: Props) {
           <label className="block"><span className="mb-1 flex justify-between text-[10px] font-outfit text-[#756d64]"><span>Escala de espacio</span><strong>{Math.round((tokens.spacingScale ?? 1) * 100)}%</strong></span><input type="range" min={0.8} max={1.25} step={0.05} value={tokens.spacingScale ?? 1} onChange={event => setTokens({ spacingScale: Number(event.target.value) })} className="w-full accent-enkarta-gold" /></label>
         </div>
         <div className="mt-4 grid grid-cols-[1fr_1.4fr] gap-3 rounded-xl border border-[#eee8e1] p-3">
-          <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Color de iconos</span><input type="color" value={cfg.iconColor || theme.primary || '#b8975a'} onChange={event => onChange({ config: { ...cfg, iconColor: event.target.value } })} className="h-10 w-full cursor-pointer rounded-lg border border-[#e5dfd7] p-1" /></label>
+          <div>
+            <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Color de iconos</span><input type="color" value={cfg.iconColor || theme.primary || '#b8975a'} onChange={event => onChange({ config: { ...cfg, iconColor: event.target.value } })} className="h-10 w-full cursor-pointer rounded-lg border border-[#e5dfd7] p-1" /></label>
+            <input aria-label="Color de iconos HEX" key={cfg.iconColor || theme.primary} defaultValue={cfg.iconColor || theme.primary || '#b8975a'} maxLength={7} spellCheck={false} onBlur={event => { const value = event.target.value.trim(); if (/^#[0-9a-f]{6}$/i.test(value)) onChange({ config: { ...cfg, iconColor: value } }); else event.target.value = cfg.iconColor || theme.primary || '#b8975a'; }} className="mt-1 w-full rounded border border-[#e5dfd7] px-2 py-1.5 text-xs uppercase" />
+          </div>
           <label><span className="mb-1 flex justify-between text-[10px] font-outfit text-[#756d64]"><span>Tamaño de iconos</span><strong>{Math.round((cfg.iconScale ?? 1) * 100)}%</strong></span><input type="range" min={0.7} max={1.4} step={0.05} value={cfg.iconScale ?? 1} onChange={event => onChange({ config: { ...cfg, iconScale: Number(event.target.value) } })} className="mt-2 w-full accent-enkarta-gold" /></label>
         </div>
         <div className="mt-4 overflow-hidden rounded-2xl border border-[#ebe5dd] p-4" style={{ background: theme.bg }}>

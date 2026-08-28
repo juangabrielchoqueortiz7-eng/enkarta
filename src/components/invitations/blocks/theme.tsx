@@ -53,3 +53,7 @@ export const BlockThemeProvider = Ctx.Provider;
 const DesignCtx = createContext<TemplateTokens>({});
 export const useBlockDesign = () => useContext(DesignCtx);
 export const BlockDesignProvider = DesignCtx.Provider;
+
+const IconCtx = createContext<{ color?: string }>({});
+export const useBlockIconTheme = () => useContext(IconCtx);
+export const BlockIconProvider = IconCtx.Provider;

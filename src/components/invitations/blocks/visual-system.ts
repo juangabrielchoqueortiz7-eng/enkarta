@@ -1,5 +1,6 @@
 import type React from 'react';
 import type { TemplateTokens } from '@/lib/types';
+import { hasInvitationVisualSystem, resolveInvitationTypography } from '@/lib/marfil-visual-system';
 import { useBlockDesign, useBlockTheme, type BlockTheme } from './theme';
 
 export type InvitationMood = 'editorial' | 'balanced' | 'rounded';
@@ -33,6 +34,9 @@ function shadowFor(theme: BlockTheme, value: TemplateTokens['shadow'], kind: 'ca
 }
 
 export function resolveInvitationVisualSystem(theme: BlockTheme, tokens: TemplateTokens = {}): InvitationVisualSystem {
+  const isMarfil = hasInvitationVisualSystem(tokens);
+  const action = resolveInvitationTypography(tokens, 'action');
+  const controlBorder = isMarfil && tokens.cardBorder !== 'none' ? `1px solid color-mix(in srgb, ${theme.primary} 55%, ${theme.bg})` : undefined;
   const source = tokens.sectionRadius ?? 18;
   const mood: InvitationMood = source <= 12 ? 'editorial' : source >= 24 ? 'rounded' : 'balanced';
   const cardRadius = tokens.cardRadius ?? (mood === 'editorial' ? Math.max(7, source) : mood === 'rounded' ? Math.min(30, source) : Math.max(14, source));
@@ -69,11 +73,12 @@ export function resolveInvitationVisualSystem(theme: BlockTheme, tokens: Templat
       boxShadow: cardShadow,
     },
     field: {
-      border,
+      border: controlBorder ?? border,
       borderRadius: fieldRadius,
       background: `color-mix(in srgb, ${theme.surface} 88%, ${theme.bg})`,
       color: theme.text,
       boxShadow: tokens.shadow === 'none' ? undefined : '0 5px 18px rgba(30,24,16,0.035)',
+      ...(isMarfil ? { ...resolveInvitationTypography(tokens, 'field'), minHeight: 48 } : {}),
     },
     media: {
       border,
@@ -81,12 +86,14 @@ export function resolveInvitationVisualSystem(theme: BlockTheme, tokens: Templat
       background: theme.surface,
       boxShadow: cardShadow,
     },
-    primaryButton: { ...primaryButton, borderRadius: buttonRadius },
+    primaryButton: { ...primaryButton, borderRadius: buttonRadius, ...action, ...(isMarfil ? { minHeight: 48 } : {}) },
     secondaryButton: {
       color: theme.primary,
       background: `color-mix(in srgb, ${theme.surface} 84%, ${theme.bg})`,
-      border,
+      border: controlBorder ?? border,
       borderRadius: buttonRadius,
+      ...action,
+      ...(isMarfil ? { minHeight: 48 } : {}),
     },
   };
 }
