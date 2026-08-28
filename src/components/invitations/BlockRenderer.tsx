@@ -43,6 +43,7 @@ interface Props {
   slug?: string;
   /** Las muestras simulan RSVP sin hacer escrituras en el servidor. */
   demo?: boolean;
+  deadlinePassed?: boolean;
   /** Read-only catalogue crop: no footer or audio. */
   previewOnly?: boolean;
   /** Invitado activo para bloques privados, QR y estados personalizados. */
@@ -657,7 +658,7 @@ function FooterBar({ seam }: { seam?: SeamInfo }) {
 }
 
 export default function BlockRenderer({
-  layout, theme, nightTheme, nightDefault, motion, decor, tokens, musicUrl, slug, guest, demo, previewOnly, gated, editor, selectedId, selectedIds, onSelectBlock, onTransform, onEditProp, onPatchBlock, onDuplicateBlock, onDeleteBlock, onCopyBlockStyle, onPasteBlockStyle, hasStyleClipboard, previewScale = 1, scrollRoot, viewportMode,
+  layout, theme, nightTheme, nightDefault, motion, decor, tokens, musicUrl, slug, guest, demo, deadlinePassed, previewOnly, gated, editor, selectedId, selectedIds, onSelectBlock, onTransform, onEditProp, onPatchBlock, onDuplicateBlock, onDeleteBlock, onCopyBlockStyle, onPasteBlockStyle, hasStyleClipboard, previewScale = 1, scrollRoot, viewportMode,
 }: Props) {
   const hasNight = !!nightTheme && Object.keys(nightTheme).length > 0;
   const [night, setNight] = useState(!!nightDefault && hasNight);
@@ -734,7 +735,7 @@ export default function BlockRenderer({
   return (
     <BlockThemeProvider value={bt}>
       <BlockDesignProvider value={tokens ?? {}}>
-      <BlockDataProvider value={{ slug, guest, demo }}>
+      <BlockDataProvider value={{ slug, guest, demo, deadlinePassed }}>
         <PageMotionProvider value={motion} gated={gated} scrollRoot={scrollRoot}>
           <ScrollExperience color={bt.primary} disabled={!!editor}>
           <div

@@ -15,7 +15,7 @@ import { useBlockTypography } from './typography';
 import { Editable, useBlockData, useBlockEdit } from './editable';
 import { useCountdown, CopyBtn, PhotoGrid, EventIcon, OrchidSprig, Odometer, Tilt, type GalleryCaption, type GalleryLayout } from '../shared';
 import { RevealDraw, PinnedStory } from '@/lib/scroll-motion';
-import { PetalBurst } from '../effects';
+import ConfirmationForm from '../ConfirmationForm';
 import { renderElement, getElement, type ElementPalette } from './elements-library';
 import { InvitationDivider, DEFAULT_DIVIDER } from '../dividers';
 import { sanitizeSvg } from '@/lib/sanitize-svg';
@@ -665,84 +665,19 @@ const StoryBlock: React.FC<{ block: Block }> = ({ block }) => {
   );
 };
 
-// Formulario de confirmación digital: guarda la respuesta vía /api/rsvp.
+// Bloques y plantillas usan el mismo formulario, protocolo y reglas de RSVP.
 function RsvpForm({ block }: { block: Block }) {
   const t = useBlockTheme();
   const type = useBlockTypography(block);
   const shape = useInvitationShape();
-  const { slug, guest, demo } = useBlockData();
+  const { slug, guest, demo, deadlinePassed } = useBlockData();
   const { editing } = useBlockEdit();
-  const [name, setName] = useState(guest?.name ?? '');
-  const [attending, setAttending] = useState<'yes' | 'no'>(guest?.status === 'declined' ? 'no' : 'yes');
-  const [passes, setPasses] = useState(guest?.confirmedPasses ?? 1);
-  const [msg, setMsg] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [done, setDone] = useState(Boolean(guest && guest.status !== 'pending'));
-
-  useEffect(() => {
-    setName(guest?.name ?? '');
-    setAttending(guest?.status === 'declined' ? 'no' : 'yes');
-    setPasses(guest?.confirmedPasses ?? 1);
-    setDone(Boolean(guest && guest.status !== 'pending'));
-  }, [guest]);
-
-  const field: React.CSSProperties = { ...shape.field, padding: '11px 13px', fontSize: 15, width: '100%', outline: 'none', ...type('field') };
-
-  if (done) {
-    return (
-      <div className="text-center" role="status" aria-live="polite">
-        {attending === 'yes' && <PetalBurst color={t.primary} />}
-        <p className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.primary, fontSize: 16, ...type('subtitle') }}>{attending === 'yes' ? '¡Asistencia confirmada! 🤍' : 'Gracias por avisarnos'}</p>
-        <p className="font-cormorant mt-2" style={{ color: t.muted, ...type('note') }}>{attending === 'yes' ? `${passes} ${passes === 1 ? 'lugar reservado' : 'lugares reservados'}.` : 'Lamentamos que no puedas acompañarnos.'}</p>
-        {(demo || editing) && <p className="mt-3 font-outfit text-xs" style={{ color: t.muted, ...type('note') }}>Modo de muestra: no se envió ninguna respuesta.</p>}
-      </div>
-    );
-  }
-
-  const submit = async () => {
-    if (busy) return;
-    setError('');
-    if (!name.trim()) { setError('Escribe tu nombre para confirmar.'); return; }
-    if (attending === 'yes' && (!Number.isInteger(passes) || passes < 1 || passes > (guest?.passes ?? 20))) { setError('Revisa el número de personas.'); return; }
-    if (editing || demo) { setDone(true); return; }
-    if (!slug) { setError('La confirmación no está disponible en esta vista.'); return; }
-    setBusy(true);
-    try {
-      const response = await fetch(guest?.publicId ? '/api/guests/confirm' : '/api/rsvp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(guest?.publicId ? { slug, publicId: guest.publicId, confirmName: name.trim(), attending, passes, message: msg } : { slug, name: name.trim(), attending, passes, message: msg }) });
-      if (!response.ok) {
-        const result = await response.json().catch(() => null);
-        throw new Error(result?.error || 'No se pudo guardar tu respuesta. Inténtalo de nuevo.');
-      }
-      setDone(true);
-    } catch (cause) {
-      setError(cause instanceof TypeError ? 'No hay conexión. Tu respuesta no se ha enviado; vuelve a intentarlo.' : cause instanceof Error ? cause.message : 'No se pudo enviar tu respuesta.');
-    } finally { setBusy(false); }
-  };
-
-  return (
-    <div className="mx-auto text-left" style={{ maxWidth: 380 }}>
-      <h3 className="font-cinzel uppercase tracking-[0.16em] text-center mb-5" style={{ color: type('title').fontFamily ? t.primary : t.muted, fontSize: 15, ...type('title') }}>{str(block, 'message', 'Confirma tu asistencia')}</h3>
-      <div className="space-y-3 font-cormorant" style={type('field')}>
-        {!guest?.publicId && <input style={field} aria-label="Tu nombre" autoComplete="name" placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />}
-        <select style={field} aria-label="¿Asistirás?" value={attending} onChange={e => setAttending(e.target.value as 'yes' | 'no')}>
-          <option value="yes">Sí, asistiré</option>
-          <option value="no">No podré asistir</option>
-        </select>
-        {attending === 'yes' && (
-          <div className="flex items-center gap-3">
-            <span style={{ color: t.muted, fontSize: 15, ...type('note') }}>N.º de personas</span>
-            <input style={{ ...field, width: 90 }} aria-label="Número de personas" type="number" min={1} max={guest?.passes ?? 20} value={passes} onChange={e => setPasses(parseInt(e.target.value) || 1)} />
-          </div>
-        )}
-        <textarea style={{ ...field, minHeight: 70 }} aria-label="Mensaje para los novios" placeholder="Mensaje para los novios (opcional)" value={msg} onChange={e => setMsg(e.target.value)} />
-        {error && <p role="alert" className="font-outfit text-sm text-red-700">{error}</p>}
-        <button onClick={submit} disabled={busy} className="ek-cta w-full font-cinzel uppercase tracking-[0.16em] text-[12px] py-3 transition-all hover:-translate-y-px hover:opacity-95 disabled:opacity-50 ek-shine ek-shine-auto" style={shape.primaryButton}>
-          {busy ? 'Enviando…' : str(block, 'buttonLabel', 'Confirmar asistencia')}
-        </button>
-      </div>
-    </div>
-  );
+  return <div id="enkarta-confirmar">
+    <h3 className="mb-5 text-center" style={{ color: t.primary, ...type('title') }}>{str(block, 'message', 'Confirma tu asistencia')}</h3>
+    <ConfirmationForm slug={slug} guest={guest} demo={demo || editing} deadlinePassed={deadlinePassed} theme={t}
+      buttonLabel={str(block, 'buttonLabel', 'Confirmar asistencia')}
+      fieldStyle={{ ...shape.field, ...type('field') }} buttonStyle={{ ...shape.primaryButton, ...type('action') }} noteStyle={type('note')} />
+  </div>;
 }
 
 const RsvpBlock: React.FC<{ block: Block }> = ({ block }) => {
@@ -776,11 +711,11 @@ const AccessPassBlock: React.FC<{ block: Block }> = ({ block }) => {
     );
   }
 
-  if (!guest.accessToken && !editing) {
+  if ((!guest.accessToken || guest.status !== 'confirmed' || (guest.confirmedPasses ?? guest.passes) < 1) && !editing) {
     return (
       <div className="mx-auto max-w-sm px-6 py-8 text-center" style={visual.card}>
         <p className="font-cinzel text-sm uppercase tracking-[0.15em]" style={{ color: t.primary }}>{title}</p>
-        <p className="mt-3 font-cormorant text-lg" style={{ color: t.muted }}>Tu código QR aparecerá aquí después de confirmar tu asistencia.</p>
+        <p className="mt-3 font-cormorant text-lg" style={{ color: t.muted }}>{guest.status === 'declined' ? 'Has indicado que no asistirás. Tu pase de acceso está inactivo.' : 'Tu código QR aparecerá aquí después de confirmar tu asistencia.'}</p>
       </div>
     );
   }
@@ -793,7 +728,7 @@ const AccessPassBlock: React.FC<{ block: Block }> = ({ block }) => {
         t={t}
         accessToken={guest.accessToken || `enkarta-preview-${guest.publicId}`}
         accessCode={guest.accessCode || 'VISTA-PREVIA'}
-        guestName={guest.name}
+        guestName={guest.confirmName || guest.name}
         tableNo={guest.tableNo}
         passes={guest.confirmedPasses ?? guest.passes}
       />

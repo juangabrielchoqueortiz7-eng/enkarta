@@ -24,6 +24,7 @@ import InvitationAnalytics from '@/components/invitations/InvitationAnalytics';
 import { canManageInvitation } from '@/lib/host-session';
 import { latestPublishedInvitation, publicInvitationData } from '@/lib/published-invitation';
 import PreviewCaptureController from '@/components/invitations/PreviewCaptureController';
+import { eventDay, hasRsvpForm } from '@/lib/rsvp-contract';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,7 +122,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
 
   // ── Expiración automática (DATE → comparación por día) ──
   if (invitation.expires_at && !privatePreview) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = eventDay();
     if (invitation.expires_at.slice(0, 10) < today) {
       return (
         <StatusScreen
@@ -177,11 +178,14 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   }
 
   // Fecha límite de confirmación (columna rsvp_deadline): bloquea el formulario.
-  const deadlinePassed = !!invitation.rsvp_deadline && invitation.rsvp_deadline.slice(0, 10) < new Date().toISOString().slice(0, 10);
+  const deadlinePassed = !!invitation.rsvp_deadline && invitation.rsvp_deadline.slice(0, 10) < eventDay();
 
   // ── Resolver el elemento de la plantilla ──
   // Si la invitación tiene un documento por bloques, manda sobre la plantilla legacy.
   const hasBlocks = !!config.layout?.blocks?.length;
+  const resolvedLayout = hasBlocks ? resolveLayoutBindings(config.layout!, parsed) : null;
+  const mobileForm = hasRsvpForm(resolvedLayout?.blocks ?? [], 'mobile');
+  const desktopForm = hasRsvpForm(resolvedLayout?.blocks ?? [], 'desktop');
   const premium = PREMIUM_REGISTRY[parsed.template];
   let templateEl: React.ReactNode;
   if (hasBlocks) {
@@ -201,7 +205,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const entryEnabled = (config.entry?.enabled ?? resolveFeatures(config).entry) && full !== '1';
 
   // Confirmación inteligente: formulario in-app al final (gateado por paquete).
-  const smartRsvp = feats.smartRsvp && !privatePreview ? (
+  const smartRsvp = feats.smartRsvp && !privatePreview && !(mobileForm && desktopForm) ? (
     <SmartRsvp
       slug={invitation.slug}
       theme={config.theme}
@@ -211,6 +215,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
       tableNo={guest?.tableNo}
       guest={guest ?? undefined}
       deadlinePassed={deadlinePassed}
+      viewport={mobileForm ? 'desktop' : desktopForm ? 'mobile' : 'both'}
     />
   ) : null;
 
@@ -223,7 +228,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
       {privatePreview && !capture && <div className="fixed left-1/2 top-3 z-[200] -translate-x-1/2 rounded-full border border-violet-200 bg-white/95 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-violet-700 shadow-lg backdrop-blur font-outfit">Vista privada del borrador{sample === '1' ? ' · invitado de prueba' : ' · no publicada'}</div>}
       {privatePreview && capture && <PreviewCaptureController position={capture} />}
       {hasBlocks ? (
-        <BlockRenderer layout={resolveLayoutBindings(config.layout!, parsed)} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} guest={guest ?? undefined} demo={privatePreview} gated={entryEnabled} />
+        <BlockRenderer layout={resolvedLayout!} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} guest={guest ?? undefined} demo={privatePreview} deadlinePassed={deadlinePassed} gated={entryEnabled} />
       ) : (
         <PageMotionProvider value={config.motion} gated={entryEnabled}>
           {templateEl}

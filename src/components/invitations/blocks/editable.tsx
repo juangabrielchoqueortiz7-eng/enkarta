@@ -25,7 +25,7 @@ export const BlockEditProvider = Ctx.Provider;
 export const useBlockEdit = () => useContext(Ctx);
 
 // Datos de la invitación disponibles para los bloques (p. ej. el slug para el RSVP).
-interface BlockData { slug?: string; guest?: Guest; demo?: boolean }
+interface BlockData { slug?: string; guest?: Guest; demo?: boolean; deadlinePassed?: boolean }
 const DataCtx = createContext<BlockData>({});
 export const BlockDataProvider = DataCtx.Provider;
 export const useBlockData = () => useContext(DataCtx);

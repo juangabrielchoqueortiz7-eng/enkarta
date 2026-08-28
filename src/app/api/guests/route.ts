@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { readGuests, mapGuestRow } from '@/lib/guests';
 import { genPublicId } from '@/lib/access';
 import { canManageInvitation, invitationIdOfGuest } from '@/lib/host-session';
+import { serviceError } from '@/lib/services-server';
 
 const forbidden = () => NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 
@@ -16,7 +17,7 @@ const forbidden = () => NextResponse.json({ error: 'No autorizado' }, { status: 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const clampPasses = (n: unknown) => Math.max(1, Math.min(20, Number(n) || 1));
+const clampPasses = (n: unknown) => Math.max(1, Math.min(20, Math.trunc(Number(n) || 1)));
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function rowFromInput(invitationId: string, g: any) {
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (!rows.length) return NextResponse.json({ error: 'Sin invitados válidos' }, { status: 400 });
 
     const { data, error } = await supabaseAdmin.from('guests').insert(rows).select('*');
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serviceError(error);
     return NextResponse.json({ ok: true, guests: (data ?? []).map(mapGuestRow) });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Error del servidor' }, { status: 500 });
@@ -78,7 +79,7 @@ export async function PATCH(request: NextRequest) {
     if (!Object.keys(patch).length) return NextResponse.json({ error: 'Nada que actualizar' }, { status: 400 });
 
     const { data, error } = await supabaseAdmin.from('guests').update(patch).eq('id', id).select('*').maybeSingle();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serviceError(error);
     return NextResponse.json({ ok: true, guest: data ? mapGuestRow(data) : null });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Error del servidor' }, { status: 500 });
@@ -91,6 +92,6 @@ export async function DELETE(request: NextRequest) {
   const ownerId = await invitationIdOfGuest(guestId);
   if (!ownerId || !(await canManageInvitation(ownerId))) return forbidden();
   const { error } = await supabaseAdmin.from('guests').delete().eq('id', guestId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serviceError(error);
   return NextResponse.json({ ok: true });
 }

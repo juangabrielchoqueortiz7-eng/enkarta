@@ -81,15 +81,20 @@ export default function GuestsPanel({ data, onChange, onPreview, previewGuestId 
     delete apiPatch.phone; delete apiPatch.group; delete apiPatch.eventAccess;
     if (Object.keys(apiPatch).length) fetch('/api/guests', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...apiPatch }),
-    }).catch(() => {});
+    }).then(async response => {
+      if (!response.ok) { const result = await response.json(); setNotice(result.error || 'No se guardaron los cambios.'); load(); }
+    }).catch(() => { setNotice('No se pudo comprobar el cambio. Actualiza antes de continuar.'); load(); });
   };
 
-  const removeGuest = (guest: Guest) => {
+  const removeGuest = async (guest: Guest) => {
+    try {
+      const response = await fetch(`/api/guests?guestId=${guest.id}`, { method: 'DELETE' });
+      if (!response.ok) { const result = await response.json(); setNotice(result.error || 'No se pudo eliminar.'); return; }
+    } catch { setNotice('Sin conexión. No se pudo comprobar la eliminación.'); load(); return; }
     setGuests(items => items.filter(item => item.id !== guest.id));
     if (previewGuestId === guest.id) onPreview?.(null);
     const next = { ...metaRef.current }; delete next[guest.publicId]; metaRef.current = next;
     onChange?.({ config: { ...(data.config ?? {}), guestMeta: next } });
-    fetch(`/api/guests?guestId=${guest.id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   const addGuests = async (rows: GuestImportRow[]) => {

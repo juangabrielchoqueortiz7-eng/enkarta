@@ -14,6 +14,8 @@
 
 La migración es aditiva. Mientras no esté aplicada, el editor conserva historial, notas y secciones en `localStorage`, y la interfaz indica “Respaldo local”.
 
+Para los cambios de RSVP y acceso de la fase 1 de servicios, aplicar también `migrations/006_reliable_rsvp_and_access.sql` antes de desplegar el código. Seguir la guía de activación, respaldos y pruebas con dos dispositivos de [Servicios · Fase 1](SERVICIOS_FASE_1_RSVP_Y_ACCESO.md). Estas operaciones no tienen respaldo alternativo local: sin la migración muestran mantenimiento y no aceptan nuevas escrituras.
+
 ## 2. Verificación técnica
 
 Ejecutar:
@@ -22,7 +24,7 @@ Ejecutar:
 npm run verify
 ```
 
-La verificación debe completar lint, TypeScript y la compilación optimizada de Next.js.
+La verificación debe completar lint, TypeScript, las pruebas del constructor, las pruebas SQL/API de servicios y la compilación optimizada de Next.js. Las pruebas automatizadas no sustituyen la validación de cámara y concurrencia con dos dispositivos en un entorno separado.
 
 ## 3. Prueba funcional
 
@@ -44,8 +46,7 @@ La verificación debe completar lint, TypeScript y la compilación optimizada de
 
 ## 5. Despliegue
 
-1. Ejecutar primero la migración 004.
+1. Ejecutar primero las migraciones requeridas: 004 para constructor y 006 para la nueva confirmación y acceso, con respaldo y siguiendo la guía de servicios.
 2. Desplegar una vista previa y realizar la prueba funcional completa.
 3. Promover a producción.
 4. No eliminar el respaldo local hasta validar la sincronización con datos reales.
-

@@ -561,6 +561,7 @@ export interface RsvpEntry {
   passes?: number;
   message?: string;
   at: string; // ISO
+  revision?: number;
 }
 
 /**
@@ -585,6 +586,7 @@ export interface Guest {
   confirmName?: string;  // nombre(s) que escribió al confirmar
   message?: string;
   respondedAt?: string;  // ISO
+  responseRevision?: number;
   accessToken?: string;  // contenido del QR (se genera al confirmar)
   accessCode?: string;   // ID de acceso visual legible (ENK-XXXX)
 }
@@ -598,6 +600,7 @@ export interface Attendee {
   state: 'in' | 'out';   // in = dentro del evento, out = afuera / no ha llegado
   checkedInAt?: string;
   checkedOutAt?: string;
+  revision: number;
 }
 
 /** Documento por bloques de una invitación. */

@@ -335,3 +335,16 @@ test('manual text styling overrides coordinated defaults and custom icons remain
   assert.match(icon('church', { lottieColors: { __tint: '#123456' } }), /stroke="#123456"/);
   assert.match(icon('/uploaded.svg'), /<img[^>]+src="\/uploaded.svg"/);
 });
+
+test('public access block hides retained QR after a decline or pending response', () => {
+  const React = require('react');
+  const { renderToStaticMarkup } = require('react-dom/server');
+  const { BLOCKS } = require('../src/components/invitations/blocks/registry.tsx');
+  const { BlockDataProvider } = require('../src/components/invitations/blocks/editable.tsx');
+  const guest = { id: 'test', publicId: 'test-public', name: 'Familia', confirmName: 'Nombre confirmado', status: 'confirmed', passes: 5, confirmedPasses: 2, accessToken: 'test-token', accessCode: 'ENK-TEST' };
+  const render = overrides => renderToStaticMarkup(React.createElement(BlockDataProvider, { value: { guest: { ...guest, ...overrides } } }, React.createElement(BLOCKS.accessPass.Component, { block: { id: 'access', type: 'accessPass', props: {} } })));
+  assert.match(render({}), /ENK-TEST/);
+  assert.match(render({}), /Nombre confirmado/);
+  assert.match(render({ status: 'declined', confirmedPasses: 0 }), /pase de acceso está inactivo/);
+  for (const overrides of [{ status: 'declined' }, { status: 'pending' }, { confirmedPasses: 0 }]) assert.doesNotMatch(render(overrides), /ENK-TEST/);
+});

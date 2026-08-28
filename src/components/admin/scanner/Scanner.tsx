@@ -16,21 +16,39 @@ export default function Scanner() {
   const [manual, setManual] = useState('');
   const [scanning, setScanning] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [mustRefresh, setMustRefresh] = useState(false);
+  const busyRef = useRef(false);
+  const groupRequest = useRef<AbortController | null>(null);
+  const lastParams = useRef('');
+  const pending = useRef<{ attendeeId: string; action: 'in' | 'out'; expectedRevision: number; requestId: string } | null>(null);
   const scannerRef = useRef<{ stop: () => Promise<void>; clear: () => void } | null>(null);
   const lastScan = useRef<{ value: string; at: number }>({ value: '', at: 0 });
 
   // ── Cargar un grupo por token (QR) o código (manual) ──
   const loadGroup = useCallback(async (params: string) => {
+    if (busyRef.current) return;
+    groupRequest.current?.abort();
+    const controller = new AbortController();
+    groupRequest.current = controller;
+    lastParams.current = params;
+    setGroup(null);
+    setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/checkin?${params}`);
+      const res = await fetch(`/api/checkin?${params}`, { cache: 'no-store', signal: controller.signal });
       const data = await res.json();
+      if (controller.signal.aborted) return;
       if (!res.ok) { setError(data.error || 'No se pudo cargar'); return; }
       setGroup(data);
-    } catch { setError('Sin conexión'); }
+      pending.current = null;
+      setMustRefresh(false);
+    } catch { if (!controller.signal.aborted) setError('Sin conexión. No se cargó ningún acceso.'); }
+    finally { if (!controller.signal.aborted) setLoading(false); }
   }, []);
 
   const onDetected = useCallback((text: string) => {
+    if (busyRef.current) return;
     const now = Date.now();
     // Anti-rebote: ignora el mismo QR repetido en <2.5s.
     if (text === lastScan.current.value && now - lastScan.current.at < 2500) return;
@@ -66,24 +84,32 @@ export default function Scanner() {
     setScanning(false);
   }, []);
 
-  useEffect(() => () => { void stopCamera(); }, [stopCamera]);
+  useEffect(() => () => { groupRequest.current?.abort(); void stopCamera(); }, [stopCamera]);
 
   // ── Marcar ingreso/salida de una persona y refrescar su estado ──
   const mark = async (att: Attendee, action: 'in' | 'out') => {
+    if (busyRef.current || loading || mustRefresh) return;
+    if (pending.current && (pending.current.attendeeId !== att.id || pending.current.action !== action)) return;
+    busyRef.current = true;
+    const operation = pending.current ?? { attendeeId: att.id, action, expectedRevision: att.revision, requestId: crypto.randomUUID() };
+    pending.current = operation;
     setBusyId(att.id);
     setError('');
     try {
       const res = await fetch('/api/checkin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attendeeId: att.id, action }),
+        body: JSON.stringify(operation),
       });
       const data = await res.json();
       if (res.ok && data.attendee) {
         setGroup(g => g ? { ...g, attendees: g.attendees.map(a => a.id === att.id ? data.attendee : a) } : g);
+        pending.current = null;
       } else {
         setError(data.error || 'No se pudo registrar');
+        if (res.status < 500) { pending.current = null; setMustRefresh(true); }
       }
-    } catch { setError('Sin conexión'); }
+    } catch { setError('No se pudo comprobar el resultado. Reintenta el mismo movimiento o actualiza el grupo; no se volverá a contar.'); }
+    busyRef.current = false;
     setBusyId(null);
   };
 
@@ -106,12 +132,14 @@ export default function Scanner() {
       </div>
 
       {/* Código manual */}
-      <form onSubmit={e => { e.preventDefault(); if (manual.trim()) loadGroup(`code=${encodeURIComponent(manual.trim())}`); }} className="flex gap-2">
+      <form onSubmit={e => { e.preventDefault(); if (manual.trim() && !busyId) loadGroup(`code=${encodeURIComponent(manual.trim())}`); }} className="flex gap-2">
         <input value={manual} onChange={e => setManual(e.target.value.toUpperCase())} placeholder="ID de acceso (ENK-XXXX)" className="flex-1 px-3 py-2.5 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold outline-none font-mono uppercase" />
-        <button type="submit" className="px-4 py-2.5 rounded-xl bg-gray-800 text-white font-outfit text-sm">Buscar</button>
+        <button type="submit" disabled={!!busyId} className="px-4 py-2.5 rounded-xl bg-gray-800 text-white font-outfit text-sm disabled:opacity-50">Buscar</button>
       </form>
 
       {error && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-outfit text-center">{error}</div>}
+      {loading && <p role="status" className="text-center text-sm text-gray-500">Consultando el acceso…</p>}
+      {!!lastParams.current && !busyId && <button type="button" onClick={() => void loadGroup(lastParams.current)} className="min-h-11 w-full rounded-xl border border-gray-200 bg-white text-sm">Actualizar grupo desde el servidor</button>}
 
       {/* Grupo cargado */}
       {group && (
@@ -137,18 +165,18 @@ export default function Scanner() {
                   </p>
                 </div>
                 {a.state === 'in' ? (
-                  <button onClick={() => mark(a, 'out')} disabled={busyId === a.id} className="px-3 py-1.5 rounded-lg text-xs font-outfit border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50">
+                  <button onClick={() => mark(a, 'out')} disabled={!!busyId || mustRefresh || (!!pending.current && pending.current.attendeeId !== a.id)} className="px-3 py-1.5 rounded-lg text-xs font-outfit border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50">
                     Marcar salida
                   </button>
                 ) : (
-                  <button onClick={() => mark(a, 'in')} disabled={busyId === a.id} className="px-3 py-1.5 rounded-lg text-xs font-outfit text-white hover:opacity-90 disabled:opacity-50" style={{ background: '#3d6b4f' }}>
+                  <button onClick={() => mark(a, 'in')} disabled={!!busyId || mustRefresh || (!!pending.current && pending.current.attendeeId !== a.id)} className="px-3 py-1.5 rounded-lg text-xs font-outfit text-white hover:opacity-90 disabled:opacity-50" style={{ background: '#3d6b4f' }}>
                     Ingresó
                   </button>
                 )}
               </div>
             ))}
           </div>
-          <button onClick={() => { setGroup(null); setManual(''); }} className="w-full py-3 text-sm font-outfit text-gray-400 hover:bg-gray-50 border-t border-gray-100">
+          <button disabled={!!busyId} onClick={() => { setGroup(null); setManual(''); pending.current = null; }} className="w-full py-3 text-sm font-outfit text-gray-400 hover:bg-gray-50 border-t border-gray-100 disabled:opacity-50">
             Cerrar y escanear otro
           </button>
         </div>

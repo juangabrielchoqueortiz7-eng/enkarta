@@ -20,6 +20,7 @@ export function mapGuestRow(r: any): Guest {
     confirmName: r.confirm_name ?? undefined,
     message: r.message ?? undefined,
     respondedAt: r.responded_at ?? undefined,
+    responseRevision: r.response_revision ?? 0,
     accessToken: r.access_token ?? undefined,
     accessCode: r.access_code ?? undefined,
   };
@@ -34,6 +35,7 @@ export function mapAttendeeRow(r: any): Attendee {
     state: r.state ?? 'out',
     checkedInAt: r.checked_in_at ?? undefined,
     checkedOutAt: r.checked_out_at ?? undefined,
+    revision: r.revision ?? 0,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -60,23 +62,5 @@ export async function findGuestByPublicId(invitationId: string, publicId: string
   return data ? mapGuestRow(data) : null;
 }
 
-/**
- * Crea los asientos 1..passes de un invitado si faltan y elimina los sobrantes
- * (cuando bajan los pases). Idempotente: conserva los asientos ya existentes y
- * su estado de check-in. Devuelve la lista de asientos resultante.
- */
-export async function materializeAttendees(guestId: string, passes: number): Promise<Attendee[]> {
-  const { data: existing } = await supabaseAdmin.from('attendees').select('*').eq('guest_id', guestId);
-  const rows = existing ?? [];
-  const have = new Set(rows.map(r => r.seat_no));
-
-  const toAdd: { guest_id: string; seat_no: number }[] = [];
-  for (let s = 1; s <= passes; s++) if (!have.has(s)) toAdd.push({ guest_id: guestId, seat_no: s });
-  if (toAdd.length) await supabaseAdmin.from('attendees').insert(toAdd);
-
-  const extra = rows.filter(r => r.seat_no > passes).map(r => r.id);
-  if (extra.length) await supabaseAdmin.from('attendees').delete().in('id', extra);
-
-  const { data } = await supabaseAdmin.from('attendees').select('*').eq('guest_id', guestId).order('seat_no');
-  return (data ?? []).map(mapAttendeeRow);
-}
+// La materialización y los cambios de estado se realizan dentro de las RPC de
+// 006, en la misma transacción que la confirmación. Nunca borrar desde un GET.
