@@ -36,6 +36,176 @@ const { MARFIL_THEME, MARFIL_TOKENS, MARFIL_SPACE, MARFIL_WIDTH, resolveInvitati
 const { resolveBlockTheme } = require('../src/components/invitations/blocks/theme.tsx');
 const { resolveInvitationVisualSystem } = require('../src/components/invitations/blocks/visual-system.ts');
 const { resolveFonts } = require('../src/lib/fonts.ts');
+const { PACKAGE_CATALOG, PACKAGE_PRESETS, commercialRows, newServiceContract, adoptServiceContract, contractErrors, resolveFeatures, gateInvitation, allowsService } = require('../src/lib/packages.ts');
+const { changesUncontractedColors } = require('../src/lib/package-colors.ts');
+const { responseCsv, responseRows } = require('../src/lib/response-sheet.ts');
+const { filterRoster, hostMetrics, rosterCsv, formatSyncTime } = require('../src/lib/host-dashboard.ts');
+const { createLiveSync, SyncDenied, retryDelay } = require('../src/lib/live-sync.ts');
+const { addDays, validDay, invitationValidity, parseValidityCommand, validityLabel } = require('../src/lib/invitation-validity.ts');
+const { deliveryState, guestMessage, reminderMessage, parseDeliveryInput } = require('../src/lib/guest-delivery.ts');
+const { mapToAzure } = require('../src/lib/invitation-mapper.ts');
+const { additionalServiceChecks, additionalServiceErrors, navigationCandidates, publicAdditionalServices } = require('../src/lib/additional-services.ts');
+const { activeInvitationLocale, formatInvitationDate, invitationCopy } = require('../src/lib/invitation-i18n.ts');
+const { parseSaveDateInput } = require('../src/lib/save-date.ts');
+const { clientInvitation } = require('../src/lib/client-invitation.ts');
+const { qualityChecksFor, qualityProgress, releaseReady, qualityReport, updateQualityCheck } = require('../src/lib/quality-assurance.ts');
+
+test('delivery tracking distinguishes opening, manual marking and real responses',()=>{
+  assert.equal(deliveryState({status:'pending',sent:false,deliveryStatus:'pending'}),'pending');
+  assert.equal(deliveryState({status:'pending',sent:false,deliveryStatus:'opened'}),'opened');
+  assert.equal(deliveryState({status:'pending',sent:true,deliveryStatus:'pending'}),'marked');
+  assert.equal(deliveryState({status:'confirmed',sent:false,deliveryStatus:'pending'}),'responded');
+});
+test('personal messages replace every supported field without claiming delivery',()=>{
+  const g={name:'Familia Pérez',passes:3,tableNo:'7',accessCode:'ENK-123'};
+  assert.equal(guestMessage('Hola {nombre}: {pases}, mesa {mesa}, {codigo} — {link}',g,'https://enkarta.test/i/x'),'Hola Familia Pérez: 3, mesa 7, ENK-123 — https://enkarta.test/i/x');
+  assert.match(reminderMessage(undefined,g,'https://enkarta.test/i/x'),/recordamos confirmar/);
+  const input={guestId:'10000000-0000-4000-8000-000000000001',requestId:'10000000-0000-4000-8000-000000000002',expectedRevision:0,action:'reminder'};
+  assert.equal(parseDeliveryInput(input).action,'reminder'); assert.throws(()=>parseDeliveryInput({...input,requestId:'x'}));
+});
+
+test('validity calendar arithmetic handles leap years, months and years without timezone shifts', () => {
+  assert.equal(addDays('2028-01-31', 30), '2028-03-01');
+  assert.equal(addDays('2027-01-31', 30), '2027-03-02');
+  assert.equal(addDays('2026-12-20', 30), '2027-01-19');
+  assert.equal(addDays('2028-02-29', 90), '2028-05-29');
+  for (const day of ['2026-02-29', '2026-13-01', '2026-04-31', '2026-1-1', '2026-08-28T00:00:00Z']) assert.equal(validDay(day), false);
+});
+test('validity expires after the entire Bolivia date and announces the last seven days', () => {
+  const source = { event_date:'2026-07-29', expires_at:'2026-08-28', is_active:true, status:'ready' };
+  for (const [today, state] of [['2026-08-20','active'], ['2026-08-21','soon'], ['2026-08-28','today'], ['2026-08-29','expired']]) assert.equal(invitationValidity(source,today).state, state);
+  assert.equal(validityLabel(invitationValidity(source,'2026-08-27')),'Vence en 1 día');
+  assert.equal(invitationValidity({...source,is_active:false},'2026-08-20').paused,true);
+});
+test('automatic preview uses package plus preserved extension; legacy has no inferred deadline', () => {
+  const inv = {event_date:'2026-08-28',expires_at:null,status:'draft',is_active:true,config:newServiceContract({},'plus')};
+  assert.equal(invitationValidity(inv).state,'unlimited');
+  assert.equal(invitationValidity({...inv,validity_mode:'automatic',validity_extra_days:10},'2026-08-28',true).expiresAt,'2026-10-07');
+  assert.equal(invitationValidity({...inv,validity_mode:'automatic',event_date:null},'2026-08-28',true).state,'pending');
+  assert.equal(invitationValidity({...inv,expires_at:'2027-01-01'},'2026-08-28',true).expiresAt,'2027-01-01');
+});
+test('renewal commands validate integer days, ISO dates, revisions, references and UUIDs', () => {
+  const command={id:'10000000-0000-4000-8000-000000000001',requestId:'10000000-0000-4000-8000-000000000002',expectedRevision:0,action:'extend',days:30,reason:'Acuerdo de prueba'};
+  assert.equal(parseValidityCommand(command).days,30);
+  for (const days of [0,-1,0.5,'30',3651,null]) assert.throws(()=>parseValidityCommand({...command,days}));
+  for (const extra of [{reason:' '},{expectedRevision:-1},{requestId:'x'},{action:'delete'},{action:'set_expiry',expiresAt:'2026-02-30'}]) assert.throws(()=>parseValidityCommand({...command,...extra}));
+  assert.equal(parseValidityCommand({...command,action:'set_expiry',expiresAt:null}).expiresAt,null);
+});
+
+test('last-sync time renders in Bolivia both on server and client',()=>{
+  assert.equal(formatSyncTime('2026-08-28T12:34:56Z'),'08:34:56');
+});
+
+test('roster filters combine accent-insensitive search, status, table and actual occupancy', () => {
+  const guests=[{id:'a',name:'José',status:'confirmed',tableNo:'2',passes:4,confirmedPasses:2,inside:1,sent:true}, {id:'b',name:'Ana',status:'pending',tableNo:null,passes:3,inside:0,sent:false}, {id:'c',name:'Luis',status:'declined',tableNo:'10',passes:1,inside:0,sent:false}];
+  const filter={search:'jose',status:'confirmed',table:'2',access:'waiting',sort:'name'};
+  assert.deepEqual(filterRoster(guests,filter).map(g=>g.id),['a']);
+  assert.deepEqual(filterRoster(guests,{...filter,search:'',status:'all',table:'unassigned',access:'all'}).map(g=>g.id),['b']);
+  assert.deepEqual(filterRoster(guests,{search:'',status:'all',table:'all',access:'all',sort:'table'}).map(g=>g.id),['a','c','b']);
+  assert.deepEqual(hostMetrics(guests),{total:3,passes:8,sent:1,confirmed:1,pending:1,declined:1,confirmedPasses:2,checkedIn:1,unassigned:0});
+});
+test('operational CSV is formula-safe, excludes secrets and respects service columns',()=>{
+  const guest={name:'=CMD()',group:'@formula',status:'confirmed',passes:2,confirmedPasses:1,inside:1,tableNo:'5',sent:false,accessToken:'secret-token',phone:'secret-phone'};
+  const csv=rosterCsv([guest],{tableAssignment:true,qrAccess:true});
+  assert.match(csv,/'=CMD\(\)/); assert.match(csv,/'@formula/); assert.doesNotMatch(csv,/secret-/);
+  const limited=rosterCsv([guest],{tableAssignment:false,qrAccess:false});
+  assert.doesNotMatch(limited,/Mesa|Dentro ahora/);
+});
+const fakeScheduler = () => { let id=0; const tasks=new Map(); return {tasks,schedule:(fn,delay)=>{const next=++id;tasks.set(next,{fn,delay});return next;},cancel:id=>tasks.delete(id)}; };
+test('live sync ignores out-of-order responses and aborts the superseded read',async()=>{
+  const clock=fakeScheduler(), deferred=[], values=[];
+  const sync=createLiveSync({...clock,read:signal=>new Promise(resolve=>deferred.push({signal,resolve})),receive:v=>values.push(v),status:()=>{}});
+  const first=sync.refresh(); const second=sync.refresh();
+  assert.equal(deferred[0].signal.aborted,true);
+  deferred[1].resolve('new'); await second; deferred[0].resolve('old'); await first;
+  assert.deepEqual(values,['new']); assert.equal(clock.tasks.size,1); sync.stop(); assert.equal(clock.tasks.size,0);
+});
+test('live sync retries with bounded backoff and retains last successful data',async()=>{
+  const clock=fakeScheduler(), values=[], states=[]; let fails=false;
+  const sync=createLiveSync({...clock,read:async()=>{if(fails)throw new Error('offline');return 'saved';},receive:v=>values.push(v),status:v=>states.push(v)});
+  await sync.refresh(); fails=true; await sync.refresh();
+  assert.deepEqual(values,['saved']); assert.equal(states.at(-1),'retrying');
+  assert.equal([...clock.tasks.values()][0].delay,16000);
+  assert.equal(retryDelay(100),60000); sync.stop();
+});
+test('hidden/offline suspension and cleanup abort requests and avoid stale updates',async()=>{
+  const clock=fakeScheduler(), values=[]; let finish; let signal;
+  const sync=createLiveSync({...clock,read:s=>{signal=s;return new Promise(resolve=>{finish=resolve;});},receive:v=>values.push(v),status:()=>{}});
+  const pending=sync.refresh(); sync.pause('offline'); assert.equal(signal.aborted,true);
+  finish('stale'); await pending; assert.deepEqual(values,[]); assert.equal(clock.tasks.size,0);
+  await sync.refresh(); assert.deepEqual(values,[]); sync.stop();
+});
+test('denied live session stops retrying instead of keeping unauthorized controls alive',async()=>{
+  const clock=fakeScheduler(), states=[]; let calls=0;
+  const sync=createLiveSync({...clock,read:async()=>{calls++;throw new SyncDenied();},receive:()=>assert.fail('No data allowed'),status:v=>states.push(v)});
+  await sync.refresh(); await sync.refresh(); sync.resume();
+  assert.equal(calls,1); assert.equal(states.at(-1),'denied'); assert.equal(clock.tasks.size,0); sync.stop();
+});
+
+test('commercial matrix and server share the unchanged prices and precise RSVP modes', () => {
+  assert.deepEqual(Object.values(PACKAGE_CATALOG).map(p => [p.bs,p.usd]), [[1100,157],[930,133],[750,107]]);
+  assert.deepEqual(commercialRows()[0].slice(2), ['Sistema inteligente','Formulario y planilla','WhatsApp']);
+  for (const pkg of ['exclusive','premium','plus']) {
+    const config=newServiceContract({},pkg);
+    assert.deepEqual(contractErrors(config),[]);
+    assert.deepEqual(resolveFeatures(config), PACKAGE_PRESETS[pkg]);
+  }
+});
+test('content switches cannot grant unpaid services or increase gallery allowance', () => {
+  const config={...newServiceContract({},'premium'),features:{qrAccess:true,hostPanel:true,galleryMax:99,rsvpMode:'smart'}};
+  const f=resolveFeatures(config); assert.equal(f.qrAccess,false); assert.equal(f.hostPanel,false); assert.equal(f.galleryMax,8); assert.equal(f.rsvpMode,'form');
+  assert.equal(resolveFeatures({...config,features:{galleryMax:3}}).galleryMax,3);
+  assert.equal(allowsService({package:'plus'},'qrAccess'),true); // Earlier agreements stay intact.
+  assert.equal(allowsService(newServiceContract({},'plus'),'qrAccess'),false);
+});
+test('extras require valid values, reason, date and consistent dependencies', () => {
+  const config=newServiceContract({},'premium');
+  const extra={id:'test',feature:'galleryMax',value:12,reason:'Contrato de prueba',source:'contracted',recordedAt:new Date().toISOString()};
+  config.serviceContract.extras=[extra]; assert.deepEqual(contractErrors(config),[]); assert.equal(resolveFeatures(config).galleryMax,12);
+  for (const patch of [{value:100},{reason:''},{value:1.5},{recordedAt:'bad'},{feature:'rsvpMode',value:['smart']}]) {
+    assert.ok(contractErrors({...config,serviceContract:{...config.serviceContract,extras:[{...extra,...patch}]}}).length);
+  }
+  assert.ok(contractErrors({...config,serviceContract:{...config.serviceContract,extras:{bad:true}}}).length);
+  config.serviceContract.extras=[{...extra,feature:'qrAccess',value:true}]; assert.ok(contractErrors(config).length);
+  assert.deepEqual(contractErrors(adoptServiceContract({package:'plus'},'premium')),[]);
+});
+test('gating traverses nested groups, respects disabled and responsive blocks without changing source', () => {
+  const images=Array.from({length:12},(_,i)=>'photo-'+i);
+  const gallery=(id,layout)=>({id,type:'gallery',enabled:true,props:{images,shareUrl:'https://example.test/photos'},layout});
+  const inv=marfilVivoDemo(); inv.config={...newServiceContract(inv.config,'premium'),layout:{version:2,blocks:[
+    {id:'disabled',type:'group',enabled:false,props:{},children:[gallery('hidden')]},
+    gallery('mobile',{hideOn:'desktop'}), gallery('desktop',{hideOn:'mobile'}),
+    {id:'group',type:'group',props:{},children:[{id:'qr',type:'accessPass',props:{}},{id:'table',type:'tableFinder',props:{}},{id:'calendar',type:'calendar',props:{}},{id:'rsvp',type:'rsvp',props:{mode:'whatsapp'}}]},
+  ]}};
+  const source=JSON.stringify(inv);
+  const result=gateInvitation(inv);
+  assert.equal(result.config.layout.blocks[1].props.images.length,8); assert.equal(result.config.layout.blocks[2].props.images.length,8);
+  assert.equal(result.config.layout.blocks[1].props.shareUrl,'');
+  assert.deepEqual(result.config.layout.blocks[3].children.map(b=>b.type),['rsvp']);
+  assert.equal(result.config.layout.blocks[3].children[0].props.mode,'form');
+  assert.equal(JSON.stringify(inv),source);
+});
+test('dynamic bindings cannot reintroduce excluded galleries or forms', () => {
+  const inv=marfilVivoDemo(); inv.config=newServiceContract({...inv.config,galleryImages:Array(20).fill('test-photo')},'premium');
+  const layout={version:2,blocks:[{id:'gallery',type:'gallery',props:{images:[]},bindings:{images:'media.galleryImages'}}]};
+  assert.equal(resolveLayoutBindings(layout,inv).blocks[0].props.images.length,8);
+  inv.config=newServiceContract(inv.config,'plus');
+  assert.equal(resolveLayoutBindings(layout,inv).blocks.length,0);
+});
+test('Plus palette needs an explicit extra; JSON key order and content edits do not count as color changes', () => {
+  const current={color_primary:'#123456',config:{...newServiceContract({},'plus'),theme:{primary:'#123456',bg:'#ffffff'},layout:{version:2,blocks:[{id:'b',type:'text',props:{text:'Hola',color:'#123456'}}]}}};
+  const next=structuredClone(current); next.config.theme={bg:'#ffffff',primary:'#123456'}; next.config.layout.blocks[0].props.text='Otra frase';
+  assert.equal(changesUncontractedColors(current,next),false);
+  next.config.layout.blocks[0].props.color='#ff0000'; assert.equal(changesUncontractedColors(current,next),true);
+  next.config.serviceContract.extras=[{id:'extra',feature:'colorCustomization',value:true,reason:'Adicional contratado',recordedAt:new Date().toISOString(),source:'contracted'}];
+  assert.equal(changesUncontractedColors(current,next),false);
+});
+test('read-only planilla combines sources without exposing QR and neutralizes CSV formulas', () => {
+  const rows=responseRows([{id:'test',name:'=SUM(A1)',publicId:'PRIVATE',accessToken:'SECRET',passes:5,status:'confirmed',confirmedPasses:2}], [{id:'open',name:'Otro',attending:'no',message:'@formula',at:'2026-08-28'}]);
+  assert.equal(rows.length,2); assert.equal(rows[0].confirmed,2); assert.equal(rows[1].confirmed,0);
+  assert.doesNotMatch(JSON.stringify(rows),/SECRET|PRIVATE/);
+  const csv=responseCsv(rows); assert.match(csv,/"'=SUM\(A1\)"/); assert.match(csv,/"'@formula"/);
+});
 
 test('Marfil typography uses two families and one treatment per semantic role', () => {
   const roles = ['display', 'title', 'subtitle', 'body', 'note', 'label', 'action', 'field', 'number', 'time'];
@@ -180,6 +350,35 @@ test('captions remain attached to their photo after reorder, deletion and additi
   const next = reorderGalleryCaptions(old, captions, ['/b.jpg', '/c.jpg', '/a.jpg']);
   assert.deepEqual(next.map(item => item.title), ['B', undefined, 'A']);
   assert.equal(captionsForImages(['/a.jpg'], next)[0].alt, 'Descripción A');
+});
+
+test('phase 6 carries enriched itinerary and global photo stories across old and block designs', () => {
+  const demo = invitationDemo('azure');
+  demo.itinerary = [{ time: '19:30', label: 'Cena', place: 'Terraza', duration: '90 min', note: 'Menú especial', icon: 'dinner' }];
+  demo.config.galleryImages = ['/uno.jpg', '/dos.jpg'];
+  demo.config.galleryCaptions = [
+    { image: '/uno.jpg', title: 'El comienzo', caption: 'Nuestra primera aventura', alt: 'Pareja caminando frente al mar' },
+    { image: '/dos.jpg', title: 'El gran sí', caption: 'Un día inolvidable', alt: 'Pareja mostrando el anillo' },
+  ];
+  const legacy = mapToAzure(demo);
+  assert.equal(legacy.itinerary[0].place, 'Terraza');
+  assert.equal(legacy.itinerary[0].duration, '90 min');
+  assert.equal(legacy.itinerary[0].note, 'Menú especial');
+  assert.equal(legacy.galleryCaptions[1].title, 'El gran sí');
+  const layout = resolveLayoutBindings(demo.config.layout, demo);
+  const gallery = layout.blocks.find(block => block.type === 'gallery');
+  assert.deepEqual(gallery.props.images, demo.config.galleryImages);
+  assert.equal(gallery.props.captions[0].alt, 'Pareja caminando frente al mar');
+});
+
+test('package gallery limits trim photo stories together with hidden images', () => {
+  const demo = invitationDemo('azure');
+  const images = Array.from({ length: 10 }, (_, index) => `/foto-${index}.jpg`);
+  demo.config = newServiceContract({ ...demo.config, galleryImages: images, galleryCaptions: images.map((image, index) => ({ image, title: `Foto ${index}` })) }, 'premium');
+  const gated = gateInvitation(demo);
+  assert.equal(gated.config.galleryImages.length, 8);
+  assert.equal(gated.config.galleryCaptions.length, 8);
+  assert.equal(gated.config.galleryCaptions[7].image, '/foto-7.jpg');
 });
 
 test('resource audit includes nested gallery arrays and local assets, but not disabled children', () => {
@@ -347,4 +546,81 @@ test('public access block hides retained QR after a decline or pending response'
   assert.match(render({}), /Nombre confirmado/);
   assert.match(render({ status: 'declined', confirmedPasses: 0 }), /pase de acceso está inactivo/);
   for (const overrides of [{ status: 'declined' }, { status: 'pending' }, { confirmedPasses: 0 }]) assert.doesNotMatch(render(overrides), /ENK-TEST/);
+});
+
+test('phase 7 additional services cannot be delivered with an incomplete checklist', () => {
+  const data = invitationDemo('marfil-vivo');
+  const candidates = navigationCandidates(data.config.layout).slice(0, 3);
+  data.config.additionalServices = { version: 1,
+    domain: { status: 'ready', hostname: 'boda.ejemplo.com', ownershipVerified: true, dnsVerified: true, httpsVerified: false, expiresAt: '2027-01-01' },
+    navigation: { status: 'ready', enabled: true, items: candidates, mobileVerified: true },
+  };
+  assert.equal(additionalServiceChecks('domain', data).find(item => item.label === 'HTTPS activo').done, false);
+  assert.match(additionalServiceErrors(data)[0], /Dominio propio/);
+  data.config.additionalServices.domain.httpsVerified = true;
+  assert.deepEqual(additionalServiceErrors(data), []);
+  assert.ok(candidates.length >= 2);
+});
+
+test('public invitation exposes delivered controls but strips internal briefs, owners and notes', () => {
+  const data = invitationDemo('marfil-vivo');
+  const items = navigationCandidates(data.config.layout).slice(0, 2);
+  data.config.additionalServices = { version: 1,
+    language: { status: 'ready', owner: 'Internal owner', notes: 'Private note', sourceLocale: 'es-BO', targetLocale: 'en-US', contentTranslated: true, formsTranslated: true, datesLocalized: true, systemMessagesTranslated: true },
+    navigation: { status: 'ready', owner: 'Designer', enabled: true, items, mobileVerified: true },
+    personalization: { status: 'ready', brief: 'This must never be public', references: ['https://private.invalid'], proposalReady: true, clientApproved: true },
+  };
+  const publicConfig = clientInvitation(data).config.additionalServices;
+  assert.equal(publicConfig.language.targetLocale, 'en-US');
+  assert.equal(publicConfig.language.owner, undefined);
+  assert.equal(publicConfig.personalization, undefined);
+  assert.equal(publicConfig.navigation.items.length, 2);
+  assert.deepEqual(publicAdditionalServices(data.config.additionalServices), publicConfig);
+});
+
+test('phase 7 localizes system controls and SQL dates without timezone shifts', () => {
+  const config = { additionalServices: { version: 1, language: { status: 'ready', targetLocale: 'en-US' } } };
+  assert.equal(activeInvitationLocale(config), 'en-US');
+  assert.equal(invitationCopy('en-US').yourName, 'Your name');
+  assert.match(formatInvitationDate('2028-02-29', 'en-US'), /February/);
+  assert.match(formatInvitationDate('2028-02-29', 'es-BO'), /febrero/i);
+});
+
+test('Save the Date validates private response keys, revisions and idempotency input', () => {
+  const body = { slug: 'ana-y-luis', responseKey: '10000000-0000-4000-8000-000000000001', name: 'Familia Paz', interest: 'interested', guests: 3, message: '', requestId: '10000000-0000-4000-8000-000000000002', expectedRevision: 0 };
+  const parsed = parseSaveDateInput(body);
+  assert.equal(parsed.guests, 3);
+  assert.match(parsed.responseKeyHash, /^[0-9a-f]{64}$/);
+  assert.throws(() => parseSaveDateInput({ ...body, responseKey: 'public-key' }));
+  assert.throws(() => parseSaveDateInput({ ...body, guests: 21 }));
+  assert.equal(parseSaveDateInput({ ...body, interest: 'unavailable', guests: 7 }).guests, 0);
+});
+
+test('phase 8 acceptance has package-specific journeys and cannot approve partial evidence', () => {
+  assert.ok(qualityChecksFor('exclusive').some(check => check.id === 'exclusive_qr'));
+  assert.ok(qualityChecksFor('premium').some(check => check.id === 'premium_sheet'));
+  assert.ok(qualityChecksFor('plus').some(check => check.id === 'plus_limits'));
+  assert.ok(!qualityChecksFor('plus').some(check => check.id === 'exclusive_qr'));
+  let control = { version: 1 };
+  for (const check of qualityChecksFor('plus')) control = updateQualityCheck(control, 'plus', check.id, { result: 'passed', checkedAt: '2026-08-29T10:00:00.000Z', evidence: 'Fixture' });
+  assert.equal(qualityProgress(control, 'plus').percent, 100);
+  assert.equal(releaseReady(control, 'plus'), false);
+  control.support = { channel: 'WhatsApp', availability: 'Lun–Vie', firstResponseHours: 4, escalationOwner: 'Operaciones', instructionsDelivered: true };
+  control.privacy = { retentionConfirmed: true, backupAt: '2026-08-29T10:00:00.000Z', restoreTestedAt: '2026-08-29T11:00:00.000Z', deletionOwner: 'Operaciones', incidentOwner: 'Soporte' };
+  control.release = { previewUrl: 'https://preview.example', rollbackVersionId: 'v-prev' };
+  assert.equal(releaseReady(control, 'plus'), true);
+  const bypass = structuredClone(control);
+  bypass.runs.plus.checks[qualityChecksFor('plus')[0].id] = { result: 'not_applicable', evidence: 'Attempted bypass' };
+  assert.equal(qualityProgress(bypass, 'plus').percent < 100, true);
+  assert.equal(releaseReady(bypass, 'plus'), false);
+});
+
+test('phase 8 report is reproducible and quality evidence never reaches guests', () => {
+  const data = invitationDemo('azure');
+  data.config = newServiceContract(data.config, 'premium');
+  data.config.qualityControl = { version: 1, support: { channel: 'Private' }, release: { notes: 'Internal incident plan' } };
+  const report = qualityReport(data, '2026-08-29T12:00:00.000Z');
+  assert.equal(report.generatedAt, '2026-08-29T12:00:00.000Z');
+  assert.equal(report.invitation.package, 'premium');
+  assert.equal(clientInvitation(data).config.qualityControl, undefined);
 });

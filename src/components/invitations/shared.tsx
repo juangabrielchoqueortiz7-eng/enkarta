@@ -657,11 +657,12 @@ function ZoomHint() {
 
 // Hook reutilizable: estado del lightbox + el nodo a renderizar. Lo usan las
 // galerías propias de cada plantilla (mosaico polaroid, etc.) para abrir foto.
-export function useLightbox(images?: string[]) {
+export function useLightbox(images?: string[], captions?: GalleryCaption[]) {
   const [open, setOpen] = useState<number | null>(null);
   const list = images ?? [];
+  const associatedCaptions = captionsForImages(list, captions);
   const node = open !== null && list.length
-    ? <Lightbox images={list} index={open} onClose={() => setOpen(null)} onIndex={setOpen} />
+    ? <Lightbox images={list} captions={associatedCaptions} index={open} onClose={() => setOpen(null)} onIndex={setOpen} />
     : null;
   return { openAt: (i: number) => setOpen(i), node };
 }
@@ -670,27 +671,37 @@ export function useLightbox(images?: string[]) {
 // variant: polaroid (marco blanco inclinado) | rounded (esquinas redondeadas) | grid.
 export function MasonryGallery({
   images,
+  captions: sourceCaptions,
   variant = 'polaroid',
   aspect = '3 / 4',
   className = '',
 }: {
   images?: string[];
+  captions?: GalleryCaption[];
   variant?: 'polaroid' | 'rounded' | 'grid';
   aspect?: string;
   className?: string;
 }) {
-  const lb = useLightbox(images);
+  const captions = captionsForImages(images ?? [], sourceCaptions);
+  const lb = useLightbox(images, captions);
   if (!images || images.length === 0) return null;
+  const story = (i: number) => Boolean(captions[i]?.title || captions[i]?.caption) && (
+    <figcaption className="absolute inset-x-0 bottom-0 z-[2] bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-3 pt-12 text-left text-white">
+      {captions[i]?.title && <span className="block font-playfair text-[15px] leading-tight">{captions[i]?.title}</span>}
+      {captions[i]?.caption && <span className="mt-1 block font-outfit text-[10px] leading-relaxed text-white/75">{captions[i]?.caption}</span>}
+    </figcaption>
+  );
 
   if (variant === 'grid') {
     return (
       <>
         <div className={`grid grid-cols-2 gap-3 invite-sm:grid-cols-3 ${className}`}>
           {images.map((src, i) => (
-            <div key={`${src}-${i}`} onClick={() => lb.openAt(i)} className={`group relative overflow-hidden rounded-2xl ${i % 3 === 1 ? 'invite-sm:translate-y-6' : ''}`} style={{ aspectRatio: aspect, cursor: 'zoom-in' }}>
-              <FadeImg src={src} className="h-full w-full object-cover group-hover:scale-105" />
+            <figure key={`${src}-${i}`} onClick={() => lb.openAt(i)} className={`group relative overflow-hidden rounded-2xl ${i % 3 === 1 ? 'invite-sm:translate-y-6' : ''}`} style={{ aspectRatio: aspect, cursor: 'zoom-in' }}>
+              <FadeImg src={src} alt={captions[i]?.alt || captions[i]?.title || ''} className="h-full w-full object-cover group-hover:scale-105" />
+              {story(i)}
               <ZoomHint />
-            </div>
+            </figure>
           ))}
         </div>
         {lb.node}
@@ -703,17 +714,18 @@ export function MasonryGallery({
     <>
       <div className={`columns-2 gap-4 invite-sm:columns-3 ${className}`}>
         {images.map((src, i) => (
-          <div
+          <figure
             key={`${src}-${i}`}
             onClick={() => lb.openAt(i)}
             className={`group mb-4 inline-block w-full shadow-md ${polaroid ? 'bg-white p-2 pb-4' : 'overflow-hidden rounded-2xl'}`}
             style={{ transform: `rotate(${(i % 3 - 1) * (polaroid ? 2.2 : 2)}deg)`, cursor: 'zoom-in' }}
           >
             <div className="relative overflow-hidden" style={{ aspectRatio: aspect }}>
-              <FadeImg src={src} className="h-full w-full object-cover group-hover:scale-105" />
+              <FadeImg src={src} alt={captions[i]?.alt || captions[i]?.title || ''} className="h-full w-full object-cover group-hover:scale-105" />
+              {story(i)}
               <ZoomHint />
             </div>
-          </div>
+          </figure>
         ))}
       </div>
       {lb.node}

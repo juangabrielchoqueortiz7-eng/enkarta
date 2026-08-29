@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { motion, MotionConfig, useMotionValue, useSpring, useInView, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import { collectionCatalog } from '@/lib/collection-catalog';
+import { commercialRows, PACKAGE_CATALOG, PACKAGE_ORDER } from '@/lib/packages';
 import CollectionPreview from '@/components/invitations/CollectionPreview';
 
 // ── Scroll reveal (entrada elegante al hacer scroll) ─────────────────────────
@@ -333,28 +334,7 @@ const steps = [
 
 // Comparison table — [ feature, description, exclusive, premium, plus ]
 // Las celdas aceptan boolean (✓/✗) o texto corto ("90 días", "Planilla"…).
-const comparisonRows: [string, string, boolean | string, boolean | string, boolean | string][] = [
-  ['Confirmación de Asistencia', 'Exclusive incluye el Sistema Inteligente: gestiona quién confirma, rechaza o queda pendiente en tiempo real.', 'Sistema Inteligente', 'Planilla', 'WhatsApp'],
-  ['Panel privado del Anfitrión', 'Tablero en tiempo real con tus invitados y sus confirmaciones.', true, false, false],
-  ['Escáner QR de acceso al evento', '', true, false, false],
-  ['Personalización de Color', '', true, true, false],
-  ['Ubicación Maps', '', true, true, true],
-  ['Cuenta Regresiva', '', true, true, true],
-  ['Itinerario', '', true, true, true],
-  ['Dress Code', '', true, true, true],
-  ['Sugerencia de Regalos', '', true, true, true],
-  ['Envíos Ilimitados', '', true, true, true],
-  ['En línea después del evento', '', '90 días', '60 días', '30 días'],
-  ['Música de fondo', '', true, true, true],
-  ['Apertura tipo sobre', '', true, true, true],
-  ['Nombres de los Invitados', '', true, true, false],
-  ['Tickets / Pases', '', true, true, false],
-  ['Número de mesa', '', true, false, false],
-  ['Galería de fotos', '', '20 fotos', '8 fotos', false],
-  ['Agendar evento (Google Calendar)', '', true, false, false],
-  ['Sugerencia de Hospedaje', '', true, false, false],
-  ['Botón para compartir fotos', '', true, false, false],
-];
+const comparisonRows = commercialRows();
 
 const additionalServices = [
   { name: 'Personalización Total',      bs: 1200, usd: 171, desc: '¿Tienen una idea clara o referencias que les encantan? Diseñamos su invitación web desde una hoja en blanco, asegurando que cada detalle, desde la tipografía hasta la disposición, sea un reflejo fiel de su evento soñado.' },
@@ -376,10 +356,10 @@ const testimonials = [
 
 const faqs = [
   { q: '¿Cuánto tiempo tarda la entrega?',                   a: 'Tu invitación estará lista en 3-5 días hábiles según el paquete que elijas.' },
-  { q: '¿Puedo personalizar los colores y el diseño?',       a: 'Sí, puedes ajustar los colores de la plantilla. También ofrecemos diseños totalmente personalizados (ver Servicios Adicionales).' },
+  { q: '¿Puedo personalizar los colores y el diseño?',       a: 'Premium y Exclusive incluyen personalización de color. Plus conserva la paleta del diseño elegido; puedes contratar la personalización como adicional. También ofrecemos diseños totalmente personalizados.' },
   { q: '¿Cuáles son los métodos de pago?',                   a: 'Reservas con 200 Bs y el saldo se cancela cuando apruebes tu invitación terminada.' },
   { q: '¿Puedo realizar cambios después de la entrega?',     a: 'Sí. El paquete Exclusive incluye rondas ilimitadas. Para los demás, ofrecemos el servicio "Ajustes Post-Entrega".' },
-  { q: '¿Cómo gestiono los pases de mis invitados?',         a: 'Cada invitado recibe su link personalizado con su nombre y número de pases. El paquete Exclusive incluye el sistema de confirmación inteligente.' },
+  { q: '¿Cómo gestiono los pases de mis invitados?',         a: 'Premium y Exclusive incluyen links personalizados con nombre y pases. Premium permite consultar y exportar respuestas; Exclusive añade gestión de invitados y escáner QR.' },
 ];
 
 // Número de contacto de la landing: se configura con NEXT_PUBLIC_WA_PHONE en
@@ -554,14 +534,7 @@ export default function LandingPage() {
   const heroGlowY = useTransform(scrollYProgress, [0, 1], [0, 120]);
   const heroTabletY = useTransform(scrollYProgress, [0, 1], [0, -60]);
 
-  const pkgs = [
-    { key: 'exclusive', label: 'EXCLUSIVE', bs: 1100, usd: 157, tag: 'El más completo',
-      feats: ['Confirmación inteligente + Panel del anfitrión', 'Escáner QR de acceso al evento', 'Galería de 20 fotos y 90 días en línea', 'Hospedaje, calendario y nº de mesa'] },
-    { key: 'premium',   label: 'PREMIUM',   bs: 930,  usd: 133, tag: 'El favorito',
-      feats: ['Música de fondo personalizada', 'Nombres de invitados y pases', 'Galería de 8 fotos y 60 días en línea', 'Confirmación por planilla'] },
-    { key: 'plus',      label: 'PLUS',      bs: 750,  usd: 107, tag: 'Esencial',
-      feats: ['Confirmación por WhatsApp', 'Música y apertura tipo sobre', 'Ubicación Maps y cuenta regresiva', 'Itinerario, dress code y regalos'] },
-  ];
+  const pkgs = PACKAGE_ORDER.map(key => ({ key, ...PACKAGE_CATALOG[key], label: PACKAGE_CATALOG[key].label.toUpperCase(), feats: PACKAGE_CATALOG[key].highlights }));
 
   return (
     <MotionConfig reducedMotion="user">

@@ -319,7 +319,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
           <LeafSprig className="pointer-events-none absolute right-0 top-0 w-44 opacity-25" />
           <Reveal className="relative z-10 mx-auto max-w-4xl">
             <Script className="text-center" style={{ fontSize: '44px' }}>Nosotros</Script>
-            <MasonryGallery images={data.galleryImages} className="mt-8" />
+            <MasonryGallery images={data.galleryImages} captions={data.galleryCaptions} className="mt-8" />
           </Reveal>
         </section>
       )}

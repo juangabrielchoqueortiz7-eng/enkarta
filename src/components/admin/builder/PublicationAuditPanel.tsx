@@ -88,7 +88,7 @@ export default function PublicationAuditPanel({ data, validation, onOpenBlock }:
     }
   };
 
-  const expiryText = data.expires_at ? new Date(`${data.expires_at.slice(0, 10)}T12:00:00`).toLocaleDateString('es-BO', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Sin expiración';
+  const expiryText = data.expires_at ? new Date(`${data.expires_at.slice(0, 10)}T12:00:00`).toLocaleDateString('es-BO', { day: 'numeric', month: 'short', year: 'numeric' }) : data.validity_mode === 'automatic' ? 'Vigencia pendiente de fecha' : 'Sin expiración acordada';
 
   return (
     <section className="space-y-4">

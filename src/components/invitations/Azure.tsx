@@ -530,7 +530,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
         <Reveal className="flex flex-col items-center">
           <SecIcon name={iconOf('gallery', 'camera')} className="w-12 h-12 mb-4" scale={iconScale} color={iconColor} colors={iconColorsOf('gallery')} speed={iconSpeedOf('gallery')} />
           <p className="font-cormorant max-w-md mx-auto" style={{ color: C.soft, fontSize: '16px' }}>{data.gallery.message}</p>
-          <PhotoGrid images={data.galleryImages} className="mt-7 max-w-lg mx-auto" />
+          <PhotoGrid images={data.galleryImages} captions={data.galleryCaptions} showCaptions className="mt-7 max-w-lg mx-auto" />
           <div className="mt-5"><OutlineBtn href={data.gallery.shareUrl}>Compartir fotografías</OutlineBtn></div>
         </Reveal>
         {sectionDivider('w-24 mx-auto my-12 opacity-70')}

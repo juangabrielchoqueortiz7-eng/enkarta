@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/host-session';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { invitationStarter, STARTER_TEMPLATE_KEYS, StarterTemplateKey } from '@/lib/template-starters';
+import { isPackage, newServiceContract } from '@/lib/packages';
+import { storedServiceConfig } from '@/lib/package-services-server';
 
 export const runtime = 'nodejs';
 
@@ -16,6 +18,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    if (!isPackage(body.package)) return NextResponse.json({ error: 'Selecciona el paquete contratado.' }, { status: 400 });
     const template = body.template as StarterTemplateKey;
     if (!STARTER_TEMPLATE_KEYS.includes(template)) {
       return NextResponse.json({ error: 'La plantilla seleccionada no está disponible' }, { status: 400 });
@@ -24,6 +27,7 @@ export async function POST(request: NextRequest) {
     const starter = invitationStarter(template);
     const insertData = {
       ...starter,
+      builder_config: newServiceContract(storedServiceConfig(starter.builder_config), body.package),
       slug: slugFor(template),
       parents_groom: JSON.stringify(starter.parents_groom),
       parents_bride: JSON.stringify(starter.parents_bride),

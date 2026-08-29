@@ -51,22 +51,48 @@ export function verifyPassword(password: string, stored?: string | null): boolea
 const SECRET = process.env.HOST_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || 'enkarta-dev-secret';
 
 /** Firma `<invitationId>.<hmac>` para la cookie httpOnly del anfitrión. */
-export function signHostSession(invitationId: string): string {
-  const sig = createHmac('sha256', SECRET).update(invitationId).digest('base64url');
+export function signHostSession(invitationId: string, credentialHash: string): string {
+  const sig = createHmac('sha256', SECRET).update(`host:${invitationId}:${credentialHash}`).digest('base64url');
   return `${invitationId}.${sig}`;
 }
 
 /** Verifica la cookie y devuelve el invitationId, o null si es inválida. */
-export function verifyHostSession(value?: string | null): string | null {
+export function verifyHostSession(value: string | null | undefined, credentialHash: string): string | null {
   if (!value || !value.includes('.')) return null;
   const idx = value.lastIndexOf('.');
   const invitationId = value.slice(0, idx);
   const sig = value.slice(idx + 1);
-  const expected = createHmac('sha256', SECRET).update(invitationId).digest('base64url');
+  const expected = signHostSession(invitationId, credentialHash).slice(idx + 1);
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   return invitationId;
+}
+
+/** Dominio de firma distinto: una cookie de revisión nunca es una de operación. */
+export function signReviewSession(invitationId: string, credentialHash: string): string {
+  const sig = createHmac('sha256', SECRET).update(`review:${invitationId}:${credentialHash}`).digest('base64url');
+  return `${invitationId}.${sig}`;
+}
+export function verifyReviewSession(value: string, credentialHash: string): boolean {
+  const id = value.slice(0, value.lastIndexOf('.'));
+  const expected = Buffer.from(signReviewSession(id, credentialHash));
+  const actual = Buffer.from(value);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+/** El personal de puerta tiene una firma distinta de anfitrión y revisión. */
+export const DOOR_SESSION_SECONDS = 60 * 60 * 12;
+export function signDoorSession(invitationId: string, credentialHash: string, expiresAt = Math.floor(Date.now() / 1000) + DOOR_SESSION_SECONDS): string {
+  const payload = `${invitationId}.${expiresAt}`;
+  return `${payload}.${createHmac('sha256', SECRET).update(`door:${payload}:${credentialHash}`).digest('base64url')}`;
+}
+export function verifyDoorSession(value: string, credentialHash: string): boolean {
+  const [id, expiry, signature, extra] = value.split('.');
+  if (!id || !signature || extra !== undefined || !/^\d{10}$/.test(expiry || '') || Number(expiry) <= Math.floor(Date.now() / 1000)) return false;
+  const actual = Buffer.from(value);
+  const expected = Buffer.from(signDoorSession(id, credentialHash, Number(expiry)));
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
 // ── Cookie de sesión del admin (equipo Enkarta), firmada para que no se falsifique ─

@@ -503,7 +503,7 @@ export default function Provence({ data }: { data: ProvenceContent }) {
             <Reveal className="mx-auto max-w-4xl text-center">
               <HeadingText className="text-2xl mb-6">GALERÍA DE RECUERDOS</HeadingText>
               {data.galleryMsg && <SansText className="text-sm max-w-md mx-auto mb-8">{data.galleryMsg}</SansText>}
-              <MasonryGallery images={data.galleryImages} />
+              <MasonryGallery images={data.galleryImages} captions={data.galleryCaptions} />
             </Reveal>
           </section>
         )}

@@ -8,9 +8,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Guest, Attendee } from '@/lib/types';
 
-type Group = { guest: Guest; attendees: Attendee[] };
+type Group = { guest: Pick<Guest, 'id' | 'name' | 'tableNo' | 'accessCode'>; attendees: Attendee[] };
 
-export default function Scanner() {
+export default function Scanner({ scope = 'host' }: { scope?: 'host' | 'door' }) {
   const [group, setGroup] = useState<Group | null>(null);
   const [error, setError] = useState('');
   const [manual, setManual] = useState('');
@@ -18,7 +18,9 @@ export default function Scanner() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [mustRefresh, setMustRefresh] = useState(false);
+  const [syncedAt, setSyncedAt] = useState('');
   const busyRef = useRef(false);
+  const loadingRef = useRef(false);
   const groupRequest = useRef<AbortController | null>(null);
   const lastParams = useRef('');
   const pending = useRef<{ attendeeId: string; action: 'in' | 'out'; expectedRevision: number; requestId: string } | null>(null);
@@ -26,26 +28,37 @@ export default function Scanner() {
   const lastScan = useRef<{ value: string; at: number }>({ value: '', at: 0 });
 
   // ── Cargar un grupo por token (QR) o código (manual) ──
-  const loadGroup = useCallback(async (params: string) => {
-    if (busyRef.current) return;
+  const loadGroup = useCallback(async (params: string, background = false) => {
+    if (busyRef.current || (background && (loadingRef.current || pending.current))) return;
     groupRequest.current?.abort();
     const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort('timeout'), 12000);
     groupRequest.current = controller;
     lastParams.current = params;
-    setGroup(null);
+    if (!background) setGroup(null);
+    loadingRef.current = true;
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/checkin?${params}`, { cache: 'no-store', signal: controller.signal });
+      const res = await fetch(`/api/checkin?${params}&scope=${scope}`, { cache: 'no-store', signal: controller.signal });
       const data = await res.json();
       if (controller.signal.aborted) return;
-      if (!res.ok) { setError(data.error || 'No se pudo cargar'); return; }
+      if (!res.ok) { setError(data.error || 'No se pudo cargar'); setMustRefresh(true); if (res.status < 500) setGroup(null); return; }
       setGroup(data);
+      setSyncedAt(new Date().toLocaleTimeString('es-BO'));
       pending.current = null;
       setMustRefresh(false);
-    } catch { if (!controller.signal.aborted) setError('Sin conexión. No se cargó ningún acceso.'); }
-    finally { if (!controller.signal.aborted) setLoading(false); }
-  }, []);
+    } catch { if (!controller.signal.aborted || controller.signal.reason === 'timeout') { setError('Sin conexión. Actualiza el grupo antes de registrar movimientos.'); setMustRefresh(true); } }
+    finally { clearTimeout(timeout); if (groupRequest.current === controller) { setLoading(false); loadingRef.current = false; } }
+  }, [scope]);
+
+  useEffect(() => {
+    if (!group?.guest.id) return;
+    const poll = () => { if (document.visibilityState === 'visible' && navigator.onLine && lastParams.current) void loadGroup(lastParams.current, true); };
+    const timer = setInterval(poll, 8000);
+    window.addEventListener('online', poll);
+    return () => { clearInterval(timer); window.removeEventListener('online', poll); };
+  }, [group?.guest.id, loadGroup]);
 
   const onDetected = useCallback((text: string) => {
     if (busyRef.current) return;
@@ -85,20 +98,28 @@ export default function Scanner() {
   }, []);
 
   useEffect(() => () => { groupRequest.current?.abort(); void stopCamera(); }, [stopCamera]);
+  useEffect(() => {
+    const offline = () => { setMustRefresh(true); setError('Sin conexión. No se registrarán movimientos hasta actualizar el grupo.'); };
+    window.addEventListener('offline', offline);
+    return () => window.removeEventListener('offline', offline);
+  }, []);
 
   // ── Marcar ingreso/salida de una persona y refrescar su estado ──
   const mark = async (att: Attendee, action: 'in' | 'out') => {
-    if (busyRef.current || loading || mustRefresh) return;
+    if (busyRef.current || loadingRef.current || loading || mustRefresh) return;
     if (pending.current && (pending.current.attendeeId !== att.id || pending.current.action !== action)) return;
     busyRef.current = true;
     const operation = pending.current ?? { attendeeId: att.id, action, expectedRevision: att.revision, requestId: crypto.randomUUID() };
     pending.current = operation;
     setBusyId(att.id);
     setError('');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
     try {
       const res = await fetch('/api/checkin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(operation),
+        body: JSON.stringify({ ...operation, scope }),
+        signal: controller.signal,
       });
       const data = await res.json();
       if (res.ok && data.attendee) {
@@ -109,6 +130,7 @@ export default function Scanner() {
         if (res.status < 500) { pending.current = null; setMustRefresh(true); }
       }
     } catch { setError('No se pudo comprobar el resultado. Reintenta el mismo movimiento o actualiza el grupo; no se volverá a contar.'); }
+    finally { clearTimeout(timeout); }
     busyRef.current = false;
     setBusyId(null);
   };
@@ -145,7 +167,8 @@ export default function Scanner() {
       {group && (
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100" style={{ background: '#faf7f2' }}>
-            <p className="font-playfair text-lg text-gray-900">{group.guest.confirmName || group.guest.name}</p>
+            <p className="font-playfair text-lg text-gray-900">{group.guest.name}</p>
+            <p className="mt-1 text-[11px] text-gray-500 font-outfit">Última lectura: {syncedAt} · actualización cada 8 s</p>
             <div className="flex items-center gap-3 mt-1 text-xs font-outfit text-gray-500">
               {group.guest.tableNo && <span>Mesa {group.guest.tableNo}</span>}
               <span className="font-mono">{group.guest.accessCode}</span>
@@ -176,7 +199,7 @@ export default function Scanner() {
               </div>
             ))}
           </div>
-          <button disabled={!!busyId} onClick={() => { setGroup(null); setManual(''); pending.current = null; }} className="w-full py-3 text-sm font-outfit text-gray-400 hover:bg-gray-50 border-t border-gray-100 disabled:opacity-50">
+          <button disabled={!!busyId} onClick={() => { groupRequest.current?.abort(); lastParams.current = ''; setGroup(null); setManual(''); pending.current = null; }} className="w-full py-3 text-sm font-outfit text-gray-400 hover:bg-gray-50 border-t border-gray-100 disabled:opacity-50">
             Cerrar y escanear otro
           </button>
         </div>

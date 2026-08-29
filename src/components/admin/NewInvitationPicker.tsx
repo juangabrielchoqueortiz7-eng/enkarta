@@ -5,6 +5,8 @@ import CollectionPreview from '@/components/invitations/CollectionPreview';
 import { useRouter } from 'next/navigation';
 import { type StarterDesignKey } from '@/lib/enkarta-collections';
 import { collectionCatalog } from '@/lib/collection-catalog';
+import { PACKAGE_CATALOG, PACKAGE_ORDER, RSVP_LABELS } from '@/lib/packages';
+import type { InvitationPackage } from '@/lib/types';
 
 const TEMPLATES = collectionCatalog();
 type TemplateKey = StarterDesignKey;
@@ -13,9 +15,11 @@ export default function NewInvitationPicker() {
   const router = useRouter();
   const [creating, setCreating] = useState<TemplateKey | null>(null);
   const [error, setError] = useState('');
+  const [pkg, setPkg] = useState<InvitationPackage | null>(null);
 
   const createFrom = async (template: TemplateKey) => {
     if (creating) return;
+    if (!pkg) { setError('Primero selecciona el paquete contratado.'); return; }
     setCreating(template);
     setError('');
 
@@ -23,7 +27,7 @@ export default function NewInvitationPicker() {
       const res = await fetch('/api/admin/invitations/starter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template }),
+        body: JSON.stringify({ template, package: pkg }),
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || 'No se pudo crear la invitación');
@@ -63,6 +67,19 @@ export default function NewInvitationPicker() {
             Selecciona un diseño ya construido. Abriremos el editor visual con la invitación completa y todos los cambios se verán al instante.
           </p>
         </div>
+
+        <fieldset className="mx-auto mb-8 max-w-3xl font-outfit">
+          <legend className="mb-3 text-sm font-semibold text-gray-700">1. Selecciona el paquete contratado</legend>
+          <div className="grid gap-3 sm:grid-cols-3">{[...PACKAGE_ORDER].reverse().map(key => {
+            const plan = PACKAGE_CATALOG[key];
+            return <label key={key} className={`cursor-pointer rounded-2xl border p-4 ${pkg === key ? 'border-[#b8975a] bg-[#fffaf0] ring-1 ring-[#b8975a]' : 'border-gray-200 bg-white'}`}>
+              <span className="flex items-center justify-between"><span className="font-medium">{plan.label}</span><input type="radio" name="package" value={key} checked={pkg === key} disabled={!!creating} onChange={() => { setPkg(key); setError(''); }} /></span>
+              <span className="mt-2 block text-lg text-[#8b6e38]">{plan.bs} Bs <span className="text-xs text-gray-500">/ USD {plan.usd}</span></span>
+              <span className="mt-2 block text-xs leading-relaxed text-gray-500">{RSVP_LABELS[plan.features.rsvpMode]}{plan.features.qrAccess ? ' + panel y QR' : ''}</span>
+            </label>;
+          })}</div>
+          <p className="mt-3 text-xs text-gray-500">2. Elige tu diseño abajo. Los adicionales se registran después en Configuración; esta selección no realiza ningún cobro.</p>
+        </fieldset>
 
         {error && (
           <div className="mx-auto mb-6 max-w-xl rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center font-outfit text-sm text-red-600">

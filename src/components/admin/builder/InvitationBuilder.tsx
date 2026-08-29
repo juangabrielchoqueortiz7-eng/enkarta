@@ -1,4 +1,5 @@
 'use client';
+import { changesUncontractedColors } from '@/lib/package-colors';
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -16,13 +17,14 @@ import ElementsPanel from './panels/ElementsPanel';
 import GuestsPanel from './panels/GuestsPanel';
 import ExportPanel from './panels/ExportPanel';
 import VersionsPanel from './panels/VersionsPanel';
+import QualityControlPanel from './panels/QualityControlPanel';
 import { detachBinding } from '@/lib/block-bindings';
 import { validateInvitationBuilder } from '@/lib/builder-validation';
 import { activePublishedVersion, hydrateBuilderState, nextScheduledVersion, persistBuilderVersion, saveBuilderVersion, type BuilderVersion } from '@/lib/builder-versions';
 import { publicTemplateName } from '@/lib/enkarta-collections';
 import { publicationSummaryText, summarizeBuilderChanges } from '@/lib/builder-workflow';
 
-type Tab = 'content' | 'blocks' | 'elements' | 'style' | 'decor' | 'motion' | 'media' | 'guests' | 'versions' | 'export' | 'config';
+type Tab = 'content' | 'blocks' | 'elements' | 'style' | 'decor' | 'motion' | 'media' | 'guests' | 'versions' | 'quality' | 'export' | 'config';
 
 const tabIcon = (d: string) => (
   <svg className="w-[18px] h-[18px] mx-auto" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
@@ -40,6 +42,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'media',   label: 'Medios',     icon: tabIcon('M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 12V6.75A2.25 2.25 0 015.25 4.5h13.5A2.25 2.25 0 0121 6.75v10.5A2.25 2.25 0 0118.75 19.5H5.25A2.25 2.25 0 013 17.25V12z') },
   { id: 'guests',  label: 'Invitados',  icon: tabIcon('M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z') },
   { id: 'versions', label: 'Historial', icon: tabIcon('M12 6v6l4 2m5-2a9 9 0 11-3-6.708M21 3v6h-6') },
+  { id: 'quality', label: 'Calidad', icon: tabIcon('M9 12.75l2.25 2.25L15 9.75m6-3.75l-9 15-9-15 9-3 9 3z') },
   { id: 'export',  label: 'Exportar',   icon: tabIcon('M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-4.5-6L12 15m0 0l-4.5-4.5M12 15V3') },
   { id: 'config',  label: 'Config',     icon: tabIcon('M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894zM15 12a3 3 0 11-6 0 3 3 0 016 0z') },
 ];
@@ -54,6 +57,7 @@ const TAB_DESCRIPTIONS: Record<Tab, string> = {
   media: 'Fotos, música, video e iconos',
   guests: 'Pases, mesas y confirmaciones',
   versions: 'Publicación, versiones y revisión colaborativa',
+  quality: 'Aceptación, soporte y liberación por etapas',
   export: 'Archivos para compartir y respaldar',
   config: 'Publicación y ajustes generales',
 };
@@ -95,6 +99,7 @@ export default function InvitationBuilder({ initialData }: Props) {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saveState, setSaveState] = useState<'clean' | 'dirty' | 'saving' | 'saved' | 'offline' | 'error'>('clean');
+  const [contractNotice, setContractNotice] = useState('');
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishLabel, setPublishLabel] = useState('');
   const [publishSummary, setPublishSummary] = useState('');
@@ -183,6 +188,11 @@ export default function InvitationBuilder({ initialData }: Props) {
   const commit = useCallback((next: InvitationParsed, coalesce = false) => {
     const prev = dataRef.current;
     if (next === prev) return;
+    if (changesUncontractedColors(prev, next)) {
+      setContractNotice('Este paquete conserva la paleta original. Para cambiar colores, registra Personalización de color como adicional.');
+      return;
+    }
+    setContractNotice('');
     const workflowChanged = next.config?.workflow?.reviewStatus !== prev.config?.workflow?.reviewStatus;
     const committed = workflowChanged ? next : {
       ...next,
@@ -410,7 +420,7 @@ export default function InvitationBuilder({ initialData }: Props) {
   const canUndo = past.current.length > 0;
   const canRedo = future.current.length > 0;
 
-  const payloadFrom = (d: InvitationParsed, status?: 'draft' | 'ready') => ({
+  const payloadFrom = useCallback((d: InvitationParsed, status?: 'draft' | 'ready') => ({
     id: d.id, slug: d.slug, status: status ?? d.status, template: d.template, type: d.type,
     names: d.names, event_date: d.event_date,
     ceremony_time: d.ceremony_time, ceremony_place: d.ceremony_place, ceremony_address: d.ceremony_address,
@@ -419,10 +429,21 @@ export default function InvitationBuilder({ initialData }: Props) {
     parents_groom: d.parents_groom, parents_bride: d.parents_bride, sponsors: d.sponsors, itinerary: d.itinerary,
     gift_message: d.gift_message, bank_account: d.bank_account, cover_image_url: d.cover_image_url, gallery_url: d.gallery_url,
     color_primary: d.color_primary, color_secondary: d.color_secondary, color_accent: d.color_accent,
-    expires_at: d.expires_at, is_active: d.is_active, phone_whatsapp: d.phone_whatsapp, builder_config: d.config ?? {},
-  });
+    is_active: d.is_active, phone_whatsapp: d.phone_whatsapp, builder_config: d.config ?? {},
+  }), []);
 
-  const storeDraft = async (snapshot: InvitationParsed) => {
+  // Operational terms live outside visual undo/version snapshots.
+  const syncValidity = useCallback((fields: Pick<InvitationParsed, 'expires_at' | 'validity_mode' | 'validity_extra_days' | 'validity_revision'>) => {
+    if ((fields.validity_revision ?? 0) < (dataRef.current.validity_revision ?? 0)) return;
+    const patch = { expires_at: fields.expires_at, validity_mode: fields.validity_mode, validity_extra_days: fields.validity_extra_days, validity_revision: fields.validity_revision };
+    if (Object.entries(patch).every(([key, value]) => dataRef.current[key as keyof InvitationParsed] === value)) return;
+    past.current = past.current.map(item => ({ ...item, ...patch }));
+    future.current = future.current.map(item => ({ ...item, ...patch }));
+    dataRef.current = { ...dataRef.current, ...patch };
+    setData(dataRef.current);
+  }, []);
+
+  const storeDraft = useCallback(async (snapshot: InvitationParsed) => {
     const response = await fetch('/api/admin/invitations', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadFrom(snapshot)),
     });
@@ -430,21 +451,22 @@ export default function InvitationBuilder({ initialData }: Props) {
       const payload = await response.json().catch(() => ({}));
       throw new Error(payload.error || 'No se pudo guardar el borrador');
     }
-  };
+    const stored = await response.json();
+    const unchanged = dataRef.current === snapshot;
+    syncValidity(stored);
+    return unchanged;
+  }, [payloadFrom, syncValidity]);
 
   // Autoguardado silencioso con estado explícito y recuperación al reconectar.
   const silentSave = useCallback(async () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) { setSaveState('offline'); return; }
     setSaveState('saving');
     try {
-      const res = await fetch('/api/admin/invitations', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadFrom(dataRef.current)),
-      });
-      if (!res.ok) throw new Error('save-failed');
+      if (!await storeDraft(dataRef.current)) { setSaveState('dirty'); return; }
       setSavedAt(new Date()); hasChanges.current = false; setSaveState('saved');
       saveBuilderVersion(dataRef.current, 'Autoguardado', 'save');
     } catch { setSaveState(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error'); }
-  }, []);
+  }, [storeDraft]);
 
   // Dispara el autoguardado 2.5s después del último cambio.
   useEffect(() => {
@@ -463,14 +485,15 @@ export default function InvitationBuilder({ initialData }: Props) {
     setSaving(true);
     setSaveState('saving');
     try {
-      await storeDraft(dataRef.current);
+      if (!await storeDraft(dataRef.current)) { setSaveState('dirty'); return; }
       setSavedAt(new Date()); hasChanges.current = false; setSaveState('saved');
       saveBuilderVersion(dataRef.current, 'Guardado manual', 'save');
     } catch (error) {
       setSaveState(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error');
       alert(error instanceof Error ? error.message : 'Error de conexión');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const openPublish = () => {
@@ -484,6 +507,8 @@ export default function InvitationBuilder({ initialData }: Props) {
   };
 
   const applySnapshot = (snapshot: InvitationParsed) => {
+    snapshot = { ...snapshot, expires_at: dataRef.current.expires_at, validity_mode: dataRef.current.validity_mode,
+      validity_extra_days: dataRef.current.validity_extra_days, validity_revision: dataRef.current.validity_revision };
     dataRef.current = snapshot;
     setData(snapshot);
     hasChanges.current = false;
@@ -514,6 +539,8 @@ export default function InvitationBuilder({ initialData }: Props) {
           ? { ...workflow, reviewStatus: 'approved', reviewUpdatedAt: now, scheduledAt: scheduledAt!.toISOString() }
           : { ...workflow, reviewStatus: 'approved', reviewUpdatedAt: now, lastPublishedAt: now, lastPublishedSummary: publishSummary.trim(), unpublishedAt: undefined } },
       };
+      // Persist the event date/package before publishing; SQL computes the current term.
+      await storeDraft({ ...snapshot, status: dataRef.current.status });
       const result = await persistBuilderVersion(snapshot, publishLabel, 'publish', publishSummary, 'admin', isSchedule ? 'schedule' : 'publish', { publicationState: isSchedule ? 'scheduled' : 'published', publishAt: isSchedule ? scheduledAt!.toISOString() : now });
       const finalSnapshot = { ...snapshot, config: { ...snapshot.config, workflow: { ...(snapshot.config.workflow ?? {}), ...(isSchedule ? { scheduledVersionId: result.version.id } : { lastPublishedVersionId: result.version.id }) } } };
       applySnapshot(finalSnapshot);
@@ -777,6 +804,7 @@ export default function InvitationBuilder({ initialData }: Props) {
           </div>
         </div>
       </header>
+      {contractNotice && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 font-outfit"><span>{contractNotice}</span><button type="button" onClick={() => setActiveTab('config')} className="font-semibold underline">Ver paquete y adicionales</button></div>}
 
       {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden">
@@ -828,8 +856,9 @@ export default function InvitationBuilder({ initialData }: Props) {
                 onWorkflowChange={(status: ReviewStatus) => handleChange({ config: { ...(data.config ?? {}), workflow: { ...(data.config?.workflow ?? {}), reviewStatus: status, reviewUpdatedAt: new Date().toISOString() } } })}
                 onOpenBlock={blockId => { selectBlock(blockId); setActiveTab('blocks'); }}
               />}
+              {activeTab === 'quality' && <QualityControlPanel data={data} onChange={config => handleChange({ config })} />}
               {activeTab === 'export'  && <ExportPanel  data={data} />}
-              {activeTab === 'config'  && <ConfigPanel data={data} onChange={handleChange} onDelete={handleDelete} validation={validation} onOpenBlock={blockId => { selectBlock(blockId); setActiveTab('blocks'); }} />}
+              {activeTab === 'config'  && <ConfigPanel data={data} onChange={handleChange} onValiditySync={syncValidity} onDelete={handleDelete} validation={validation} onOpenBlock={blockId => { selectBlock(blockId); setActiveTab('blocks'); }} />}
             </div>
           </div>
         </div>

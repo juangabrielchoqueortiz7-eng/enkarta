@@ -426,7 +426,7 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
                   así que la plantilla tiene que aguantar cualquier paleta sin
                   que la galería pegue un grito en medio de la invitación. */}
               <div style={{ filter: 'saturate(0.82) contrast(1.02)' }}>
-                <MasonryGallery images={data.galleryImages} variant="rounded" className="mt-9" />
+                <MasonryGallery images={data.galleryImages} captions={data.galleryCaptions} variant="rounded" className="mt-9" />
               </div>
             </Reveal>
           </section>

@@ -241,7 +241,7 @@ export default function Allegria({ data }: { data: DolceVitaContent }) {
         <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
           <Reveal className="mx-auto max-w-4xl text-center">
             <Caps style={{ fontSize: '16px', color: C.ink }}>Nosotros</Caps>
-            <MasonryGallery images={data.galleryImages} className="mt-8" />
+            <MasonryGallery images={data.galleryImages} captions={data.galleryCaptions} className="mt-8" />
           </Reveal>
         </section>
       )}

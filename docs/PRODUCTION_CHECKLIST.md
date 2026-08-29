@@ -16,7 +16,21 @@ La migración es aditiva. Mientras no esté aplicada, el editor conserva histori
 
 Para los cambios de RSVP y acceso de la fase 1 de servicios, aplicar también `migrations/006_reliable_rsvp_and_access.sql` antes de desplegar el código. Seguir la guía de activación, respaldos y pruebas con dos dispositivos de [Servicios · Fase 1](SERVICIOS_FASE_1_RSVP_Y_ACCESO.md). Estas operaciones no tienen respaldo alternativo local: sin la migración muestran mantenimiento y no aceptan nuevas escrituras.
 
+Para la fase 2, ejecutar `migrations/007_separate_design_review.sql` antes de activar los accesos separados. Revisar [Paquetes y accesos](SERVICIOS_FASE_2_PAQUETES_Y_ACCESOS.md), incluyendo el nuevo campo obligatorio `package` en las integraciones de alta. Los clientes deberán volver a iniciar sesión; las invitaciones anteriores no cambian de contrato automáticamente.
+
+Para la fase 3, ejecutar completa `migrations/008_live_host_and_door_access.sql` y seguir [Panel y puerta](SERVICIOS_FASE_3_PANEL_Y_PUERTA.md). La fase 2 ya tiene 007 comprobada; ambas fases siguen pendientes de commit/despliegue. Validar con `node scripts/check-services-db.cjs --phase3` y probar actualización automática, cambios simultáneos de mesa y aislamiento/revocación de puerta antes de publicar.
+
 ## 2. Verificación técnica
+
+Para fase 5, aplicar completa `migrations/010_delivery_followup.sql` después de 009 y seguir [Envíos y seguimiento](SERVICIOS_FASE_5_ENVIOS.md). Comprobar con `node scripts/check-services-db.cjs --phase5`; abrir WhatsApp no equivale a entrega y los recordatorios deben limitarse a invitados pendientes.
+
+La fase 6 no necesita SQL: itinerarios enriquecidos y relatos de galería viven en el documento JSON existente. Seguir [Itinerarios y galerías editoriales](SERVICIOS_FASE_6_EDITORIAL.md), comprobar reordenamiento de fotos y revisar los límites de 0/8/20 imágenes por paquete antes de publicar.
+
+Para fase 7, aplicar completa `migrations/011_verifiable_addons.sql` después de 010 y seguir [Adicionales con entrega verificable](SERVICIOS_FASE_7_ADICIONALES.md). Comprobar con `node scripts/check-services-db.cjs --phase7`; la preconfirmación Save the Date es independiente del RSVP final y nunca concede QR ni ingreso.
+
+La fase 8 no necesita SQL: usar el [Centro de calidad y soporte](SERVICIOS_FASE_8_CALIDAD_Y_SOPORTE.md) para probar el recorrido del paquete contratado, restauración, permisos, soporte y publicación por etapas. Entregar las guías de [anfitrión](GUIA_ANFITRION.md) y [puerta](GUIA_PUERTA.md), y seguir el [SOP operativo](SOP_SOPORTE_PRIVACIDAD_RESPALDOS.md). El gate cerrado no debe eludirse marcando fallos como “No aplica”.
+
+Para fase 4 aplicar completa `migrations/009_invitation_validity.sql` después de 008 y seguir [Vigencia y renovaciones](SERVICIOS_FASE_4_VIGENCIA.md). Comprobar con `node scripts/check-services-db.cjs --phase4`; los acuerdos anteriores no se convierten automáticamente. Revisar ampliaciones, cambio de fecha, avisos de 7 días y conservación de datos antes de desplegar juntas las fases 2–4.
 
 Ejecutar:
 

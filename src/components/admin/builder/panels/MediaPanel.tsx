@@ -3,6 +3,7 @@
 import { InvitationParsed, BuilderConfig } from '@/lib/types';
 import { resolveFeatures, PACKAGE_LABELS } from '@/lib/packages';
 import { MUSIC_LIBRARY } from '@/lib/music';
+import { captionsForImages, reorderGalleryCaptions } from '@/lib/gallery';
 import ImageUploader from '../ImageUploader';
 import MultiImageUploader from '../MultiImageUploader';
 
@@ -16,6 +17,15 @@ export default function MediaPanel({ data, onChange }: Props) {
   const setCfg = (patch: Partial<BuilderConfig>) => onChange({ config: { ...cfg, ...patch } });
   const feats = resolveFeatures(cfg);
   const pkgName = cfg.package ? PACKAGE_LABELS[cfg.package] : null;
+  const galleryImages = cfg.galleryImages ?? [];
+  const galleryCaptions = captionsForImages(galleryImages, cfg.galleryCaptions ?? []);
+  const setGalleryImages = (urls: string[]) => setCfg({
+    galleryImages: urls,
+    galleryCaptions: reorderGalleryCaptions(galleryImages, galleryCaptions, urls),
+  });
+  const setGalleryCaption = (index: number, patch: Partial<(typeof galleryCaptions)[number]>) => {
+    setCfg({ galleryCaptions: galleryCaptions.map((caption, current) => current === index ? { ...caption, ...patch } : caption) });
+  };
 
   return (
     <div className="space-y-6 p-4">
@@ -87,12 +97,39 @@ export default function MediaPanel({ data, onChange }: Props) {
           </p>
         )}
         <MultiImageUploader
-          values={cfg.galleryImages ?? []}
-          onChange={urls => setCfg({ galleryImages: urls })}
+          values={galleryImages}
+          onChange={setGalleryImages}
           folder="gallery"
           ownerId={data.id}
           max={feats.galleryMax > 0 && feats.galleryMax < 99 ? feats.galleryMax : 20}
         />
+
+        {galleryImages.length > 0 && (
+          <details className="mt-4 overflow-hidden rounded-2xl border border-[#e7ded2] bg-[#fcfaf7]" open>
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-outfit text-xs font-semibold text-[#655b50]">
+              <span>Relato y accesibilidad · {galleryImages.length} foto{galleryImages.length === 1 ? '' : 's'}</span>
+              <span className="text-enkarta-gold">Editar ▾</span>
+            </summary>
+            <div className="space-y-3 border-t border-[#ebe3d8] p-3">
+              <p className="font-outfit text-[11px] leading-relaxed text-[#8a8075]">El título y el pie aparecerán en las galerías editoriales y en el visor. La descripción accesible ayuda a personas que usan lectores de pantalla.</p>
+              {galleryCaptions.map((caption, index) => (
+                <div key={caption.image || index} className="grid gap-3 rounded-xl border border-[#ebe4da] bg-white p-3 sm:grid-cols-[96px_1fr]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={galleryImages[index]} alt="" className="h-24 w-full rounded-lg object-cover" />
+                  <div className="min-w-0 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-outfit text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a18f77]">Foto {index + 1}</span>
+                      <span className="font-outfit text-[10px] text-[#b1a79c]">El texto seguirá a esta imagen</span>
+                    </div>
+                    <input className="w-full rounded-lg border border-gray-200 px-3 py-2 font-outfit text-xs outline-none focus:border-enkarta-gold" value={caption.title ?? ''} onChange={event => setGalleryCaption(index, { title: event.target.value })} placeholder="Título · Nuestro primer viaje" />
+                    <textarea className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 font-outfit text-xs outline-none focus:border-enkarta-gold" rows={2} value={caption.caption ?? ''} onChange={event => setGalleryCaption(index, { caption: event.target.value })} placeholder="Pie de foto · Una frase breve que cuente este momento" />
+                    <input className="w-full rounded-lg border border-gray-200 px-3 py-2 font-outfit text-xs outline-none focus:border-enkarta-gold" value={caption.alt ?? ''} onChange={event => setGalleryCaption(index, { alt: event.target.value })} placeholder="Descripción accesible de lo que aparece" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
 
         <div className="mt-4">
           <label className="block text-xs text-gray-500 font-outfit mb-1">Link de galería compartida (opcional)</label>

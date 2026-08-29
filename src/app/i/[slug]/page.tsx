@@ -21,10 +21,13 @@ import { resolveLayoutBindings } from '@/lib/block-bindings';
 import { findGuestByPublicId } from '@/lib/guests';
 import { headers } from 'next/headers';
 import InvitationAnalytics from '@/components/invitations/InvitationAnalytics';
-import { canManageInvitation } from '@/lib/host-session';
+import { canReviewInvitation } from '@/lib/host-session';
+import { guestForServices } from '@/lib/package-services-server';
+import { clientInvitation } from '@/lib/client-invitation';
 import { latestPublishedInvitation, publicInvitationData } from '@/lib/published-invitation';
 import PreviewCaptureController from '@/components/invitations/PreviewCaptureController';
 import { eventDay, hasRsvpForm } from '@/lib/rsvp-contract';
+import { activeInvitationLocale, formatInvitationDate, invitationCopy } from '@/lib/invitation-i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,16 +42,6 @@ function deriveInitials(names: string | null): string {
   const parts = names.split(/\s*[&y]\s*/i).map(p => p.trim()).filter(Boolean);
   if (parts.length >= 2) return `${parts[0][0]?.toUpperCase() ?? ''} & ${parts[1][0]?.toUpperCase() ?? ''}`;
   return parts[0]?.[0]?.toUpperCase() ?? '';
-}
-
-const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-
-/** "2026-09-20" → "Septiembre 20 · 2026" (parse por componentes para evitar desfases de zona horaria) */
-function deriveDateLine(iso: string | null): string | undefined {
-  if (!iso) return undefined;
-  const [y, mo, d] = iso.slice(0, 10).split('-').map(Number);
-  if (!y || !mo || !d) return undefined;
-  return `${MESES[mo - 1]} ${String(d).padStart(2, '0')} · ${y}`;
 }
 
 // ── Pantallas de estado ────────────────────────────────────────────────────────
@@ -87,7 +80,11 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   }
 
   const invitation = data as Invitation;
-  const privatePreview = preview === '1' && await canManageInvitation(invitation.id);
+  const storedCopy = invitationCopy(activeInvitationLocale(parseInvitation(invitation).config));
+  const privatePreview = preview === '1' && await canReviewInvitation(invitation.id);
+  if (!privatePreview && invitation.validity_mode === 'automatic' && !invitation.expires_at) {
+    return <StatusScreen icon={ClockIcon} title={storedCopy.preparationTitle} text={storedCopy.preparationText} />;
+  }
   const publishedVersion = privatePreview ? null : await latestPublishedInvitation(invitation);
 
   // ── Borrador: aún no publicada ──
@@ -95,18 +92,18 @@ export default async function InvitationPage({ params, searchParams }: Props) {
     return (
       <StatusScreen
         icon={ClockIcon}
-        title="Invitación en preparación"
-        text="Esta invitación aún no está disponible. Pronto estará lista para ti."
+        title={storedCopy.preparationTitle}
+        text={storedCopy.preparationText}
       />
     );
   }
 
   if (invitation.status === 'disabled' && !privatePreview) {
-    return <StatusScreen icon={ClockIcon} title="Invitación temporalmente fuera de línea" text="El anfitrión ha pausado esta invitación. Vuelve a intentarlo más adelante." />;
+    return <StatusScreen icon={ClockIcon} title={storedCopy.pausedTitle} text={storedCopy.pausedText} />;
   }
 
   if (invitation.status === 'expired' && !privatePreview) {
-    return <StatusScreen icon={ClockIcon} title="Evento finalizado" text="Gracias por acompañarnos. Esta invitación ya no está disponible." />;
+    return <StatusScreen icon={ClockIcon} title={storedCopy.finishedTitle} text={storedCopy.finishedText} />;
   }
 
   // ── Dada de baja manualmente ──
@@ -114,8 +111,8 @@ export default async function InvitationPage({ params, searchParams }: Props) {
     return (
       <StatusScreen
         icon={ClockIcon}
-        title="Evento finalizado"
-        text="Gracias por acompañarnos. Esta invitación ya no está disponible."
+        title={storedCopy.finishedTitle}
+        text={storedCopy.finishedText}
       />
     );
   }
@@ -127,8 +124,8 @@ export default async function InvitationPage({ params, searchParams }: Props) {
       return (
         <StatusScreen
           icon={ClockIcon}
-          title="Evento finalizado"
-          text="Gracias por acompañarnos. El acceso a esta invitación ya expiró."
+          title={storedCopy.finishedTitle}
+          text={storedCopy.expiredText}
         />
       );
     }
@@ -143,8 +140,11 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   // El paquete contratado (config.package) apaga las funciones no incluidas.
   // El editor guarda el borrador en `invitations`; el público recibe el último
   // snapshot publicado. ?preview=1 (admin/anfitrión autenticado) ve el borrador.
-  const parsed = gateInvitation(privatePreview ? parseInvitation(invitation) : (publishedVersion?.data ?? parseInvitation(invitation)));
+  const parsed = clientInvitation(gateInvitation(privatePreview ? parseInvitation(invitation) : (publishedVersion?.data ?? parseInvitation(invitation))));
   const config = parsed.config;
+  const locale = activeInvitationLocale(config);
+  const copy = invitationCopy(locale);
+  delete config.activeGuest; // Nunca reutilizar un invitado de una vista previa guardada.
   const feats = resolveFeatures(config);
 
   // Toda invitación con música activa suena al abrirse: si el cliente no
@@ -158,7 +158,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
     guest = await findGuestByPublicId(invitation.id, g);
     if (guest) {
       const meta = config.guestMeta?.[guest.publicId];
-      guest = { ...guest, ...meta };
+      guest = guestForServices({ ...guest, ...meta }, config)!;
       config.activeGuest = guest;
       parsed.guest_name = guest.name;
       if (feats.passes) parsed.guest_passes = guest.passes;
@@ -172,12 +172,14 @@ export default async function InvitationPage({ params, searchParams }: Props) {
       id: 'preview-sample', publicId: 'muestra', name: 'Familia de Ejemplo', tableNo: '12', passes: 3,
       allowKids: true, group: 'Familia', eventAccess: 'both', sent: true, status: 'pending', accessCode: 'ENK-DEMO',
     };
+    guest = guestForServices(guest, config)!;
     config.activeGuest = guest;
     parsed.guest_name = guest.name;
     if (feats.passes) parsed.guest_passes = guest.passes;
   }
 
   // Fecha límite de confirmación (columna rsvp_deadline): bloquea el formulario.
+  delete config.guestMeta; // El público solo recibe el invitado de su enlace, nunca el padrón completo.
   const deadlinePassed = !!invitation.rsvp_deadline && invitation.rsvp_deadline.slice(0, 10) < eventDay();
 
   // ── Resolver el elemento de la plantilla ──
@@ -216,6 +218,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
       guest={guest ?? undefined}
       deadlinePassed={deadlinePassed}
       viewport={mobileForm ? 'desktop' : desktopForm ? 'mobile' : 'both'}
+      locale={locale}
     />
   ) : null;
 
@@ -228,7 +231,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
       {privatePreview && !capture && <div className="fixed left-1/2 top-3 z-[200] -translate-x-1/2 rounded-full border border-violet-200 bg-white/95 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-violet-700 shadow-lg backdrop-blur font-outfit">Vista privada del borrador{sample === '1' ? ' · invitado de prueba' : ' · no publicada'}</div>}
       {privatePreview && capture && <PreviewCaptureController position={capture} />}
       {hasBlocks ? (
-        <BlockRenderer layout={resolvedLayout!} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} guest={guest ?? undefined} demo={privatePreview} deadlinePassed={deadlinePassed} gated={entryEnabled} />
+        <BlockRenderer layout={resolvedLayout!} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} guest={guest ?? undefined} demo={privatePreview} deadlinePassed={deadlinePassed} gated={entryEnabled} navigation={config.additionalServices?.navigation} locale={locale} />
       ) : (
         <PageMotionProvider value={config.motion} gated={entryEnabled}>
           {templateEl}
@@ -248,16 +251,16 @@ export default async function InvitationPage({ params, searchParams }: Props) {
         template={parsed.template}
         names={parsed.names ?? 'Nuestra Boda'}
         initials={deriveInitials(parsed.names)}
-        dateLine={deriveDateLine(parsed.event_date)}
+        dateLine={formatInvitationDate(parsed.event_date, locale)}
         coverImage={parsed.cover_image_url ?? undefined}
-        label={config.entry?.label || 'Ingresar a mi invitación'}
+        label={config.entry?.label || copy.enter}
         scene={config.entry?.style === 'cinematic' ? 'cinematic' : undefined}
         entryVideoUrl={config.entry?.videoUrl}
         entryPoster={config.entry?.poster}
         entryDuration={config.entry?.duration}
         entryOverlay={config.entry?.overlay}
         showSkip={config.entry?.showSkip ?? true}
-        skipLabel={config.entry?.skipLabel || 'Omitir animación'}
+        skipLabel={config.entry?.skipLabel || copy.skip}
         bg={config.theme?.bg}
         text={config.theme?.text}
         accent={config.theme?.primary}
@@ -289,7 +292,7 @@ export async function generateMetadata({ params }: Props) {
   const title = metaData?.names
     ? `${titles[metaData.type] || 'Invitación'} - ${metaData.names} | Enkarta`
     : 'Invitación Digital | Enkarta';
-  const dateLine = deriveDateLine(metaData?.event_date ?? null);
+  const dateLine = formatInvitationDate(metaData?.event_date ?? null, activeInvitationLocale(metaData?.config));
   const description = metaData?.names
     ? `Estás invitado(a) a la ${titles[metaData.type]?.toLowerCase() || 'celebración'} de ${metaData.names}${dateLine ? ` · ${dateLine}` : ''}`
     : 'Invitación digital personalizada';

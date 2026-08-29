@@ -10,6 +10,8 @@ import BlockRenderer from '@/components/invitations/BlockRenderer';
 import FontScope from '@/components/invitations/FontScope';
 import SmartRsvp from '@/components/invitations/SmartRsvp';
 import { publicTemplateName } from '@/lib/enkarta-collections';
+import { publicAdditionalServices } from '@/lib/additional-services';
+import { activeInvitationLocale } from '@/lib/invitation-i18n';
 
 interface Props {
   invitation: InvitationParsed;
@@ -216,6 +218,8 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
                 scrollRoot={scrollRef}
                 viewportMode={device}
                 guest={activeGuest}
+                navigation={publicAdditionalServices(cfg.additionalServices)?.navigation}
+                locale={activeInvitationLocale(cfg)}
               />
             ) : (
             <PageMotionProvider key={remountKey} value={invitation.config?.motion} scrollRoot={scrollRef}>
@@ -232,7 +236,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
             )}
             </PageMotionProvider>
             )}
-            {smartRsvpOn && <SmartRsvp slug={invitation.slug} theme={cfg.theme} guest={activeGuest} publicId={activeGuest?.publicId} guestName={activeGuest?.name} maxPasses={activeGuest?.passes ?? invitation.guest_passes} tableNo={activeGuest?.tableNo} />}
+            {smartRsvpOn && <SmartRsvp demo slug={invitation.slug} theme={cfg.theme} guest={activeGuest} publicId={activeGuest?.publicId} guestName={activeGuest?.name} maxPasses={activeGuest?.passes ?? invitation.guest_passes} tableNo={activeGuest?.tableNo} locale={activeInvitationLocale(cfg)} />}
             </FontScope>
           </div>
           </div>

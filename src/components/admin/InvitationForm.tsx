@@ -131,14 +131,17 @@ function ItineraryEditor({
                 placeholder="Ceremonia Religiosa"
               />
 
-              {/* Quitar paso */}
-              {itinerary.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => onChange(itinerary.filter((_, j) => j !== i))}
-                  className="text-red-300 hover:text-red-500 px-2 flex-shrink-0"
-                >✕</button>
-              )}
+              <div className="flex flex-shrink-0 items-center gap-1">
+                <button type="button" aria-label="Subir actividad" disabled={i === 0} onClick={() => { const next = [...itinerary]; [next[i - 1], next[i]] = [next[i], next[i - 1]]; onChange(next); }} className="px-1 text-gray-400 disabled:opacity-20">↑</button>
+                <button type="button" aria-label="Bajar actividad" disabled={i === itinerary.length - 1} onClick={() => { const next = [...itinerary]; [next[i + 1], next[i]] = [next[i], next[i + 1]]; onChange(next); }} className="px-1 text-gray-400 disabled:opacity-20">↓</button>
+                {itinerary.length > 1 && <button type="button" aria-label="Eliminar actividad" onClick={() => onChange(itinerary.filter((_, j) => j !== i))} className="px-1 text-red-300 hover:text-red-500">✕</button>}
+              </div>
+            </div>
+
+            <div className="grid gap-2 border-t border-gray-100 bg-[#fcfbf9] p-3 sm:grid-cols-2">
+              <input value={item.place ?? ''} onChange={e => update(i, { place: e.target.value })} className="rounded-lg border border-gray-200 px-3 py-2 font-outfit text-xs outline-none focus:border-enkarta-gold" placeholder="Lugar · Jardín principal" />
+              <input value={item.duration ?? ''} onChange={e => update(i, { duration: e.target.value })} className="rounded-lg border border-gray-200 px-3 py-2 font-outfit text-xs outline-none focus:border-enkarta-gold" placeholder="Duración · 45 min" />
+              <textarea value={item.note ?? ''} onChange={e => update(i, { note: e.target.value })} className="resize-none rounded-lg border border-gray-200 px-3 py-2 font-outfit text-xs outline-none focus:border-enkarta-gold sm:col-span-2" rows={2} placeholder="Nota útil · Llegar 15 minutos antes" />
             </div>
 
             {/* Picker Lottie (desplegable) */}

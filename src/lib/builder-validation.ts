@@ -3,6 +3,8 @@ import { resolveFeatures } from './packages';
 import { auditDesignConsistency } from './design-audit';
 import { collectPublicationResources, publicationMetrics } from './publication-audit';
 import { resolveLayoutBindings } from './block-bindings';
+import { additionalServiceErrors, additionalServices, ADDITIONAL_SERVICE_KEYS, ADDITIONAL_SERVICE_META } from './additional-services';
+import { releaseReady } from './quality-assurance';
 
 export interface BuilderIssue {
   severity: 'error' | 'warning';
@@ -63,6 +65,22 @@ export function validateInvitationBuilder(data: InvitationParsed): BuilderValida
   const resources = collectPublicationResources(data);
   const metrics = publicationMetrics(data);
   const consistency = auditDesignConsistency(data);
+
+  additionalServiceErrors(data).forEach(detail => issues.push({ severity: 'error', category: 'publicación', title: 'Adicional incompleto', detail }));
+  const configuredServices = additionalServices(cfg);
+  ADDITIONAL_SERVICE_KEYS.forEach(key => {
+    const status = configuredServices[key]?.status;
+    if (status && !['not_contracted', 'ready'].includes(status)) issues.push({ severity: 'warning', category: 'publicación', title: `${ADDITIONAL_SERVICE_META[key].label} pendiente`, detail: `El adicional está “${status === 'contracted' ? 'contratado' : status === 'in_progress' ? 'en proceso' : 'bloqueado'}” y todavía no debe presentarse como entregado.` });
+  });
+  if (['approved', 'production'].includes(cfg.qualityControl?.release?.stage ?? '') && !releaseReady(cfg.qualityControl, cfg.package ?? 'exclusive')) {
+    issues.push({ severity: 'error', category: 'publicación', title: 'Liberación sin evidencia completa', detail: 'La entrega figura aprobada o en producción, pero faltan comprobaciones del paquete, soporte, privacidad, vista previa o rollback.' });
+  }
+  if (['approved', 'production'].includes(cfg.qualityControl?.release?.stage ?? '') && (!cfg.qualityControl?.release?.approvedBy?.trim() || !cfg.qualityControl.release.approvedAt)) {
+    issues.push({ severity: 'error', category: 'publicación', title: 'Aprobación incompleta', detail: 'La liberación necesita identificar a quien aprobó la versión y registrar la fecha exacta.' });
+  }
+  if (cfg.qualityControl?.release?.stage === 'production' && !cfg.qualityControl.release.productionCheckedAt) {
+    issues.push({ severity: 'error', category: 'publicación', title: 'Producción sin comprobar', detail: 'La entrega figura en producción, pero todavía no se registró la revisión de la URL pública.' });
+  }
 
   if (!data.names?.trim()) {
     issues.push({ severity: 'error', title: 'Faltan los nombres', detail: 'La invitación necesita los nombres principales para portada, calendario y encabezados.' });
@@ -137,7 +155,10 @@ export function validateInvitationBuilder(data: InvitationParsed): BuilderValida
   if (data.event_date && data.event_date.slice(0, 10) < new Date().toISOString().slice(0, 10)) {
     issues.push({ severity: 'warning', category: 'publicación', title: 'La fecha del evento ya pasó', detail: 'Comprueba que no estés publicando una invitación con una fecha anterior a hoy.' });
   }
-  if (data.expires_at && data.event_date && data.expires_at.slice(0, 10) < data.event_date.slice(0, 10)) {
+  if (data.validity_mode === 'automatic' && !data.event_date) {
+    issues.push({ severity: 'error', category: 'publicación', title: 'Falta la fecha para calcular la vigencia', detail: 'Define y guarda la fecha del evento antes de publicar.' });
+  }
+  if (data.validity_mode !== 'automatic' && data.expires_at && data.event_date && data.expires_at.slice(0, 10) < data.event_date.slice(0, 10)) {
     issues.push({ severity: 'warning', category: 'publicación', title: 'El enlace vence antes del evento', detail: 'La fecha de expiración es anterior a la celebración.' });
   }
 

@@ -487,7 +487,7 @@ export default function Passport({ data }: { data: PassportContent }) {
             </svg>
           )}
           <p className="italic" style={{ fontFamily: F.body, fontSize: '18px', lineHeight: 1.6, color: C.creamText }}>{data.galleryMsg}</p>
-          <PhotoGrid images={data.galleryImages} className="mt-7 w-full max-w-lg" radius={12} />
+          <PhotoGrid images={data.galleryImages} captions={data.galleryCaptions} showCaptions className="mt-7 w-full max-w-lg" radius={12} />
           <div className="mt-6">
             <a
               href={data.galleryUrl}

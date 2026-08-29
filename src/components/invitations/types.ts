@@ -3,6 +3,7 @@
 // and later wired to real Supabase data.
 
 import type { TemplateTheme, TemplateDecor } from '@/lib/types';
+import type { GalleryCaption } from '@/lib/gallery';
 
 export type { TemplateTheme, TemplateDecor };
 
@@ -11,6 +12,9 @@ export interface ItineraryStep {
   icon: string;
   label: string;
   time: string;
+  place?: string;
+  duration?: string;
+  note?: string;
   /** Colores editados del ícono Lottie: { '#origen': '#nuevo' | 'transparent' } */
   iconColors?: Record<string, string>;
   /** Velocidad del ícono Lottie (1 = normal). */
@@ -32,6 +36,8 @@ export interface IconCustomization {
   iconColor?: string;
   /** Escala de iconos (1 = normal) */
   iconScale?: number;
+  /** Textos globales que siguen a cada fotografía por su URL. */
+  galleryCaptions?: GalleryCaption[];
 }
 
 export interface GiftBank {

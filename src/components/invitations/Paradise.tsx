@@ -426,7 +426,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
             </Reveal>
           </div>
 
-          <PhotoGrid images={data.galleryImages} className="mx-auto mt-8 max-w-2xl" />
+          <PhotoGrid images={data.galleryImages} captions={data.galleryCaptions} showCaptions className="mx-auto mt-8 max-w-2xl" />
         </div>
       </section>
 

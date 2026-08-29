@@ -1,7 +1,10 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { verifyHostSession, verifyAdminSession } from '@/lib/access';
+import { verifyHostSession, verifyAdminSession, verifyReviewSession, verifyDoorSession } from '@/lib/access';
+import { isUuid } from './rsvp-contract';
+import { allowsService, isCurrentContract, type OperationalService } from './packages';
+import { invitationServiceConfig } from './package-services-server';
 
 // Sesiones del servidor. Hay dos accesos independientes:
 //  - Admin (equipo Enkarta): cookie 'enkarta-admin' (password global, /admin).
@@ -9,11 +12,50 @@ import { verifyHostSession, verifyAdminSession } from '@/lib/access';
 // Solo se usa en el servidor (API routes / server components).
 
 export const HOST_COOKIE = 'enkarta-host';
+export const REVIEW_COOKIE = 'enkarta-review';
+export const DOOR_COOKIE = 'enkarta-door';
+
+export async function getDoorSession(): Promise<string | null> {
+  const value = (await cookies()).get(DOOR_COOKIE)?.value;
+  if (!value) return null;
+  const id = value.split('.')[0];
+  if (!isUuid(id)) return null;
+  const { data, error } = await supabaseAdmin.from('invitations').select('door_email,door_password_hash').eq('id', id).maybeSingle();
+  return !error && data?.door_email && data?.door_password_hash && verifyDoorSession(value, data.door_password_hash) ? id : null;
+}
+
+/** No reutilizar este permiso para listas, exportaciones o edición de invitados. */
+export async function canScanInvitation(invitationId: string): Promise<boolean> {
+  if (await getDoorSession() === invitationId) return allowsService((await invitationServiceConfig(invitationId)).config, 'qrAccess');
+  return canManageInvitation(invitationId, 'qrAccess');
+}
 
 /** invitationId del cliente logueado, o null. */
-export async function getHostSession(): Promise<string | null> {
+export async function getHostSession(strict = false): Promise<string | null> {
   const c = (await cookies()).get(HOST_COOKIE)?.value;
-  return verifyHostSession(c);
+  if (!c) return null;
+  const id = c.slice(0, c.lastIndexOf('.'));
+  if (!isUuid(id)) return null;
+  const { data, error } = await supabaseAdmin.from('invitations').select('host_email,host_password_hash').eq('id', id).maybeSingle();
+  // El panel en vivo debe distinguir una caída de conexión de una revocación real.
+  if (error && strict) throw error;
+  return !error && data?.host_email && data?.host_password_hash ? verifyHostSession(c, data.host_password_hash) : null;
+}
+
+export async function getReviewSession(): Promise<string | null> {
+  const value = (await cookies()).get(REVIEW_COOKIE)?.value;
+  if (!value) return null;
+  const id = value.slice(0, value.lastIndexOf('.'));
+  if (!isUuid(id)) return null;
+  const { data, error } = await supabaseAdmin.from('invitations').select('review_email,review_password_hash').eq('id', id).maybeSingle();
+  return !error && data?.review_email && data?.review_password_hash && verifyReviewSession(value, data.review_password_hash) ? id : null;
+}
+export async function canReviewInvitation(invitationId: string): Promise<boolean> {
+  if (await getAdminSession()) return true;
+  if (await getReviewSession() === invitationId) return true;
+  // Los contratos anteriores conservan el acceso combinado; los nuevos separan los alcances.
+  if (await getHostSession() !== invitationId) return false;
+  return !isCurrentContract((await invitationServiceConfig(invitationId)).config);
 }
 
 /** true si el equipo Enkarta está autenticado (cookie admin firmada). */
@@ -31,10 +73,20 @@ export async function requireAdminPage(): Promise<void> {
  * el cliente solo con la suya. Se usa para proteger las mutaciones de invitados
  * y de control de acceso.
  */
-export async function canManageInvitation(invitationId: string): Promise<boolean> {
-  if (await getAdminSession()) return true;
+export async function canManageInvitation(invitationId: string, service?: OperationalService): Promise<boolean> {
+  const admin = await getAdminSession();
   const host = await getHostSession();
-  return host !== null && host === invitationId;
+  if (!admin && host !== invitationId) return false;
+  const { config } = await invitationServiceConfig(invitationId);
+  if (!admin && !allowsService(config, 'hostPanel')) return false;
+  return !service || allowsService(config, service);
+}
+
+/** Planilla de solo lectura; no concede gestión, escaneo ni revisión del diseño. */
+export async function canReadResponses(invitationId: string): Promise<boolean> {
+  if (await getAdminSession()) return true;
+  if (await getHostSession() !== invitationId) return false;
+  return allowsService((await invitationServiceConfig(invitationId)).config, 'rsvp');
 }
 
 /** Resuelve el invitationId dueño de un invitado (para validar permisos). */

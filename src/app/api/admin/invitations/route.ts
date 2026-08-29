@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { getAdminSession } from '@/lib/host-session';
+import { contractErrors, isCurrentContract, isPackage, newServiceContract, retainServiceContract } from '@/lib/packages';
+import { storedServiceConfig } from '@/lib/package-services-server';
+import { changesUncontractedColors } from '@/lib/package-colors';
+import { validityError } from '@/lib/validity-server';
 
 export const runtime = 'nodejs';
 
@@ -30,6 +34,12 @@ export async function POST(request: NextRequest) {
   if (!(await getAdminSession())) return unauthenticated();
   try {
     const body = await request.json();
+
+    let config = storedServiceConfig(body.builder_config);
+    if (!isPackage(config.package)) return NextResponse.json({ error: 'Selecciona el paquete contratado.' }, { status: 400 });
+    if (!config.serviceContract) config = newServiceContract(config, config.package);
+    const errors = contractErrors(config);
+    if (errors.length) return NextResponse.json({ error: errors.join(' ') }, { status: 400 });
 
     const insertData = {
       slug: body.slug,
@@ -61,7 +71,7 @@ export async function POST(request: NextRequest) {
       color_secondary: body.color_secondary || '#FAF7F2',
       color_accent: body.color_accent || '#2C2519',
       phone_whatsapp: body.phone_whatsapp || null,
-      builder_config: body.builder_config ?? null,
+      builder_config: config,
     };
 
     const { data, error } = await supabaseAdmin
@@ -91,6 +101,22 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'ID es requerido' }, { status: 400 });
     }
 
+    // Las credenciales se cambian únicamente desde su endpoint dedicado.
+    for (const key of ['host_email', 'host_password_hash', 'review_email', 'review_password_hash', 'door_email', 'door_password_hash',
+      'expires_at', 'validity_mode', 'validity_extra_days', 'validity_revision']) delete updateData[key];
+    if ('builder_config' in updateData || ['color_primary', 'color_secondary', 'color_accent'].some(key => key in updateData)) {
+      const { data: current, error } = await supabaseAdmin.from('invitations').select('builder_config,color_primary,color_secondary,color_accent,template').eq('id', id).maybeSingle();
+      if (error) throw error;
+      if (!current) return NextResponse.json({ error: 'Invitación no encontrada' }, { status: 404 });
+      const previous = storedServiceConfig(current.builder_config);
+      const config = 'builder_config' in updateData ? retainServiceContract(storedServiceConfig(updateData.builder_config), previous) : previous;
+      const errors = contractErrors(config);
+      if (isCurrentContract(previous) && !isCurrentContract(config)) errors.push('No se puede eliminar el contrato de servicios.');
+      if (errors.length) return NextResponse.json({ error: errors.join(' ') }, { status: 400 });
+      if (changesUncontractedColors({ ...current, config: previous }, { ...current, ...updateData, config })) return NextResponse.json({ error: 'La personalización de color no está incluida. Registra el adicional en Configuración antes de cambiar la paleta o los colores de los bloques.' }, { status: 400 });
+      updateData.builder_config = config;
+    }
+
     // Stringify JSON fields if they're arrays/objects
     if (Array.isArray(updateData.parents_groom)) {
       updateData.parents_groom = JSON.stringify(updateData.parents_groom);
@@ -113,6 +139,7 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) {
+      if (error.message?.startsWith('VALIDITY_')) return validityError(error);
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 

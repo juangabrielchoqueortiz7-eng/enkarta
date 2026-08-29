@@ -226,10 +226,12 @@ export function invitationToLayout(inv: InvitationParsed): PageLayout {
   blocks.push(blk('gallery', {
     message: (cfg.galleryMessage as string) || 'Comparte con nosotros tus fotos del evento.',
     images: (cfg.galleryImages as string[]) || [],
+    captions: cfg.galleryCaptions || [],
     shareUrl: inv.gallery_url || '',
   }, undefined, {
     message: 'content.galleryMessage',
     images: 'media.galleryImages',
+    captions: 'media.galleryCaptions',
     shareUrl: 'links.galleryUrl',
   }));
 
@@ -321,7 +323,7 @@ export function contentToLayout(c: any, template?: string): PageLayout {
   blocks.push(blk('dressCode', { title: 'Código de vestimenta', men, women, icon: 'dress' }));
 
   if (Array.isArray(c.itinerary) && c.itinerary.length) {
-    blocks.push(blk('itinerary', { title: 'Itinerario', items: c.itinerary.map((it: any) => ({ time: it.time, label: it.label, icon: it.icon || 'rings', iconColors: it.iconColors, iconSpeed: it.iconSpeed })) }));
+    blocks.push(blk('itinerary', { title: 'Itinerario', items: c.itinerary.map((it: any) => ({ time: it.time, label: it.label, place: it.place, duration: it.duration, note: it.note, icon: it.icon || 'rings', iconColors: it.iconColors, iconSpeed: it.iconSpeed })) }));
   }
 
   // Historia fija (pinned storytelling) — solo si hay una foto que anclar.
@@ -350,7 +352,7 @@ export function contentToLayout(c: any, template?: string): PageLayout {
 
   blocks.push(blk('gallery', {
     message: c.gallery?.message || 'Comparte con nosotros tus fotos del evento.',
-    images: c.galleryImages || [], shareUrl: c.gallery?.shareUrl || c.galleryUrl || '',
+    images: c.galleryImages || [], captions: c.galleryCaptions || [], shareUrl: c.gallery?.shareUrl || c.galleryUrl || '',
   }));
 
   blocks.push(blk('rsvp', {

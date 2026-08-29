@@ -89,13 +89,43 @@ const STYLE_RECIPES: { key: string; label: string; desc: string; patch: NonNulla
   { key: 'scene', label: 'Escena', desc: 'Pantalla completa', patch: { bgKind: 'none', fullHeight: true, padTop: 80, padBottom: 80 } },
 ];
 
+function LayoutPreview({ kind, layout }: { kind: 'itinerary' | 'gallery'; layout: string }) {
+  if (kind === 'gallery') {
+    const cells = layout === 'editorial' ? ['col-span-2 row-span-2', '', '']
+      : layout === 'filmstrip' || layout === 'carousel' || layout === 'coverflow' ? ['', '', '']
+      : layout === 'masonry' ? ['row-span-2', '', 'row-span-2', '']
+      : ['', '', '', '', '', ''];
+    return <span className={`grid h-11 w-full gap-1 overflow-hidden rounded-lg bg-[#f6f1e9] p-1.5 ${['filmstrip', 'carousel', 'coverflow'].includes(layout) ? 'grid-flow-col auto-cols-[42%]' : 'grid-cols-3 grid-rows-2'}`}>
+      {cells.map((cell, index) => <span key={index} style={{ opacity: index ? 0.65 : 1 }} className={`rounded-[3px] bg-[linear-gradient(135deg,#c9aa70,#6f7c62)] ${cell} ${layout === 'polaroid' ? index % 2 ? 'rotate-3 border-2 border-white' : '-rotate-3 border-2 border-white' : ''}`} />)}
+    </span>;
+  }
+  if (layout === 'cards') return <span className="grid h-11 w-full grid-cols-2 gap-1 rounded-lg bg-[#f6f1e9] p-1.5">{[0,1,2,3].map(index => <span key={index} className="rounded border border-[#cdbb9e] bg-white" />)}</span>;
+  if (layout === 'route') return <span className="relative block h-11 w-full rounded-lg bg-[#f6f1e9]"><span className="absolute bottom-1 left-1/2 top-1 w-px bg-[#c4aa78]" />{[0,1,2].map(index => <span key={index} className={`absolute h-2 w-2 rounded-full bg-[#8d7449] ${index % 2 ? 'right-[28%]' : 'left-[28%]'}`} style={{ top: 7 + index * 12 }} />)}</span>;
+  if (layout === 'carousel') return <span className="flex h-11 w-full gap-1.5 overflow-hidden rounded-lg bg-[#f6f1e9] p-1.5">{[0,1,2].map(index => <span key={index} className="h-full min-w-[42%] rounded border border-[#cdbb9e] bg-white" />)}</span>;
+  if (layout === 'editorial') return <span className="flex h-11 w-full flex-col justify-center gap-1.5 rounded-lg bg-[#f6f1e9] px-2">{[0,1,2].map(index => <span key={index} className="grid grid-cols-[22px_1fr] gap-2"><i className="h-1.5 rounded bg-[#c4aa78]" /><i className="h-1.5 rounded bg-[#d9cfc0]" /></span>)}</span>;
+  return <span className="relative flex h-11 w-full flex-col justify-center gap-1.5 rounded-lg bg-[#f6f1e9] pl-6 pr-2"><span className="absolute bottom-2 left-3 top-2 w-px bg-[#c4aa78]" />{[0,1,2].map(index => <span key={index} className="relative h-1.5 rounded bg-[#d9cfc0]"><i className="absolute -left-[15px] -top-[1px] h-2 w-2 rounded-full bg-[#8d7449]" /></span>)}</span>;
+}
+
+function VisualLayoutSelect({ kind, value, options, set }: { kind: 'itinerary' | 'gallery'; value: string; options: NonNullable<FieldDef['options']>; set: (value: string) => void }) {
+  return <div className="grid grid-cols-2 gap-2">
+    {options.map(option => {
+      const active = value === option.value;
+      return <button key={option.value} type="button" aria-pressed={active} onClick={() => set(option.value)} className={`rounded-xl border p-2 text-left transition-all ${active ? 'border-enkarta-gold bg-enkarta-gold/5 shadow-sm ring-2 ring-enkarta-gold/10' : 'border-[#e7e0d7] bg-white hover:border-enkarta-gold/50'}`}>
+        <LayoutPreview kind={kind} layout={option.value} />
+        <span className={`mt-1.5 block font-outfit text-[10px] font-medium leading-tight ${active ? 'text-[#8b6829]' : 'text-[#6e665d]'}`}>{option.label}</span>
+      </button>;
+    })}
+  </div>;
+}
+
 // Renderiza un campo según su tipo (texto, color, imagen, icono, lista…).
-function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, eventType, accent }: {
+function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, eventType, accent, visualSelect }: {
   field: FieldDef; value: any; set: (v: any) => void;
   setIcon?: (v: string, colors?: any, speed?: number) => void;
   colors?: any; speed?: number; ownerId?: string; eventType?: any;
   /** Color con el que se dibujan las miniaturas de separador (el de la invitación). */
   accent?: string;
+  visualSelect?: 'itinerary' | 'gallery';
 }) {
   switch (field.kind) {
     case 'textarea':
@@ -105,6 +135,7 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
     case 'switch':
       return <Toggle on={!!value} onToggle={() => set(!value)} />;
     case 'select':
+      if (visualSelect && field.options) return <VisualLayoutSelect kind={visualSelect} value={String(value ?? field.options[0]?.value ?? '')} options={field.options} set={set} />;
       return (
         <select className={inputCls} value={value ?? field.options?.[0]?.value} onChange={e => set(e.target.value)}>
           {field.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -710,6 +741,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
                   setIcon={(v, c, s) => setIcon(f.key, v, c, s)}
                   colors={selected.props[`${f.key}Colors`]} speed={selected.props[`${f.key}Speed`] as number | undefined}
                   ownerId={data.id} eventType={data.type} accent={cfg.theme?.primary}
+                  visualSelect={f.key === 'layout' && (selected.type === 'itinerary' || selected.type === 'gallery') ? selected.type : undefined}
                 />
               </Labeled>
               {['text', 'textarea'].includes(f.kind) && (
@@ -871,6 +903,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
                           setIcon={(v, col, sp) => setKidIcon(i, f.key, v, col, sp)}
                           colors={c.props[`${f.key}Colors`]} speed={c.props[`${f.key}Speed`] as number | undefined}
                           ownerId={data.id} eventType={data.type}
+                          visualSelect={f.key === 'layout' && (c.type === 'itinerary' || c.type === 'gallery') ? c.type : undefined}
                         />
                       </Labeled>
                     )

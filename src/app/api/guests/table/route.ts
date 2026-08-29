@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { requireInvitationService } from '@/lib/package-services-server';
+import { serviceError } from '@/lib/services-server';
 
 // Buscador de mesa público: el invitado escribe su nombre y obtiene su número de
 // mesa. Devuelve SOLO la coincidencia de ese nombre (no lista a los demás
@@ -16,6 +18,7 @@ export async function POST(request: NextRequest) {
     if (!slug || query.length < 2) {
       return NextResponse.json({ error: 'Escribe tu nombre completo.' }, { status: 400 });
     }
+    await requireInvitationService(slug, 'tableAssignment', 'slug');
 
     const { data: inv } = await supabaseAdmin.from('invitations').select('id').eq('slug', slug).single();
     if (!inv) return NextResponse.json({ error: 'Invitación no encontrada' }, { status: 404 });
@@ -38,6 +41,6 @@ export async function POST(request: NextRequest) {
       results: matches.map(g => ({ name: g.name, tableNo: g.table_no, passes: g.passes })),
     });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Error del servidor' }, { status: 500 });
+    return serviceError(e);
   }
 }

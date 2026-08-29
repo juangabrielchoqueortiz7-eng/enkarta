@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function HostLogin() {
+export default function HostLogin({ scope = 'host' }: { scope?: 'host' | 'review' | 'door' }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,7 +19,7 @@ export default function HostLogin() {
     setError('');
     setBusy(true);
     try {
-      const res = await fetch('/api/host/auth', {
+      const res = await fetch(`/api/${scope}/auth`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
@@ -34,19 +34,19 @@ export default function HostLogin() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <p className="font-great text-5xl" style={{ color: '#B8975A' }}>Enkarta</p>
-          <p className="font-cormorant text-lg mt-1" style={{ color: 'rgba(44,37,25,0.6)' }}>Accede a tu evento</p>
+          <p className="font-cormorant text-lg mt-1" style={{ color: 'rgba(44,37,25,0.6)' }}>{scope === 'door' ? 'Personal de puerta · solo control de acceso' : scope === 'review' ? 'Revisa el diseño de tu invitación' : 'Accede a las confirmaciones de tu evento'}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-xl p-7 border border-enkarta-gold/20">
           <form onSubmit={submit} className="space-y-4">
             <div>
               <label className="block text-sm font-outfit text-enkarta-dark/70 mb-1">Correo</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoFocus
+              <input type="email" aria-label="Correo" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} autoFocus
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none transition-all font-outfit"
                 placeholder="tucorreo@ejemplo.com" />
             </div>
             <div>
               <label className="block text-sm font-outfit text-enkarta-dark/70 mb-1">Contraseña</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+              <input type="password" aria-label="Contraseña" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none transition-all font-outfit"
                 placeholder="••••••••" />
             </div>
@@ -60,6 +60,8 @@ export default function HostLogin() {
         <p className="text-center text-xs font-outfit mt-5" style={{ color: 'rgba(44,37,25,0.4)' }}>
           ¿Problemas para entrar? Contacta a quien creó tu invitación.
         </p>
+        <a className="mt-4 block text-center font-outfit text-sm text-enkarta-gold underline" href={scope === 'host' ? '/revision' : '/panel'}>{scope === 'host' ? 'Solo quiero revisar el diseño' : 'Acceso del anfitrión'}</a>
+        {scope === 'host' && <a href="/puerta" className="mt-3 block text-center font-outfit text-sm text-enkarta-gold underline">Soy personal de puerta</a>}
       </div>
     </div>
   );

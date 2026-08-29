@@ -16,6 +16,7 @@ import { deleteUserDesignKit, listUserDesignKits, saveUserDesignKit } from '@/li
 import { auditDesignConsistency, cleanInvitationDesign } from '@/lib/design-audit';
 import { hasInvitationVisualSystem } from '@/lib/marfil-visual-system';
 import DesignModeControl from '../DesignModeControl';
+import { resolveFeatures } from '@/lib/packages';
 
 interface Props {
   data: InvitationParsed;
@@ -74,16 +75,17 @@ function useCatalogFonts() {
   }, []);
 }
 
-function KitCard({ kit, active, recommended, onApply, onDelete }: {
+function KitCard({ kit, active, recommended, onApply, onDelete, disabled }: {
   kit: DesignKit;
   active: boolean;
   recommended?: boolean;
   onApply: () => void;
   onDelete?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <div className={`group relative overflow-hidden rounded-2xl border-2 transition-all ${active ? 'border-enkarta-gold shadow-[0_10px_28px_rgba(184,151,90,.14)]' : 'border-[#eee9e2] hover:border-enkarta-gold/45'}`}>
-      <button type="button" onClick={onApply} className="block w-full text-left">
+      <button type="button" disabled={disabled} onClick={onApply} className="block w-full text-left disabled:opacity-50">
         <span className="relative block h-[116px] overflow-hidden px-3 py-3" style={{ background: kit.theme.bg }}>
           <span className="absolute -right-6 -top-7 h-24 w-24 rounded-full opacity-15" style={{ background: kit.theme.primary }} />
           <span className="absolute bottom-0 left-0 h-8 w-full opacity-75" style={{ background: kit.theme.surface }} />
@@ -113,6 +115,7 @@ function KitCard({ kit, active, recommended, onApply, onDelete }: {
 export default function StylePanel({ data, onChange }: Props) {
   useCatalogFonts();
   const cfg: BuilderConfig = data.config ?? {};
+  const colorsIncluded = resolveFeatures(cfg).colorCustomization;
   const guided = cfg.designMode === 'guided' && hasInvitationVisualSystem(cfg.tokens);
   const baseTheme = themeForTemplate(data.template);
   const theme: TemplateTheme = { ...baseTheme, ...(cfg.theme ?? {}) };
@@ -149,6 +152,7 @@ export default function StylePanel({ data, onChange }: Props) {
   const setTokens = (patch: Partial<TemplateTokens>) =>
     onChange({ config: { ...cfg, tokens: { ...tokens, ...patch, typeScale: patch.typeScale ? { ...(tokens.typeScale ?? {}), ...patch.typeScale } : tokens.typeScale } } });
   const setThemeColor = (key: keyof TemplateTheme, value: string) => {
+    if (!colorsIncluded) return;
     const next: Partial<InvitationParsed> = { config: { ...cfg, theme: { ...theme, [key]: value } } };
     if (key === 'primary') next.color_primary = value;
     if (key === 'bg') next.color_secondary = value;
@@ -156,6 +160,7 @@ export default function StylePanel({ data, onChange }: Props) {
     onChange(next);
   };
   const applyKit = (kit: DesignKit) => {
+    if (!colorsIncluded) return;
     onChange(applyDesignKitPatch(data, kit));
     setConfirmClean(false);
   };
@@ -171,6 +176,7 @@ export default function StylePanel({ data, onChange }: Props) {
 
   return (
     <div className="space-y-4 p-4 pb-8">
+      {!colorsIncluded && <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900 font-outfit">Plus conserva la paleta del diseño elegido. Para cambiar colores o aplicar otro kit, registra Personalización de color como adicional en Configuración.</p>}
       {hasInvitationVisualSystem(cfg.tokens) && <DesignModeControl guided={guided} onChange={value => onChange({ config: { ...cfg, designMode: value ? 'guided' : 'free' } })} />}
       <section className={cardCls}>
         <div className="flex items-start justify-between gap-3">
@@ -182,7 +188,7 @@ export default function StylePanel({ data, onChange }: Props) {
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           {visibleKits.map(kit => (
-            <KitCard key={kit.id} kit={kit} active={cfg.designKitId === kit.id} recommended={kitMatchScore(kit, data) === kitMatchScore(bestKit, data)} onApply={() => applyKit(kit)} />
+            <KitCard key={kit.id} kit={kit} disabled={!colorsIncluded} active={cfg.designKitId === kit.id} recommended={kitMatchScore(kit, data) === kitMatchScore(bestKit, data)} onApply={() => applyKit(kit)} />
           ))}
         </div>
         {orderedKits.length > 4 && (
@@ -202,7 +208,7 @@ export default function StylePanel({ data, onChange }: Props) {
         </div>
         {customKits.length > 0 && (
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            {customKits.map(kit => <KitCard key={kit.id} kit={kit} active={cfg.designKitId === kit.id} onApply={() => applyKit(kit)} onDelete={() => setCustomKits(deleteUserDesignKit(kit.id))} />)}
+            {customKits.map(kit => <KitCard key={kit.id} kit={kit} disabled={!colorsIncluded} active={cfg.designKitId === kit.id} onApply={() => applyKit(kit)} onDelete={() => setCustomKits(deleteUserDesignKit(kit.id))} />)}
           </div>
         )}
       </section>
@@ -217,7 +223,7 @@ export default function StylePanel({ data, onChange }: Props) {
             return (
               <label key={item.key} className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-[#ede8e1] bg-[#fbfaf8] p-2.5">
                 <span className="relative h-9 w-9 flex-none overflow-hidden rounded-xl border border-black/10 shadow-inner" style={{ background: value }}>
-                  <input type="color" value={value} onChange={event => setThemeColor(item.key, event.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+                  <input type="color" disabled={!colorsIncluded} aria-label={item.label} value={value} onChange={event => setThemeColor(item.key, event.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
                 </span>
                 <span className="min-w-0"><span className="block text-xs font-outfit font-medium text-[#544d45]">{item.label}</span><span className="block truncate text-[9px] font-outfit text-[#9f968d]">{item.desc}</span></span>
               </label>
@@ -285,8 +291,8 @@ export default function StylePanel({ data, onChange }: Props) {
         </div>
         <div className="mt-4 grid grid-cols-[1fr_1.4fr] gap-3 rounded-xl border border-[#eee8e1] p-3">
           <div>
-            <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Color de iconos</span><input type="color" value={cfg.iconColor || theme.primary || '#b8975a'} onChange={event => onChange({ config: { ...cfg, iconColor: event.target.value } })} className="h-10 w-full cursor-pointer rounded-lg border border-[#e5dfd7] p-1" /></label>
-            <input aria-label="Color de iconos HEX" key={cfg.iconColor || theme.primary} defaultValue={cfg.iconColor || theme.primary || '#b8975a'} maxLength={7} spellCheck={false} onBlur={event => { const value = event.target.value.trim(); if (/^#[0-9a-f]{6}$/i.test(value)) onChange({ config: { ...cfg, iconColor: value } }); else event.target.value = cfg.iconColor || theme.primary || '#b8975a'; }} className="mt-1 w-full rounded border border-[#e5dfd7] px-2 py-1.5 text-xs uppercase" />
+            <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Color de iconos</span><input type="color" disabled={!colorsIncluded} value={cfg.iconColor || theme.primary || '#b8975a'} onChange={event => onChange({ config: { ...cfg, iconColor: event.target.value } })} className="h-10 w-full cursor-pointer rounded-lg border border-[#e5dfd7] p-1" /></label>
+            <input disabled={!colorsIncluded} aria-label="Color de iconos HEX" key={cfg.iconColor || theme.primary} defaultValue={cfg.iconColor || theme.primary || '#b8975a'} maxLength={7} spellCheck={false} onBlur={event => { const value = event.target.value.trim(); if (/^#[0-9a-f]{6}$/i.test(value)) onChange({ config: { ...cfg, iconColor: value } }); else event.target.value = cfg.iconColor || theme.primary || '#b8975a'; }} className="mt-1 w-full rounded border border-[#e5dfd7] px-2 py-1.5 text-xs uppercase" />
           </div>
           <label><span className="mb-1 flex justify-between text-[10px] font-outfit text-[#756d64]"><span>Tamaño de iconos</span><strong>{Math.round((cfg.iconScale ?? 1) * 100)}%</strong></span><input type="range" min={0.7} max={1.4} step={0.05} value={cfg.iconScale ?? 1} onChange={event => onChange({ config: { ...cfg, iconScale: Number(event.target.value) } })} className="mt-2 w-full accent-enkarta-gold" /></label>
         </div>
@@ -333,7 +339,7 @@ export default function StylePanel({ data, onChange }: Props) {
           ))}
         </div>
         {!confirmClean ? (
-          <button type="button" onClick={() => setConfirmClean(true)} className="mt-4 w-full rounded-xl border border-[#ded7ce] bg-white py-2.5 text-xs font-outfit font-semibold text-[#61584f] hover:border-enkarta-gold hover:text-enkarta-gold">Limpiar diseño</button>
+          <button type="button" disabled={!colorsIncluded} onClick={() => setConfirmClean(true)} className="mt-4 w-full rounded-xl border border-[#ded7ce] bg-white py-2.5 text-xs font-outfit font-semibold text-[#61584f] hover:border-enkarta-gold hover:text-enkarta-gold">Limpiar diseño</button>
         ) : (
           <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
             <p className="text-[10px] font-outfit leading-relaxed text-amber-800">Se normalizarán fuentes, colores, radios y espacios manuales usando <strong>{(activeKit ?? bestKit)?.name}</strong>. Textos, fotos, bloques e información del evento se conservan.</p>

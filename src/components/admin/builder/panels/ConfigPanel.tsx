@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { BuilderConfig, InvitationParsed, InvitationTemplate, InvitationPackage } from '@/lib/types';
-import { PACKAGE_PRESETS, PACKAGE_LABELS, resolveFeatures } from '@/lib/packages';
+import { useState } from 'react';
+import { BuilderConfig, InvitationParsed, InvitationTemplate } from '@/lib/types';
+import { resolveFeatures } from '@/lib/packages';
 import type { BuilderValidation } from '@/lib/builder-validation';
 import { ENKARTA_COLLECTIONS } from '@/lib/enkarta-collections';
 import PublicationAuditPanel from '../PublicationAuditPanel';
 import ImageUploader from '../ImageUploader';
+import PackageSettings from './PackageSettings';
+import ServiceAccessPanel from './ServiceAccessPanel';
+import ValidityPanel from './ValidityPanel';
+import AdditionalServicesPanel from './AdditionalServicesPanel';
+import { invitationValidity, type ValidityFields } from '@/lib/invitation-validity';
 
 interface Props {
   data: InvitationParsed;
@@ -14,6 +19,7 @@ interface Props {
   onDelete?: () => void;
   validation: BuilderValidation;
   onOpenBlock?: (blockId: string) => void;
+  onValiditySync?: (fields: ValidityFields & { expires_at: string | null }) => void;
 }
 
 const PREMIUM_TEMPLATES: { value: InvitationTemplate; label: string; available: boolean }[] = [
@@ -45,81 +51,16 @@ function LinkRow({ label, url }: { label: string; url: string }) {
   );
 }
 
-// Acceso del cliente: correo + contraseña con que el anfitrión entra a /panel a
-// gestionar SUS invitados y el escáner. Lo fija el equipo Enkarta.
-function HostAccessSection({ id }: { id: string; slug: string }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [deadline, setDeadline] = useState('');
-  const [hasPassword, setHasPassword] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    fetch(`/api/admin/host-credentials?id=${id}`)
-      .then(r => r.json())
-      .then(d => { setEmail(d.hostEmail || ''); setHasPassword(!!d.hasPassword); setDeadline(d.rsvpDeadline ? String(d.rsvpDeadline).slice(0, 10) : ''); })
-      .catch(() => {});
-  }, [id]);
-
-  const save = () => {
-    setSaving(true);
-    fetch('/api/admin/host-credentials', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, email, password: password || undefined, rsvpDeadline: deadline }),
-    })
-      .then(r => r.json())
-      .then(() => { if (password) setHasPassword(true); setPassword(''); setSaved(true); setTimeout(() => setSaved(false), 2000); })
-      .catch(() => {})
-      .finally(() => setSaving(false));
-  };
-
-  const base = typeof window !== 'undefined' ? window.location.origin : 'https://enkarta.com';
-
-  return (
-    <div className="border-t border-gray-100 pt-5">
-      <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-1">🔐 Acceso del Cliente</h4>
-      <p className="text-xs text-gray-400 font-outfit mb-3">
-        Credenciales para que el cliente entre a <code className="text-gray-500">{base}/panel</code> a gestionar sus
-        invitados y el control de acceso. No verá el diseño ni el panel de administración.
-      </p>
-      <div className="space-y-2">
-        <div>
-          <label className="block text-xs text-gray-500 font-outfit mb-1">Correo del cliente</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="cliente@correo.com" className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold outline-none font-outfit" />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 font-outfit mb-1">
-            Contraseña {hasPassword && <span className="text-green-600">· ya configurada</span>}
-          </label>
-          <input type="text" value={password} onChange={e => setPassword(e.target.value)} placeholder={hasPassword ? 'Escribe para cambiarla' : 'Define una contraseña'} className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold outline-none font-outfit" />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 font-outfit mb-1">Fecha límite de confirmación</label>
-          <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold outline-none font-outfit" />
-          <p className="text-[11px] text-gray-400 font-outfit mt-1">Pasada esta fecha, el formulario de confirmación se bloquea para los invitados.</p>
-        </div>
-        <button type="button" onClick={save} disabled={saving || !email} className="w-full py-2.5 rounded-xl bg-enkarta-dark text-white text-sm font-outfit font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
-          {saving ? 'Guardando…' : saved ? '✓ Guardado' : 'Guardar acceso del cliente'}
-        </button>
-        <p className="text-[11px] text-gray-400 font-outfit text-center">
-          Comparte con el cliente: <strong>{base}/panel</strong> + su correo y contraseña.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-export default function ConfigPanel({ data, onChange, onDelete, validation, onOpenBlock }: Props) {
+export default function ConfigPanel({ data, onChange, onDelete, validation, onOpenBlock, onValiditySync }: Props) {
   // Calcular si está expirada
-  const isExpired = data.expires_at ? new Date(data.expires_at) < new Date() : false;
+  const isExpired = invitationValidity(data).state === 'expired';
   const publicationPaused = data.status === 'disabled';
 
   return (
     <div className="space-y-6 p-4">
 
       {/* Acceso del cliente (panel /panel) */}
-      <HostAccessSection id={data.id} slug={data.slug} />
+      <ServiceAccessPanel id={data.id} config={data.config} />
 
       <div className="border-t border-gray-100 pt-5">
         <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">Checklist de Publicación</h4>
@@ -183,93 +124,9 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
         </div>
       </div>
 
-      {/* Paquete contratado */}
-      {(() => {
-        const cfg = data.config ?? {};
-        const feats = resolveFeatures(cfg);
-        const setPackage = (pkg: InvitationPackage | '') =>
-          onChange({ config: { ...cfg, package: pkg || undefined, features: undefined } });
-        const setFeature = (key: keyof NonNullable<typeof cfg.features>, value: boolean | number) =>
-          onChange({ config: { ...cfg, features: { ...(cfg.features ?? {}), [key]: value } } });
-        const TOGGLES: { key: 'music' | 'guestNames' | 'passes' | 'lodging' | 'calendar' | 'smartRsvp'; label: string }[] = [
-          { key: 'smartRsvp',  label: '🤖 Confirmación inteligente' },
-          { key: 'music',      label: '🎵 Música de fondo' },
-          { key: 'guestNames', label: '👤 Nombre del invitado' },
-          { key: 'passes',     label: '🎟️ Tickets / pases' },
-          { key: 'lodging',    label: '🏨 Sugerencia de hospedaje' },
-          { key: 'calendar',   label: '📅 Agendar (Google Calendar)' },
-        ];
-        return (
-          <div className="border-t border-gray-100 pt-5">
-            <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">📦 Paquete del Cliente</h4>
-            <div className="grid grid-cols-4 gap-1.5 mb-3">
-              {([['', 'Libre'], ['exclusive', PACKAGE_LABELS.exclusive], ['premium', PACKAGE_LABELS.premium], ['plus', PACKAGE_LABELS.plus]] as const).map(([v, label]) => (
-                <button
-                  key={v || 'none'}
-                  type="button"
-                  onClick={() => setPackage(v)}
-                  className={`py-2 rounded-xl border-2 text-xs font-outfit transition-all ${
-                    (cfg.package ?? '') === v
-                      ? 'border-enkarta-gold bg-enkarta-gold/5 text-enkarta-gold font-medium'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            {!cfg.package ? (
-              <p className="text-xs text-gray-400 font-outfit">
-                Sin paquete asignado: todas las funciones están activas. Elige el paquete que
-                contrató el cliente y la invitación mostrará solo lo incluido (puedes ajustar
-                cada función abajo si pagó extras).
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {TOGGLES.map(({ key, label }) => {
-                  const on = feats[key] as boolean;
-                  const included = PACKAGE_PRESETS[cfg.package!][key] as boolean;
-                  return (
-                    <label key={key} className="flex items-center justify-between p-2.5 rounded-xl border border-gray-100 bg-gray-50">
-                      <div>
-                        <p className="text-sm font-outfit text-gray-700">{label}</p>
-                        <p className="text-[11px] text-gray-400 font-outfit">
-                          {included ? 'Incluida en el paquete' : 'No incluida'}{on !== included && ' · ajustada manualmente'}
-                        </p>
-                      </div>
-                      <div
-                        onClick={() => setFeature(key, !on)}
-                        className={`w-11 h-6 rounded-full transition-all cursor-pointer relative flex-shrink-0 ${on ? 'bg-enkarta-gold' : 'bg-gray-300'}`}
-                      >
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${on ? 'left-6' : 'left-1'}`} />
-                      </div>
-                    </label>
-                  );
-                })}
-                <div className="flex items-center justify-between p-2.5 rounded-xl border border-gray-100 bg-gray-50">
-                  <div>
-                    <p className="text-sm font-outfit text-gray-700">📷 Galería de fotos</p>
-                    <p className="text-[11px] text-gray-400 font-outfit">Máximo de fotos visibles</p>
-                  </div>
-                  <select
-                    value={feats.galleryMax}
-                    onChange={e => setFeature('galleryMax', parseInt(e.target.value))}
-                    className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 bg-white focus:border-enkarta-gold outline-none font-outfit"
-                  >
-                    {[0, 8, 12, 20, 99].map(n => (
-                      <option key={n} value={n}>{n === 0 ? 'Sin galería' : n === 99 ? 'Ilimitada' : `${n} fotos`}</option>
-                    ))}
-                  </select>
-                </div>
-                <p className="text-[11px] text-gray-400 font-outfit">
-                  El sobre de entrada {feats.entry ? 'está incluido' : 'no está incluido'} en este
-                  paquete; puedes forzarlo en la sección Pantalla de Entrada.
-                </p>
-              </div>
-            )}
-          </div>
-        );
-      })()}
+      <PackageSettings config={data.config ?? {}} onChange={config => onChange({ config })} />
+      <AdditionalServicesPanel data={data} onChange={config => onChange({ config })} />
+      <ValidityPanel data={data} onSync={onValiditySync} />
 
       {/* Pantalla de entrada / sobre */}
       {(() => {
@@ -377,45 +234,6 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
           </div>
         );
       })()}
-
-      {/* Expiración */}
-      <div className="border-t border-gray-100 pt-5">
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">⏰ Expiración Automática</h4>
-
-        <div>
-          <label className="block text-xs text-gray-500 font-outfit mb-1">Fecha de expiración (opcional)</label>
-          <input
-            type="date"
-            className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit"
-            value={data.expires_at?.slice(0, 10) ?? ''}
-            onChange={e => onChange({ expires_at: e.target.value || null })}
-          />
-          <p className="text-xs text-gray-400 font-outfit mt-1">
-            El link se desactivará automáticamente en esta fecha. Dejar vacío = sin expiración.
-          </p>
-        </div>
-
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {[
-            { label: '+7 días',  days: 7 },
-            { label: '+30 días', days: 30 },
-            { label: '+90 días', days: 90 },
-          ].map(({ label, days }) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => {
-                const d = new Date();
-                d.setDate(d.getDate() + days);
-                onChange({ expires_at: d.toISOString().slice(0, 10) });
-              }}
-              className="py-2 text-xs font-outfit rounded-xl border border-gray-200 hover:border-enkarta-gold/50 hover:bg-enkarta-gold/5 text-gray-600 transition-all"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Plantilla */}
       <div className="border-t border-gray-100 pt-5">

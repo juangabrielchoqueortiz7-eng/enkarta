@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { canManageInvitation } from '@/lib/host-session';
+import { canReadResponses } from '@/lib/host-session';
+import { requireInvitationService } from '@/lib/package-services-server';
 import { mapRsvpRow, readRsvps } from '@/lib/rsvps';
 import { parseRsvpInput } from '@/lib/rsvp-contract';
 import { mapRsvpState, openReceipt, privateJson, serviceBody, serviceError } from '@/lib/services-server';
@@ -12,11 +13,12 @@ export async function GET(request: NextRequest) {
   try {
     const id = request.nextUrl.searchParams.get('id');
     if (id) {
-      if (!(await canManageInvitation(id))) return privateJson({ error: 'No autorizado' }, 401);
+      if (!(await canReadResponses(id))) return privateJson({ error: 'No autorizado' }, 401);
       return privateJson(await readRsvps(id));
     }
     const slug = request.nextUrl.searchParams.get('slug');
     if (!slug) throw new Error('INVALID_INPUT');
+    await requireInvitationService(slug, 'rsvp', 'slug');
     const receipt = openReceipt(request, slug, true);
     const { data, error } = await supabaseAdmin.rpc('enkarta_rsvp_state', { p_slug: slug, p_receipt_hash: receipt.hash });
     if (error) return serviceError(error);
@@ -34,6 +36,7 @@ export async function POST(request: NextRequest) {
     const input = parseRsvpInput(body);
     const slug = String(body.slug ?? '').trim();
     if (!slug) throw new Error('INVALID_INPUT');
+    await requireInvitationService(slug, 'rsvp', 'slug');
     const receipt = openReceipt(request, slug);
     if (!receipt.hash) return privateJson({ error: 'Actualiza el formulario para iniciar una confirmación segura.', code: 'SESSION_REQUIRED' }, 400);
     const { data, error } = await supabaseAdmin.rpc('enkarta_submit_open_rsvp', {

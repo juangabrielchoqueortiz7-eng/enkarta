@@ -2,6 +2,7 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { activePublishedVersion, readVersionStorageMeta, type BuilderVersion } from '@/lib/builder-versions';
 import { parseInvitation, type Invitation, type InvitationParsed } from '@/lib/types';
+import { isCurrentContract } from './packages';
 
 interface PublishedRow {
   id: string;
@@ -35,6 +36,7 @@ export async function latestPublishedInvitation(invitation: Invitation): Promise
   });
   const selected = activePublishedVersion(versions);
   if (!selected) return null;
+  const currentConfig = parseInvitation(invitation).config;
   if (selected.publicationState === 'scheduled' && invitation.status === 'draft') {
     await supabaseAdmin.from('invitations').update({ status: 'ready' }).eq('id', invitation.id).eq('status', 'draft');
   }
@@ -49,7 +51,17 @@ export async function latestPublishedInvitation(invitation: Invitation): Promise
       status: 'ready',
       is_active: invitation.is_active,
       expires_at: invitation.expires_at,
+      validity_mode: invitation.validity_mode,
+      validity_extra_days: invitation.validity_extra_days,
+      validity_revision: invitation.validity_revision,
       views_count: invitation.views_count,
+      // El contrato operativo actual no se revierte al restaurar una versión visual antigua.
+      config: isCurrentContract(currentConfig) ? {
+        ...selected.data.config,
+        package: currentConfig.package,
+        features: currentConfig.features,
+        serviceContract: currentConfig.serviceContract,
+      } : selected.data.config,
     },
   };
 }

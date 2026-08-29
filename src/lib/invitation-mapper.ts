@@ -85,7 +85,7 @@ function parseDressCode(raw: string | null): InvitationContent['dressCode'] {
 
 /** Maps itinerary items to ItineraryStep (supports Lottie paths & classic names) */
 function mapItinerary(
-  items: Array<{ time: string; label: string; icon?: string; iconColors?: Record<string, string>; iconSpeed?: number }>
+  items: Array<{ time: string; label: string; place?: string; duration?: string; note?: string; icon?: string; iconColors?: Record<string, string>; iconSpeed?: number }>
 ): ItineraryStep[] {
   if (!items.length) {
     return [
@@ -97,6 +97,9 @@ function mapItinerary(
     icon: i.icon ?? 'church',
     label: i.label,
     time: i.time,
+    place: i.place,
+    duration: i.duration,
+    note: i.note,
     iconColors: i.iconColors,
     iconSpeed: i.iconSpeed,
   }));
@@ -164,6 +167,7 @@ export function mapToAzure(inv: InvitationParsed): InvitationContent {
     musicUrl: config?.musicUrl,
     coverImage: inv.cover_image_url ?? undefined,
     galleryImages: config?.galleryImages ?? [],
+    galleryCaptions: config?.galleryCaptions ?? [],
     icons: config?.sectionIcons,
     iconColorsMap: config?.sectionIconColors,
     iconSpeedsMap: config?.sectionIconSpeeds,
@@ -236,6 +240,7 @@ export function mapToPrimicia(inv: InvitationParsed): PrimiciaContent {
     photoUrl: inv.cover_image_url ?? '/catalog/primicia.jpg',
     musicUrl: config?.musicUrl,
     galleryImages: config?.galleryImages ?? [],
+    galleryCaptions: config?.galleryCaptions ?? [],
     icons: config?.sectionIcons,
     iconColorsMap: config?.sectionIconColors,
     iconSpeedsMap: config?.sectionIconSpeeds,
@@ -292,6 +297,7 @@ export function mapToPassport(inv: InvitationParsed): PassportContent {
     musicUrl: config?.musicUrl,
     coverImage: inv.cover_image_url ?? undefined,
     galleryImages: config?.galleryImages ?? [],
+    galleryCaptions: config?.galleryCaptions ?? [],
     icons: config?.sectionIcons,
     iconColorsMap: config?.sectionIconColors,
     iconSpeedsMap: config?.sectionIconSpeeds,
@@ -366,6 +372,7 @@ export function mapToParadise(inv: InvitationParsed): ParadiseContent {
 
     musicUrl: config?.musicUrl,
     galleryImages: config?.galleryImages ?? [],
+    galleryCaptions: config?.galleryCaptions ?? [],
     icons: config?.sectionIcons,
     iconColorsMap: config?.sectionIconColors,
     iconSpeedsMap: config?.sectionIconSpeeds,
@@ -436,6 +443,7 @@ export function mapToObsidiana(inv: InvitationParsed): ObsidianaContent {
 
     musicUrl: config?.musicUrl,
     galleryImages: config?.galleryImages ?? [],
+    galleryCaptions: config?.galleryCaptions ?? [],
     icons: config?.sectionIcons,
     iconColorsMap: config?.sectionIconColors,
     iconSpeedsMap: config?.sectionIconSpeeds,
@@ -481,6 +489,7 @@ export function mapToDolceVita(inv: InvitationParsed): DolceVitaContent {
 
     itinerary: mapItinerary(inv.itinerary),
     galleryImages: config?.galleryImages ?? [],
+    galleryCaptions: config?.galleryCaptions ?? [],
 
     lodgingTitle: config?.lodgingTitle ?? 'Sugerencia de hospedaje',
     lodging: config?.lodging ?? [],
@@ -562,6 +571,7 @@ export function mapToGrazia(inv: InvitationParsed): GraziaContent {
     storyTitle: config?.storyTitle ?? 'Nuestra Historia',
     storyMessage: config?.storyMessage ?? inv.message ?? 'Nuestros caminos se unieron de una forma inesperada.',
     galleryImages: config?.galleryImages ?? [],
+    galleryCaptions: config?.galleryCaptions ?? [],
 
     noKids: config?.noKidsMessage ?? 'La invitación es solo para adultos.',
     dressCode: inv.dress_code ?? 'Elegante',
@@ -645,6 +655,7 @@ export function mapToProvence(inv: InvitationParsed): ProvenceContent {
     galleryMsg: config?.galleryMessage ?? 'Comparte los momentos especiales de nuestro evento.',
     galleryUrl: inv.gallery_url ?? '#',
     galleryImages: config?.galleryImages ?? [],
+    galleryCaptions: config?.galleryCaptions ?? [],
 
     rsvpMessage: config?.rsvpMessage ?? 'Es muy importante para nosotros confirmar tu asistencia.',
     whatsapp: confirmHref(inv),

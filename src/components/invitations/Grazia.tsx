@@ -271,7 +271,7 @@ export default function Grazia({ data }: { data: GraziaContent }) {
           <Reveal className="mx-auto max-w-4xl text-center">
             <Script style={{ fontSize: '44px' }}>{data.storyTitle ?? 'Nuestra Historia'}</Script>
             <p className="mx-auto mt-4 max-w-xl" style={{ fontFamily: F.body, fontSize: TYPE.body, color: C.ink, lineHeight: 1.6 }}>{data.storyMessage}</p>
-            <MasonryGallery images={data.galleryImages} variant="rounded" className="mt-8" />
+            <MasonryGallery images={data.galleryImages} captions={data.galleryCaptions} variant="rounded" className="mt-8" />
           </Reveal>
         </section>
       )}

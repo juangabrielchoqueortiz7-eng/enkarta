@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { Invitation, parseConfig } from '@/lib/types';
 import ConfirmationsDashboard from '@/components/admin/ConfirmationsDashboard';
 import { collectionFor, publicTemplateName } from '@/lib/enkarta-collections';
+import { formatValidityDate, invitationValidity, validityLabel } from '@/lib/invitation-validity';
+import { eventDay } from '@/lib/rsvp-contract';
 
 const BUILDER_TEMPLATES = ['azure','primicia','passport','paradise','obsidiana','dolcevita','grazia','carmesi_v2','napoly','euforia','rosegold','allegria'];
 
@@ -23,6 +25,11 @@ export default function AdminPage() {
   const [view, setView] = useState<'invitations' | 'confirmations'>('invitations');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [validityFilter, setValidityFilter] = useState('all');
+  const [today, setToday] = useState(() => new Date());
+  useEffect(() => { const timer = setInterval(() => setToday(new Date()), 60000); return () => clearInterval(timer); }, []);
+  const terms = useMemo(() => new Map(invitations.map(inv => [inv.id, invitationValidity({ ...inv, config: parseConfig(inv.builder_config) }, eventDay(today))])), [invitations, today]);
+  const expiringCount = Array.from(terms.values()).filter(v => v.state === 'soon' || v.state === 'today').length;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,6 +125,9 @@ export default function AdminPage() {
     const q = search.trim().toLowerCase();
     return invitations.filter(inv => {
       if (statusFilter !== 'all' && inv.status !== statusFilter) return false;
+      const state = terms.get(inv.id)?.state;
+      if (validityFilter === 'soon' && state !== 'soon' && state !== 'today') return false;
+      if (validityFilter === 'expired' && state !== 'expired') return false;
       if (!q) return true;
       return (
         inv.slug.toLowerCase().includes(q) ||
@@ -126,7 +136,7 @@ export default function AdminPage() {
         publicTemplateName(inv.template, parseConfig(inv.builder_config).layout?.presetKey).toLowerCase().includes(q)
       );
     });
-  }, [invitations, search, statusFilter]);
+  }, [invitations, search, statusFilter, validityFilter, terms]);
 
   // ── Login ──
   if (!isAuthenticated) {
@@ -296,6 +306,7 @@ export default function AdminPage() {
             </div>
 
             {/* Toolbar: búsqueda + filtros */}
+            {expiringCount > 0 && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 font-outfit"><div><p className="text-sm font-semibold text-amber-900">{expiringCount} {expiringCount === 1 ? 'invitación vence' : 'invitaciones vencen'} en los próximos 7 días</p><p className="mt-1 text-xs text-amber-800">Revisa las ampliaciones acordadas. El vencimiento no elimina invitados ni respuestas.</p></div><button type="button" onClick={() => { setValidityFilter('soon'); setStatusFilter('all'); setSearch(''); }} className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-medium text-amber-900">Revisar vencimientos</button></div>}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
               <div className="relative flex-1 max-w-md">
                 <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
@@ -319,6 +330,7 @@ export default function AdminPage() {
                   </button>
                 ))}
               </div>
+              <select aria-label="Filtrar vigencia" value={validityFilter} onChange={e => setValidityFilter(e.target.value)} className="rounded-xl border bg-white px-3 py-2 text-xs font-outfit"><option value="all">Cualquier vigencia</option><option value="soon">Vencen en 7 días</option><option value="expired">Vigencia finalizada</option></select>
               <span className="font-outfit text-xs text-gray-400 sm:ml-auto">{filtered.length} de {invitations.length}</span>
             </div>
 
@@ -345,7 +357,7 @@ export default function AdminPage() {
             ) : filtered.length === 0 ? (
               <div className="bg-white rounded-2xl border p-14 text-center" style={{ borderColor: 'rgba(139,125,95,0.14)' }}>
                 <p className="font-outfit text-sm text-gray-500">No hay resultados para tu búsqueda.</p>
-                <button onClick={() => { setSearch(''); setStatusFilter('all'); }} className="mt-3 font-outfit text-sm text-enkarta-gold hover:underline">
+                <button onClick={() => { setSearch(''); setStatusFilter('all'); setValidityFilter('all'); }} className="mt-3 font-outfit text-sm text-enkarta-gold hover:underline">
                   Limpiar filtros
                 </button>
               </div>
@@ -359,6 +371,7 @@ export default function AdminPage() {
                         <th>Plantilla</th>
                         <th>Estado</th>
                         <th>Fecha evento</th>
+                        <th>Vigencia</th>
                         <th className="text-right">Acciones</th>
                       </tr>
                     </thead>
@@ -391,11 +404,13 @@ export default function AdminPage() {
                                 : 'bg-amber-50 text-amber-700'
                             }`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${inv.status === 'ready' ? 'bg-green-500' : 'bg-amber-400'}`} />
-                              {inv.status === 'ready' ? 'Publicada' : 'Borrador'}
+                              {inv.status === 'disabled' || inv.is_active === false ? 'Pausada' : inv.status === 'expired' ? 'Cerrada' : inv.status === 'ready' ? 'Publicada' : 'Borrador'}
                             </span>
                           </td>
                           <td className="text-gray-600 font-outfit text-sm">
-                            {inv.event_date ? new Date(inv.event_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                            {inv.event_date ? formatValidityDate(inv.event_date.slice(0, 10)) : '—'}
+                          </td>
+                          <td className="font-outfit text-xs"><a href={`/admin/vigencia/${inv.id}`} className="block rounded-lg p-1 hover:bg-amber-50"><span className={`block font-medium ${['soon', 'today', 'expired'].includes(terms.get(inv.id)!.state) ? 'text-amber-800' : 'text-gray-600'}`}>{validityLabel(terms.get(inv.id)!)}</span><span className="mt-1 block text-[11px] text-gray-400">{terms.get(inv.id)!.expiresAt ? formatValidityDate(terms.get(inv.id)!.expiresAt) : 'Ver condiciones'} →</span></a>
                           </td>
                           <td>
                             <div className="flex items-center justify-end gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">

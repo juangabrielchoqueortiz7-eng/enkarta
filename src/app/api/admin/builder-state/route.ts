@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminSession, getHostSession } from '@/lib/host-session';
+import { getAdminSession, canReviewInvitation } from '@/lib/host-session';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { readReviewNoteStorage, readVersionStorageMeta, reviewNoteTextForStorage, versionSnapshotForStorage, type BuilderVersion, type ReviewNote } from '@/lib/builder-versions';
 import type { BuilderRole, ReviewStatus } from '@/lib/types';
+import { clientInvitation } from '@/lib/client-invitation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -56,13 +57,13 @@ function storageError(error: { message?: string; code?: string } | null) {
 async function actorRole(invitationId: string): Promise<'admin' | 'client' | null> {
   if (!invitationId) return null;
   if (await getAdminSession()) return 'admin';
-  const hostInvitationId = await getHostSession();
-  return hostInvitationId === invitationId ? 'client' : null;
+  return await canReviewInvitation(invitationId) ? 'client' : null;
 }
 
 export async function GET(request: NextRequest) {
   const invitationId = new URL(request.url).searchParams.get('invitationId') || '';
-  if (!(await actorRole(invitationId))) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const actor = await actorRole(invitationId);
+  if (!actor) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   const [versionsResult, notesResult] = await Promise.all([
     supabaseAdmin.from('builder_versions').select('*').eq('invitation_id', invitationId).order('created_at', { ascending: false }).limit(30),
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
   const failure = storageError(versionsResult.error || notesResult.error);
   if (failure) return failure;
   return NextResponse.json({
-    versions: ((versionsResult.data || []) as VersionRow[]).map(versionFromRow),
+    versions: ((versionsResult.data || []) as VersionRow[]).map(row => { const version = versionFromRow(row); return actor === 'client' ? { ...version, data: clientInvitation(version.data, true) } : version; }),
     notes: ((notesResult.data || []) as NoteRow[]).map(noteFromRow),
   });
 }
@@ -88,7 +89,15 @@ export async function POST(request: NextRequest) {
   const versions = [...(Array.isArray(body?.versions) ? body!.versions : []), ...(body?.version ? [body.version] : [])]
     .slice(0, 30).map(value => versionToRow(value, invitationId)).filter(Boolean);
   const incomingNotes = [...(Array.isArray(body?.notes) ? body!.notes : []), ...(body?.note ? [body.note] : [])]
-    .map(note => actor === 'client' ? { ...note, role: 'client' as const } : note);
+    .map(note => actor === 'client' ? { ...note, role: 'client' as const, author: 'Cliente' } : note);
+  if (actor === 'client') {
+    // Un upsert por id no debe permitir apropiarse de una nota del equipo u otro evento.
+    for (const note of incomingNotes.slice(0, 200)) {
+      const { data: existing, error } = await supabaseAdmin.from('builder_review_notes').select('invitation_id,text').eq('id', note.id).maybeSingle();
+      const failure = storageError(error); if (failure) return failure;
+      if (existing && (existing.invitation_id !== invitationId || readReviewNoteStorage(existing.text).role !== 'client')) return NextResponse.json({ error: 'Solo puedes modificar tus propias observaciones' }, { status: 403 });
+    }
+  }
   const notes = incomingNotes
     .slice(0, 200).map(value => noteToRow(value, invitationId)).filter(Boolean);
   if (!versions.length && !notes.length) return NextResponse.json({ error: 'Contenido inválido' }, { status: 400 });

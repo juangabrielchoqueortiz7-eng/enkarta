@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { isPackage, newServiceContract } from '@/lib/packages';
 
 export async function POST(request: NextRequest) {
   try {
     // Validate API key
     const apiKey = request.headers.get('x-api-key');
-    if (apiKey !== process.env.ENKARTA_API_KEY) {
+    if (!process.env.ENKARTA_API_KEY || apiKey !== process.env.ENKARTA_API_KEY) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
+    if (!isPackage(body.package)) return NextResponse.json({ error: 'Selecciona el paquete contratado (plus, premium o exclusive).' }, { status: 400 });
 
     // Try to parse guest info from raw data
     let guestName = body.guest_name || null;
@@ -35,6 +37,7 @@ export async function POST(request: NextRequest) {
       .from('invitations')
       .insert({
         slug,
+        builder_config: newServiceContract({}, body.package),
         status: 'draft',
         template: body.template || 'perla',
         type: body.type || 'boda',

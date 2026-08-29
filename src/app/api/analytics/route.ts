@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'node:crypto';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { parseConfig } from '@/lib/types';
+import { eventDay } from '@/lib/rsvp-contract';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     const { data: invitation } = await supabaseAdmin
       .from('invitations').select('id,status,is_active,expires_at,builder_config').eq('slug', slug).maybeSingle();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = eventDay();
     if (!invitation || invitation.status !== 'ready' || invitation.is_active === false || (invitation.expires_at && invitation.expires_at.slice(0, 10) < today)) {
       return NextResponse.json({ error: 'Invitación no disponible' }, { status: 404 });
     }

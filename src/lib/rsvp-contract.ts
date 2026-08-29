@@ -9,6 +9,7 @@ export interface RsvpSessionState {
 }
 
 export const SERVICE_ERRORS: Record<string, { status: number; message: string }> = {
+  SERVICE_NOT_INCLUDED: { status: 403, message: 'Este servicio no está incluido en el paquete contratado. Contacta al equipo Enkarta.' },
   NOT_FOUND: { status: 404, message: 'No encontramos esta invitación o acceso.' },
   EVENT_CLOSED: { status: 403, message: 'Esta invitación no está disponible para confirmar o registrar ingresos.' },
   RSVP_CLOSED: { status: 403, message: 'La fecha límite de confirmación ya pasó. Contacta a los anfitriones para cambios.' },
@@ -21,6 +22,8 @@ export const SERVICE_ERRORS: Record<string, { status: number; message: string }>
   DUPLICATE_SCAN: { status: 409, message: 'Este movimiento ya está registrado. No se volvió a contabilizar.' },
   NOT_CONFIRMED: { status: 409, message: 'Este pase no tiene un cupo confirmado disponible.' },
   REQUEST_REUSED: { status: 409, message: 'El reintento no coincide con la operación original. Actualiza antes de continuar.' },
+  SAVE_DATE_CLOSED: { status: 403, message: 'La preconfirmación de esta fecha no está disponible.' },
+  STALE_SAVE_DATE: { status: 409, message: 'La preconfirmación cambió en otra sesión. Actualiza antes de guardar.' },
 };
 
 export const isUuid = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);

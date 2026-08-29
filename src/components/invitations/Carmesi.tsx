@@ -310,7 +310,7 @@ export default function Carmesi({ data }: { data: DolceVitaContent }) {
         <section className={`px-6 ${SECTION.tight}`} style={{ background: C.paper }}>
           <Reveal className="mx-auto max-w-4xl text-center">
             <Script style={{ fontSize: '44px', color: C.crimson }}>Nosotros</Script>
-            <MasonryGallery images={data.galleryImages} className="mt-8" />
+            <MasonryGallery images={data.galleryImages} captions={data.galleryCaptions} className="mt-8" />
           </Reveal>
         </section>
       )}

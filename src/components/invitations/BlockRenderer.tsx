@@ -10,6 +10,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import type {
   Block, BlockLayout, BlockViewportLayout, PageLayout, TemplateTheme,
   PageMotion, TemplateDecor, TemplateTokens, SeamShape, Guest,
+  NavigationItem,
+  InvitationLocale,
 } from '@/lib/types';
 import PageDecor from './decorations';
 import { BLOCKS } from './blocks/registry';
@@ -19,11 +21,13 @@ import { useBlockTypography } from './blocks/typography';
 import { hasInvitationVisualSystem, MARFIL_SPACE, resolveInvitationTypography } from '@/lib/marfil-visual-system';
 import { isEmptyOptionalBlock } from '@/lib/collection-design';
 import { SeamFx, type SeamFxKind } from './seam-fx';
-import { BlockEditProvider, BlockDataProvider } from './blocks/editable';
+import { BlockEditProvider, BlockDataProvider, useBlockData } from './blocks/editable';
 import MusicPlayer from './MusicPlayer';
 import { ENKARTA_WA_URL } from './shared';
 import type { BlockTheme } from './blocks/theme';
 import { PageMotionProvider, ScrollExperience, ScrollReveal, usePageMotion } from '@/lib/scroll-motion';
+import InvitationNavigation from './InvitationNavigation';
+import { invitationCopy } from '@/lib/invitation-i18n';
 
 interface Props {
   layout: PageLayout;
@@ -50,6 +54,9 @@ interface Props {
   guest?: Guest;
   /** Hay portada ("sobre"): no animar hasta que el invitado entre. */
   gated?: boolean;
+  /** Menú público opcional asociado a secciones estables del documento. */
+  navigation?: { enabled?: boolean; position?: 'top' | 'bottom'; style?: 'glass' | 'solid' | 'minimal'; items?: NavigationItem[] };
+  locale?: InvitationLocale;
   // ── Modo editor ──
   editor?: boolean;
   selectedId?: string;
@@ -645,20 +652,22 @@ function EditorBlock({
 function FooterBar({ seam }: { seam?: SeamInfo }) {
   const t = useBlockTheme();
   const type = useBlockTypography();
+  const { locale } = useBlockData();
+  const copy = invitationCopy(locale);
   const noteType = type('note');
   return (
     <footer className="relative pb-8 pt-14 text-center" style={{ background: t.primaryDeep }}>
       {seam && <SeamFx fx={seam.fx} from={seam.from} shape={seam.shape} hairline={seam.hairline} height={44} />}
       <p className="font-great text-2xl" style={{ color: '#fff' }}>Enkarta</p>
       <p className="font-cormorant text-sm mt-1" style={{ color: noteType.fontFamily ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)', ...noteType, paddingInline: noteType.fontFamily ? 24 : undefined }}>
-        ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Contáctanos</a>
+        {copy.footerQuestion} <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">{copy.contactUs}</a>
       </p>
     </footer>
   );
 }
 
 export default function BlockRenderer({
-  layout, theme, nightTheme, nightDefault, motion, decor, tokens, musicUrl, slug, guest, demo, deadlinePassed, previewOnly, gated, editor, selectedId, selectedIds, onSelectBlock, onTransform, onEditProp, onPatchBlock, onDuplicateBlock, onDeleteBlock, onCopyBlockStyle, onPasteBlockStyle, hasStyleClipboard, previewScale = 1, scrollRoot, viewportMode,
+  layout, theme, nightTheme, nightDefault, motion, decor, tokens, musicUrl, slug, guest, demo, deadlinePassed, previewOnly, gated, navigation, locale = 'es-BO', editor, selectedId, selectedIds, onSelectBlock, onTransform, onEditProp, onPatchBlock, onDuplicateBlock, onDeleteBlock, onCopyBlockStyle, onPasteBlockStyle, hasStyleClipboard, previewScale = 1, scrollRoot, viewportMode,
 }: Props) {
   const hasNight = !!nightTheme && Object.keys(nightTheme).length > 0;
   const [night, setNight] = useState(!!nightDefault && hasNight);
@@ -735,7 +744,7 @@ export default function BlockRenderer({
   return (
     <BlockThemeProvider value={bt}>
       <BlockDesignProvider value={tokens ?? {}}>
-      <BlockDataProvider value={{ slug, guest, demo, deadlinePassed }}>
+      <BlockDataProvider value={{ slug, guest, demo, deadlinePassed, locale }}>
         <PageMotionProvider value={motion} gated={gated} scrollRoot={scrollRoot}>
           <ScrollExperience color={bt.primary} disabled={!!editor}>
           <div
@@ -760,6 +769,7 @@ export default function BlockRenderer({
             onClick={editor ? () => onSelectBlock?.('', false) : undefined}
           >
             {isMarfil ? <div className="ek-scoped-decor pointer-events-none absolute inset-0 overflow-clip" style={{ contain: 'paint' }}><PageDecor decor={decor} color={bt.primary} /></div> : <PageDecor decor={decor} color={bt.primary} />}
+            {!editor && !previewOnly && navigation?.enabled && (navigation.items?.length ?? 0) >= 2 && <InvitationNavigation items={navigation.items!} position={navigation.position} style={navigation.style} theme={night && hasNight ? nightTheme : theme} />}
             <div className="relative" style={{ zIndex: 10 }}>
               {blocks.map((b, i) => {
                 const currentLayout = resolvedLayout(b.layout, viewport);

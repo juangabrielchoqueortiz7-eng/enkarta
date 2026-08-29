@@ -1,5 +1,7 @@
 import { migrateBuilderConfig } from './layout-migrations';
 import { ENKARTA_COLLECTIONS } from './enkarta-collections';
+import type { ValidityFields } from './invitation-validity';
+import type { GalleryCaption } from './gallery';
 
 export type InvitationStatus = 'draft' | 'ready' | 'expired' | 'disabled';
 
@@ -29,6 +31,86 @@ export interface BuilderWorkflow {
   scheduledAt?: string;
   scheduledVersionId?: string;
   unpublishedAt?: string;
+}
+
+export type AdditionalServiceStatus = 'not_contracted' | 'contracted' | 'in_progress' | 'blocked' | 'ready';
+export type InvitationLocale = 'es-BO' | 'en-US' | 'pt-BR' | 'fr-FR';
+
+export interface AdditionalServiceBase {
+  status?: AdditionalServiceStatus;
+  owner?: string;
+  dueAt?: string;
+  updatedAt?: string;
+  notes?: string;
+}
+
+export interface NavigationItem {
+  id: string;
+  blockId: string;
+  label: string;
+}
+
+/** Expediente verificable de los adicionales contratados para una invitación. */
+export interface AdditionalServicesConfig {
+  version: 1;
+  domain?: AdditionalServiceBase & {
+    hostname?: string;
+    accountOwner?: string;
+    expiresAt?: string;
+    autoRenew?: boolean;
+    ownershipVerified?: boolean;
+    dnsVerified?: boolean;
+    httpsVerified?: boolean;
+  };
+  language?: AdditionalServiceBase & {
+    sourceLocale?: InvitationLocale;
+    targetLocale?: InvitationLocale;
+    contentTranslated?: boolean;
+    formsTranslated?: boolean;
+    datesLocalized?: boolean;
+    systemMessagesTranslated?: boolean;
+    clientReviewed?: boolean;
+  };
+  saveDate?: AdditionalServiceBase & {
+    enabled?: boolean;
+    title?: string;
+    message?: string;
+    eyebrow?: string;
+    buttonLabel?: string;
+    heroImage?: string;
+    preconfirmationEnabled?: boolean;
+    published?: boolean;
+    convertedAt?: string;
+  };
+  personalization?: AdditionalServiceBase & {
+    brief?: string;
+    references?: string[];
+    proposalLabel?: string;
+    proposalReady?: boolean;
+    clientApproved?: boolean;
+    approvedAt?: string;
+  };
+  navigation?: AdditionalServiceBase & {
+    enabled?: boolean;
+    position?: 'top' | 'bottom';
+    style?: 'glass' | 'solid' | 'minimal';
+    items?: NavigationItem[];
+    mobileVerified?: boolean;
+  };
+  visibility?: AdditionalServiceBase & {
+    extensionRegistered?: boolean;
+    clientNotified?: boolean;
+  };
+}
+
+export type QualityCheckResult = 'pending' | 'passed' | 'failed' | 'not_applicable';
+export interface QualityCheckRecord { result: QualityCheckResult; checkedAt?: string; evidence?: string; }
+export interface QualityControlConfig {
+  version: 1;
+  runs?: Partial<Record<InvitationPackage, { environment?: 'local' | 'preview' | 'production'; url?: string; checks?: Record<string, QualityCheckRecord>; updatedAt?: string }>>;
+  support?: { channel?: string; availability?: string; firstResponseHours?: number; supportUntil?: string; escalationOwner?: string; instructionsDelivered?: boolean };
+  privacy?: { retentionConfirmed?: boolean; backupAt?: string; restoreTestedAt?: string; deletionOwner?: string; incidentOwner?: string };
+  release?: { stage?: 'draft' | 'preview' | 'approved' | 'production'; previewUrl?: string; deploymentId?: string; rollbackVersionId?: string; approvedBy?: string; approvedAt?: string; productionCheckedAt?: string; notes?: string };
 }
 
 /** Datos de segmentación que viven en builder_config para no exigir columnas nuevas. */
@@ -123,6 +205,8 @@ export interface BuilderConfig {
   musicUrl?: string;
   /** Galería de fotos subidas (URLs de Supabase Storage) renderizada en la plantilla */
   galleryImages?: string[];
+  /** Relato y descripción accesible asociados a cada fotografía por URL. */
+  galleryCaptions?: GalleryCaption[];
   /** Imágenes por sección, ej: { hero: '...', couple: '...' } */
   sectionImages?: Record<string, string>;
   /** Iconos por sección elegidos en el panel: { ceremony: 'church' | '/lottie/...' | 'https://.../icono.png' } */
@@ -157,6 +241,12 @@ export interface BuilderConfig {
   package?: InvitationPackage;
   /** Overrides por función sobre el preset del paquete (lo que pida el cliente). */
   features?: PackageFeatureOverrides;
+  /** Catálogo de servicios vigente. Ausente = conservar las condiciones anteriores. */
+  serviceContract?: { version: 2; adoptedAt: string; extras: PackageExtra[] };
+  /** Estado, alcance y comprobaciones de los adicionales de la fase 7. */
+  additionalServices?: AdditionalServicesConfig;
+  /** Evidencia interna de aceptación, soporte y liberación de la fase 8. */
+  qualityControl?: QualityControlConfig;
   // ── Tema visual y decoración (control total de la plantilla) ──
   theme?: TemplateTheme;
   /** Paleta alternativa "noche" (modo oscuro). Si existe, aparece un toggle sol/luna. */
@@ -174,6 +264,8 @@ export interface BuilderConfig {
   entry?: InvitationEntryConfig;
   /** Mensaje configurable para compartir por WhatsApp. Soporta {nombre} y {link}. */
   whatsappTemplate?: string;
+  /** Recordatorio manual. Abrir WhatsApp no confirma envío ni entrega. */
+  whatsappReminderTemplate?: string;
   // Permite añadir claves nuevas sin tocar el tipo
   [key: string]: unknown;
 }
@@ -194,6 +286,15 @@ export interface InvitationEntryConfig {
 
 /** Paquetes comerciales de Enkarta (ver tabla comparativa de la landing). */
 export type InvitationPackage = 'exclusive' | 'premium' | 'plus';
+export type RsvpMode = 'whatsapp' | 'form' | 'smart';
+export interface PackageExtra {
+  id: string;
+  feature: keyof PackageFeatureOverrides;
+  value: boolean | number | RsvpMode;
+  reason: string;
+  recordedAt: string;
+  source: 'contracted' | 'legacy';
+}
 
 /**
  * Overrides por función sobre el preset del paquete. Permiten ajustar una
@@ -216,6 +317,12 @@ export interface PackageFeatureOverrides {
   calendar?: boolean;
   /** Confirmación inteligente: formulario in-app + panel de invitados en vivo */
   smartRsvp?: boolean;
+  rsvpMode?: RsvpMode;
+  hostPanel?: boolean;
+  qrAccess?: boolean;
+  tableAssignment?: boolean;
+  photoSharing?: boolean;
+  colorCustomization?: boolean;
 }
 
 /**
@@ -580,6 +687,11 @@ export interface Guest {
   group?: string;        // familia, VIP, proveedores, etc.
   eventAccess?: GuestEventAccess;
   sent: boolean;         // "invitación enviada" (manual)
+  deliveryStatus?: 'pending' | 'opened' | 'marked';
+  whatsappOpenedAt?: string;
+  manuallyMarkedAt?: string;
+  lastReminderAt?: string;
+  reminderCount?: number;
   status: 'pending' | 'confirmed' | 'declined';
   /** Cuántos pases confirmó realmente usar (≤ passes). */
   confirmedPasses?: number;
@@ -614,7 +726,7 @@ export interface PageLayout {
   blocks: Block[];
 }
 
-export interface Invitation {
+export interface Invitation extends ValidityFields {
   id: string;
   slug: string;
   status: InvitationStatus;
@@ -666,6 +778,10 @@ export interface Invitation {
   // Gestión de invitados / control de acceso (migración 002)
   host_email: string | null;
   host_password_hash: string | null;
+  review_email?: string | null;
+  review_password_hash?: string | null;
+  door_email?: string | null;
+  door_password_hash?: string | null;
   rsvp_deadline: string | null;     // fecha límite de confirmación (ISO date)
   whatsapp_template: string | null; // mensaje de envío configurable
 

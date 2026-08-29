@@ -11,7 +11,7 @@
 
 import React, { createContext, useContext } from 'react';
 import { WriteOn, CascadeText } from '@/lib/scroll-motion';
-import type { Guest } from '@/lib/types';
+import type { Guest, InvitationLocale } from '@/lib/types';
 import { useBlockDesign } from './theme';
 import { hasInvitationVisualSystem } from '@/lib/marfil-visual-system';
 
@@ -25,7 +25,7 @@ export const BlockEditProvider = Ctx.Provider;
 export const useBlockEdit = () => useContext(Ctx);
 
 // Datos de la invitación disponibles para los bloques (p. ej. el slug para el RSVP).
-interface BlockData { slug?: string; guest?: Guest; demo?: boolean; deadlinePassed?: boolean }
+interface BlockData { slug?: string; guest?: Guest; demo?: boolean; deadlinePassed?: boolean; locale?: InvitationLocale }
 const DataCtx = createContext<BlockData>({});
 export const BlockDataProvider = DataCtx.Provider;
 export const useBlockData = () => useContext(DataCtx);

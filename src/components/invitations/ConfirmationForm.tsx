@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Guest, RsvpEntry } from '@/lib/types';
+import type { Guest, InvitationLocale, RsvpEntry } from '@/lib/types';
 import type { RsvpSessionState } from '@/lib/rsvp-contract';
 import type { BlockTheme } from './blocks/theme';
 import QrCard from './QrCard';
 import { emitInvitationAnalytics } from './InvitationAnalytics';
+import { invitationCopy } from '@/lib/invitation-i18n';
 
 interface Props {
   slug?: string;
@@ -20,11 +21,14 @@ interface Props {
   fieldStyle?: CSSProperties;
   buttonStyle?: CSSProperties;
   noteStyle?: CSSProperties;
+  locale?: InvitationLocale;
 }
 
 /** Una implementación para bloques y plantillas. No escribe en demos/editor. */
-export default function ConfirmationForm({ slug, guest, guestName, maxPasses, demo, deadlinePassed, theme, buttonLabel = 'Confirmar asistencia', fieldStyle, buttonStyle, noteStyle }: Props) {
+export default function ConfirmationForm({ slug, guest, guestName, maxPasses, demo, deadlinePassed, theme, buttonLabel, fieldStyle, buttonStyle, noteStyle, locale = 'es-BO' }: Props) {
   const router = useRouter();
+  const copy = invitationCopy(locale);
+  const submitLabel = buttonLabel || copy.confirmAttendance;
   const [session, setSession] = useState<RsvpSessionState>({ canRespond: !deadlinePassed, guest });
   const [name, setName] = useState(guest?.confirmName || guest?.name || guestName || '');
   const [attending, setAttending] = useState<'yes' | 'no'>(guest?.status === 'declined' ? 'no' : 'yes');
@@ -60,31 +64,31 @@ export default function ConfirmationForm({ slug, guest, guestName, maxPasses, de
 
   const refresh = useCallback(async () => {
     if (demo) { applyState({ canRespond: !deadlinePassed, guest }); setLoading(false); return; }
-    if (!slug) { setError('La confirmación no está disponible en esta vista.'); setLoading(false); setMustRefresh(true); return; }
+    if (!slug) { setError(copy.unavailable); setLoading(false); setMustRefresh(true); return; }
     setLoading(true);
     setError('');
     try {
       const query = new URLSearchParams({ slug, ...(publicId ? { publicId } : {}) });
       const response = await fetch(`${endpoint}?${query}`, { cache: 'no-store' });
       const value = await response.json();
-      if (!response.ok) throw new Error(value.error || 'No pudimos consultar tu respuesta.');
+      if (!response.ok) throw new Error(value.error || copy.queryFailed);
       if (!alive.current) return;
       applyState(value);
       pending.current = null;
       setMustRefresh(false);
     } catch (cause) {
       if (!alive.current) return;
-      setError(cause instanceof TypeError ? 'Sin conexión. No se enviaron cambios.' : cause instanceof Error ? cause.message : 'No pudimos cargar el formulario.');
+      setError(cause instanceof TypeError ? copy.offline : cause instanceof Error ? cause.message : copy.queryFailed);
       setMustRefresh(true);
     } finally { if (alive.current) setLoading(false); }
-  }, [demo, deadlinePassed, guest, slug, publicId, endpoint, applyState]);
+  }, [demo, deadlinePassed, guest, slug, publicId, endpoint, applyState, copy]);
 
   useEffect(() => { alive.current = true; void refresh(); return () => { alive.current = false; }; }, [refresh]);
 
   const submit = async () => {
     if (inFlight.current || loading || mustRefresh || !session.canRespond) return;
-    if (!name.trim()) { setError('Escribe tu nombre para confirmar.'); return; }
-    if (attending === 'yes' && (!Number.isInteger(passes) || passes < 1 || passes > cap)) { setError(`Elige entre 1 y ${cap} personas.`); return; }
+    if (!name.trim()) { setError(copy.nameRequired); return; }
+    if (attending === 'yes' && (!Number.isInteger(passes) || passes < 1 || passes > cap)) { setError(copy.passesBetween(cap)); return; }
     if (demo) {
       const next: RsvpEntry = { id: 'demo', name, attending, passes: attending === 'yes' ? passes : 0, message, at: new Date().toISOString(), revision: 1 };
       applyState({ ...session, entry: next }); return;
@@ -100,42 +104,42 @@ export default function ConfirmationForm({ slug, guest, guestName, maxPasses, de
       const result = await response.json();
       if (!response.ok) {
         if (response.status < 500) { pending.current = null; setMustRefresh(true); }
-        throw new Error(result.error || 'No se pudo guardar tu respuesta.');
+        throw new Error(result.error || copy.saveFailed);
       }
       applyState({ ...session, guest: result.guest ?? session.guest, entry: result.entry ?? session.entry });
       pending.current = null;
       emitInvitationAnalytics('rsvp_submit', { attending, passes: attending === 'yes' ? passes : 0, personalized: Boolean(publicId) });
       if (publicId) router.refresh(); // Actualiza también pases y bloques condicionales.
     } catch (cause) {
-      setError(cause instanceof TypeError ? 'No pudimos comprobar el resultado. Reintenta sin cambiar los datos: no se duplicará la respuesta.' : cause instanceof Error ? cause.message : 'No se pudo guardar tu respuesta.');
+      setError(cause instanceof TypeError ? copy.uncertain : cause instanceof Error ? cause.message : copy.saveFailed);
     } finally { inFlight.current = false; setBusy(false); }
   };
 
   return <div className="mx-auto text-left" style={{ maxWidth: 420 }}>
-    {loading && <p role="status" className="py-4 text-center" style={{ color: theme.muted, ...noteStyle }}>Consultando tu confirmación…</p>}
+    {loading && <p role="status" className="py-4 text-center" style={{ color: theme.muted, ...noteStyle }}>{copy.loading}</p>}
     {done && !editing && <div className="space-y-4 text-center" role="status">
       <div className="rounded-2xl border px-5 py-6" style={{ background: theme.surface, borderColor: theme.line, color: theme.text }}>
-        <p className="text-lg">{confirmed ? '¡Asistencia confirmada!' : 'Gracias por avisarnos'}</p>
-        <p className="mt-2" style={noteStyle}>{confirmed ? `${confirmedPasses} ${confirmedPasses === 1 ? 'lugar reservado' : 'lugares reservados'}.` : 'Lamentamos que no puedas acompañarnos.'}</p>
+        <p className="text-lg">{confirmed ? copy.confirmed : copy.thanks}</p>
+        <p className="mt-2" style={noteStyle}>{confirmed ? copy.placesReserved(confirmedPasses) : copy.cannotAttend}</p>
       </div>
       {!demo && confirmed && currentGuest?.accessToken && currentGuest.accessCode && <QrCard t={theme} accessToken={currentGuest.accessToken} accessCode={currentGuest.accessCode} guestName={currentGuest.confirmName || currentGuest.name} tableNo={currentGuest.tableNo} passes={confirmedPasses} />}
-      {session.canRespond && !loading && <button type="button" className="min-h-11 underline underline-offset-4" onClick={() => setEditing(true)} style={{ color: theme.primary }}>Modificar mi respuesta</button>}
+      {session.canRespond && !loading && <button type="button" className="min-h-11 underline underline-offset-4" onClick={() => setEditing(true)} style={{ color: theme.primary }}>{copy.editAnswer}</button>}
     </div>}
-    {!session.canRespond && !loading && <p className="my-4 rounded-xl border p-4" style={{ borderColor: theme.line, color: theme.muted, ...noteStyle }}>{session.closedReason || 'El período de confirmación ya cerró. Contacta a los anfitriones.'}</p>}
+    {!session.canRespond && !loading && <p className="my-4 rounded-xl border p-4" style={{ borderColor: theme.line, color: theme.muted, ...noteStyle }}>{session.closedReason || copy.closed}</p>}
     {(!done || editing) && session.canRespond && !loading && <form className="space-y-3" onSubmit={event => { event.preventDefault(); void submit(); }}>
       <fieldset disabled={busy || mustRefresh || !!pending.current} className="space-y-3 disabled:opacity-60">
-        <label className="block"><span className="mb-1 block text-sm">Tu nombre</span><input style={field} aria-label="Tu nombre" autoComplete="name" maxLength={publicId ? 120 : 80} value={name} onChange={event => setName(event.target.value)} required /></label>
-        <label className="block"><span className="mb-1 block text-sm">¿Asistirás?</span><select style={field} aria-label="¿Asistirás?" value={attending} onChange={event => setAttending(event.target.value as 'yes' | 'no')}><option value="yes">Sí, asistiré</option><option value="no">No podré asistir</option></select></label>
-        {attending === 'yes' && <label className="flex items-center justify-between gap-3"><span>N.º de personas</span><input style={{ ...field, width: 90 }} aria-label="Número de personas" type="number" min={1} max={cap} step={1} value={passes} onChange={event => setPasses(Number(event.target.value))} required /></label>}
-        <textarea style={{ ...field, minHeight: 75 }} aria-label="Mensaje para los anfitriones" placeholder="Mensaje para los anfitriones (opcional)" maxLength={400} value={message} onChange={event => setMessage(event.target.value)} />
+        <label className="block"><span className="mb-1 block text-sm">{copy.yourName}</span><input style={field} aria-label={copy.yourName} autoComplete="name" maxLength={publicId ? 120 : 80} value={name} onChange={event => setName(event.target.value)} required /></label>
+        <label className="block"><span className="mb-1 block text-sm">{copy.attendingQuestion}</span><select style={field} aria-label={copy.attendingQuestion} value={attending} onChange={event => setAttending(event.target.value as 'yes' | 'no')}><option value="yes">{copy.yes}</option><option value="no">{copy.no}</option></select></label>
+        {attending === 'yes' && <label className="flex items-center justify-between gap-3"><span>{copy.people}</span><input style={{ ...field, width: 90 }} aria-label={copy.people} type="number" min={1} max={cap} step={1} value={passes} onChange={event => setPasses(Number(event.target.value))} required /></label>}
+        <textarea style={{ ...field, minHeight: 75 }} aria-label={copy.hostMessage} placeholder={copy.hostMessage} maxLength={400} value={message} onChange={event => setMessage(event.target.value)} />
       </fieldset>
-      {session.hasUsedPasses && <p className="text-sm" style={noteStyle}>Ya se utilizaron pases. Puedes corregir tus datos, pero no cancelar ni reducir esos cupos.</p>}
-      <button type="submit" disabled={busy || mustRefresh} className="ek-cta min-h-11 w-full rounded-xl px-4 py-3 disabled:opacity-50" style={{ background: theme.primary, color: theme.onPrimary, ...buttonStyle }}>{busy ? 'Guardando…' : pending.current ? 'Reintentar la misma respuesta' : done ? 'Guardar cambios' : buttonLabel}</button>
-      {editing && !busy && !pending.current && <button type="button" className="min-h-11 w-full text-sm underline" onClick={() => { setEditing(false); void refresh(); }}>Cancelar edición</button>}
+      {session.hasUsedPasses && <p className="text-sm" style={noteStyle}>{copy.usedPasses}</p>}
+      <button type="submit" disabled={busy || mustRefresh} className="ek-cta min-h-11 w-full rounded-xl px-4 py-3 disabled:opacity-50" style={{ background: theme.primary, color: theme.onPrimary, ...buttonStyle }}>{busy ? copy.saving : pending.current ? copy.retrySame : done ? copy.saveChanges : submitLabel}</button>
+      {editing && !busy && !pending.current && <button type="button" className="min-h-11 w-full text-sm underline" onClick={() => { setEditing(false); void refresh(); }}>{copy.cancelEdit}</button>}
     </form>}
     {error && <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-    {mustRefresh && !loading && <button type="button" onClick={() => void refresh()} className="mt-3 min-h-11 w-full rounded-xl border px-4 text-sm" style={{ borderColor: theme.line, color: theme.text }}>Actualizar mi respuesta</button>}
-    {demo && <p className="mt-3 text-center text-xs" style={{ color: theme.muted, ...noteStyle }}>Modo de muestra: no se envía ninguna respuesta.</p>}
-    {!demo && !publicId && <p className="mt-4 text-center text-xs" style={{ color: theme.muted, ...noteStyle }}>Podrás modificar esta respuesta desde este navegador hasta la fecha límite. Para otra familia, utiliza otro navegador o solicita un enlace personal.</p>}
+    {mustRefresh && !loading && <button type="button" onClick={() => void refresh()} className="mt-3 min-h-11 w-full rounded-xl border px-4 text-sm" style={{ borderColor: theme.line, color: theme.text }}>{copy.refresh}</button>}
+    {demo && <p className="mt-3 text-center text-xs" style={{ color: theme.muted, ...noteStyle }}>{copy.demo}</p>}
+    {!demo && !publicId && <p className="mt-4 text-center text-xs" style={{ color: theme.muted, ...noteStyle }}>{copy.browserNote}</p>}
   </div>;
 }

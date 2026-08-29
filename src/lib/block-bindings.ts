@@ -1,4 +1,5 @@
 import type { Block, BlockType, InvitationParsed, PageLayout } from './types';
+import { gateInvitation, isCurrentContract } from './packages';
 
 function splitNames(names: string | null): [string, string] {
   if (!names) return ['Novia', 'Novio'];
@@ -51,6 +52,7 @@ function buildScope(inv: InvitationParsed) {
   const bank = parseBank(inv.bank_account);
   const dress = dressParts(inv.dress_code);
   const galleryImages = Array.isArray(cfg.galleryImages) ? cfg.galleryImages : [];
+  const galleryCaptions = Array.isArray(cfg.galleryCaptions) ? cfg.galleryCaptions : [];
   const coverImage =
     inv.cover_image_url
     || (cfg.sectionImages as Record<string, string> | undefined)?.hero
@@ -117,6 +119,7 @@ function buildScope(inv: InvitationParsed) {
     media: {
       coverImage,
       galleryImages,
+      galleryCaptions,
     },
     links: {
       galleryUrl: inv.gallery_url || '',
@@ -143,7 +146,7 @@ const DEFAULT_BINDINGS: Partial<Record<BlockType, Record<string, string>>> = {
   dateBadge: { weekday: 'event.date.weekday', day: 'event.date.day', month: 'event.date.month', year: 'event.date.year', city: 'event.city' },
   dressCode: { men: 'content.dress.men', women: 'content.dress.women' },
   gift: { message: 'content.giftMessage', bank: 'content.bank.bank', account: 'content.bank.account', qrUrl: 'links.giftQrUrl' },
-  gallery: { message: 'content.galleryMessage', images: 'media.galleryImages', shareUrl: 'links.galleryUrl' },
+  gallery: { message: 'content.galleryMessage', images: 'media.galleryImages', captions: 'media.galleryCaptions', shareUrl: 'links.galleryUrl' },
   monogram: { initialA: 'couple.initialA', initialB: 'couple.initialB', date: 'event.date.label' },
   story: { image: 'media.coverImage' },
   rsvp: { message: 'content.rsvpMessage', whatsappUrl: 'links.whatsappUrl' },
@@ -234,10 +237,11 @@ function resolveBlock(block: Block, scope: unknown, inv: InvitationParsed): Bloc
 
 export function resolveLayoutBindings(layout: PageLayout, inv: InvitationParsed): PageLayout {
   const scope = buildScope(inv);
-  return {
+  const resolved = {
     ...layout,
     blocks: layout.blocks.filter(block => matchesVisibility(block, inv)).map(block => resolveBlock(block, scope, inv)),
   };
+  return isCurrentContract(inv.config) ? gateInvitation({ ...inv, config: { ...inv.config, layout: resolved } }).config.layout! : resolved;
 }
 
 /** Values shown by the inspector. Keep inline {{tokens}} intact for editing. */

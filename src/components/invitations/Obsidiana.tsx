@@ -406,7 +406,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       {data.galleryImages && data.galleryImages.length > 0 && (
         <Band seam={sew('galeria')}>
           <Reveal>
-            <MasonryGallery images={data.galleryImages} variant="grid" aspect="3 / 5" />
+            <MasonryGallery images={data.galleryImages} captions={data.galleryCaptions} variant="grid" aspect="3 / 5" />
           </Reveal>
         </Band>
       )}

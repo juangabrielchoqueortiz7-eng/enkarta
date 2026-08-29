@@ -644,7 +644,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
             )}
             <Head style={{ fontSize: 'clamp(20px,4.5vw,30px)', textTransform: 'uppercase' }}>Nuestra Galería</Head>
             <div className="mt-7">
-              <PhotoGrid images={data.galleryImages} radius={4} />
+              <PhotoGrid images={data.galleryImages} captions={data.galleryCaptions} showCaptions radius={4} />
             </div>
           </Reveal>
         </section>

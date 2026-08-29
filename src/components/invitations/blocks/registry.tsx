@@ -187,7 +187,7 @@ const CinematicHeroBlock: React.FC<{ block: Block }> = ({ block }) => {
             className="h-full w-full"
           />
         ) : poster ? (
-          <Image src={poster} alt={mediaAlt} fill sizes="100vw" priority className="object-cover" style={{ objectPosition: focal }} />
+          <Image src={poster} alt={mediaAlt} fill sizes="(max-width: 640px) 100vw, 980px" priority className="object-cover" style={{ objectPosition: focal }} />
         ) : (
           <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 68% 18%, ${t.primary} 0%, transparent 35%), linear-gradient(145deg, ${t.primaryDeep}, ${t.primary})` }} />
         )}
@@ -670,11 +670,11 @@ function RsvpForm({ block }: { block: Block }) {
   const t = useBlockTheme();
   const type = useBlockTypography(block);
   const shape = useInvitationShape();
-  const { slug, guest, demo, deadlinePassed } = useBlockData();
+  const { slug, guest, demo, deadlinePassed, locale } = useBlockData();
   const { editing } = useBlockEdit();
   return <div id="enkarta-confirmar">
     <h3 className="mb-5 text-center" style={{ color: t.primary, ...type('title') }}>{str(block, 'message', 'Confirma tu asistencia')}</h3>
-    <ConfirmationForm slug={slug} guest={guest} demo={demo || editing} deadlinePassed={deadlinePassed} theme={t}
+    <ConfirmationForm slug={slug} guest={guest} demo={demo || editing} deadlinePassed={deadlinePassed} theme={t} locale={locale}
       buttonLabel={str(block, 'buttonLabel', 'Confirmar asistencia')}
       fieldStyle={{ ...shape.field, ...type('field') }} buttonStyle={{ ...shape.primaryButton, ...type('action') }} noteStyle={type('note')} />
   </div>;
@@ -1869,7 +1869,7 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
       ] },
       { key: 'images', label: 'Fotos', kind: 'images' },
       {
-        key: 'captions', label: 'Textos de las fotos (en el mismo orden)', kind: 'list', itemFields: [
+        key: 'captions', label: 'Relato y descripción de cada foto', kind: 'list', itemFields: [
           { key: 'title', label: 'Título', kind: 'text', placeholder: 'Ej. Nuestro primer viaje' },
           { key: 'caption', label: 'Pie de foto', kind: 'textarea', placeholder: 'Una frase breve que cuente este momento' },
           { key: 'alt', label: 'Descripción accesible', kind: 'text', placeholder: 'Describe lo que aparece en la foto' },
