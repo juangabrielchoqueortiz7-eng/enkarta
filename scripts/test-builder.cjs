@@ -399,7 +399,7 @@ test('captions remain attached to their photo after reorder, deletion and additi
 });
 
 test('phase 6 carries enriched itinerary and global photo stories across old and block designs', () => {
-  const demo = invitationDemo('azure');
+  const demo = invitationDemo('azure', { blocks: true });
   demo.itinerary = [{ time: '19:30', label: 'Cena', place: 'Terraza', duration: '90 min', note: 'Menú especial', icon: 'dinner' }];
   demo.config.galleryImages = ['/uno.jpg', '/dos.jpg'];
   demo.config.galleryCaptions = [
@@ -466,22 +466,31 @@ test('Marfil Vivo has no validation errors or false empty-cover/itinerary warnin
   assert.ok(!validation.warnings.some(issue => /No hay portada|Itinerario vacío|Galería vacía|Actividad incompleta/.test(issue.title)));
 });
 
-test('all 13 catalogue entries use the same names, dates, image and native layout as creation', () => {
+test('all 13 catalogue entries keep native identity and expose blocks only as an opt-in', () => {
   const catalog = collectionCatalog();
   assert.equal(catalog.length, 13);
   for (const card of catalog) {
     const starter = invitationStarter(card.key);
     const demo = invitationDemo(card.key);
+    const blockDemo = invitationDemo(card.key, { blocks: true });
     assert.equal(card.names, starter.names);
     assert.equal(card.date, starter.event_date);
     assert.equal(card.image, starter.cover_image_url);
-    assert.equal(demo.config.layout.presetKey, card.key);
-    assert.equal(starter.builder_config.designMode, 'guided');
-    assert.equal(starter.builder_config.tokens.visualProfile, card.key === 'marfil-vivo' ? 'marfil-v1' : 'collection-v1');
-    assert.deepEqual(demo.config.layout.blocks.map(b => b.type), starter.builder_config.layout.blocks.map(b => b.type));
+    if (card.key === 'marfil-vivo') assert.equal(demo.config.layout.presetKey, card.key);
+    else assert.equal(demo.config.layout, undefined, `${card.key} debe conservar su plantilla original`);
+    assert.equal(blockDemo.config.layout.presetKey, card.key);
+    assert.equal(blockDemo.config.designMode, 'guided');
+    assert.equal(blockDemo.config.tokens.visualProfile, card.key === 'marfil-vivo' ? 'marfil-v1' : 'collection-v1');
     assert.deepEqual(validateInvitationBuilder(demo).errors, [], card.key);
     assert.ok(card.demoPath.startsWith('/muestra/'));
   }
+});
+
+test('public samples render artistic templates by default and blocks only on explicit request', () => {
+  const source = fs.readFileSync(path.join(root, 'src/app/muestra/[template]/page.tsx'), 'utf8');
+  assert.match(source, /if \(key === 'marfil-vivo'\)/);
+  assert.match(source, /const el = blocks === '1'/);
+  assert.doesNotMatch(source, /STARTER_TEMPLATE_KEYS\.includes/);
 });
 
 test('collection defaults retain their colour identities and explicitly selected default fonts', () => {
@@ -538,7 +547,7 @@ test('public empty-section detection only hides genuinely empty optional content
 
 test('all collection documents round-trip without losing manual style and icon overrides', () => {
   for (const key of STARTER_TEMPLATE_KEYS) {
-    const demo = invitationDemo(key);
+    const demo = invitationDemo(key, { blocks: true });
     demo.config.designMode = 'free';
     demo.config.fontHeading = 'Marcellus';
     demo.config.iconColor = '#a23559';

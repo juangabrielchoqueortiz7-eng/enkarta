@@ -34,7 +34,7 @@ export default function InvitationQualityWorkbench() {
   return <main className="min-h-screen bg-[#f1eee7] font-outfit">
     <header className="sticky top-0 z-[100] flex flex-wrap items-center gap-3 border-b bg-white p-3 text-xs">
       <h1 className="font-semibold">Pruebas del constructor</h1>
-      <select aria-label="Colección de prueba" value={data.config.layout?.presetKey} onChange={e => { change(invitationDemo(e.target.value as Parameters<typeof invitationDemo>[0])); setSelected(''); }}>{designs.map(item => <option key={item.key} value={item.key}>{item.name}</option>)}</select>
+      <select aria-label="Colección de prueba" value={data.config.layout?.presetKey} onChange={e => { change(invitationDemo(e.target.value as Parameters<typeof invitationDemo>[0], { blocks: true })); setSelected(''); }}>{designs.map(item => <option key={item.key} value={item.key}>{item.name}</option>)}</select>
       <select aria-label="Ancho de prueba" value={width} onChange={e => setWidth(Number(e.target.value))}>{[320,390,768,1280].map(value => <option key={value}>{value}</option>)}</select>
       <button onClick={() => setPanel('blocks')}>Bloques</button><button onClick={() => setPanel('style')}>Estilo</button><button onClick={() => setPanel('public')}>Vista pública</button>
       <button onClick={stress}>Textos largos</button>

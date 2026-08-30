@@ -83,9 +83,12 @@ function whatsappNumber(value: unknown): string | null {
 
 /**
  * Copia los datos de la muestra construida a una nueva fila editable. El
- * builder y catálogo comparten el mismo documento nativo. No modifica filas existentes.
+ * builder abre por defecto la plantilla artística original. El documento por
+ * bloques se genera únicamente cuando se pide de forma explícita; de ese modo
+ * el constructor no aplana automáticamente todas las colecciones al mismo
+ * esqueleto. Marfil Vivo es la excepción porque nació como diseño por bloques.
  */
-export function invitationStarter(template: StarterTemplateKey) {
+export function invitationStarter(template: StarterTemplateKey, options: { blocks?: boolean } = {}) {
   if (template === 'marfil-vivo') return marfilVivoStarter();
   const sample = SAMPLES[template];
   const first = BRIDE_FIRST.has(template) ? sample.bride : sample.groom;
@@ -100,7 +103,7 @@ export function invitationStarter(template: StarterTemplateKey) {
     decor: sample.decor ?? decorForTemplate(template),
     tokens: sample.tokens ?? tokensForTemplate(template),
     musicUrl: sample.musicUrl ?? DEFAULT_MUSIC_URL,
-    ...collectionDesign(template),
+    ...(options.blocks ? collectionDesign(template) : {}),
   }));
 
   const starter = {
@@ -134,13 +137,15 @@ export function invitationStarter(template: StarterTemplateKey) {
     phone_whatsapp: whatsappNumber(sample.whatsapp ?? sample.rsvp?.whatsappUrl),
     builder_config: config,
   };
-  config.layout = curateCollectionLayout(invitationToLayout({ ...starter, config } as InvitationParsed), template);
+  if (options.blocks) {
+    config.layout = curateCollectionLayout(invitationToLayout({ ...starter, config } as InvitationParsed), template);
+  }
   return starter;
 }
 
 /** Read-only sample with the exact content used by "Usar y editar". */
-export function invitationDemo(template: StarterTemplateKey): InvitationParsed {
-  const starter = invitationStarter(template);
+export function invitationDemo(template: StarterTemplateKey, options: { blocks?: boolean } = {}): InvitationParsed {
+  const starter = invitationStarter(template, options);
   return {
     ...starter, id: `demo-${template}`, slug: template === 'carmesi_v2' ? 'carmesi' : template,
     config: starter.builder_config, builder_config: JSON.stringify(starter.builder_config),

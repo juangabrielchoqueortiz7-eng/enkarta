@@ -9,7 +9,7 @@ import { contentToLayout } from '@/lib/layout-presets';
 import { themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import type { PageMotionPreset, TemplateDecor, ParticleShape, CornerStyle, InvitationTemplate } from '@/lib/types';
 import { ENKARTA_COLLECTIONS, MARFIL_VIVO_DESIGN } from '@/lib/enkarta-collections';
-import { invitationDemo, STARTER_TEMPLATE_KEYS, type StarterTemplateKey } from '@/lib/template-starters';
+import { invitationDemo } from '@/lib/template-starters';
 import FontScope from '@/components/invitations/FontScope';
 import { resolveLayoutBindings } from '@/lib/block-bindings';
 import { entryPropsFor } from '@/components/invitations/entry/config';
@@ -19,7 +19,7 @@ import CommercialTracker from '@/components/commercial/CommercialTracker';
 
 interface Props {
   params: Promise<{ template: string }>;
-  searchParams: Promise<{ n?: string; m?: string; full?: string; mo?: string; blocks?: string; fp?: string; cs?: string; seam?: string; fx?: string; flow?: string; prog?: string; tempo?: string; px?: string; preview?: string; classic?: string }>;
+  searchParams: Promise<{ n?: string; m?: string; full?: string; mo?: string; blocks?: string; fp?: string; cs?: string; seam?: string; fx?: string; flow?: string; prog?: string; tempo?: string; px?: string; preview?: string }>;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -116,15 +116,18 @@ const DEMO_MUSIC: Record<string, string> = {
 
 export default async function MuestraPage({ params, searchParams }: Props) {
   const { template } = await params;
-  const { n, m, full, mo, blocks, fp, cs, seam, fx, flow, prog, tempo, px, preview, classic } = await searchParams;
+  const { n, m, full, mo, blocks, fp, cs, seam, fx, flow, prog, tempo, px, preview } = await searchParams;
   let key = template.toLowerCase();
   if (key === 'carmesi_v2') key = 'carmesi';
   const designName = key === 'marfil-vivo' ? MARFIL_VIVO_DESIGN.name : TEMPLATE_META[key]?.name || key;
   const tracked = (node: ReactNode) => preview === '1' ? node : <><CommercialTracker event="design_view" design={designName} placement="sample" />{node}</>;
 
-  const starterKey = key === 'carmesi' ? 'carmesi_v2' : key;
-  if (STARTER_TEMPLATE_KEYS.includes(starterKey as StarterTemplateKey) && (classic !== '1' || key === 'marfil-vivo')) {
-    const demo = invitationDemo(starterKey as StarterTemplateKey);
+  // Marfil Vivo nació como una experiencia nativa por bloques. Las demás
+  // colecciones continúan más abajo con su componente artístico propio; el
+  // render por bloques solo se activa con ?blocks=1. Así el catálogo y "Usar y
+  // editar" no convierten automáticamente diseños distintos en el mismo layout.
+  if (key === 'marfil-vivo') {
+    const demo = invitationDemo('marfil-vivo');
     if (m) demo.guest_name = m;
     if (n && Number.isFinite(parseInt(n, 10))) demo.guest_passes = Math.max(1, Math.min(20, parseInt(n, 10)));
     const config = demo.config;
@@ -152,7 +155,7 @@ export default async function MuestraPage({ params, searchParams }: Props) {
 
   // ?mo=cinematic3d|parallaxBook|elegant|minimal|none → previsualizar un preset.
   const motionVal = {
-    preset: (mo as PageMotionPreset) || data.motion?.preset || DEMO_MOTION[key] || 'elegant',
+    preset: preview === '1' ? 'none' : (mo as PageMotionPreset) || data.motion?.preset || DEMO_MOTION[key] || 'elegant',
     ...(flow ? { scrollFlow: flow as 'free' | 'guided' | 'cinematic' } : {}),
     ...(prog ? { progress: prog as 'none' | 'line' | 'steps' } : {}),
     ...(tempo ? { tempo: tempo as 'quick' | 'balanced' | 'slow' } : {}),
@@ -171,7 +174,7 @@ export default async function MuestraPage({ params, searchParams }: Props) {
       ? { background: 'art', corners: { on: true }, floating: { on: true }, ...(data.decor ?? {}) }
       : data.decor;
   const el = blocks === '1' ? (
-    <BlockRenderer layout={contentToLayout(data, key)} theme={data.theme ?? themeForTemplate(key)} motion={motionVal} decor={previewDecor} tokens={{ ...(data.tokens ?? tokensForTemplate(key)), ...(seam ? { seam: seam as never } : {}), ...(fx ? { seamFx: fx as never } : {}) }} musicUrl={data.musicUrl} gated={full !== '1'} demo />
+    <BlockRenderer layout={contentToLayout(data, key)} theme={data.theme ?? themeForTemplate(key)} motion={motionVal} decor={previewDecor} tokens={{ ...(data.tokens ?? tokensForTemplate(key)), ...(seam ? { seam: seam as never } : {}), ...(fx ? { seamFx: fx as never } : {}) }} musicUrl={preview === '1' ? undefined : data.musicUrl} gated={full !== '1' && preview !== '1'} previewOnly={preview === '1'} demo />
   ) : (
     <PageMotionProvider value={motionVal} gated={full !== '1'}>
       <div className="ek-invite"><Comp data={data} /></div>
@@ -179,7 +182,7 @@ export default async function MuestraPage({ params, searchParams }: Props) {
   );
 
   // El enlace directo (?full=1) salta la portada de entrada.
-  if (full === '1') return tracked(el);
+  if (full === '1' || preview === '1') return tracked(el);
 
   const gate = entryPropsFor(key, data);
   return tracked(
