@@ -6,6 +6,9 @@ import { motion, MotionConfig, useMotionValue, useSpring, useInView, useScroll, 
 import { collectionCatalog } from '@/lib/collection-catalog';
 import { commercialRows, PACKAGE_CATALOG, PACKAGE_ORDER } from '@/lib/packages';
 import CollectionPreview from '@/components/invitations/CollectionPreview';
+import BrandByline from '@/components/brand/BrandByline';
+import CommercialLink from '@/components/commercial/CommercialLink';
+import CommercialTracker from '@/components/commercial/CommercialTracker';
 
 // ── Scroll reveal (entrada elegante al hacer scroll) ─────────────────────────
 function Reveal({ children, delay = 0, y = 32, className = '' }: {
@@ -347,25 +350,19 @@ const additionalServices = [
   { name: 'Ajustes Post-Entrega',        bs: 90,   usd: 13,  desc: 'Cubre una solicitud de cambios menores (como textos, fechas o imágenes) realizados después de la aprobación y entrega final.' },
 ];
 
-const testimonials = [
-  { name: 'Valentina R.',  event: 'Boda · Colección Lirio',       text: 'Quedé completamente enamorada de mi invitación. Todos mis invitados me preguntaron dónde la había hecho. ¡Super recomendado!', stars: 5, initial: 'V' },
-  { name: 'Mariana S.',    event: 'XV Años · Colección Terracota', text: 'El proceso fue facilísimo y el resultado fue hermoso. La invitación de mis XV quedó mejor de lo que imaginé.',              stars: 5, initial: 'M' },
-  { name: 'Lucía & Andrés',event: 'Boda · Colección Granate',     text: 'Elegimos Granate para nuestra boda y fue perfecta. Dramática, única y elegante. Nuestros invitados quedaron impresionados.', stars: 5, initial: 'L' },
-  { name: 'Carolina T.',   event: 'Boda · Colección Lunaria',     text: 'Rápidos, atentos y el diseño quedó hermoso. Me cambiaron detalles sin problema hasta que quedó perfecta.',                    stars: 5, initial: 'C' },
+const proofHighlights = [
+  { title: 'Marfil Vivo', event: 'Demostración · Boda editorial', text: 'Recorre una invitación completa con capítulos fotográficos, agenda, galería y confirmación.', path: '/muestra/marfil-vivo?full=1', initial: 'M' },
+  { title: 'Aurora Rosa', event: 'Demostración · XV años', text: 'Comprueba cómo una dirección romántica conserva jerarquía y lectura clara desde el celular.', path: '/muestra/rosegold?full=1', initial: 'A' },
+  { title: 'Terracota', event: 'Demostración · Cumpleaños', text: 'Explora una alternativa cálida y dinámica para fotografías, itinerario y detalles de fiesta.', path: '/muestra/euforia?full=1', initial: 'T' },
 ];
 
 const faqs = [
   { q: '¿Cuánto tiempo tarda la entrega?',                   a: 'Tu invitación estará lista en 3-5 días hábiles según el paquete que elijas.' },
   { q: '¿Puedo personalizar los colores y el diseño?',       a: 'Premium y Exclusive incluyen personalización de color. Plus conserva la paleta del diseño elegido; puedes contratar la personalización como adicional. También ofrecemos diseños totalmente personalizados.' },
   { q: '¿Cuáles son los métodos de pago?',                   a: 'Reservas con 200 Bs y el saldo se cancela cuando apruebes tu invitación terminada.' },
-  { q: '¿Puedo realizar cambios después de la entrega?',     a: 'Sí. El paquete Exclusive incluye rondas ilimitadas. Para los demás, ofrecemos el servicio "Ajustes Post-Entrega".' },
+  { q: '¿Puedo realizar cambios después de la entrega?',     a: 'Sí. Plus incluye 1 ronda de cambios, Premium 2 y Exclusive 4 antes de la aprobación. Después de aprobar, puedes contratar Ajustes Post-Entrega; los errores atribuibles a Enkarta se corrigen sin consumir rondas.' },
   { q: '¿Cómo gestiono los pases de mis invitados?',         a: 'Premium y Exclusive incluyen links personalizados con nombre y pases. Premium permite consultar y exportar respuestas; Exclusive añade gestión de invitados y escáner QR.' },
 ];
-
-// Número de contacto de la landing: se configura con NEXT_PUBLIC_WA_PHONE en
-// .env.local (formato internacional sin +, p. ej. 59171234567).
-const WA_PHONE = process.env.NEXT_PUBLIC_WA_PHONE || '0000000000';
-const WA = `https://wa.me/${WA_PHONE}?text=Hola%20Enkarta%21%20Me%20gustaría%20reservar%20una%20invitación%20digital.`;
 
 const smartConfirmationCards = [
   {
@@ -539,6 +536,7 @@ export default function LandingPage() {
   return (
     <MotionConfig reducedMotion="user">
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#FAF7F2' }}>
+    <CommercialTracker event="landing_view" placement="landing" />
     {/* ── Global premium animations ── */}
     <style>{`
       html { scroll-behavior: smooth; }
@@ -588,18 +586,21 @@ export default function LandingPage() {
           boxShadow: scrolled ? '0 10px 36px rgba(90,78,52,0.12)' : 'none',
         }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <h1 className="font-cinzel text-xl tracking-wide" style={{
-            backgroundImage: 'linear-gradient(90deg, #8B7D5F 0%, #B8975A 30%, #e0c074 50%, #B8975A 70%, #8B7D5F 100%)',
-            backgroundSize: '260% auto',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            animation: 'logoShimmer 6s linear infinite',
-          }}>
-            <span className="font-great text-3xl">E</span>nkarta
-          </h1>
+          <div className="leading-none">
+            <h1 className="font-cinzel text-xl tracking-wide" style={{
+              backgroundImage: 'linear-gradient(90deg, #8B7D5F 0%, #B8975A 30%, #e0c074 50%, #B8975A 70%, #8B7D5F 100%)',
+              backgroundSize: '260% auto',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              animation: 'logoShimmer 6s linear infinite',
+            }}>
+              <span className="font-great text-3xl">E</span>nkarta
+            </h1>
+            <BrandByline tone="warm" className="mt-0.5 pl-0.5" />
+          </div>
           <div className="hidden md:flex items-center gap-7 font-outfit text-sm" style={{ color: 'rgba(44,37,25,0.55)' }}>
-            {[['Bodas','#catalogo'],['XV Años','#catalogo'],['Graduaciones','#catalogo'],['Bautizos','#catalogo'],['Precios','#precios']].map(([l, href]) => (
+            {[['Bodas','/bodas'],['XV Años','/xv-anos'],['Cumpleaños','/cumpleanos'],['Casos','/casos'],['Precios','#precios'],['Cómo funciona','/proceso']].map(([l, href]) => (
               <a key={l} href={href} className="relative group transition-colors hover:text-enkarta-dark py-1">
                 {l}
                 <span className="absolute left-0 -bottom-0.5 h-px w-0 group-hover:w-full transition-all duration-300" style={{ backgroundColor: '#B8975A' }} />
@@ -613,11 +614,11 @@ export default function LandingPage() {
                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(139,125,95,0.35)'; (e.currentTarget as HTMLElement).style.color = 'rgba(44,37,25,0.7)'; }}>
               Iniciar Sesión
             </a>
-            <a href={WA} target="_blank" rel="noopener noreferrer"
+            <CommercialLink placement="nav_contact"
                className="px-4 py-2 rounded-lg font-outfit text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-px hover:shadow-lg"
                style={{ backgroundColor: '#8B7D5F', boxShadow: '0 4px 16px rgba(139,125,95,0.25)' }}>
               Contactar
-            </a>
+            </CommercialLink>
             {/* Hamburguesa (solo móvil) */}
             <button
               onClick={() => setMenuOpen(o => !o)}
@@ -642,7 +643,7 @@ export default function LandingPage() {
           style={{ backgroundColor: 'rgba(250,247,242,0.97)', borderColor: 'rgba(139,125,95,0.12)' }}
         >
           <div className="px-6 py-4 flex flex-col gap-1 font-outfit text-sm">
-            {[['Bodas','#catalogo'],['XV Años','#catalogo'],['Graduaciones','#catalogo'],['Bautizos','#catalogo'],['Precios','#precios'],['Preguntas','#faq']].map(([l, href]) => (
+            {[['Bodas','/bodas'],['XV Años','/xv-anos'],['Cumpleaños','/cumpleanos'],['Casos','/casos'],['Precios','#precios'],['Cómo funciona','/proceso'],['Preguntas','#faq']].map(([l, href]) => (
               <a key={l} href={href} onClick={() => setMenuOpen(false)}
                  className="py-2.5 px-3 rounded-lg transition-colors hover:bg-enkarta-gold/10"
                  style={{ color: 'rgba(44,37,25,0.7)' }}>
@@ -682,14 +683,17 @@ export default function LandingPage() {
             <div className="w-12 h-12 rounded-full border flex items-center justify-center" style={{ borderColor: 'rgba(139,125,95,0.4)', background: 'rgba(212,184,120,0.1)', animation: 'goldPulse 2.8s ease-in-out infinite' }}>
               <span className="font-great text-2xl" style={{ color: '#8B7D5F' }}>E</span>
             </div>
-            <span className="font-cinzel text-3xl tracking-wide" style={{
-              backgroundImage: 'linear-gradient(90deg, #8B7D5F 0%, #B8975A 30%, #e0c074 50%, #B8975A 70%, #8B7D5F 100%)',
-              backgroundSize: '260% auto',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              animation: 'logoShimmer 6s linear infinite',
-            }}>Enkarta</span>
+            <div className="leading-none">
+              <span className="block font-cinzel text-3xl tracking-wide" style={{
+                backgroundImage: 'linear-gradient(90deg, #8B7D5F 0%, #B8975A 30%, #e0c074 50%, #B8975A 70%, #8B7D5F 100%)',
+                backgroundSize: '260% auto',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                animation: 'logoShimmer 6s linear infinite',
+              }}>Enkarta</span>
+              <BrandByline tone="warm" className="mt-2 text-center" />
+            </div>
           </motion.div>
 
           <motion.p variants={{ hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}
@@ -740,11 +744,11 @@ export default function LandingPage() {
               </span>
               Ver Catálogo
             </a>
-            <a href={WA} target="_blank" rel="noopener noreferrer"
+            <CommercialLink placement="hero_advisor"
                className="px-9 py-3.5 rounded-full font-outfit font-semibold text-sm transition-all border"
                style={{ borderColor: 'rgba(139,125,95,0.4)', color: 'rgba(44,37,25,0.75)' }}>
               Contactar Asesor
-            </a>
+            </CommercialLink>
           </div>
 
           <div className="flex gap-10 sm:gap-14">
@@ -773,13 +777,13 @@ export default function LandingPage() {
       {/* ── Event type pills ── */}
       <section className="py-6 px-4 bg-white border-b border-gray-100">
         <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-3">
-          {['Bodas','XV Años','Cumpleaños','Baby Shower','Bautizos','Graduaciones'].map((t) => (
-            <span key={t} className="px-5 py-2 rounded-full border font-outfit text-sm transition-all cursor-pointer"
+          {[['Bodas','/bodas'],['XV Años','/xv-anos'],['Cumpleaños','/cumpleanos']].map(([t, href]) => (
+            <a href={href} key={t} className="px-5 py-2 rounded-full border font-outfit text-sm transition-all cursor-pointer"
               style={{ borderColor: 'rgba(184,151,90,0.25)', color: 'rgba(30,27,22,0.55)' }}
               onMouseEnter={e => { (e.target as HTMLElement).style.borderColor='#B8975A'; (e.target as HTMLElement).style.color='#B8975A'; }}
               onMouseLeave={e => { (e.target as HTMLElement).style.borderColor='rgba(184,151,90,0.25)'; (e.target as HTMLElement).style.color='rgba(30,27,22,0.55)'; }}>
               {t}
-            </span>
+            </a>
           ))}
         </div>
       </section>
@@ -798,13 +802,10 @@ export default function LandingPage() {
           {/* Covers keep one shared aspect ratio at every breakpoint. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {templates.map((t, i) => {
-              const isDemo = 'demoPath' in t;
               return (
               <Reveal key={t.name} delay={(i % 3) * 0.08} y={20}>
                 <a
-                  href={isDemo ? t.demoPath : WA}
-                  target={isDemo ? undefined : '_blank'}
-                  rel={isDemo ? undefined : 'noopener noreferrer'}
+                  href={t.demoPath}
                   aria-label={`Ver invitación ${t.name}`}
                   className="group block w-full max-w-[380px] mx-auto rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4d5944]"
                 >
@@ -815,11 +816,11 @@ export default function LandingPage() {
             })}
           </div>
           <Reveal className="text-center mt-20">
-            <a href={WA} target="_blank" rel="noopener noreferrer"
+            <CommercialLink placement="catalog_bottom"
                className="inline-block px-9 py-3.5 border rounded-full font-outfit font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                style={{ borderColor: 'rgba(139,125,95,0.5)', color: '#8B7D5F' }}>
               Pedir mi invitación
-            </a>
+            </CommercialLink>
           </Reveal>
         </div>
       </section>
@@ -1000,13 +1001,13 @@ export default function LandingPage() {
 
                 {/* CTA del paquete */}
                 <div className="px-6 pb-6">
-                  <a href={WA} target="_blank" rel="noopener noreferrer"
+                  <CommercialLink packageKey={pkg.key} placement="pricing_card"
                     className="block text-center py-2.5 rounded-full font-outfit text-xs font-semibold tracking-wide transition-all"
                     style={isExclusive
                       ? { background: 'linear-gradient(90deg, #B8975A, #d8b876)', color: '#10131a', boxShadow: '0 6px 22px rgba(184,151,90,0.4)' }
                       : { border: '1.5px solid rgba(139,125,95,0.45)', color: '#8B7D5F' }}>
                     Reservar {pkg.label.charAt(0) + pkg.label.slice(1).toLowerCase()}
-                  </a>
+                  </CommercialLink>
                 </div>
               </div>
               </Reveal>
@@ -1020,14 +1021,14 @@ export default function LandingPage() {
               Reserva con {currency === 'bs' ? '200 Bs' : '$29'}
             </p>
             <p className="font-outfit text-enkarta-dark/50 text-xs">Paga el resto cuando tu invitación esté finalizada</p>
-            <a href={WA} target="_blank" rel="noopener noreferrer"
+            <CommercialLink placement="pricing_reservation"
                className="inline-flex items-center gap-2 mt-5 px-8 py-3.5 rounded-full font-outfit font-semibold text-white transition-all shadow-lg"
                style={{ backgroundColor: '#25D366', boxShadow: '0 4px 20px rgba(37,211,102,0.35)' }}>
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
               </svg>
               Quiero Reservar
-            </a>
+            </CommercialLink>
           </div>
 
           {/* Comparison table — las 3 columnas siempre visibles (sin scroll
@@ -1121,38 +1122,35 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
+      {/* ── Product proof: never presented as client testimony without permission ── */}
       <section className="py-28 px-4" style={{ backgroundColor: '#f0ebe4' }}>
         <div className="max-w-4xl mx-auto">
           <Reveal className="text-center mb-16">
-            <p className="font-great text-4xl mb-2" style={{ color: '#B8975A' }}>Opiniones</p>
-            <h3 className="font-cinzel text-3xl sm:text-4xl tracking-[0.06em]" style={{ color: '#5a4e34' }}>LO QUE DICEN NUESTROS CLIENTES</h3>
+            <p className="font-great text-4xl mb-2" style={{ color: '#B8975A' }}>Compruébalo</p>
+            <h3 className="font-cinzel text-3xl sm:text-4xl tracking-[0.06em]" style={{ color: '#5a4e34' }}>DEMOSTRACIONES NAVEGABLES</h3>
+            <p className="mx-auto mt-4 max-w-2xl font-outfit text-sm leading-6 text-[#776d60]">Estas son muestras creadas por Enkarta, no opiniones de clientes. Puedes abrir cada experiencia completa antes de reservar.</p>
           </Reveal>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {testimonials.map((t, i) => (
-              <Reveal key={i} delay={(i % 2) * 0.12} y={30}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {proofHighlights.map((t, i) => (
+              <Reveal key={t.title} delay={i * 0.1} y={30}>
               <div className="h-full bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: t.stars }).map((_, s) => (
-                    <svg key={s} className="w-4 h-4" viewBox="0 0 20 20" fill="#B8975A">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <p className="font-cormorant leading-relaxed mb-5 italic" style={{ color: 'rgba(44,37,25,0.7)', fontSize: '18px', fontWeight: 500 }}>&ldquo;{t.text}&rdquo;</p>
+                <span className="inline-flex rounded-full bg-[#eee4d3] px-3 py-1 font-outfit text-[9px] font-bold uppercase tracking-[.14em] text-[#806c48]">Muestra</span>
+                <p className="font-cormorant leading-relaxed mb-5 mt-4" style={{ color: 'rgba(44,37,25,0.7)', fontSize: '18px', fontWeight: 500 }}>{t.text}</p>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#B8975A' }}>
                     <span className="font-playfair text-sm font-bold text-white">{t.initial}</span>
                   </div>
                   <div>
-                    <p className="font-outfit font-semibold text-sm text-enkarta-dark">{t.name}</p>
+                    <p className="font-outfit font-semibold text-sm text-enkarta-dark">{t.title}</p>
                     <p className="font-outfit text-xs text-gray-400">{t.event}</p>
                   </div>
                 </div>
+                <a href={t.path} className="mt-5 block rounded-full border border-[#d8cbb8] px-4 py-2.5 text-center font-outfit text-xs font-semibold text-[#796642]">Abrir demostración</a>
               </div>
               </Reveal>
             ))}
           </div>
+          <Reveal className="mt-10 text-center"><a href="/casos" className="font-outfit text-sm font-semibold text-[#806b48] underline underline-offset-4">Ver casos, criterios y garantía comercial</a></Reveal>
         </div>
       </section>
 
@@ -1205,27 +1203,38 @@ export default function LandingPage() {
             <span style={{ color: '#B8975A' }}>hoy mismo</span>
           </h3>
           <p className="font-outfit text-white/50 mb-10 text-sm">Elige la colección que conecte contigo. Nosotros convertimos tus detalles en una experiencia completa.</p>
-          <a href={WA} target="_blank" rel="noopener noreferrer"
+          <CommercialLink placement="final_cta"
              className="inline-flex items-center gap-3 px-8 py-4 rounded-xl font-outfit font-semibold text-lg text-white transition-all"
              style={{ backgroundColor: '#B8975A', boxShadow: '0 8px 40px rgba(184,151,90,0.3)' }}>
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
             Reserva tu Invitación
-          </a>
+          </CommercialLink>
         </Reveal>
       </section>
 
       {/* ── Footer ── */}
-      <footer className="py-8 px-4 border-t border-white/5" style={{ backgroundColor: '#120f0c' }}>
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="font-outfit text-sm text-white/25">© 2026 Enkarta. Todos los derechos reservados.</p>
-          <div className="flex items-center gap-6">
-            {['Catálogo','Precios','FAQ'].map(l => (
-              <a key={l} href={`#${l.toLowerCase()}`} className="font-outfit text-xs text-white/25 hover:text-white/50 transition-colors">{l}</a>
-            ))}
+      <footer className="border-t border-white/5 px-4 py-8" style={{ backgroundColor: '#120f0c' }}>
+        <div className="mx-auto grid max-w-6xl gap-6 text-center sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:text-left">
+          <div>
+            <p className="font-outfit text-sm text-white/30">© 2026 Enkarta. Todos los derechos reservados.</p>
+            <p className="mt-1 font-outfit text-[10px] leading-4 text-white/20">Enkarta es una marca comercial operada por Grupo JABA.</p>
           </div>
-          <p className="font-great text-xl" style={{ color: 'rgba(184,151,90,0.35)' }}>Enkarta</p>
+          <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2" aria-label="Enlaces del sitio">
+            <a href="#catalogo" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Catálogo</a>
+            <a href="#precios" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Precios</a>
+            <a href="#faq" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">FAQ</a>
+            <a href="/proceso" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Cómo funciona</a>
+            <a href="/casos" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Casos y garantía</a>
+            <a href="/legal/privacidad" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Privacidad</a>
+            <a href="/legal/terminos" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Términos</a>
+            <a href="/legal/pagos" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Pagos</a>
+          </nav>
+          <div className="sm:text-right">
+            <p className="font-great text-xl" style={{ color: 'rgba(184,151,90,0.42)' }}>Enkarta</p>
+            <BrandByline tone="light" className="mt-1 sm:text-right" />
+          </div>
         </div>
       </footer>
     </div>

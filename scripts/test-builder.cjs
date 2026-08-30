@@ -49,6 +49,10 @@ const { activeInvitationLocale, formatInvitationDate, invitationCopy } = require
 const { parseSaveDateInput } = require('../src/lib/save-date.ts');
 const { clientInvitation } = require('../src/lib/client-invitation.ts');
 const { qualityChecksFor, qualityProgress, releaseReady, qualityReport, updateQualityCheck } = require('../src/lib/quality-assurance.ts');
+const { commercialMessage, commercialContactPath, commercialConfirmationPath, parseCommercialContext } = require('../src/lib/commercial.ts');
+const { COMMERCIAL_EVENT_PAGES, COMMERCIAL_EVENT_SLUGS } = require('../src/lib/event-pages.ts');
+const { COMMERCIAL_PROOFS, isPublishableClientProof } = require('../src/lib/commercial-proof.ts');
+const { MARKETING_CAMPAIGNS, MARKETING_FORMATS, marketingTrackingPath } = require('../src/lib/marketing-kit.ts');
 
 test('delivery tracking distinguishes opening, manual marking and real responses',()=>{
   assert.equal(deliveryState({status:'pending',sent:false,deliveryStatus:'pending'}),'pending');
@@ -62,6 +66,48 @@ test('personal messages replace every supported field without claiming delivery'
   assert.match(reminderMessage(undefined,g,'https://enkarta.test/i/x'),/recordamos confirmar/);
   const input={guestId:'10000000-0000-4000-8000-000000000001',requestId:'10000000-0000-4000-8000-000000000002',expectedRevision:0,action:'reminder'};
   assert.equal(parseDeliveryInput(input).action,'reminder'); assert.throws(()=>parseDeliveryInput({...input,requestId:'x'}));
+});
+
+test('commercial WhatsApp identifies package, design and reference without personal tracking', () => {
+  const context = parseCommercialContext({ package: 'premium', design: 'Lunaria', event_type: 'Boda', placement: 'pricing_card', landing_path: '/muestra/azure', utm_source: 'instagram' });
+  const message = commercialMessage(context, 'EK-A1B2C3D4');
+  assert.match(message, /Premium de 930 Bs/); assert.match(message, /diseño Lunaria/); assert.match(message, /Referencia: EK-A1B2C3D4/);
+  assert.doesNotMatch(JSON.stringify(context), /phone|telefono|ip/i);
+  assert.equal(commercialContactPath({ packageKey: 'exclusive', design: 'Granate', placement: 'test' }), '/contacto/whatsapp?package=exclusive&placement=test&design=Granate');
+  assert.equal(parseCommercialContext({ package: 'forged', landing_path: 'https://evil.test' }).packageKey, 'general');
+  assert.equal(parseCommercialContext({ package: 'forged', landing_path: 'https://evil.test' }).landingPath, '/');
+  assert.equal(commercialConfirmationPath({ packageKey: 'premium', design: 'Lunaria', eventType: 'Boda', landingPath: '/bodas' }), '/contacto/preparado?package=premium&design=Lunaria&event_type=Boda&from=%2Fbodas');
+  assert.equal(commercialConfirmationPath({ landingPath: 'https://evil.test' }), '/contacto/preparado?from=%2F');
+});
+
+test('event landing pages are distinct, attributable and linked to real demos', () => {
+  assert.deepEqual(COMMERCIAL_EVENT_SLUGS.sort(), ['bodas', 'cumpleanos', 'xv-anos']);
+  const pages = Object.values(COMMERCIAL_EVENT_PAGES);
+  assert.equal(new Set(pages.map(page => page.title)).size, 3);
+  assert.equal(new Set(pages.map(page => page.eventType)).size, 3);
+  for (const page of pages) {
+    assert.equal(page.designKeys.length, 3);
+    assert.equal(new Set(page.designKeys).size, 3);
+    assert.equal(page.features.length, 3);
+  }
+});
+
+test('client proof cannot be published without a dated authorization', () => {
+  assert.ok(COMMERCIAL_PROOFS.every(isPublishableClientProof));
+  assert.ok(COMMERCIAL_PROOFS.every(proof => proof.kind === 'demonstration'));
+  const forged = { ...COMMERCIAL_PROOFS[0], kind: 'verified-client', permissionRecordedAt: undefined };
+  assert.equal(isPublishableClientProof(forged), false);
+  assert.equal(isPublishableClientProof({ ...forged, permissionRecordedAt: '2026-08-29T12:00:00Z' }), true);
+});
+
+test('marketing kit generates one measured asset matrix without changing campaign destinations', () => {
+  assert.equal(Object.keys(MARKETING_CAMPAIGNS).length, 3);
+  assert.equal(Object.keys(MARKETING_FORMATS).length, 3);
+  for (const campaign of Object.keys(MARKETING_CAMPAIGNS)) for (const format of Object.keys(MARKETING_FORMATS)) {
+    const path = marketingTrackingPath(campaign, format);
+    assert.ok(path.startsWith(MARKETING_CAMPAIGNS[campaign].path));
+    assert.match(path, /utm_source=instagram/); assert.match(path, /utm_campaign=lanzamiento_/); assert.match(path, /utm_content=/);
+  }
 });
 
 test('validity calendar arithmetic handles leap years, months and years without timezone shifts', () => {

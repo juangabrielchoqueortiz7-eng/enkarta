@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { InvitationContent, TemplateTheme } from './types';
 import { useCountdown, Odometer, Reveal, Particles, CopyBtn, EventIcon, OrchidSprig, HeartLoader, PhotoGrid, SECTION, ENKARTA_WA_URL, seamsFor } from './shared';
 import { ParallaxLayer, WriteOn } from '@/lib/scroll-motion';
+import BrandByline from '@/components/brand/BrandByline';
 
 // ── Palette por defecto ─────────────────────────────────────────────────────────
 const DEFAULT_C = {
@@ -547,6 +548,7 @@ export default function Azure({ data }: { data: InvitationContent }) {
       <footer className="relative z-10 pb-8 pt-14 text-center" style={{ background: C.navyDeep }}>
         {sew('pie')}
         <p className="font-great text-2xl" style={{ color: '#fff' }}>Enkarta</p>
+        <BrandByline tone="inherit" className="mt-1 justify-center" />
         <p className="font-cormorant text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Contáctanos</a>
         </p>

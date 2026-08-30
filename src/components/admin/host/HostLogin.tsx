@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import BrandByline from '@/components/brand/BrandByline';
 
 export default function HostLogin({ scope = 'host' }: { scope?: 'host' | 'review' | 'door' }) {
   const router = useRouter();
@@ -34,6 +35,7 @@ export default function HostLogin({ scope = 'host' }: { scope?: 'host' | 'review
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <p className="font-great text-5xl" style={{ color: '#B8975A' }}>Enkarta</p>
+          <BrandByline tone="warm" className="mt-1.5" />
           <p className="font-cormorant text-lg mt-1" style={{ color: 'rgba(44,37,25,0.6)' }}>{scope === 'door' ? 'Personal de puerta · solo control de acceso' : scope === 'review' ? 'Revisa el diseño de tu invitación' : 'Accede a las confirmaciones de tu evento'}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-xl p-7 border border-enkarta-gold/20">
@@ -62,6 +64,10 @@ export default function HostLogin({ scope = 'host' }: { scope?: 'host' | 'review
         </p>
         <a className="mt-4 block text-center font-outfit text-sm text-enkarta-gold underline" href={scope === 'host' ? '/revision' : '/panel'}>{scope === 'host' ? 'Solo quiero revisar el diseño' : 'Acceso del anfitrión'}</a>
         {scope === 'host' && <a href="/puerta" className="mt-3 block text-center font-outfit text-sm text-enkarta-gold underline">Soy personal de puerta</a>}
+        <div className="mt-5 flex items-center justify-center gap-4 font-outfit text-[10px] text-enkarta-dark/40">
+          <a href="/legal/privacidad" className="underline underline-offset-2">Privacidad</a>
+          <a href="/legal/terminos" className="underline underline-offset-2">Términos</a>
+        </div>
       </div>
     </div>
   );

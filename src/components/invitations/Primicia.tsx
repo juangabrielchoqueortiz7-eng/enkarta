@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { Reveal, useCountdown, Odometer, PhotoGrid, EventIcon, SECTION, ENKARTA_WA_URL, Seam } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
 import { PrimiciaContent, TemplateTheme } from './types';
+import BrandByline from '@/components/brand/BrandByline';
 
 const DEFAULT_C = {
   paper: '#fdfbf5',
@@ -653,6 +654,7 @@ export default function Primicia({ data }: { data: PrimiciaContent }) {
       <footer className="relative pb-8 pt-14 text-center" style={{ background: C.ink, color: C.paper }}>
         <Seam shape="bevel" from={C.paper} hairline={C.rule} />
         <p style={{ fontFamily: FONT.black, fontSize: '24px' }}>Enkarta</p>
+        <BrandByline tone="inherit" className="mt-1 justify-center" />
         <p className="mt-1" style={{ fontFamily: FONT.body, fontSize: '14px', opacity: 0.7 }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>

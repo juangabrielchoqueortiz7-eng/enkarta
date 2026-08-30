@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { ParadiseContent, TemplateTheme } from './types';
 import { useCountdown, Odometer, Reveal, EventIcon, PhotoGrid, Monogram, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn, CascadeText } from '@/lib/scroll-motion';
+import BrandByline from '@/components/brand/BrandByline';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
 const DEFAULT_C = {
@@ -451,6 +452,7 @@ export default function Paradise({ data }: { data: ParadiseContent }) {
         )}
         <footer className="py-8 text-center" style={{ background: C.greenDeep, color: C.creamText }}>
           <p style={{ fontFamily: F.script, fontSize: '34px', color: C.gold }}>Enkarta</p>
+          <BrandByline tone="inherit" className="mt-1 justify-center" />
           <p className="mt-1" style={{ fontSize: '14px', opacity: 0.8 }}>
             ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
           </p>

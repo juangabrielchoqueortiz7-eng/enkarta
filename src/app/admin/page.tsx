@@ -7,6 +7,8 @@ import ConfirmationsDashboard from '@/components/admin/ConfirmationsDashboard';
 import { collectionFor, publicTemplateName } from '@/lib/enkarta-collections';
 import { formatValidityDate, invitationValidity, validityLabel } from '@/lib/invitation-validity';
 import { eventDay } from '@/lib/rsvp-contract';
+import CommercialDashboard from '@/components/admin/CommercialDashboard';
+import LaunchDashboard from '@/components/admin/LaunchDashboard';
 
 const BUILDER_TEMPLATES = ['azure','primicia','passport','paradise','obsidiana','dolcevita','grazia','carmesi_v2','napoly','euforia','rosegold','allegria'];
 
@@ -22,7 +24,7 @@ export default function AdminPage() {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  const [view, setView] = useState<'invitations' | 'confirmations'>('invitations');
+  const [view, setView] = useState<'invitations' | 'confirmations' | 'commercial' | 'launch'>('invitations');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [validityFilter, setValidityFilter] = useState('all');
@@ -231,6 +233,18 @@ export default function AdminPage() {
               >
                 Confirmaciones
               </button>
+              <button
+                onClick={() => setView('commercial')}
+                className={`px-4 py-1.5 rounded-lg font-outfit text-sm transition-all ${view === 'commercial' ? 'bg-white shadow-sm text-enkarta-dark font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Ventas
+              </button>
+              <button
+                onClick={() => setView('launch')}
+                className={`px-4 py-1.5 rounded-lg font-outfit text-sm transition-all ${view === 'launch' ? 'bg-white shadow-sm text-enkarta-dark font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Lanzamiento
+              </button>
             </div>
             <a
               href="/admin/icons"
@@ -260,6 +274,10 @@ export default function AdminPage() {
         </div>
       </header>
 
+      <nav className="sticky top-16 z-30 grid grid-cols-4 border-b bg-white/95 p-1.5 backdrop-blur sm:hidden" aria-label="Secciones del panel">
+        {([['invitations', 'Invitaciones'], ['confirmations', 'Confirmaciones'], ['commercial', 'Ventas'], ['launch', 'Lanzamiento']] as const).map(([key, label]) => <button key={key} type="button" onClick={() => setView(key)} className={`rounded-lg px-1 py-2 font-outfit text-[10px] ${view === key ? 'bg-[#f0ebe3] font-semibold text-enkarta-dark' : 'text-gray-500'}`}>{label}</button>)}
+      </nav>
+
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
@@ -268,6 +286,10 @@ export default function AdminPage() {
             <h2 className="font-playfair text-2xl text-gray-900 mb-6">Confirmaciones</h2>
             <ConfirmationsDashboard invitations={invitations} />
           </>
+        ) : view === 'commercial' ? (
+          <CommercialDashboard />
+        ) : view === 'launch' ? (
+          <LaunchDashboard />
         ) : (
           <>
             {/* Stats */}

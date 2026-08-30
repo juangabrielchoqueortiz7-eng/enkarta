@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
 import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
+import BrandByline from '@/components/brand/BrandByline';
 
 // ── Paleta por defecto (blush/durazno + rosa-dorado + crema) ──────────────────────
 const DEFAULT_C = {
@@ -353,6 +354,7 @@ export default function RoseGold({ data }: { data: DolceVitaContent }) {
       <footer className="relative pb-9 pt-14 text-center" style={{ background: C.peachDeep, color: C.bandText }}>
         {sew('pie')}
         <Script style={{ fontSize: '34px', color: C.rose }}>Enkarta</Script>
+        <BrandByline tone="inherit" className="mt-1 justify-center" />
         <p className="mt-1" style={{ fontFamily: F.serif, fontSize: '14px' }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: C.rose, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>

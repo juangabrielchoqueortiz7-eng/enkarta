@@ -6,6 +6,7 @@ import { EventIcon, Reveal, useCountdown, Odometer, PhotoGrid, SECTION, ENKARTA_
 import { WriteOn } from '@/lib/scroll-motion';
 import { InvitationDivider } from './dividers';
 import { PassportContent, TemplateTheme } from './types';
+import BrandByline from '@/components/brand/BrandByline';
 
 const DEFAULT_C = {
   cream: '#d9cdb5',
@@ -523,6 +524,7 @@ export default function Passport({ data }: { data: PassportContent }) {
 
       <footer className="py-8 text-center" style={{ background: C.sage, color: C.creamText, borderTop: '1px solid rgba(236,230,214,0.2)' }}>
         <Caps style={{ color: C.creamText, fontSize: '18px', letterSpacing: '0.2em' }}>Enkarta</Caps>
+        <BrandByline tone="inherit" className="mt-1 justify-center" />
         <p className="mt-1" style={{ fontFamily: F.body, fontSize: '15px', color: C.creamDim }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>

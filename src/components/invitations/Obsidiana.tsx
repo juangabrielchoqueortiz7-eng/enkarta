@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { ObsidianaContent, TemplateTheme } from './types';
 import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
+import BrandByline from '@/components/brand/BrandByline';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
 const DEFAULT_C = {
@@ -456,6 +457,7 @@ export default function Obsidiana({ data }: { data: ObsidianaContent }) {
       <footer className="relative pb-8 pt-14 text-center" style={{ background: C.panel, color: C.cream }}>
         {sew('pie')}
         <Script style={{ fontSize: '34px' }}>Enkarta</Script>
+        <BrandByline tone="inherit" className="mt-1 justify-center" />
         <p className="mt-1" style={{ fontSize: '13px', color: C.creamDim }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: C.gold, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>

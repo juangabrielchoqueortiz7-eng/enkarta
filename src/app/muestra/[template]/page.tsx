@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { PREMIUM_REGISTRY, PREMIUM_KEYS } from '@/lib/template-registry';
 import EntryGate from '@/components/invitations/EntryGate';
@@ -14,6 +15,7 @@ import { resolveLayoutBindings } from '@/lib/block-bindings';
 import { entryPropsFor } from '@/components/invitations/entry/config';
 import { DEFAULT_MUSIC_URL, TRACK } from '@/lib/music';
 import { azureSample, passportSample, primiciaSample, paradiseSample, obsidianaSample, dolceVitaSample, graziaSample, carmesiSample, napolySample, euforiaSample, roseGoldSample, allegriaSample, provenceSample, esmeraldaSample } from '@/components/invitations/sampleData';
+import CommercialTracker from '@/components/commercial/CommercialTracker';
 
 interface Props {
   params: Promise<{ template: string }>;
@@ -63,8 +65,9 @@ export async function generateMetadata({ params }: { params: Promise<{ template:
   const title = `Colección ${m.name} · Invitación digital — Enkarta`;
   const description = `${m.desc}. Explora su apertura, música, recorrido visual y confirmación de asistencia tal como la vivirán tus invitados.`;
   return {
-    title,
+    title: { absolute: title },
     description,
+    alternates: { canonical: `/muestra/${key}` },
     openGraph: { title, description, type: 'website', siteName: 'Enkarta', images: [{ url: m.img }] },
     twitter: { card: 'summary_large_image' },
   };
@@ -116,6 +119,8 @@ export default async function MuestraPage({ params, searchParams }: Props) {
   const { n, m, full, mo, blocks, fp, cs, seam, fx, flow, prog, tempo, px, preview, classic } = await searchParams;
   let key = template.toLowerCase();
   if (key === 'carmesi_v2') key = 'carmesi';
+  const designName = key === 'marfil-vivo' ? MARFIL_VIVO_DESIGN.name : TEMPLATE_META[key]?.name || key;
+  const tracked = (node: ReactNode) => preview === '1' ? node : <><CommercialTracker event="design_view" design={designName} placement="sample" />{node}</>;
 
   const starterKey = key === 'carmesi' ? 'carmesi_v2' : key;
   if (STARTER_TEMPLATE_KEYS.includes(starterKey as StarterTemplateKey) && (classic !== '1' || key === 'marfil-vivo')) {
@@ -126,9 +131,9 @@ export default async function MuestraPage({ params, searchParams }: Props) {
     const resolved = resolveLayoutBindings(config.layout!, demo);
     const layout = preview === '1' ? { ...resolved, blocks: resolved.blocks.slice(0, 1).map(block => ({ ...block, animation: { preset: 'none' as const } })) } : resolved;
     const content = <FontScope config={config}><BlockRenderer layout={layout} theme={config.theme} tokens={config.tokens} motion={preview === '1' ? { preset: 'none', progress: 'none' } : config.motion} decor={config.decor} musicUrl={preview === '1' ? undefined : config.musicUrl} gated={full !== '1' && preview !== '1'} previewOnly={preview === '1'} demo /></FontScope>;
-    if (full === '1' || preview === '1' || config.entry?.enabled === false) return content;
+    if (full === '1' || preview === '1' || config.entry?.enabled === false) return tracked(content);
     const initials = demo.names!.split(/\s*&\s*|\s+y\s+/i).map(name => name[0]).join(' & ');
-    return <FontScope config={config}><EntryGate template={demo.template} names={demo.names!} initials={initials} dateLine={demo.event_date!} coverImage={demo.cover_image_url!} label={config.entry?.label} scene={config.entry?.style === 'cinematic' ? 'cinematic' : undefined} entryVideoUrl={config.entry?.videoUrl} entryPoster={config.entry?.poster} entryDuration={config.entry?.duration} entryOverlay={config.entry?.overlay} showSkip={config.entry?.showSkip ?? true} skipLabel={config.entry?.skipLabel} bg={config.theme?.bg} accent={config.theme?.primary} text={config.theme?.text}>{content}</EntryGate></FontScope>;
+    return tracked(<FontScope config={config}><EntryGate template={demo.template} names={demo.names!} initials={initials} dateLine={demo.event_date!} coverImage={demo.cover_image_url!} label={config.entry?.label} scene={config.entry?.style === 'cinematic' ? 'cinematic' : undefined} entryVideoUrl={config.entry?.videoUrl} entryPoster={config.entry?.poster} entryDuration={config.entry?.duration} entryOverlay={config.entry?.overlay} showSkip={config.entry?.showSkip ?? true} skipLabel={config.entry?.skipLabel} bg={config.theme?.bg} accent={config.theme?.primary} text={config.theme?.text}>{content}</EntryGate></FontScope>);
   }
 
   const sample = SAMPLES[key];
@@ -174,10 +179,10 @@ export default async function MuestraPage({ params, searchParams }: Props) {
   );
 
   // El enlace directo (?full=1) salta la portada de entrada.
-  if (full === '1') return el;
+  if (full === '1') return tracked(el);
 
   const gate = entryPropsFor(key, data);
-  return (
+  return tracked(
     <EntryGate template={key} names={gate.names} initials={gate.initials} dateLine={gate.dateLine} coverImage={gate.coverImage}>
       {el}
     </EntryGate>

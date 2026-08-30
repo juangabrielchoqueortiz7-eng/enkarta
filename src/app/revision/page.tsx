@@ -8,7 +8,7 @@ import SessionExit from '@/components/admin/host/SessionExit';
 import { isCurrentContract } from '@/lib/packages';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Revisión privada | Enkarta', robots: { index: false, follow: false } };
+export const metadata = { title: 'Revisión privada', robots: { index: false, follow: false } };
 export default async function ReviewPage() {
   const reviewId = await getReviewSession();
   const id = reviewId || await getHostSession();

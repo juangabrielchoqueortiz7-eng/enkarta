@@ -308,7 +308,7 @@ export async function generateMetadata({ params }: Props) {
   // (nombres + fecha sobre la foto, con marca). Next la inyecta en og:image y
   // twitter:image automáticamente, resolviéndola con metadataBase.
   return {
-    title,
+    title: { absolute: title },
     description,
     metadataBase,
     // Las invitaciones son privadas: no indexar en buscadores.

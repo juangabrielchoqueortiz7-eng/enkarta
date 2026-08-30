@@ -31,5 +31,5 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const { data } = await supabaseAdmin.from('invitations').select('*').eq('slug', slug).maybeSingle();
   const invitation = data ? parseInvitation(data as Invitation) : null;
-  return { title: invitation?.names ? `Save the Date · ${invitation.names} | Enkarta` : 'Save the Date | Enkarta', robots: { index: false, follow: false } };
+  return { title: { absolute: invitation?.names ? `Save the Date · ${invitation.names} | Enkarta` : 'Save the Date | Enkarta' }, robots: { index: false, follow: false } };
 }

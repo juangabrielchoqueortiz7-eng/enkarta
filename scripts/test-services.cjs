@@ -139,11 +139,13 @@ before(async () => {
     await db.exec(fs.readFileSync(path.join(root,'migrations/010_delivery_followup.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/011_verifiable_addons.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/011_verifiable_addons.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/012_commercial_funnel.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/012_commercial_funnel.sql'),'utf8'));
   } catch(error) { throw new Error(`Migration: ${error.message} at ${error.position}; ${migration.slice(Math.max(0,Number(error.position)-100),Number(error.position)+100)}`); }
 });
 beforeEach(async () => {
   actor=null; rpcFailure=null; queryFailure=null; cookieJar.clear();
-  await db.exec('TRUNCATE invitations,guests,attendees,access_log,rsvps,builder_versions,save_date_responses CASCADE');
+  await db.exec('TRUNCATE invitations,guests,attendees,access_log,rsvps,builder_versions,save_date_responses,commercial_events,commercial_leads CASCADE');
   await db.query("INSERT INTO invitations(id,slug,status,rsvp_deadline) VALUES($1,'test-event','ready',((now() AT TIME ZONE 'America/La_Paz')::date+1)),($2,'other-event','ready',NULL)",[invId,otherId]);
   await db.query("UPDATE invitations SET host_email=id::text||'@test.invalid', host_password_hash=$1, review_email=id::text||'@review.invalid', review_password_hash=$2",[hostHash,reviewHash]);
   await db.query("UPDATE invitations SET door_email=id::text||'@door.invalid', door_password_hash=$1",[doorHash]);
@@ -203,6 +205,21 @@ test('Save the Date is closed unless delivered and remains private in PostgreSQL
   response=await saveDateRoute.POST(req('/api/save-the-date',{...input,responseKey:'invalid'})); assert.equal(response.status,400);
   assert.equal(await scalar("select has_table_privilege('anon','save_date_responses','SELECT') as result"),false);
   assert.equal(await scalar("select has_function_privilege('anon','enkarta_submit_save_date(text,text,text,text,integer,text,uuid,text,integer)','EXECUTE') as result"),false);
+});
+
+test('commercial attribution is private, constrained and independent from guest data', async () => {
+  const hash=createHash('sha256').update('anonymous-commercial-session').digest('hex');
+  await db.query("insert into commercial_events(session_hash,event_type,package_key,design,utm_source) values($1,'landing_view','general','','instagram')",[hash]);
+  const leadId=randomUUID();
+  await db.query("insert into commercial_leads(id,reference,session_hash,package_key,design,utm_source) values($1,'EK-A1B2C3D4',$2,'premium','Lunaria','instagram')",[leadId,hash]);
+  assert.equal(await scalar('select count(*)::int as result from commercial_events'),1);
+  assert.equal(await scalar('select count(*)::int as result from commercial_leads'),1);
+  for(const role of ['anon','authenticated']) {
+    assert.equal(await scalar("select has_table_privilege($1,'commercial_events','SELECT') as result",[role]),false);
+    assert.equal(await scalar("select has_table_privilege($1,'commercial_leads','SELECT') as result",[role]),false);
+  }
+  await assert.rejects(db.query("insert into commercial_leads(reference,session_hash,status) values('BAD',$1,'sold')",[hash]));
+  assert.equal(await scalar('select count(*)::int as result from guests'),1);
 });
 
 const validityInput = (extra={}) => ({ id:invId, action:'extend', days:30, reason:'Ampliación acordada en prueba', expectedRevision:0, requestId:randomUUID(), ...extra });

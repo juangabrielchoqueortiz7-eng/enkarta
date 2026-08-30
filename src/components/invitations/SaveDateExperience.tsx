@@ -74,6 +74,10 @@ export default function SaveDateExperience({ slug, names, dateLabel, config, the
           {interest !== 'unavailable' && <label className="flex items-center justify-between gap-3 text-xs"><span>{copy.preconfirmGuests}</span><input type="number" min={1} max={20} value={guests} onChange={event => setGuests(Number(event.target.value))} className="min-h-11 w-24 rounded-xl border px-3 outline-none" style={field} /></label>}
           <textarea maxLength={400} rows={3} value={message} onChange={event => setMessage(event.target.value)} placeholder={copy.preconfirmMessage} aria-label={copy.preconfirmMessage} className="w-full rounded-xl border px-3 py-2 text-xs outline-none" style={field} />
           <button type="submit" disabled={busy} className="min-h-12 w-full rounded-xl px-4 text-xs font-semibold uppercase tracking-[.12em] disabled:opacity-50" style={{ background: t.primary, color: t.onPrimary }}>{busy ? copy.saving : config.buttonLabel || copy.preconfirmButton}</button>
+          <p className="px-2 text-center text-[10px] leading-relaxed" style={{ color: t.muted }}>
+            Tus datos se usan únicamente para gestionar este evento.{' '}
+            <Link href="/legal/privacidad" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Privacidad</Link>
+          </p>
         </form>}
         {error && <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">{error}</p>}
       </div>}

@@ -20,6 +20,7 @@ import {
   useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon,
   CopyBtn, SECTION, TYPE, ENKARTA_WA_URL, seamsFor,
 } from './shared';
+import BrandByline from '@/components/brand/BrandByline';
 
 // ── Paleta por defecto ────────────────────────────────────────────────────────
 const DEFAULT_C = {
@@ -517,6 +518,8 @@ export default function Esmeralda({ data }: { data: DolceVitaContent }) {
         <footer className="relative py-12 text-center" style={{ background: C.forestDeep, color: C.cream }}>
           {sew('pie')}
           <Seal a={ini(data.groom)} b={ini(data.bride)} color={C.gold} ink={C.cream} size={64} />
+          <p className="mt-5 font-great text-2xl">Enkarta</p>
+          <BrandByline tone="inherit" className="mt-1 justify-center" />
           <div className="mx-auto mt-6 max-w-xs">
             <Over style={{ color: `${C.cream}cc` }}>
               ¿Deseas una invitación para tu evento?{' '}

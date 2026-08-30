@@ -135,6 +135,10 @@ export default function ConfirmationForm({ slug, guest, guestName, maxPasses, de
       </fieldset>
       {session.hasUsedPasses && <p className="text-sm" style={noteStyle}>{copy.usedPasses}</p>}
       <button type="submit" disabled={busy || mustRefresh} className="ek-cta min-h-11 w-full rounded-xl px-4 py-3 disabled:opacity-50" style={{ background: theme.primary, color: theme.onPrimary, ...buttonStyle }}>{busy ? copy.saving : pending.current ? copy.retrySame : done ? copy.saveChanges : submitLabel}</button>
+      <p className="px-2 text-center text-[11px] leading-relaxed" style={{ color: theme.muted, ...noteStyle }}>
+        Tus datos se usan únicamente para gestionar este evento.{' '}
+        <a href="/legal/privacidad" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Privacidad</a>
+      </p>
       {editing && !busy && !pending.current && <button type="button" className="min-h-11 w-full text-sm underline" onClick={() => { setEditing(false); void refresh(); }}>{copy.cancelEdit}</button>}
     </form>}
     {error && <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}

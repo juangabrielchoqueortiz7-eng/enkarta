@@ -28,6 +28,7 @@ import type { BlockTheme } from './blocks/theme';
 import { PageMotionProvider, ScrollExperience, ScrollReveal, usePageMotion } from '@/lib/scroll-motion';
 import InvitationNavigation from './InvitationNavigation';
 import { invitationCopy } from '@/lib/invitation-i18n';
+import BrandByline from '@/components/brand/BrandByline';
 
 interface Props {
   layout: PageLayout;
@@ -659,6 +660,7 @@ function FooterBar({ seam }: { seam?: SeamInfo }) {
     <footer className="relative pb-8 pt-14 text-center" style={{ background: t.primaryDeep }}>
       {seam && <SeamFx fx={seam.fx} from={seam.from} shape={seam.shape} hairline={seam.hairline} height={44} />}
       <p className="font-great text-2xl" style={{ color: '#fff' }}>Enkarta</p>
+      <BrandByline tone="light" className="mt-1 justify-center" />
       <p className="font-cormorant text-sm mt-1" style={{ color: noteType.fontFamily ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)', ...noteType, paddingInline: noteType.fontFamily ? 24 : undefined }}>
         {copy.footerQuestion} <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">{copy.contactUs}</a>
       </p>

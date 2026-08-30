@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { DolceVitaContent, TemplateTheme } from './types';
 import { useCountdown, Odometer, Reveal, EventIcon, MasonryGallery, CalIcon, SECTION, TYPE, ENKARTA_WA_URL, seamsFor } from './shared';
 import { WriteOn } from '@/lib/scroll-motion';
+import BrandByline from '@/components/brand/BrandByline';
 
 // ── Paleta por defecto ──────────────────────────────────────────────────────────
 const DEFAULT_C = {
@@ -418,6 +419,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       <footer className="relative overflow-hidden pb-9 pt-12 text-center" style={{ background: FOOTER_BG, color: C.cream }}>
         {sew('pie')}
         <Script style={{ fontSize: '34px', color: C.gold }}>Enkarta</Script>
+        <BrandByline tone="inherit" className="mt-1 justify-center" />
         <p className="mt-1" style={{ fontFamily: F.serif, fontSize: '14px', opacity: 0.8 }}>
           ¿Deseas una invitación para tu evento? <a href={ENKARTA_WA_URL} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: C.gold, textDecoration: 'underline', textUnderlineOffset: 3 }}>Contáctanos</a>
         </p>
