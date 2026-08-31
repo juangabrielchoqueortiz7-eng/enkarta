@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 import { SITE_URL } from '@/lib/site';
+import ConsentAnalytics from '@/components/commercial/ConsentAnalytics';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
     type: 'website', siteName: 'Enkarta', images: [{ url: '/catalog/dolcevita.jpg' }],
   },
   twitter: { card: 'summary_large_image', title: 'Enkarta — Invitaciones Digitales', description: 'Invitaciones digitales para bodas, XV años y cumpleaños.', images: ['/catalog/dolcevita.jpg'] },
+  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } : undefined,
 };
 
 export default function RootLayout({
@@ -32,6 +34,7 @@ export default function RootLayout({
       <body className="antialiased">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }} />
         {children}
+        <ConsentAnalytics gaMeasurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} metaPixelId={process.env.NEXT_PUBLIC_META_PIXEL_ID} />
       </body>
     </html>
   );

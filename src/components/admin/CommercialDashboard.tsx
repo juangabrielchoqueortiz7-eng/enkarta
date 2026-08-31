@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { COMMERCIAL_LEAD_STATUSES, leadStatusLabel, type CommercialLeadStatus } from '@/lib/commercial';
+import SalesToolkit from '@/components/admin/SalesToolkit';
 
 type Lead = {
   id: string; reference: string; status: CommercialLeadStatus; package_key: string; design: string; event_category: string;
@@ -74,6 +75,7 @@ export default function CommercialDashboard() {
     ['Reservas', s.reserved, 'Incluye ventas'], ['Ventas', s.sales, `${s.closeRate}% de conversaciones`], ['Ingresos registrados', `${s.revenue.toLocaleString('es-BO')} Bs`, 'Solo ventas marcadas'],
   ];
   return <div className="space-y-6">
+    <SalesToolkit />
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="font-outfit text-[10px] font-semibold uppercase tracking-[.2em] text-[#a48655]">Últimos {data.periodDays} días</p><h2 className="mt-1 font-playfair text-3xl text-gray-900">Embudo comercial</h2><p className="mt-1 max-w-2xl font-outfit text-xs leading-5 text-gray-500">Relaciona anuncio, diseño, paquete y resultado mediante la referencia que aparece en WhatsApp. No registra IP, teléfono ni conversación.</p></div><button type="button" onClick={() => void load()} className="self-start rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">Actualizar</button></div>
 
     <section className="grid grid-cols-2 gap-3 lg:grid-cols-6">{cards.map(([label, value, detail]) => <article key={String(label)} className="rounded-2xl border border-[#e4dfd4] bg-white p-4"><p className="font-playfair text-3xl text-[#5d513d]">{value}</p><h3 className="mt-2 font-outfit text-[11px] font-semibold text-gray-700">{label}</h3><p className="mt-1 font-outfit text-[9px] text-gray-400">{detail}</p></article>)}</section>

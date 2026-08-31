@@ -1,0 +1,57 @@
+name: Enkarta production health
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: enkarta-production-health
+  cancel-in-progress: true
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HEALTH_URL: https://enkarta.vercel.app/api/health
+      ALERT_TITLE: "[ALERTA] Enkarta no responde"
+    steps:
+      - name: Check production
+        id: health
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          body="$(curl --fail --silent --show-error --max-time 10 --retry 2 --retry-delay 2 "$HEALTH_URL")"
+          echo "$body" | grep -q '"status":"operational"'
+
+      - name: Open one incident when unhealthy
+        if: steps.health.outcome == 'failure'
+        shell: bash
+        run: |
+          issue_number="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "$ALERT_TITLE in:title" --json number,title --jq ".[] | select(.title == \"$ALERT_TITLE\") | .number" | head -n1)"
+          if [ -z "$issue_number" ]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$ALERT_TITLE" --body "La comprobación externa no recibió un estado operativo de $HEALTH_URL. Revisa Admin → Lanzamiento, Vercel y Supabase. Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          else
+            gh issue comment "$issue_number" --repo "$GITHUB_REPOSITORY" --body "La incidencia continúa. Nueva comprobación fallida: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi
+
+      - name: Close incident after recovery
+        if: steps.health.outcome == 'success'
+        shell: bash
+        run: |
+          issue_numbers="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "$ALERT_TITLE in:title" --json number,title --jq ".[] | select(.title == \"$ALERT_TITLE\") | .number")"
+          for issue_number in $issue_numbers; do
+            gh issue comment "$issue_number" --repo "$GITHUB_REPOSITORY" --body "Producción volvió a responder correctamente en $HEALTH_URL."
+            gh issue close "$issue_number" --repo "$GITHUB_REPOSITORY" --reason completed
+          done
+
+      - name: Fail workflow when unhealthy
+        if: steps.health.outcome == 'failure'
+        run: exit 1

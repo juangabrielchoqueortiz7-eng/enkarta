@@ -52,7 +52,8 @@ const { qualityChecksFor, qualityProgress, releaseReady, qualityReport, updateQu
 const { commercialMessage, commercialContactPath, commercialConfirmationPath, parseCommercialContext } = require('../src/lib/commercial.ts');
 const { COMMERCIAL_EVENT_PAGES, COMMERCIAL_EVENT_SLUGS } = require('../src/lib/event-pages.ts');
 const { COMMERCIAL_PROOFS, isPublishableClientProof } = require('../src/lib/commercial-proof.ts');
-const { MARKETING_CAMPAIGNS, MARKETING_FORMATS, marketingTrackingPath } = require('../src/lib/marketing-kit.ts');
+const { LAUNCH_CALENDAR, MARKETING_CAMPAIGNS, MARKETING_FORMATS, marketingTrackingPath } = require('../src/lib/marketing-kit.ts');
+const { SALES_PIPELINE, formatSalesQuote, salesQuoteTotals, salesReply } = require('../src/lib/sales-playbook.ts');
 
 test('delivery tracking distinguishes opening, manual marking and real responses',()=>{
   assert.equal(deliveryState({status:'pending',sent:false,deliveryStatus:'pending'}),'pending');
@@ -108,6 +109,23 @@ test('marketing kit generates one measured asset matrix without changing campaig
     assert.ok(path.startsWith(MARKETING_CAMPAIGNS[campaign].path));
     assert.match(path, /utm_source=instagram/); assert.match(path, /utm_campaign=lanzamiento_/); assert.match(path, /utm_content=/);
   }
+  assert.match(marketingTrackingPath('bodas', 'square', 'whatsapp'), /utm_source=whatsapp/);
+  assert.match(marketingTrackingPath('bodas', 'square', 'whatsapp'), /utm_medium=message/);
+  assert.equal(LAUNCH_CALENDAR.length, 14);
+  assert.deepEqual(LAUNCH_CALENDAR.map(item => item.day), Array.from({ length: 14 }, (_, index) => index + 1));
+  assert.ok(LAUNCH_CALENDAR.some(item => item.channel === 'Operación'));
+});
+
+test('sales playbook produces consistent totals, proposal and stage replies', () => {
+  const input = { clientName: 'Ana y Luis', eventType: 'Boda', eventDate: '2027-06-12', design: 'Lunaria', packageKey: 'premium', extrasLabel: 'Entrega express', extrasBs: 270, paymentInstructions: 'QR empresarial confirmado' };
+  assert.deepEqual(salesQuoteTotals(input), { base: 930, extras: 270, total: 1200, reservation: 200, balance: 1000 });
+  const proposal = formatSalesQuote(input, 'https://enkarta.test');
+  assert.match(proposal, /Total: 1[.,]200 Bs/);
+  assert.match(proposal, /Reserva para iniciar: 200 Bs/);
+  assert.match(proposal, /QR empresarial confirmado/);
+  assert.match(proposal, /https:\/\/enkarta\.test\/legal\/pagos/);
+  assert.match(salesReply('materials', input), /reserva confirmada/i);
+  assert.equal(SALES_PIPELINE.length, 5);
 });
 
 test('validity calendar arithmetic handles leap years, months and years without timezone shifts', () => {

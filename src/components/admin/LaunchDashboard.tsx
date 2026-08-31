@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { MARKETING_CAMPAIGNS, MARKETING_FORMATS, marketingTrackingPath, type MarketingCampaignKey, type MarketingFormatKey } from '@/lib/marketing-kit';
+import { LAUNCH_CALENDAR, MARKETING_CAMPAIGNS, MARKETING_FORMATS, marketingTrackingPath, type MarketingCampaignKey, type MarketingFormatKey } from '@/lib/marketing-kit';
 import { SITE_URL } from '@/lib/site';
 
 type Check = { key: string; label: string; status: 'ok' | 'error'; latencyMs: number; detail: string };
@@ -26,7 +26,20 @@ function HealthPanel() {
   return <section className="rounded-3xl border border-[#e2ddd3] bg-white p-5 sm:p-7">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-outfit text-[10px] font-semibold uppercase tracking-[.2em] text-[#a48655]">Monitoreo operativo</p><h2 className="mt-1 font-playfair text-3xl text-gray-900">Salud de los servicios críticos</h2><p className="mt-2 max-w-2xl font-outfit text-xs leading-5 text-gray-500">Comprueba invitaciones, RSVP, QR, embudo y configuración. El endpoint público solo devuelve el estado general y no expone detalles.</p></div><button type="button" onClick={() => void load()} className="self-start rounded-xl border border-gray-200 px-4 py-2 font-outfit text-xs text-gray-600">{loading ? 'Comprobando…' : 'Actualizar'}</button></div>
     {error ? <p className="mt-5 rounded-xl bg-red-50 p-4 font-outfit text-sm text-red-700">{error}</p> : health && <><div className={`mt-6 rounded-2xl border p-4 ${health.status === 'operational' ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}><div className="flex items-center gap-3"><span className={`h-3 w-3 rounded-full ${health.status === 'operational' ? 'bg-emerald-500' : 'bg-red-500'}`} /><strong className={`font-outfit text-sm ${health.status === 'operational' ? 'text-emerald-800' : 'text-red-800'}`}>{health.status === 'operational' ? 'Todos los servicios responden' : 'Hay servicios que requieren atención'}</strong></div><p className="mt-1 pl-6 font-outfit text-[10px] text-gray-500">Última comprobación: {new Date(health.checkedAt).toLocaleString('es-BO')}</p></div><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">{health.checks.map(check => <article key={check.key} className="rounded-2xl border border-gray-100 bg-[#faf9f6] p-4"><div className="flex items-center justify-between gap-2"><span className={`h-2.5 w-2.5 rounded-full ${check.status === 'ok' ? 'bg-emerald-500' : 'bg-red-500'}`} /><span className="font-mono text-[9px] text-gray-400">{check.latencyMs} ms</span></div><h3 className="mt-3 font-outfit text-xs font-semibold text-gray-800">{check.label}</h3><p className="mt-1 font-outfit text-[10px] leading-4 text-gray-500">{check.detail}</p></article>)}</div></>}
-    <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4"><p className="font-outfit text-xs font-semibold text-amber-900">Alerta externa pendiente de conexión</p><p className="mt-1 font-outfit text-[11px] leading-5 text-amber-800">Después del despliegue conecta <code className="rounded bg-white/70 px-1">/api/health</code> a un monitor externo con intervalos de 5 minutos. Solo un servicio externo puede avisarte si Enkarta completa deja de responder.</p></div>
+    <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="font-outfit text-xs font-semibold text-emerald-900">Monitor externo versionado</p><p className="mt-1 font-outfit text-[11px] leading-5 text-emerald-800">GitHub Actions comprobará <code className="rounded bg-white/70 px-1">/api/health</code> cada 5 minutos. Si falla, abre una incidencia; cuando se recupera, la cierra automáticamente.</p></div>
+  </section>;
+}
+
+function LaunchCalendar() {
+  const [copied, setCopied] = useState(0);
+  const copy = async (day: number, value: string) => { await navigator.clipboard.writeText(value); setCopied(day); window.setTimeout(() => setCopied(0), 1500); };
+  return <section className="rounded-3xl border border-[#e2ddd3] bg-white p-5 sm:p-7">
+    <div><p className="font-outfit text-[10px] font-semibold uppercase tracking-[.2em] text-[#a48655]">Plan de 14 días</p><h2 className="mt-1 font-playfair text-3xl text-gray-900">Lanzamiento orgánico medible</h2><p className="mt-2 max-w-2xl font-outfit text-xs leading-5 text-gray-500">Una acción diaria para validar el mensaje, el segmento y el proceso de venta antes de pagar anuncios.</p></div>
+    <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{LAUNCH_CALENDAR.map(item => {
+      const url = `${SITE_URL}${marketingTrackingPath(item.campaign, item.format, item.channel.toLowerCase())}`;
+      const text = `${item.caption}\n\n${url}`;
+      return <article key={item.day} className="flex flex-col rounded-2xl border border-gray-100 bg-[#faf9f6] p-5"><div className="flex items-center justify-between gap-3"><span className="font-playfair text-2xl text-[#9a7e50]">Día {item.day}</span><span className="rounded-full bg-white px-2.5 py-1 font-outfit text-[9px] font-semibold text-gray-500">{item.channel}</span></div><p className="mt-3 font-outfit text-[10px] font-semibold uppercase tracking-[.14em] text-[#a48655]">{item.objective}</p><h3 className="mt-1 font-outfit text-sm font-semibold text-gray-800">{item.action}</h3><p className="mt-3 flex-1 font-outfit text-[11px] leading-5 text-gray-500">{item.caption}</p><button type="button" onClick={() => void copy(item.day, text)} className="mt-4 self-start rounded-xl border border-gray-200 bg-white px-4 py-2 font-outfit text-xs font-semibold text-gray-700">{copied === item.day ? 'Copiado' : 'Copiar publicación y enlace'}</button></article>;
+    })}</div>
   </section>;
 }
 
@@ -54,5 +67,5 @@ function MarketingKit() {
 }
 
 export default function LaunchDashboard() {
-  return <div className="space-y-6"><HealthPanel /><MarketingKit /></div>;
+  return <div className="space-y-6"><HealthPanel /><LaunchCalendar /><MarketingKit /></div>;
 }

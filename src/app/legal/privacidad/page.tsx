@@ -12,11 +12,13 @@ export default function PrivacyPage() {
         <li><strong>Contenido:</strong> fotografías, textos, música, lugares y otros materiales entregados para la invitación.</li>
         <li><strong>Datos técnicos:</strong> eventos agregados de uso y registros de seguridad. La analítica propia de la invitación no almacena nombres, teléfonos, mensajes ni IP cruda.</li>
         <li><strong>Interés comercial:</strong> fuente o campaña, página visitada, diseño, paquete, referencia de consulta y avance manual entre contacto, reserva y venta. El embudo no almacena la IP, el teléfono ni el contenido de WhatsApp.</li>
+        <li><strong>Medición publicitaria opcional:</strong> si la persona lo autoriza, Google Analytics y/o Meta Pixel pueden recibir eventos de navegación y campaña conforme a sus propias políticas. Estas herramientas no se cargan cuando se elige “Solo necesarias”.</li>
       </LegalList>
     </LegalSection>
     <LegalSection title="Finalidades">
       <p>Utilizamos la información para preparar el diseño, personalizar enlaces, recibir confirmaciones, administrar cupos y mesas, controlar ingresos, prestar soporte, prevenir abuso y cumplir obligaciones comerciales o legales.</p>
       <p>Los datos de invitados no se utilizan para publicidad de Enkarta ni se venden. Una campaña comercial de Grupo JABA no recibe nombres, teléfonos, respuestas, QR o mensajes de invitados.</p>
+      <p>La preferencia de medición se conserva en el navegador y puede restablecerse eliminando los datos locales del sitio. La analítica propia necesaria para atribuir una consulta no copia conversaciones ni datos de invitados.</p>
     </LegalSection>
     <LegalSection title="Responsabilidades y accesos">
       <p>El cliente debe contar con autorización suficiente para proporcionarnos fotografías y datos de sus invitados, informarles sobre el uso de la invitación y mantener actualizada la lista.</p>

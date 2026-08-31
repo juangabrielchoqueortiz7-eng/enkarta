@@ -6,15 +6,17 @@
 
 El detalle se consulta únicamente con sesión administrativa en **Admin → Lanzamiento**.
 
-## Alerta externa necesaria
+## Alerta externa activa
 
-Una aplicación no puede avisar de su propia caída si su servidor también está fuera de línea. Después de desplegar, conectar `https://enkarta.vercel.app/api/health` a un monitor externo con:
+Una aplicación no puede avisar de su propia caída si su servidor también está fuera de línea. `.github/workflows/production-health.yml` comprueba `https://enkarta.vercel.app/api/health` desde GitHub Actions con:
 
 - método `GET`;
 - intervalo de 5 minutos;
 - éxito esperado: HTTP `200`;
 - alerta ante `503`, error de red o 10 segundos sin respuesta;
-- notificación al canal operativo elegido por Grupo JABA.
+- una incidencia única en GitHub cuando falla y cierre automático después de la recuperación.
+
+La cuenta operativa debe conservar habilitadas las notificaciones de GitHub para Actions e incidencias.
 
 La comprobación manual equivalente es:
 
@@ -29,4 +31,3 @@ npm run monitor:production
 3. Evitar cambios destructivos y conservar registros.
 4. Informar a clientes afectados por el canal del pedido.
 5. Restaurar el último estado estable y documentar causa, duración y solución.
-
