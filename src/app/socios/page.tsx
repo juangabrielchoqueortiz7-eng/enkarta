@@ -46,7 +46,10 @@ export default async function PartnersLandingPage({ searchParams }: {
       <header className="border-b border-[#2C2519]/8">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
           <Link href="/" className="font-cinzel text-sm tracking-[0.18em]">ENKARTA</Link>
-          <span className="font-outfit text-[10px] uppercase tracking-[0.3em] text-[#B8975A]">Programa de socios</span>
+          <nav className="flex items-center gap-4 sm:gap-6" aria-label="Secciones">
+            <Link href="/catalogo" className="font-outfit text-[11px] text-[#2C2519]/55 transition-colors hover:text-[#2C2519]">Catálogo</Link>
+            <span className="font-outfit text-[10px] uppercase tracking-[0.3em] text-[#B8975A]">Programa de socios</span>
+          </nav>
         </div>
       </header>
 

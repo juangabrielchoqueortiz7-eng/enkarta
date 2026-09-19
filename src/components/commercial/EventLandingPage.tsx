@@ -33,6 +33,7 @@ export default function EventLandingPage({ slug }: { slug: CommercialEventSlug }
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
         <Link href="/" aria-label="Volver a Enkarta"><span className="font-cinzel text-xl tracking-[.12em] text-[#665a47]">ENKARTA</span><BrandByline tone="warm" className="mt-1.5" /></Link>
         <nav className="hidden items-center gap-6 font-outfit text-xs text-[#6c6254] sm:flex" aria-label="Categorías">
+          <Link href="/catalogo" className="hover:text-[#30291f]">Catálogo</Link>
           {Object.values(COMMERCIAL_EVENT_PAGES).map(item => <Link key={item.slug} href={`/${item.slug}`} className={item.slug === slug ? 'font-semibold text-[var(--event-accent)]' : 'hover:text-[#30291f]'}>{item.navLabel}</Link>)}
           <Link href="/casos" className="hover:text-[#30291f]">Casos</Link>
         </nav>
@@ -74,6 +75,7 @@ export default function EventLandingPage({ slug }: { slug: CommercialEventSlug }
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="font-outfit text-[10px] font-semibold uppercase tracking-[.25em] text-[var(--event-accent)]">Punto de partida</p><h2 className="mt-3 font-playfair text-4xl sm:text-5xl">Tres direcciones para explorar</h2></div><Link href="/casos" className="font-outfit text-sm font-semibold text-[var(--event-accent)] underline underline-offset-4">Cómo evaluamos las muestras</Link></div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">{designs.map(design => <article key={design.key} className="overflow-hidden rounded-[1.75rem] border border-[#ded2c1] bg-white shadow-[0_18px_50px_rgba(72,55,32,.08)]"><Image src={design.image} alt={`Diseño ${design.name}`} width={700} height={800} className="aspect-[4/3] w-full object-cover" /><div className="p-6"><p className="font-outfit text-[9px] font-semibold uppercase tracking-[.2em] text-[var(--event-accent)]">{design.tag}</p><h3 className="mt-2 font-playfair text-3xl">{design.name}</h3><p className="mt-2 min-h-10 font-outfit text-sm leading-5 text-[#786e61]">{design.desc}</p><div className="mt-5 flex gap-2"><Link href={design.demoPath} className="flex-1 rounded-full border border-[#d8ccba] px-4 py-2.5 text-center font-outfit text-xs font-semibold">Ver completa</Link><CommercialLink design={design.name} eventType={event.eventType} placement="event_design" className="flex-1 rounded-full bg-[var(--event-accent)] px-4 py-2.5 text-center font-outfit text-xs font-semibold text-white">Elegir</CommercialLink></div></div></article>)}</div>
+        <div className="mt-12 text-center"><Link href="/catalogo" className="inline-flex items-center gap-2 rounded-full border border-[#cfc2ae] bg-white px-8 py-3.5 font-outfit text-sm font-semibold text-[#665a47] transition-colors hover:border-[var(--event-accent)] hover:text-[var(--event-accent)]">Ver el catálogo completo<span aria-hidden>→</span></Link><p className="mt-3 font-outfit text-xs text-[#8a8073]">Todas las colecciones Enkarta, con muestra navegable</p></div>
       </div>
     </section>
 

@@ -37,7 +37,10 @@ export default function ProcessPage() {
           <span className="font-cinzel text-xl tracking-[.12em] text-[#6e6048]">ENKARTA</span>
           <BrandByline tone="warm" className="mt-1.5" />
         </Link>
-        <Link href="/#precios" className="rounded-full border border-[#cbbb9f] px-4 py-2 font-outfit text-xs font-semibold text-[#6e6048]">Ver paquetes</Link>
+        <nav className="flex items-center gap-4 sm:gap-6" aria-label="Secciones">
+          <Link href="/catalogo" className="font-outfit text-xs text-[#6c6254] transition-colors hover:text-[#30291f]">Catálogo</Link>
+          <Link href="/#precios" className="rounded-full border border-[#cbbb9f] px-4 py-2 font-outfit text-xs font-semibold text-[#6e6048]">Ver paquetes</Link>
+        </nav>
       </div>
     </header>
 

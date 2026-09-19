@@ -64,6 +64,7 @@ export default function CatalogPage() {
           {Object.values(COMMERCIAL_EVENT_PAGES).map(event => (
             <Link key={event.slug} href={`/${event.slug}`} className="transition-colors hover:text-[#30291f]">{event.navLabel}</Link>
           ))}
+          <Link href="/casos" className="transition-colors hover:text-[#30291f]">Casos</Link>
           <Link href="/#precios" className="transition-colors hover:text-[#30291f]">Precios</Link>
           <Link href="/proceso" className="transition-colors hover:text-[#30291f]">Cómo funciona</Link>
         </nav>
