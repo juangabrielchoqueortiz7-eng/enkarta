@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
+import {isCleanDesign} from '@/lib/clean-designs';
 import { Guest, Invitation, parseInvitation } from '@/lib/types';
-import { PREMIUM_REGISTRY } from '@/lib/template-registry';
+import { premiumFor } from '@/lib/template-registry';
 import { notFound } from 'next/navigation';
 import React from 'react';
 // Legacy
@@ -16,6 +17,7 @@ import FontScope from '@/components/invitations/FontScope';
 import SmartRsvp from '@/components/invitations/SmartRsvp';
 import { PageMotionProvider } from '@/lib/scroll-motion';
 import { gateInvitation, resolveFeatures } from '@/lib/packages';
+import { partnerServesInvitation } from '@/lib/partner-session';
 import { DEFAULT_MUSIC_URL } from '@/lib/music';
 import { resolveLayoutBindings } from '@/lib/block-bindings';
 import { findGuestByPublicId } from '@/lib/guests';
@@ -117,6 +119,11 @@ export default async function InvitationPage({ params, searchParams }: Props) {
     );
   }
 
+  // ── Invitación de un socio con la mensualidad vencida (tras los días de gracia) ──
+  if (!privatePreview && !(await partnerServesInvitation((invitation as { partner_id?: string | null }).partner_id))) {
+    return <StatusScreen icon={ClockIcon} title={storedCopy.pausedTitle} text={storedCopy.pausedText} />;
+  }
+
   // ── Expiración automática (DATE → comparación por día) ──
   if (invitation.expires_at && !privatePreview) {
     const today = eventDay();
@@ -188,12 +195,14 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const resolvedLayout = hasBlocks ? resolveLayoutBindings(config.layout!, parsed) : null;
   const mobileForm = hasRsvpForm(resolvedLayout?.blocks ?? [], 'mobile');
   const desktopForm = hasRsvpForm(resolvedLayout?.blocks ?? [], 'desktop');
-  const premium = PREMIUM_REGISTRY[parsed.template];
+  const premium = premiumFor(parsed);
+  const nativeLaura = (config.designKey === 'laura-y-andres' || config.designKey === 'annie-y-micky' || config.designKey === 'roly-y-yeliana' || config.designKey === 'nicole-y-francisco' || config.designKey === 'manuel-y-maya' || config.designKey === 'mariana-y-jesus' || config.designKey === 'paula-y-juan-felipe' || config.designKey === 'karla-y-mauricio' || (config.designKey === 'maria-angelica-y-mario' || isCleanDesign(config.designKey))) && !hasBlocks;
+  const customCinematic = nativeLaura && config.entry?.style === 'cinematic';
   let templateEl: React.ReactNode;
   if (hasBlocks) {
     templateEl = null; // se reemplaza más abajo por <BlockRenderer> (con sus providers)
   } else if (premium) {
-    templateEl = <div className="ek-invite"><premium.Comp data={premium.map(parsed)} /></div>;
+    templateEl = <div className="ek-invite"><premium.Comp data={premium.map(parsed)} demo={privatePreview} skipEntry={full === '1' || customCinematic} deadlinePassed={deadlinePassed} /></div>;
   } else {
     const templates: Partial<Record<string, React.ComponentType<{ invitation: ReturnType<typeof parseInvitation> }>>> = {
       perla: Perla, marmol: Marmol, terra: Terra, sobre: Sobre, carmesi: Carmesi, gerbera: Gerbera,
@@ -204,10 +213,10 @@ export default async function InvitationPage({ params, searchParams }: Props) {
 
   // ── Pantalla de entrada / "sobre": enlace principal la muestra; ?full=1 la salta ──
   // El toggle explícito de Entrada manda; si no se tocó, decide el paquete.
-  const entryEnabled = (config.entry?.enabled ?? resolveFeatures(config).entry) && full !== '1';
+  const entryEnabled = (config.entry?.enabled ?? resolveFeatures(config).entry) && full !== '1' && (!nativeLaura || customCinematic);
 
   // Confirmación inteligente: formulario in-app al final (gateado por paquete).
-  const smartRsvp = feats.smartRsvp && !privatePreview && !(mobileForm && desktopForm) ? (
+  const smartRsvp = !nativeLaura && feats.smartRsvp && !privatePreview && !(mobileForm && desktopForm) ? (
     <SmartRsvp
       slug={invitation.slug}
       theme={config.theme}

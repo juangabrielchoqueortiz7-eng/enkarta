@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { hashPassword } from '@/lib/access';
-import { getAdminSession } from '@/lib/host-session';
+import { invitationActor } from '@/lib/builder-access';
 import { allowsService } from '@/lib/packages';
 import { storedServiceConfig } from '@/lib/package-services-server';
 import { privateJson, serviceBody } from '@/lib/services-server';
@@ -15,11 +15,12 @@ const columns = (scope: string) => `id,${scope}_email,${scope}_password_hash${sc
 const missingMigration = (scope: string) => `Falta aplicar migrations/${scope === 'door' ? '008_live_host_and_door_access.sql' : '007_separate_design_review.sql'} para activar este acceso.`;
 
 export async function GET(request: NextRequest) {
-  if (!(await getAdminSession())) return fail('No autorizado', 401);
   const params = new URL(request.url).searchParams;
   const id = params.get('id');
   const scope = params.get('scope') || 'host';
   if (!isUuid(id) || !['host', 'review', 'door'].includes(scope)) return fail('Acceso no válido');
+  // El socio entrega estos accesos a su propio cliente: solo sobre sus invitaciones.
+  if (!(await invitationActor(id))) return fail('No autorizado', 401);
   const { data, error } = await supabaseAdmin.from('invitations').select(columns(scope)).eq('id', id).maybeSingle();
   if (error) return fail(migrationError(error) ? missingMigration(scope) : 'No se pudo consultar el acceso.', 503);
   if (!data) return fail('Invitación no encontrada', 404);
@@ -29,11 +30,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await getAdminSession())) return fail('No autorizado', 401);
   try {
     const body = await serviceBody(request);
     const scope = body.scope || 'host';
     if (!isUuid(body.id) || !['host', 'review', 'door'].includes(String(scope))) return fail('Acceso no válido');
+    if (!(await invitationActor(String(body.id)))) return fail('No autorizado', 401);
     const { data, error } = await supabaseAdmin.from('invitations').select(columns(String(scope))).eq('id', body.id).maybeSingle();
     if (error) return fail(migrationError(error) ? missingMigration(String(scope)) : 'No se pudo consultar la invitación.', 503);
     if (!data) return fail('Invitación no encontrada', 404);

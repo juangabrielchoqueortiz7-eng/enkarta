@@ -360,7 +360,8 @@ test('all old starters still work and the new design is selectable', () => {
     assert.equal(starter.status, 'draft');
     assert.ok(starter.names);
     assert.ok(starter.builder_config);
-    if (key !== 'marfil-vivo') assert.equal(starter.template, key);
+    if (['laura-y-andres','annie-y-micky','roly-y-yeliana','nicole-y-francisco','manuel-y-maya','mariana-y-jesus','paula-y-juan-felipe','karla-y-mauricio','maria-angelica-y-mario','siena-editorial','jardin-salvia','carta-malva','costa-celeste','noche-champagne','jardin-de-seda','casa-limone','promesa','aurelia','velada'].includes(key)) assert.equal(starter.template, 'dolcevita');
+    else if (key !== 'marfil-vivo') assert.equal(starter.template, key);
   }
 });
 
@@ -484,9 +485,9 @@ test('Marfil Vivo has no validation errors or false empty-cover/itinerary warnin
   assert.ok(!validation.warnings.some(issue => /No hay portada|Itinerario vacío|Galería vacía|Actividad incompleta/.test(issue.title)));
 });
 
-test('all 13 catalogue entries keep native identity and expose blocks only as an opt-in', () => {
+test('all catalogue entries keep native identity and expose blocks only as an opt-in', () => {
   const catalog = collectionCatalog();
-  assert.equal(catalog.length, 13);
+  assert.equal(catalog.length, STARTER_TEMPLATE_KEYS.length);
   for (const card of catalog) {
     const starter = invitationStarter(card.key);
     const demo = invitationDemo(card.key);
@@ -496,6 +497,13 @@ test('all 13 catalogue entries keep native identity and expose blocks only as an
     assert.equal(card.image, starter.cover_image_url);
     if (card.key === 'marfil-vivo') assert.equal(demo.config.layout.presetKey, card.key);
     else assert.equal(demo.config.layout, undefined, `${card.key} debe conservar su plantilla original`);
+    if (['laura-y-andres','annie-y-micky','roly-y-yeliana','nicole-y-francisco','manuel-y-maya','mariana-y-jesus','paula-y-juan-felipe','karla-y-mauricio','maria-angelica-y-mario','siena-editorial','jardin-salvia','carta-malva','costa-celeste','noche-champagne','jardin-de-seda','casa-limone','promesa','aurelia','velada'].includes(card.key)) {
+      assert.equal(blockDemo.config.designKey, card.key);
+      assert.equal(blockDemo.config.layout, undefined);
+      if(['mariana-y-jesus','karla-y-mauricio'].includes(card.key)) assert.deepEqual(validateInvitationBuilder(demo).errors.map(e=>e.title), ['Contraste de texto insuficiente']);
+      else assert.deepEqual(validateInvitationBuilder(demo).errors, []);
+      continue;
+    }
     assert.equal(blockDemo.config.layout.presetKey, card.key);
     assert.equal(blockDemo.config.designMode, 'guided');
     assert.equal(blockDemo.config.tokens.visualProfile, card.key === 'marfil-vivo' ? 'marfil-v1' : 'collection-v1');
@@ -570,7 +578,7 @@ test('all collection documents round-trip without losing manual style and icon o
     demo.config.fontHeading = 'Marcellus';
     demo.config.iconColor = '#a23559';
     demo.config.iconScale = 1.2;
-    demo.config.layout.blocks[0].props.focal = '32% 64%';
+    if (demo.config.layout) demo.config.layout.blocks[0].props.focal = '32% 64%';
     const original = JSON.parse(JSON.stringify(demo.config));
     const parsed = parseInvitation({ ...demo, builder_config: JSON.stringify(original), itinerary: JSON.stringify(demo.itinerary), parents_groom: '[]', parents_bride: '[]', sponsors: '[]' });
     assert.deepEqual(JSON.parse(JSON.stringify(parsed.config)), original, key);
@@ -696,4 +704,282 @@ test('phase 8 report is reproducible and quality evidence never reaches guests',
   assert.equal(report.generatedAt, '2026-08-29T12:00:00.000Z');
   assert.equal(report.invitation.package, 'premium');
   assert.equal(clientInvitation(data).config.qualityControl, undefined);
+});
+
+
+test('Laura editable data and animation choices survive save, reopen and duplication', () => {
+  const { laText, laMaps } = require('../src/lib/laura-andres.ts');
+  const demo = invitationDemo('laura-y-andres');
+  demo.names = 'Lucía y Diego';
+  demo.event_date = '2027-06-12';
+  demo.config.lauraAndres.texts.story = '';
+  demo.config.lauraAndres.sections.gallery = false;
+  demo.config.lauraAndres.coverImages = ['/foto-personal.webp'];
+  demo.config.sectionIcons.noKids = '/lottie/boda/laura-sin-ninos.json';
+  const reopened = parseInvitation({...demo, builder_config:JSON.stringify(demo.config), itinerary:JSON.stringify(demo.itinerary), parents_groom:'[]', parents_bride:'[]', sponsors:'[]'});
+  assert.equal(reopened.config.designKey,'laura-y-andres');
+  assert.equal(reopened.names,'Lucía y Diego');
+  assert.equal(laText(reopened,'story'),'');
+  assert.equal(reopened.config.lauraAndres.sections.gallery,false);
+  assert.deepEqual(reopened.config.lauraAndres.coverImages,['/foto-personal.webp']);
+  assert.equal(laMaps('Casa Aragón'),'https://www.google.com/maps/search/?api=1&query=Casa%20Arag%C3%B3n');
+  assert.ok(collectPublicationResources(reopened).some(r=>r.url==='/foto-personal.webp'));
+  assert.notEqual(laText(invitationDemo('laura-y-andres'),'story'),'');
+  for (const name of ['sin-ninos','corazones','lluvia-de-sobres']) {
+    const animation=JSON.parse(fs.readFileSync(path.join(root,'public/lottie/boda/laura-'+name+'.json'),'utf8'));
+    assert.ok(animation.layers.length && animation.op > animation.ip && animation.fr > 0);
+    assert.ok(!animation.assets.length, 'Animations must be self-contained');
+  }
+});
+
+test('Laura carousels obey the package photo allowance without modifying the saved design', () => {
+  const { laMedia } = require('../src/lib/laura-andres.ts');
+  const data=invitationDemo('laura-y-andres');
+  const original=JSON.stringify(data.config.lauraAndres);
+  data.config=newServiceContract(data.config,'plus');
+  assert.equal(Object.values(laMedia(data)).flat().length,0);
+  data.config=newServiceContract(data.config,'premium');
+  assert.ok(new Set(Object.values(laMedia(data)).flat()).size<=8);
+  assert.equal(JSON.stringify(data.config.lauraAndres),original);
+});
+
+test('Annie edits survive persistence and use independent local media within package limits',()=>{
+ const {amText,amMedia}=require('../src/lib/annie-micky.ts');
+ const data=invitationDemo('annie-y-micky');
+ assert.equal(data.config.lauraAndres,undefined);
+ assert.ok(!JSON.stringify(data).includes('invitali.com'));
+ for(const url of [data.cover_image_url,...data.config.galleryImages]) assert.ok(fs.existsSync(path.join(root,'public',url)));
+ data.config.annieMicky.texts.honor='Nuestra fiesta';
+ data.config.annieMicky.texts.story='';
+ data.config.annieMicky.sections.family=false;
+ data.config.annieMicky.coverImages=['/mi-foto.webp'];
+ data.config.annieMicky.wideImages=['/panoramica.webp'];
+ const reopened=parseInvitation({...data,builder_config:JSON.stringify(data.config)});
+ assert.equal(amText(reopened,'honor'),'Nuestra fiesta');
+ assert.equal(amText(reopened,'story'),'');
+ assert.equal(reopened.config.annieMicky.sections.family,false);
+ assert.ok(collectPublicationResources(reopened).some(r=>r.url==='/mi-foto.webp'));
+ assert.deepEqual(reopened.config.annieMicky.wideImages,['/panoramica.webp']);
+ assert.ok(collectPublicationResources(reopened).some(r=>r.url==='/panoramica.webp'));
+ assert.ok(amMedia(reopened).wide.includes('/panoramica.webp'));
+ assert.notEqual(amText(invitationDemo('annie-y-micky'),'honor'),'Nuestra fiesta');
+ reopened.config=newServiceContract(reopened.config,'plus');
+ assert.equal(Object.values(amMedia(reopened)).flat().length,0);
+ reopened.config=newServiceContract(reopened.config,'premium');
+ assert.ok(new Set(Object.values(amMedia(reopened)).flat()).size<=8);
+});
+
+test('Roly retains independent content, original resources and bounded carousels on reopen', () => {
+ const {ryText,ryMedia,RY_ICONS}=require('../src/lib/roly-y-yeliana.ts');
+ const {originalInvitationAsset,REMOTE_ORIGINAL_ICONS}=require('../src/lib/invitation-assets.ts');
+ const draft=invitationDemo('roly-y-yeliana');
+ draft.config.rolyYeliana.texts.headline='Nuestra gran noticia';
+ draft.config.rolyYeliana.firstImages=['/mi-foto.webp'];
+ const reopened=parseInvitation({...draft,itinerary:JSON.stringify(draft.itinerary),builder_config:JSON.stringify(draft.config)});
+ assert.equal(reopened.config.designKey,'roly-y-yeliana');
+ assert.equal(ryText(reopened,'headline'),'Nuestra gran noticia');
+ assert.deepEqual(ryMedia(reopened).first,['/mi-foto.webp']);
+ assert.equal(reopened.itinerary.length,9);
+ assert.equal(originalInvitationAsset('https://invitali.com/wp-content/uploads/2024/05/Animation-1715978306775.json'),'/lottie/boda/annie-corazones-original.json');
+ assert.ok(REMOTE_ORIGINAL_ICONS.some(icon=>icon.path===RY_ICONS.car));
+ const original=JSON.parse(fs.readFileSync(path.join(root,'public/lottie/boda/annie-corazones-original.json')));
+ assert.equal(original.w,1920);assert.equal(original.h,1080);assert.ok(original.layers.some(layer=>layer.ks?.p?.a===1));
+ for(const image of [draft.cover_image_url,draft.config.rolyYeliana.backgroundImage,draft.config.rolyYeliana.dressImage,draft.config.rolyYeliana.registryImage,draft.config.giftQrUrl])assert.ok(fs.existsSync(path.join(root,'public',image)));
+ reopened.config=newServiceContract(reopened.config,'plus');
+ assert.equal(Object.values(ryMedia(reopened)).flat().length,0);
+ reopened.config=newServiceContract(reopened.config,'premium');
+ assert.ok(new Set(Object.values(ryMedia(reopened)).flat()).size<=8);
+});
+
+
+test('Nicole preserves independent sections, original assets and edits after reopening',()=>{
+ const {nfText,nfMedia,NF_ICONS}=require('../src/lib/nicole-francisco.ts');
+ const {REMOTE_ORIGINAL_ICONS}=require('../src/lib/invitation-assets.ts');
+ const data=invitationDemo('nicole-y-francisco');
+ assert.equal(data.config.rolyYeliana,undefined);
+ assert.equal(data.config.annieMicky,undefined);
+ assert.equal(data.itinerary.length,5);
+ for(const url of [data.cover_image_url,...Object.values(nfMedia(data)).flat(),data.config.nicoleFrancisco.monogramImage,data.config.nicoleFrancisco.envelopeImage,data.config.giftQrUrl])assert.ok(fs.existsSync(path.join(root,'public',url)),url);
+ data.config.nicoleFrancisco.texts.entry='Abrir nuestro día';
+ data.config.nicoleFrancisco.sections.dress=false;
+ data.config.nicoleFrancisco.collageImages=['/collage-propio.webp'];
+ data.itinerary[0].iconColors={'#000000':'#112233'};
+ data.itinerary[0].iconSpeed=0.6;
+ const reopened=parseInvitation({...data,itinerary:JSON.stringify(data.itinerary),builder_config:JSON.stringify(data.config)});
+ assert.equal(nfText(reopened,'entry'),'Abrir nuestro día');
+ assert.equal(reopened.config.nicoleFrancisco.sections.dress,false);
+ assert.equal(reopened.itinerary[0].iconSpeed,0.6);
+ assert.equal(reopened.itinerary[0].iconColors['#000000'],'#112233');
+ assert.ok(collectPublicationResources(reopened).some(r=>r.url==='/collage-propio.webp'));
+ assert.ok(REMOTE_ORIGINAL_ICONS.some(i=>i.path===NF_ICONS.photo));
+ assert.notEqual(nfText(invitationDemo('nicole-y-francisco'),'entry'),'Abrir nuestro día');
+ reopened.config=newServiceContract(reopened.config,'plus');
+ assert.equal(Object.values(nfMedia(reopened)).flat().length,0);
+ reopened.config=newServiceContract(reopened.config,'premium');
+ assert.ok(new Set(Object.values(nfMedia(reopened)).flat()).size<=8);
+});
+
+test('Manuel preserves its family, galleries and independent builder configuration',()=>{
+ const {mmText,mmMedia,MM_ICONS}=require('../src/lib/manuel-maya.ts');
+ const {originalInvitationAsset}=require('../src/lib/invitation-assets.ts');
+ const data=invitationDemo('manuel-y-maya');
+ assert.equal(data.config.nicoleFrancisco,undefined);
+ assert.equal(data.itinerary.length,8);
+ assert.equal(data.sponsors.length,2);
+ assert.equal(data.config.manuelMaya.registryImages.length,2);
+ for(const url of [data.cover_image_url,...Object.values(mmMedia(data)).flat(),...data.config.manuelMaya.registryImages,data.config.manuelMaya.churchImage,data.config.manuelMaya.sealImage,data.config.giftQrUrl,originalInvitationAsset(MM_ICONS.cake),originalInvitationAsset(data.config.musicUrl)])assert.ok(fs.existsSync(path.join(root,'public',url)),url);
+ data.cover_image_url='/portada-editada.webp';
+ assert.equal(mmMedia(data).cover[0],'/portada-editada.webp');
+ data.config.manuelMaya.texts.family='Nuestras familias';
+ data.config.manuelMaya.sections.dress=false;
+ data.config.manuelMaya.firstImages=['/fotos-nuevas.webp'];
+ data.sponsors[0].names='Familia editada';
+ const reopened=parseInvitation({...data,sponsors:JSON.stringify(data.sponsors),builder_config:JSON.stringify(data.config)});
+ assert.equal(mmText(reopened,'family'),'Nuestras familias');
+ assert.equal(reopened.sponsors[0].names,'Familia editada');
+ assert.equal(reopened.config.manuelMaya.sections.dress,false);
+ assert.ok(collectPublicationResources(reopened).some(r=>r.url==='/fotos-nuevas.webp'));
+ assert.notEqual(mmText(invitationDemo('manuel-y-maya'),'family'),'Nuestras familias');
+ reopened.config=newServiceContract(reopened.config,'plus');
+ assert.equal(Object.values(mmMedia(reopened)).flat().length,0);
+ reopened.config=newServiceContract(reopened.config,'premium');
+ assert.ok(new Set(Object.values(mmMedia(reopened)).flat()).size<=8);
+});
+
+test('Imported originals preserve archive bytes and disambiguate duplicate filenames',()=>{
+ const crypto=require('node:crypto');
+ const {originalInvitationAsset}=require('../src/lib/invitation-assets.ts');
+ const manifest=JSON.parse(fs.readFileSync(path.join(root,'public/invitali-originales.json')));
+ for(const item of manifest.filter(item=>item.localPath)){
+  const source=fs.readFileSync(path.join(root,item.archiveFile));
+  const served=fs.readFileSync(path.join(root,'public',originalInvitationAsset(item.url)));
+  assert.ok(source.equals(served),item.url);
+  assert.equal(crypto.createHash('sha256').update(served).digest('hex'),item.sha256);
+ }
+ assert.notEqual(originalInvitationAsset('https://invitali.com/wp-content/uploads/2025/07/boda.json'),originalInvitationAsset('https://invitali.com/wp-content/uploads/2025/08/boda.json'));
+});
+
+test('Mariana and Paula preserve isolated native edits and package media limits',()=>{
+ const {mjMedia,mjText}=require('../src/lib/mariana-jesus.ts');
+ const {pjMedia,pjText}=require('../src/lib/paula-juan-felipe.ts');
+ for(const [key,scope,media,text] of [['mariana-y-jesus','marianaJesus',mjMedia,mjText],['paula-y-juan-felipe','paulaJuanFelipe',pjMedia,pjText]]){
+  const data=invitationDemo(key);data.config[scope].texts.family='Familia editada';data.config[scope].sections.dress=false;
+  const reopened=parseInvitation({...data,builder_config:JSON.stringify(data.config)});
+  assert.equal(text(reopened,'family'),'Familia editada');assert.equal(reopened.config[scope].sections.dress,false);
+  assert.notEqual(text(invitationDemo(key),'family'),'Familia editada');
+  assert.ok(!reopened.config.manuelMaya);
+  for(const item of collectPublicationResources(reopened).filter(r=>r.url.startsWith('/invitations/')))assert.ok(fs.existsSync(path.join(root,'public',item.url)),item.url);
+  assert.ok(reopened.itinerary.every(i=>i.icon));
+  reopened.config=newServiceContract(reopened.config,'plus');assert.equal(Object.values(media(reopened)).flat().filter(Boolean).length,0);
+  reopened.config=newServiceContract(reopened.config,'premium');assert.ok(new Set(Object.values(media(reopened)).flat().filter(Boolean)).size<=8);
+ }
+});
+test('Replica media archives preserve every distributed byte',()=>{
+ const crypto=require('node:crypto');
+ for(const name of ['mariana-jesus','paula-juan-felipe','karla-mauricio','maria-mario']){
+  const rows=JSON.parse(fs.readFileSync(path.join(root,'Iconos INVITALI',name+'-recursos.json')));
+  for(const item of rows){const archived=fs.readFileSync(path.join(root,item.archiveFile)),served=fs.readFileSync(path.join(root,'public',item.localPath));assert.ok(archived.equals(served));assert.equal(crypto.createHash('sha256').update(served).digest('hex'),item.sha256);}
+ }
+});
+
+test('Karla native fields, original icons and resource edits survive reopening independently',()=>{
+ const {kmText,KM_ICONS}=require('../src/lib/karla-mauricio.ts');
+ const data=invitationDemo('karla-y-mauricio');
+ assert.equal(data.config.musicUrl,undefined);
+ assert.ok(!data.config.manuelMaya);
+ assert.equal(data.config.sectionIcons.heart,KM_ICONS.heart);
+ data.config.karlaMauricio.texts.family='Nuestra familia';
+ data.config.karlaMauricio.sections.gift=false;
+ data.config.karlaMauricio.scrollSpeed=3.2;
+ data.config.karlaMauricio.backgroundImage='/nuevo-fondo.webp';
+ const reopened=parseInvitation({...data,builder_config:JSON.stringify(data.config)});
+ assert.equal(kmText(reopened,'family'),'Nuestra familia');
+ assert.equal(reopened.config.karlaMauricio.sections.gift,false);
+ assert.equal(reopened.config.karlaMauricio.scrollSpeed,3.2);
+ assert.notEqual(kmText(invitationDemo('karla-y-mauricio'),'family'),'Nuestra familia');
+ assert.ok(collectPublicationResources(reopened).some(r=>r.url==='/nuevo-fondo.webp'));
+ for(const r of collectPublicationResources(invitationDemo('karla-y-mauricio')).filter(r=>r.url.startsWith('/invitations/')))assert.ok(fs.existsSync(path.join(root,'public',r.url)),r.url);
+});
+
+test('Maria keeps independent editable travel, hotels and media limits after reopening',()=>{
+ const {maText,maMedia}=require('../src/lib/maria-mario.ts');
+ const data=invitationDemo('maria-angelica-y-mario');
+ assert.ok(!data.config.manuelMaya);
+ for(const r of collectPublicationResources(data).filter(r=>r.url.startsWith('/invitations/')))assert.ok(fs.existsSync(path.join(root,'public',r.url)),r.url);
+ data.config.mariaMario.texts.city='La Paz';data.config.mariaMario.sections.hotel=false;
+ data.config.mariaMario.hotels[0]={name:'Mi hotel',image:'/hotel.webp',url:'https://example.com/'};
+ data.config.mariaMario.travelVideo='/viaje.mp4';
+ const reopened=parseInvitation({...data,builder_config:JSON.stringify(data.config)});
+ assert.equal(maText(reopened,'city'),'La Paz');assert.equal(reopened.config.mariaMario.sections.hotel,false);
+ assert.equal(reopened.config.mariaMario.hotels[0].name,'Mi hotel');
+ assert.ok(collectPublicationResources(reopened).some(r=>r.url==='/viaje.mp4'));
+ assert.notEqual(invitationDemo('maria-angelica-y-mario').config.mariaMario.hotels[0].name,'Mi hotel');
+ reopened.config=newServiceContract(reopened.config,'plus');assert.equal(Object.values(maMedia(reopened)).flat().length,0);
+ reopened.config=newServiceContract(reopened.config,'premium');assert.ok(new Set(Object.values(maMedia(reopened)).flat()).size<=8);
+});
+
+test('collection editions persist independent content, palette and editable routes',()=>{
+ const {CLEAN_DESIGNS}=require('../src/lib/clean-designs.ts');
+ const {cleanDemo}=require('../src/lib/clean-starters.ts');
+ assert.equal(new Set(CLEAN_DESIGNS.map(d=>d.paper)).size,10);
+ for(const d of CLEAN_DESIGNS){const data=cleanDemo(d.key);data.config.travelRoute.origin='Mi ciudad';data.config.travelRoute.originLat=-17.78;data.config.mariaMario.texts.family='Familia nueva';const opened=parseInvitation({...data,builder_config:JSON.stringify(data.config)});assert.equal(opened.config.designKey,d.key);assert.equal(opened.config.travelRoute.origin,'Mi ciudad');assert.equal(opened.config.travelRoute.originLat,-17.78);assert.equal(opened.config.mariaMario.texts.family,'Familia nueva');assert.notEqual(cleanDemo(d.key).config.mariaMario.texts.family,'Familia nueva');}
+ assert.equal(invitationDemo('maria-angelica-y-mario').config.travelRoute,undefined);
+});
+test('travel route handles international date line, invalid numbers and coincident cities',()=>{
+ const {routeGeometry}=require('../src/lib/travel-route.ts');
+ const cross=routeGeometry({originLon:170,destinationLon:-170,originLat:20,destinationLat:20});assert.equal(Math.abs(cross.a.x-cross.b.x),20);
+ for(const r of [{originLon:NaN,destinationLat:Infinity},{originLon:0,destinationLon:0,originLat:0,destinationLat:0}]){const g=routeGeometry(r);assert.ok(!/NaN|Infinity/.test(g.path+g.viewBox));assert.ok(g.width>0);}
+ assert.equal(routeGeometry({seconds:0}).seconds,2);assert.equal(routeGeometry({seconds:100}).seconds,30);
+});
+
+test('new editions keep their itinerary edits and personalized invitation data on reopen',()=>{
+ const {CLEAN_DESIGNS}=require('../src/lib/clean-designs.ts');const {cleanDemo}=require('../src/lib/clean-starters.ts');
+ for(const design of CLEAN_DESIGNS){const data=cleanDemo(design.key);assert.equal(data.itinerary.length,5);assert.ok(data.itinerary.every(i=>i.time&&i.label&&i.icon));data.guest_name='Familia Pérez';data.guest_passes=3;data.itinerary[1].time='18:45';data.itinerary[1].note='Terraza principal';const opened=parseInvitation({...data,itinerary:JSON.stringify(data.itinerary),builder_config:JSON.stringify(data.config)});assert.equal(opened.guest_name,'Familia Pérez');assert.equal(opened.guest_passes,3);assert.equal(opened.itinerary[1].time,'18:45');assert.equal(opened.itinerary[1].note,'Terraza principal');assert.equal(cleanDemo(design.key).itinerary[1].time,'18:00');}
+});
+
+
+test('original stationery starters retain their artwork, photo framing and guest edits independently', () => {
+ for(const [key,field,names] of [['jardin-de-seda','silk','Isabella & Gabriel'],['casa-limone','limone','Lucía & Nicolás']]){
+  const data=invitationDemo(key);
+  assert.equal(data.names,names);
+  assert.equal(data.config.designKey,key);
+  assert.ok(data.config.entry.enabled);
+  const art=data.config[field].artImage;
+  if(art)assert.ok(fs.existsSync(path.join(root,'public',art)));
+  if(key==='casa-limone')assert.equal(art,undefined);
+  assert.equal(data.config.mariaMario.collageImages.length,6);
+  if(art)assert.ok(collectPublicationResources(data).some(r=>r.url===art));
+  data.config[field].heroPosition='50% 25%';
+  data.config[field].galleryPositions[2]='50% 75%';
+  data.config.mariaMario.sections.collage=false;
+  data.guest_name='Familia de prueba';data.guest_passes=3;
+  const opened=parseInvitation({...data,builder_config:JSON.stringify(data.config)});
+  assert.equal(opened.config[field].galleryPositions[2],'50% 75%');
+  assert.equal(opened.config.mariaMario.sections.collage,false);
+  assert.equal(opened.guest_passes,3);
+  assert.notEqual(invitationDemo(key).config[field].galleryPositions[2],'50% 75%');
+  assert.equal(invitationDemo(key).config.mariaMario.sections.collage,undefined);
+ }
+});
+
+
+test('Promesa has independent album pages, framing and reusable originals',()=>{
+ const data=invitationDemo('promesa');
+ assert.equal(data.names,'Emilia & Alejandro');
+ assert.equal(data.config.designKey,'promesa');
+ assert.equal(data.config.silk,undefined);
+ assert.equal(data.config.mariaMario.collageImages.length,6);
+ for(const photo of data.config.mariaMario.collageImages)assert.ok(fs.existsSync(path.join(root,'public',photo)));
+ data.config.promesa.heroPosition='50% 25%';
+ data.config.promesa.galleryPositions[1]='50% 75%';
+ data.config.mariaMario.collageImages.reverse();
+ data.config.mariaMario.sections.itinerary=false;
+ data.guest_name='Familia Rojas';data.guest_passes=4;
+ const restored=parseInvitation({...data,builder_config:JSON.stringify(data.config)});
+ assert.equal(restored.config.promesa.heroPosition,'50% 25%');
+ assert.equal(restored.config.promesa.galleryPositions[1],'50% 75%');
+ assert.equal(restored.guest_passes,4);
+ assert.equal(restored.config.mariaMario.sections.itinerary,false);
+ assert.equal(invitationDemo('promesa').config.promesa.heroPosition,'50% 40%');
+ assert.notEqual(invitationDemo('promesa').config.mariaMario.collageImages[0],restored.config.mariaMario.collageImages[0]);
 });

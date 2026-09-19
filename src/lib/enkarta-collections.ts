@@ -1,3 +1,4 @@
+import {CLEAN_DESIGNS} from './clean-designs';
 import type { InvitationTemplate } from '@/lib/types';
 
 /**
@@ -166,7 +167,23 @@ export const MARFIL_VIVO_DESIGN = {
   demoKey: 'marfil-vivo',
 } as const;
 
-export const STARTER_DESIGNS = [MARFIL_VIVO_DESIGN, ...STARTER_COLLECTIONS];
+export const LAURA_ANDRES_DESIGN = {
+  key: 'laura-y-andres', baseTemplate: 'dolcevita', name: 'Laura y Andrés', series: 'Atelier', tag: 'Romántico',
+  description: 'Sobre de lacre, fotografía y caligrafía en oliva',
+  artDirection: 'La composición completa de Laura y Andrés, con contenidos y medios editables.',
+  image: '/invitations/laura-andres/portada-Laura-y-Andres16.webp', accent: '#68693f', ink: '#544e39', premium: true, available: true,
+  demoKey: 'laura-y-andres',
+} as const;
+export const ANNIE_MICKY_DESIGN={key:'annie-y-micky',baseTemplate:'dolcevita',name:'Annie y Micky',series:'Atelier',tag:'Jardín editorial',description:'Marfil, oliva y fotografías originales',artDirection:'Papelería clásica, familia y una celebración entre olivos. Contenido editable.',image:'/invitations/annie-micky/jardin.webp',accent:'#747c5b',ink:'#514d40',premium:true,available:true,demoKey:'annie-y-micky'} as const;
+export const ROLY_YELIANA_DESIGN={key:'roly-y-yeliana',baseTemplate:'dolcevita',name:'Roly y Yeliana',series:'Atelier',tag:'Periódico y jardín',description:'Portada de periódico, verde y fotografía',artDirection:'Composición de Roly y Yeliana con carruseles y detalles editables.',image:'/invitations/roly-y-yeliana/portada-YR.webp',accent:'#4e5f49',ink:'#5d6623',premium:true,available:true,demoKey:'roly-y-yeliana'} as const;
+export const NICOLE_FRANCISCO_DESIGN={key:'nicole-y-francisco',baseTemplate:'dolcevita',name:'Nicole y Francisco',series:'Atelier',tag:'Orquídeas y jardín',description:'Sobre con sello, orquídeas y fotografías',artDirection:'Composición original con collage, carruseles e itinerario alternado.',image:'/invitations/nicole-y-francisco/Nicole-y-Francisco5.webp',accent:'#848867',ink:'#343b28',premium:true,available:true,demoKey:'nicole-y-francisco'} as const;
+export const MANUEL_MAYA_DESIGN={key:'manuel-y-maya',baseTemplate:'dolcevita',name:'Manuel y Maya',series:'Atelier',tag:'Sello negro y destellos',description:'Sobre, carruseles en blanco y negro y destellos',artDirection:'Portada con monograma, familia, ocho momentos y collage con scroll.',image:'/invitations/manuel-y-maya/IMG_5988-copia.webp',accent:'#b5a78c',ink:'#000000',premium:true,available:true,demoKey:'manuel-y-maya'} as const;
+export const MARIANA_JESUS_DESIGN={key:'mariana-y-jesus',baseTemplate:'dolcevita',name:'Mariana y Jesús',series:'Atelier',tag:'Mar turquesa',description:'Mar en movimiento y tarjetas translúcidas',artDirection:'Sobre, video de playa, familia y celebración en Cancún.',image:'/invitations/mariana-y-jesus/Mariana-Jesus4.webp',accent:'#428d90',ink:'#428d90',premium:true,available:true,demoKey:'mariana-y-jesus'} as const;
+export const PAULA_JUAN_FELIPE_DESIGN={key:'paula-y-juan-felipe',baseTemplate:'dolcevita',name:'Paula y Juan Felipe',series:'Atelier',tag:'Rosas y papel verde',description:'Sello verde, fondo floral y cuatro carruseles',artDirection:'Papelería en arcos, itinerario y collage con movimiento.',image:'/invitations/paula-y-juan-felipe/paula-1.webp',accent:'#517535',ink:'#344e25',premium:true,available:true,demoKey:'paula-y-juan-felipe'} as const;
+export const KARLA_MAURICIO_DESIGN={key:'karla-y-mauricio',baseTemplate:'dolcevita',name:'Karla y Mauricio',series:'Atelier',tag:'Orquídeas y perla',description:'Orquídeas nude, franjas beige y fondo perlado',artDirection:'Entrada floral, retrato, corazones originales y detalles editables.',image:'/invitations/karla-y-mauricio/Karlay-Mauricio-portada-scaled.webp',accent:'#c1b6a4',ink:'#b3907a',premium:true,available:true,demoKey:'karla-y-mauricio'} as const;
+export const MARIA_MARIO_DESIGN={key:'maria-angelica-y-mario',baseTemplate:'dolcevita',name:'María Angélica y Mario',series:'Atelier',tag:'Viaje y mar azul',description:'Sello azul, playa en video y mapa del viaje',artDirection:'Tarjetas translúcidas, collage e información de hospedaje.',image:'/invitations/maria-angelica-y-mario/Maria-Angelica-Mario4.webp',accent:'#859fb1',ink:'#152e4a',premium:true,available:true,demoKey:'maria-angelica-y-mario'} as const;
+export const CLEAN_STARTER_DESIGNS=CLEAN_DESIGNS.map(d=>({...d,baseTemplate:'dolcevita' as const,series:'Atelier' as const,artDirection:d.description,image:d.key==='aurelia'?'/invitations/maria-angelica-y-mario/Maria-Angelica-Mario7.webp':d.key==='velada'?'/invitations/nicole-y-francisco/Nicole-y-Francisco14.webp':d.key==='promesa'?'/invitations/manuel-y-maya/Manuel-Maya2.webp':d.key==='casa-limone'?'/invitations/maria-angelica-y-mario/Maria-Angelica-Mario7.webp':d.key==='jardin-de-seda'?'/invitations/jardin-de-seda/botanica.webp':'/invitations/maria-angelica-y-mario/Maria-Angelica-Mario4.webp',premium:true,available:true,demoKey:d.key}));
+export const STARTER_DESIGNS = [...CLEAN_STARTER_DESIGNS,MARIA_MARIO_DESIGN,KARLA_MAURICIO_DESIGN,PAULA_JUAN_FELIPE_DESIGN,MARIANA_JESUS_DESIGN,MANUEL_MAYA_DESIGN,NICOLE_FRANCISCO_DESIGN,ROLY_YELIANA_DESIGN,ANNIE_MICKY_DESIGN, LAURA_ANDRES_DESIGN, MARFIL_VIVO_DESIGN, ...STARTER_COLLECTIONS];
 export type StarterDesignKey = (typeof STARTER_DESIGNS)[number]['key'];
 
 export function collectionFor(template?: string | null): EnkartaCollection {
@@ -179,6 +196,16 @@ export function collectionFor(template?: string | null): EnkartaCollection {
 }
 
 export function publicTemplateName(template?: string | null, presetKey?: string): string {
+  const clean=CLEAN_DESIGNS.find(d=>d.key===presetKey);if(clean)return clean.name;
+  if (presetKey === MARIA_MARIO_DESIGN.key) return MARIA_MARIO_DESIGN.name;
+  if (presetKey === KARLA_MAURICIO_DESIGN.key) return KARLA_MAURICIO_DESIGN.name;
+  if (presetKey === PAULA_JUAN_FELIPE_DESIGN.key) return PAULA_JUAN_FELIPE_DESIGN.name;
+  if (presetKey === MARIANA_JESUS_DESIGN.key) return MARIANA_JESUS_DESIGN.name;
+  if (presetKey === MANUEL_MAYA_DESIGN.key) return MANUEL_MAYA_DESIGN.name;
+  if (presetKey === NICOLE_FRANCISCO_DESIGN.key) return NICOLE_FRANCISCO_DESIGN.name;
+  if (presetKey === ROLY_YELIANA_DESIGN.key) return ROLY_YELIANA_DESIGN.name;
+  if (presetKey === ANNIE_MICKY_DESIGN.key) return ANNIE_MICKY_DESIGN.name;
+  if (presetKey === LAURA_ANDRES_DESIGN.key) return LAURA_ANDRES_DESIGN.name;
   if (presetKey === MARFIL_VIVO_DESIGN.key) return MARFIL_VIVO_DESIGN.name;
   return collectionFor(template).name;
 }

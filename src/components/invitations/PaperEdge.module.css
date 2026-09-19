@@ -1,0 +1,2 @@
+.edge{position:absolute;left:-1px;right:-1px;bottom:-1px;height:var(--edge-height,110px);pointer-events:none;z-index:3;overflow:hidden}.edge svg{display:block;width:100%;height:100%;fill:var(--edge-color)}.top{top:-1px;bottom:auto;transform:rotate(180deg)}
+@media(max-width:700px){.edge{height:calc(var(--edge-height,110px)*.6)}}

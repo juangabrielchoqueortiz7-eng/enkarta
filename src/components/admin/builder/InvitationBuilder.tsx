@@ -88,9 +88,13 @@ function localDateTimeInput(date: Date) {
 
 interface Props {
   initialData: InvitationParsed;
+  /** A dónde vuelve la flecha del encabezado: el equipo al admin, el socio a su panel. */
+  backHref?: string;
+  /** Prefijo del editor para abrir otra invitación (al duplicar). */
+  builderPath?: string;
 }
 
-export default function InvitationBuilder({ initialData }: Props) {
+export default function InvitationBuilder({ initialData, backHref = '/admin', builderPath = '/admin/builder' }: Props) {
   const router = useRouter();
   const [data, setData] = useState<InvitationParsed>(initialData);
   const [activeTab, setActiveTab] = useState<Tab>('content');
@@ -422,7 +426,7 @@ export default function InvitationBuilder({ initialData }: Props) {
 
   const payloadFrom = useCallback((d: InvitationParsed, status?: 'draft' | 'ready') => ({
     id: d.id, slug: d.slug, status: status ?? d.status, template: d.template, type: d.type,
-    names: d.names, event_date: d.event_date,
+    names: d.names, event_date: d.event_date, rsvp_deadline: d.rsvp_deadline,
     ceremony_time: d.ceremony_time, ceremony_place: d.ceremony_place, ceremony_address: d.ceremony_address,
     reception_time: d.reception_time, reception_place: d.reception_place, reception_address: d.reception_address,
     guest_name: d.guest_name, guest_passes: d.guest_passes, message: d.message, dress_code: d.dress_code, no_kids: d.no_kids,
@@ -612,6 +616,7 @@ export default function InvitationBuilder({ initialData }: Props) {
       type: data.type,
       names: data.names,
       event_date: data.event_date,
+      rsvp_deadline: data.rsvp_deadline,
       ceremony_time: data.ceremony_time,
       ceremony_place: data.ceremony_place,
       ceremony_address: data.ceremony_address,
@@ -643,7 +648,7 @@ export default function InvitationBuilder({ initialData }: Props) {
       });
       if (res.ok) {
         const nv = await res.json();
-        router.push(`/admin/builder/${nv.id}`);
+        router.push(`${builderPath}/${nv.id}`);
       } else {
         const err = await res.json();
         alert(err.error || 'Error al duplicar');
@@ -657,7 +662,7 @@ export default function InvitationBuilder({ initialData }: Props) {
     if (!confirm('¿Eliminar esta invitación permanentemente? Esta acción no se puede deshacer.')) return;
     try {
       const res = await fetch(`/api/admin/invitations?id=${data.id}`, { method: 'DELETE' });
-      if (res.ok) router.push('/admin');
+      if (res.ok) router.push(backHref);
       else alert('Error al eliminar');
     } catch {
       alert('Error de conexión');
@@ -673,7 +678,7 @@ export default function InvitationBuilder({ initialData }: Props) {
 
           {/* Izquierda */}
           <div className="flex items-center gap-3 min-w-0">
-            <a href="/admin" title="Volver al panel"
+            <a href={backHref} title="Volver al panel"
               className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all flex-shrink-0">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -684,7 +689,7 @@ export default function InvitationBuilder({ initialData }: Props) {
               <h1 className="font-playfair text-base text-enkarta-dark leading-tight truncate">
                 {data.names || 'Nueva invitación'}
               </h1>
-              <p className="text-[11px] text-gray-400 font-outfit truncate">{publicTemplateName(data.template, data.config?.layout?.presetKey)} · {data.type}</p>
+              <p className="text-[11px] text-gray-400 font-outfit truncate">{publicTemplateName(data.template, data.config?.designKey ?? data.config?.layout?.presetKey)} · {data.type}</p>
             </div>
           </div>
 

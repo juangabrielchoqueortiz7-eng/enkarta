@@ -28,6 +28,11 @@ export function genAccessCode(): string {
   return `ENK-${randomCode(4)}`;
 }
 
+/** Referencia que el socio escribe en su transferencia, ej. "ENK-7K2PXR". */
+export function genPaymentReference(): string {
+  return `ENK-${randomCode(6)}`;
+}
+
 // ── Contraseña del evento (scrypt) ───────────────────────────────────────────
 
 /** Devuelve "salt:hash" para guardar en invitations.host_password_hash. */

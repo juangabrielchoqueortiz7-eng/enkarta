@@ -1,7 +1,7 @@
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminSession } from '@/lib/host-session';
+import { builderActor } from '@/lib/builder-access';
 import { probeLocalPublicAsset } from '@/lib/public-assets';
 import { resourceBudgetBytes } from '@/lib/publication-audit';
 
@@ -67,7 +67,7 @@ async function remoteProbe(raw: string) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await getAdminSession())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (!(await builderActor())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   const body = await request.json().catch(() => null) as { resources?: ProbeInput[] } | null;
   const resources = Array.isArray(body?.resources) ? body!.resources.filter((item): item is ProbeInput => !!item && typeof item === 'object').slice(0, 24) : [];
   const results = await Promise.all(resources.map(async resource => {

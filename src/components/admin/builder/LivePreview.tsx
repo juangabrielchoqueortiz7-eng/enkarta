@@ -1,8 +1,9 @@
 'use client';
+import {isCleanDesign} from '@/lib/clean-designs';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { InvitationParsed } from '@/lib/types';
-import { PREMIUM_REGISTRY } from '@/lib/template-registry';
+import { premiumFor } from '@/lib/template-registry';
 import { PageMotionProvider } from '@/lib/scroll-motion';
 import { gateInvitation, resolveFeatures } from '@/lib/packages';
 import { resolveLayoutBindings } from '@/lib/block-bindings';
@@ -39,7 +40,6 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
   // igual que la página pública. El editor de bloques usa el layout sin filtrar
   // para poder seguir editando bloques que el paquete oculta.
   const invitation = useMemo(() => gateInvitation(rawInvitation), [rawInvitation]);
-  const template = invitation.template;
   const scrollRef = useRef<HTMLDivElement>(null);
   const scaledContentRef = useRef<HTMLDivElement>(null);
   const [scaledContentHeight, setScaledContentHeight] = useState(0);
@@ -110,7 +110,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
   }, [selectedBlockId, hasBlocks, blockEditor]);
 
   // Mapear datos DB → props de la plantilla via registry central.
-  const premium = PREMIUM_REGISTRY[template];
+  const premium = premiumFor(invitation);
   const premiumData = useMemo(() => (premium ? premium.map(invitation) : null), [premium, invitation]);
 
   return (
@@ -224,7 +224,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
             ) : (
             <PageMotionProvider key={remountKey} value={invitation.config?.motion} scrollRoot={scrollRef}>
             {premium && premiumData ? (
-              <div className="ek-invite"><premium.Comp data={premiumData} /></div>
+              <div className="ek-invite"><premium.Comp data={premiumData} preview demo /></div>
             ) : (
               <div className="flex flex-col items-center justify-center h-[600px] text-gray-400 gap-3">
                 <span className="text-5xl">🎨</span>
@@ -236,7 +236,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
             )}
             </PageMotionProvider>
             )}
-            {smartRsvpOn && <SmartRsvp demo slug={invitation.slug} theme={cfg.theme} guest={activeGuest} publicId={activeGuest?.publicId} guestName={activeGuest?.name} maxPasses={activeGuest?.passes ?? invitation.guest_passes} tableNo={activeGuest?.tableNo} locale={activeInvitationLocale(cfg)} />}
+            {smartRsvpOn && cfg.designKey !== 'laura-y-andres' && cfg.designKey !== 'annie-y-micky' && cfg.designKey !== 'roly-y-yeliana' && cfg.designKey !== 'nicole-y-francisco' && cfg.designKey !== 'manuel-y-maya' && cfg.designKey !== 'mariana-y-jesus' && cfg.designKey !== 'paula-y-juan-felipe' && cfg.designKey !== 'karla-y-mauricio' && cfg.designKey !== 'maria-angelica-y-mario' && !isCleanDesign(cfg.designKey) && <SmartRsvp demo slug={invitation.slug} theme={cfg.theme} guest={activeGuest} publicId={activeGuest?.publicId} guestName={activeGuest?.name} maxPasses={activeGuest?.passes ?? invitation.guest_passes} tableNo={activeGuest?.tableNo} locale={activeInvitationLocale(cfg)} />}
             </FontScope>
           </div>
           </div>
@@ -254,7 +254,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
         {/* Etiqueta de plantilla */}
         <div className="text-center mt-3">
           <span className="text-xs text-gray-400 font-outfit bg-white px-3 py-1 rounded-full border border-gray-200 capitalize">
-            {publicTemplateName(invitation.template, invitation.config?.layout?.presetKey)} · {isDesktop ? 'escritorio' : 'móvil'}
+            {publicTemplateName(invitation.template, invitation.config?.designKey ?? invitation.config?.layout?.presetKey)} · {isDesktop ? 'escritorio' : 'móvil'}
           </span>
         </div>
       </div>

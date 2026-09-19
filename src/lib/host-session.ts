@@ -5,10 +5,12 @@ import { verifyHostSession, verifyAdminSession, verifyReviewSession, verifyDoorS
 import { isUuid } from './rsvp-contract';
 import { allowsService, isCurrentContract, type OperationalService } from './packages';
 import { invitationServiceConfig } from './package-services-server';
+import { isPartnerOwnerOf } from './partner-session';
 
-// Sesiones del servidor. Hay dos accesos independientes:
+// Sesiones del servidor. Hay tres accesos independientes:
 //  - Admin (equipo Enkarta): cookie 'enkarta-admin' (password global, /admin).
 //  - Anfitrión/cliente: cookie 'enkarta-host' firmada = un solo evento (/panel).
+//  - Socio del programa de reventa: sesión de Google = sus propias invitaciones.
 // Solo se usa en el servidor (API routes / server components).
 
 export const HOST_COOKIE = 'enkarta-host';
@@ -75,8 +77,10 @@ export async function requireAdminPage(): Promise<void> {
  */
 export async function canManageInvitation(invitationId: string, service?: OperationalService): Promise<boolean> {
   const admin = await getAdminSession();
-  const host = await getHostSession();
-  if (!admin && host !== invitationId) return false;
+  // El socio dueño gestiona su invitación con los mismos límites de paquete que
+  // el anfitrión: su plan define qué servicios están incluidos.
+  const owner = admin || await getHostSession() === invitationId || await isPartnerOwnerOf(invitationId);
+  if (!owner) return false;
   const { config } = await invitationServiceConfig(invitationId);
   if (!admin && !allowsService(config, 'hostPanel')) return false;
   return !service || allowsService(config, service);
@@ -85,7 +89,7 @@ export async function canManageInvitation(invitationId: string, service?: Operat
 /** Planilla de solo lectura; no concede gestión, escaneo ni revisión del diseño. */
 export async function canReadResponses(invitationId: string): Promise<boolean> {
   if (await getAdminSession()) return true;
-  if (await getHostSession() !== invitationId) return false;
+  if (await getHostSession() !== invitationId && !(await isPartnerOwnerOf(invitationId))) return false;
   return allowsService((await invitationServiceConfig(invitationId)).config, 'rsvp');
 }
 

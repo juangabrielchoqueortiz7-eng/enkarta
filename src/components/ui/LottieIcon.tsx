@@ -5,6 +5,7 @@ import Lottie, { LottieRefCurrentProps } from 'lottie-react';
 import { loadLottieById, loadLottieByPath, applyIconColors, tintLottie } from '@/lib/lottie-utils';
 import { useMediaPreferences } from '@/lib/use-media-preferences';
 import { usePageMotion } from '@/lib/scroll-motion';
+import { originalInvitationAsset } from '@/lib/invitation-assets';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -98,8 +99,8 @@ export default function LottieIcon({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let json: any = null;
 
-      if (icon.startsWith('/')) {
-        json = await loadLottieByPath(icon);
+      if (icon.startsWith('/') || /^https:\/\//i.test(icon)) {
+        json = await loadLottieByPath(originalInvitationAsset(icon));
       } else {
         json = await loadLottieById(icon);
       }

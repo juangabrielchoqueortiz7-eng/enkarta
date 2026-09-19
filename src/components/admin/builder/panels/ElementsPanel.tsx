@@ -1,4 +1,5 @@
 'use client';
+import {isCleanDesign} from '@/lib/clean-designs';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Pestaña "Elementos": añade y gestiona los stickers decorativos flotantes
@@ -6,6 +7,7 @@
 // subidos por el cliente. Edita los bloques de tipo 'element' dentro de
 // cfg.layout.blocks; el render flotante lo hace BlockRenderer.
 
+import SectionIconsEditor from '../SectionIconsEditor';
 import { useState } from 'react';
 import { InvitationParsed, BuilderConfig, Block, BlockLayout, LAYOUT_VERSION } from '@/lib/types';
 import { createElementBlock, createCornerSet, cloneBlock, DECOR_PACKS } from '@/components/invitations/blocks/registry';
@@ -55,6 +57,8 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect }: 
     onChange({ config: { ...cfg, layout: { version: LAYOUT_VERSION, basePreset: layout?.basePreset ?? data.template, presetKey: layout?.presetKey ?? data.template, blocks: next } } });
   const patchBlock = (id: string, patch: Partial<Block>) =>
     setBlocks(blocks.map(b => (b.id === id ? { ...b, ...patch } : b)));
+
+  if ((cfg.designKey === 'laura-y-andres' || cfg.designKey === 'annie-y-micky' || cfg.designKey === 'roly-y-yeliana' || cfg.designKey === 'nicole-y-francisco' || cfg.designKey === 'manuel-y-maya' || cfg.designKey === 'mariana-y-jesus' || cfg.designKey === 'paula-y-juan-felipe' || cfg.designKey === 'karla-y-mauricio' || (cfg.designKey === 'maria-angelica-y-mario' || isCleanDesign(cfg.designKey))) && !blocks.length) return <div className="p-4"><SectionIconsEditor data={data} onChange={onChange} /></div>;
 
   // Sin documento por bloques no hay dónde poner elementos flotantes.
   if (!layout || blocks.length === 0) {

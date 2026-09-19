@@ -45,3 +45,12 @@ next-start*.log
 next-env.d.ts
 
 .vercel
+
+# Material de referencia y descargas de trabajo: NO se publican.
+# Pesan ~75 MB, el repo es publico y todo lo de /public se sirve en produccion
+# (ademas incluyen mp3 comerciales descargados de YouTube).
+Iconos INVITALI/
+public/audio/invitali-originales/
+public/invitali-originales.json
+public/referencias-descargas.html
+public/referencias-descargas.js

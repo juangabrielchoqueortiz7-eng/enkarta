@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession, canReviewInvitation } from '@/lib/host-session';
+import { invitationActor, publishDenial } from '@/lib/builder-access';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { readReviewNoteStorage, readVersionStorageMeta, reviewNoteTextForStorage, versionSnapshotForStorage, type BuilderVersion, type ReviewNote } from '@/lib/builder-versions';
 import type { BuilderRole, ReviewStatus } from '@/lib/types';
@@ -54,9 +55,12 @@ function storageError(error: { message?: string; code?: string } | null) {
   return NextResponse.json({ error: migrationRequired ? 'Falta aplicar la migración 004' : error.message, migrationRequired }, { status: migrationRequired ? 503 : 500 });
 }
 
-async function actorRole(invitationId: string): Promise<'admin' | 'client' | null> {
+// 'partner' = socio dueño de la invitación: edita como el equipo, pero publicar
+// le exige suscripción vigente y cupo libre.
+async function actorRole(invitationId: string): Promise<'admin' | 'partner' | 'client' | null> {
   if (!invitationId) return null;
   if (await getAdminSession()) return 'admin';
+  if ((await invitationActor(invitationId))?.kind === 'partner') return 'partner';
   return await canReviewInvitation(invitationId) ? 'client' : null;
 }
 
@@ -87,7 +91,7 @@ export async function POST(request: NextRequest) {
   if (actor === 'client' && (body?.version || body?.versions?.length || body?.action)) return NextResponse.json({ error: 'El cliente puede revisar, pero no crear ni publicar versiones' }, { status: 403 });
 
   const versions = [...(Array.isArray(body?.versions) ? body!.versions : []), ...(body?.version ? [body.version] : [])]
-    .slice(0, 30).map(value => versionToRow(value, invitationId)).filter(Boolean);
+    .slice(0, 30).map(value => versionToRow(value, invitationId)).filter((row): row is NonNullable<typeof row> => row !== null);
   const incomingNotes = [...(Array.isArray(body?.notes) ? body!.notes : []), ...(body?.note ? [body.note] : [])]
     .map(note => actor === 'client' ? { ...note, role: 'client' as const, author: 'Cliente' } : note);
   if (actor === 'client') {
@@ -99,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
   }
   const notes = incomingNotes
-    .slice(0, 200).map(value => noteToRow(value, invitationId)).filter(Boolean);
+    .slice(0, 200).map(value => noteToRow(value, invitationId)).filter((row): row is NonNullable<typeof row> => row !== null);
   if (!versions.length && !notes.length) return NextResponse.json({ error: 'Contenido inválido' }, { status: 400 });
 
   if (versions.length) {
@@ -114,6 +118,16 @@ export async function POST(request: NextRequest) {
     const failure = storageError(error); if (failure) return failure;
   }
   if (body?.action === 'publish' && versions.some(version => version?.source === 'publish')) {
+    if (actor === 'partner') {
+      const owner = await invitationActor(invitationId);
+      const { data: current } = await supabaseAdmin.from('invitations').select('status').eq('id', invitationId).maybeSingle();
+      const denial = owner ? await publishDenial(owner, current?.status === 'ready') : 'No autorizado';
+      if (denial) {
+        const publishIds = versions.filter(version => version?.source === 'publish').map(version => version!.id);
+        if (publishIds.length) await supabaseAdmin.from('builder_versions').delete().in('id', publishIds).eq('invitation_id', invitationId);
+        return NextResponse.json({ error: denial, needsSubscription: true }, { status: 402 });
+      }
+    }
     const { error } = await supabaseAdmin.from('invitations').update({ status: 'ready' }).eq('id', invitationId);
     const failure = storageError(error);
     if (failure) {

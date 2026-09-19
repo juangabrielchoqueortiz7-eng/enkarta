@@ -146,6 +146,35 @@ export interface ItineraryItem {
  * campos nuevos desde el builder.
  */
 export interface BuilderConfig {
+  atelier?:{artImage?:string;heroPosition?:string;galleryPositions?:string[]};
+  promesa?:{heroPosition?:string;galleryPositions?:string[]};
+  limone?:{artImage?:string;heroPosition?:string;galleryPositions?:string[]};
+  silk?:{artImage?:string;heroPosition?:string;galleryPositions?:string[]};
+  /** Variante artística que conserva la base SQL de la colección. */
+  travelRoute?: import('./travel-route').TravelRoute;
+  designKey?: import('./clean-designs').CleanDesignKey | 'laura-y-andres' | 'annie-y-micky' | 'roly-y-yeliana' | 'nicole-y-francisco' | 'manuel-y-maya' | 'mariana-y-jesus' | 'paula-y-juan-felipe' | 'karla-y-mauricio' | 'maria-angelica-y-mario';
+  mariaMario?: {texts?:Record<string,string>;sections?:Record<string,boolean>;backgroundVideo?:string;posterImage?:string;travelVideo?:string;travelRemoveWhite?:boolean;travelPosterImage?:string;entryLeftImage?:string;entryRightImage?:string;sealImage?:string;compassImage?:string;compassSecondImage?:string;stampImage?:string;dateStampImage?:string;worldLeftImage?:string;worldRightImage?:string;planeLeftImage?:string;planeRightImage?:string;envelopeImage?:string;coverImages?:string[];collageImages?:string[];carouselImages?:string[];closingImages?:string[];coverSeconds?:number;slideSeconds?:number;playlistUrl?:string;hotelSeconds?:number;hotels?:{name:string;image:string;url:string}[]};
+  karlaMauricio?: {texts?:Record<string,string>;sections?:Record<string,boolean>;entryImage?:string;mobileEntryImage?:string;backgroundImage?:string;particlesImage?:string;flowersLeftImage?:string;flowersRightImage?:string;entryFlowersImage?:string;separatorImage?:string;registryImage?:string;registryUrl?:string;scrollSpeed?:number};
+  paulaJuanFelipe?: {texts?:Record<string,string>;sections?:Record<string,boolean>;backgroundImage?:string;paperImage?:string;entryLeftImage?:string;entryRightImage?:string;sealImage?:string;monogramImage?:string;dressImage?:string;firstImages?:string[];secondImages?:string[];thirdImages?:string[];closingImages?:string[];collageImages?:string[];slideSeconds?:number;firstSeconds?:number;secondSeconds?:number;brideColors?:string[];groomColors?:string[]};
+  marianaJesus?: {texts?:Record<string,string>;sections?:Record<string,boolean>;backgroundVideo?:string;mobileVideo?:string;posterImage?:string;paperImage?:string;entryLeftImage?:string;entryRightImage?:string;sealImage?:string;dressImage?:string;firstImage?:string;secondImage?:string;closingImage?:string;zelleImage?:string;hotelImage?:string;hotelUrl?:string;signatureImage?:string};
+  manuelMaya?: { texts?: Record<string,string>; sections?: Record<string,boolean>; coverImages?: string[]; firstImages?: string[]; secondImages?: string[]; closingImages?: string[]; collageImages?: string[]; slideSeconds?: number; coverSeconds?: number; backgroundImage?: string; entryLeftImage?: string; entryRightImage?: string; sealImage?: string; churchImage?: string; registryImages?: string[]; registryUrls?: string[]; brideColors?: string[]; groomColors?: string[] };
+  nicoleFrancisco?: { texts?: Record<string,string>; sections?: Record<string,boolean>; collageImages?: string[]; portraitImages?: string[]; closingImages?: string[]; slideSeconds?: number; backgroundImage?: string; flowersImage?: string; monogramImage?: string; envelopeImage?: string; registryImage?: string };
+  rolyYeliana?: { texts?: Record<string,string>; sections?: Record<string,boolean>; firstImages?: string[]; secondImages?: string[]; thirdImages?: string[]; closingImages?: string[]; slideSeconds?: number; backgroundImage?: string; registryImage?: string; dressImage?: string };
+  annieMicky?: BuilderConfig['lauraAndres'] & { wideImages?: string[] };
+  lauraAndres?: {
+    texts?: Record<string, string>;
+    sections?: Record<string, boolean>;
+    coverImages?: string[];
+    portraitImages?: string[];
+    closingImages?: string[];
+    womenColors?: string[];
+    menColors?: string[];
+    suggestedColors?: string[];
+    sealImage?: string;
+    envelopeImage?: string;
+    dividerImage?: string;
+    slideSeconds?: number;
+  };
   /** Guided editing changes the controls offered, never existing content. */
   designMode?: 'guided' | 'free';
   // ── Comunes / Azure ──

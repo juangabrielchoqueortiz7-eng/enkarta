@@ -241,6 +241,8 @@ input[type="color"]::-webkit-color-swatch {
    sin problema en navegadores que no los soportan. */
 .ek-invite h1, .ek-invite h2, .ek-invite h3, .ek-invite h4 { text-wrap: balance; }
 .ek-invite p { text-wrap: pretty; }
+.ek-dolcevita [id] { scroll-margin-top: 88px; }
+.ek-dolcevita h1 { overflow-wrap: anywhere; }
 .ek-invite [data-ek-section] { isolation: isolate; }
 .ek-invite :where(img, video, iframe) { max-inline-size: 100%; }
 .ek-invite :where(input, select, textarea) {

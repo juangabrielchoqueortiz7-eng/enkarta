@@ -405,16 +405,18 @@ const DateBadgeBlock: React.FC<{ block: Block }> = ({ block }) => {
 const EventCardBlock: React.FC<{ block: Block }> = ({ block }) => {
   const type = useBlockTypography(block);
   const t = useBlockTheme();
+  const shape = useInvitationShape();
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex h-full flex-col items-center px-6 py-9 text-center" style={{ ...shape.card, borderRadius: shape.cardRadius }}>
       <span className="inline-flex w-12 h-12 mb-3">
         <EventIcon name={str(block, 'icon', 'church')} className="w-12 h-12" stroke={t.primary} lottieColors={block.props.iconColors as any} speed={block.props.iconSpeed as any} />
       </span>
-      <h3 className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'subtitle') , ...type('subtitle') }}>{str(block, 'title', 'Ceremonia')}</h3>
-      <p className="font-playfair font-bold mt-2" style={{ color: t.primary, fontSize: scaledPx(block, 30, 'title') , ...type('title') }}>{str(block, 'time', '16:00 h')}</p>
-      <p className="font-cormorant mt-1" style={{ color: 'inherit', fontSize: scaledPx(block, 16, 'body') , ...type('body') }}>{str(block, 'place', 'Lugar del evento')}</p>
-      {str(block, 'address') && <p className="font-cormorant" style={{ color: t.muted, fontSize: scaledPx(block, 14, 'body') , ...type('body') }}>{str(block, 'address')}</p>}
-      {str(block, 'mapsUrl') && <div className="mt-4"><Pill href={str(block, 'mapsUrl')}>Ver ubicación</Pill></div>}
+      <h3 className="font-cinzel uppercase tracking-[0.16em]" style={{ color: t.text, fontSize: scaledPx(block, 14, 'subtitle'), ...type('label') }}>{str(block, 'title', 'Ceremonia')}</h3>
+      <p className="font-playfair mt-5 tabular-nums" style={{ color: t.primary, fontSize: scaledPx(block, 36, 'title'), ...type('title') }}>{str(block, 'time', '16:00 h')}</p>
+      <div className="my-5 h-px w-10" style={{ background: t.line }} aria-hidden />
+      <p className="font-cormorant" style={{ color: t.text, fontSize: scaledPx(block, 20, 'body'), ...type('body') }}>{str(block, 'place', 'Lugar del evento')}</p>
+      {str(block, 'address') && <p className="font-cormorant mt-2 max-w-sm break-words" style={{ color: t.muted, fontSize: scaledPx(block, 16, 'body'), ...type('note') }}>{str(block, 'address')}</p>}
+      {str(block, 'mapsUrl') && <div className="mt-auto pt-7"><Pill href={str(block, 'mapsUrl')} filled>Cómo llegar</Pill></div>}
     </div>
   );
 };

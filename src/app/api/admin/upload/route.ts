@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { getAdminSession } from '@/lib/host-session';
+import { builderActor } from '@/lib/builder-access';
+import { partnerOwnsInvitation } from '@/lib/partner-session';
 import { sanitizeSvg } from '@/lib/sanitize-svg';
 
 export const runtime = 'nodejs';
@@ -46,7 +47,7 @@ function slugifyName(name: string): string {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await getAdminSession())) return unauthenticated();
+  if (!(await builderActor())) return unauthenticated();
   try {
     const form = await request.formData();
     const file = form.get('file');
@@ -112,11 +113,21 @@ export async function POST(request: NextRequest) {
 
 /** DELETE ?path=... — borra un archivo subido del bucket. */
 export async function DELETE(request: NextRequest) {
-  if (!(await getAdminSession())) return unauthenticated();
+  const actor = await builderActor();
+  if (!actor) return unauthenticated();
   try {
     const { searchParams } = new URL(request.url);
     const path = searchParams.get('path');
     if (!path) return NextResponse.json({ error: 'path requerido' }, { status: 400 });
+
+    // Las rutas son `carpeta/<invitationId>/archivo`: un socio solo borra medios
+    // de sus propias invitaciones, nunca los del catálogo ni los de otro socio.
+    if (actor.kind === 'partner') {
+      const owner = path.split('/')[1] ?? '';
+      if (!(await partnerOwnsInvitation(actor.partnerId, owner))) {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+      }
+    }
 
     const { error } = await supabaseAdmin.storage.from(BUCKET).remove([path]);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

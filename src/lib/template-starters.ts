@@ -1,3 +1,17 @@
+import {atelierStarter} from './atelier-editions';
+import {promesaStarter} from './promesa';
+import {limoneStarter} from './casa-limone';
+import {silkStarter} from './jardin-de-seda';
+import {isCleanDesign} from './clean-designs';
+import {cleanStarter} from './clean-starters';
+import {mariaMarioStarter} from './maria-mario';
+import {karlaMauricioStarter} from './karla-mauricio';
+import {paulaJuanFelipeStarter} from './paula-juan-felipe';
+import {marianaJesusStarter} from './mariana-jesus';
+import {manuelMayaStarter} from './manuel-maya';
+import { nicoleFranciscoStarter } from './nicole-francisco';
+import { rolyYelianaStarter } from './roly-y-yeliana';
+import { annieMickyStarter } from '@/lib/annie-micky';
 import {
   azureSample,
   primiciaSample,
@@ -16,6 +30,7 @@ import { DEFAULT_MUSIC_URL } from '@/lib/music';
 import { decorForTemplate, motionForTemplate, themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import { STARTER_DESIGNS, type StarterDesignKey, type StarterCollectionKey } from '@/lib/enkarta-collections';
 import { marfilVivoStarter } from '@/lib/marfil-vivo';
+import { lauraAndresStarter } from '@/lib/laura-andres';
 import { collectionDesign, curateCollectionLayout } from '@/lib/collection-design';
 import { invitationToLayout } from '@/lib/layout-presets';
 import type { InvitationParsed } from '@/lib/types';
@@ -89,6 +104,20 @@ function whatsappNumber(value: unknown): string | null {
  * esqueleto. Marfil Vivo es la excepción porque nació como diseño por bloques.
  */
 export function invitationStarter(template: StarterTemplateKey, options: { blocks?: boolean } = {}) {
+  if(template==='aurelia'||template==='velada')return atelierStarter(template);
+  if(template==='promesa')return promesaStarter();
+  if(template==='casa-limone')return limoneStarter();
+  if(template==='jardin-de-seda')return silkStarter();
+  if(isCleanDesign(template))return cleanStarter(template);
+  if (template === 'maria-angelica-y-mario') return mariaMarioStarter();
+  if (template === 'karla-y-mauricio') return karlaMauricioStarter();
+  if (template === 'paula-y-juan-felipe') return paulaJuanFelipeStarter();
+  if (template === 'mariana-y-jesus') return marianaJesusStarter();
+  if (template === 'manuel-y-maya') return manuelMayaStarter();
+  if (template === 'nicole-y-francisco') return nicoleFranciscoStarter();
+  if (template === 'roly-y-yeliana') return rolyYelianaStarter();
+  if (template === 'annie-y-micky') return annieMickyStarter();
+  if (template === 'laura-y-andres') return lauraAndresStarter();
   if (template === 'marfil-vivo') return marfilVivoStarter();
   const sample = SAMPLES[template];
   const first = BRIDE_FIRST.has(template) ? sample.bride : sample.groom;
@@ -150,6 +179,6 @@ export function invitationDemo(template: StarterTemplateKey, options: { blocks?:
     ...starter, id: `demo-${template}`, slug: template === 'carmesi_v2' ? 'carmesi' : template,
     config: starter.builder_config, builder_config: JSON.stringify(starter.builder_config),
     is_active: true, expires_at: null, views_count: 0, host_email: null, host_password_hash: null,
-    rsvp_deadline: null, whatsapp_template: null, created_at: new Date().toISOString(), phone_raw: null,
+    rsvp_deadline: 'rsvp_deadline' in starter && typeof starter.rsvp_deadline === 'string' ? starter.rsvp_deadline : null, whatsapp_template: null, created_at: new Date().toISOString(), phone_raw: null,
   };
 }

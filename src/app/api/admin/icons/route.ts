@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { getAdminSession } from '@/lib/host-session';
+import { builderActor } from '@/lib/builder-access';
+import { REMOTE_ORIGINAL_ICONS } from '@/lib/invitation-assets';
 
 export const runtime = 'nodejs';
 
 // Lee las carpetas de lottie y devuelve todos los archivos JSON encontrados
 export async function GET() {
-  if (!(await getAdminSession())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  // Biblioteca de solo lectura: la comparten el equipo y los socios del programa.
+  if (!(await builderActor())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   const lottieDir = path.join(process.cwd(), 'public', 'lottie');
 
   const categories = ['boda', 'xv', 'cumpleanos', 'baby_shower', 'bautizo', 'general'];
@@ -61,7 +63,7 @@ export async function GET() {
       id: cat,
       label: labelMap[cat] ?? cat,
       emoji: emojiMap[cat] ?? '✨',
-      icons,
+      icons: cat === 'boda' ? [...icons, ...REMOTE_ORIGINAL_ICONS] : icons,
     };
   });
 

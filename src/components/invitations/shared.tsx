@@ -27,9 +27,9 @@ export const TYPE = {
   title:    'clamp(24px,4.6vw,34px)', // títulos de sección
   subtitle: 'clamp(20px,3.6vw,27px)', // subtítulos / script mediano
   lead:     'clamp(17px,2.6vw,20px)', // mensaje destacado
-  body:     'clamp(15px,2vw,17px)',   // cuerpo
-  small:    'clamp(13px,1.8vw,15px)', // secundario
-  caption:  'clamp(11px,1.5vw,13px)', // etiquetas / overline
+  body:     'clamp(17px,2vw,19px)',   // lectura cómoda también en móvil
+  small:    'clamp(15px,1.8vw,17px)', // secundario
+  caption:  'clamp(12px,1.5vw,14px)', // etiquetas / overline
   number:   'clamp(26px,5vw,40px)',   // dígitos de la cuenta regresiva
 } as const;
 
@@ -38,8 +38,8 @@ export const TYPE = {
 // consistente, en vez del batiburrillo actual py-8/10/12/14/16.
 export const SECTION = {
   tight: 'py-10 invite-sm:py-12',
-  base:  'py-14 invite-sm:py-16',
-  roomy: 'py-16 invite-sm:py-20',
+  base:  'py-16 invite-sm:py-20',
+  roomy: 'py-20 invite-sm:py-24',
 } as const;
 
 // ── Costuras entre secciones ("capas") ────────────────────────────────────────

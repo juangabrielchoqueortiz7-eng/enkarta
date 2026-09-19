@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { getAdminSession } from '@/lib/host-session';
+import { builderActor, invitationActor, publishDenial } from '@/lib/builder-access';
+import { packageForPlan } from '@/lib/partner-session';
+import { draftCap } from '@/lib/partner-plans';
 import { contractErrors, isCurrentContract, isPackage, newServiceContract, retainServiceContract } from '@/lib/packages';
 import { storedServiceConfig } from '@/lib/package-services-server';
 import { changesUncontractedColors } from '@/lib/package-colors';
@@ -12,12 +14,15 @@ const unauthenticated = () => NextResponse.json({ error: 'No autorizado' }, { st
 
 // GET — List all invitations
 export async function GET() {
-  if (!(await getAdminSession())) return unauthenticated();
+  const actor = await builderActor();
+  if (!actor) return unauthenticated();
   try {
-    const { data, error } = await supabaseAdmin
+    const query = supabaseAdmin
       .from('invitations')
       .select('*')
       .order('created_at', { ascending: false });
+    // El socio solo ve su propia cartera; el equipo Enkarta ve todo.
+    const { data, error } = await (actor.kind === 'partner' ? query.eq('partner_id', actor.partnerId) : query);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -31,23 +36,37 @@ export async function GET() {
 
 // POST — Create invitation
 export async function POST(request: NextRequest) {
-  if (!(await getAdminSession())) return unauthenticated();
+  const actor = await builderActor();
+  if (!actor) return unauthenticated();
   try {
     const body = await request.json();
 
     let config = storedServiceConfig(body.builder_config);
-    if (!isPackage(config.package)) return NextResponse.json({ error: 'Selecciona el paquete contratado.' }, { status: 400 });
-    if (!config.serviceContract) config = newServiceContract(config, config.package);
+    if (actor.kind === 'partner') {
+      // El plan del socio manda: no puede asignarse un paquete que no paga.
+      const { subscription, totalInvitations } = actor.context;
+      if (totalInvitations >= draftCap(subscription.plan)) {
+        return NextResponse.json({ error: `Llegaste al máximo de ${draftCap(subscription.plan)} invitaciones. Elimina alguna o sube de plan.` }, { status: 409 });
+      }
+      config = newServiceContract(config, packageForPlan(subscription.plan));
+    } else {
+      if (!isPackage(config.package)) return NextResponse.json({ error: 'Selecciona el paquete contratado.' }, { status: 400 });
+      if (!config.serviceContract) config = newServiceContract(config, config.package);
+    }
     const errors = contractErrors(config);
     if (errors.length) return NextResponse.json({ error: errors.join(' ') }, { status: 400 });
 
     const insertData = {
+      // Solo las invitaciones de un socio llevan dueño; las del equipo Enkarta
+      // no tocan la columna, así nada cambia donde aún no existe la migración 013.
+      ...(actor.kind === 'partner' ? { partner_id: actor.partnerId } : {}),
       slug: body.slug,
       status: body.status || 'draft',
       template: body.template || 'perla',
       type: body.type || 'boda',
       names: body.names || null,
       event_date: body.event_date || null,
+      rsvp_deadline: body.rsvp_deadline || null,
       ceremony_time: body.ceremony_time || null,
       ceremony_place: body.ceremony_place || null,
       ceremony_address: body.ceremony_address || null,
@@ -92,7 +111,6 @@ export async function POST(request: NextRequest) {
 
 // PUT — Update invitation
 export async function PUT(request: NextRequest) {
-  if (!(await getAdminSession())) return unauthenticated();
   try {
     const body = await request.json();
     const { id, ...updateData } = body;
@@ -100,10 +118,20 @@ export async function PUT(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: 'ID es requerido' }, { status: 400 });
     }
+    const actor = await invitationActor(id);
+    if (!actor) return unauthenticated();
 
-    // Las credenciales se cambian únicamente desde su endpoint dedicado.
+    // Las credenciales se cambian únicamente desde su endpoint dedicado, y el
+    // dueño de la invitación no se reasigna desde el constructor.
     for (const key of ['host_email', 'host_password_hash', 'review_email', 'review_password_hash', 'door_email', 'door_password_hash',
-      'expires_at', 'validity_mode', 'validity_extra_days', 'validity_revision']) delete updateData[key];
+      'expires_at', 'validity_mode', 'validity_extra_days', 'validity_revision', 'partner_id']) delete updateData[key];
+
+    // Publicar es lo que cobra la suscripción del socio: se verifica aquí, no en la UI.
+    if (updateData.status === 'ready') {
+      const { data: current } = await supabaseAdmin.from('invitations').select('status').eq('id', id).maybeSingle();
+      const denial = await publishDenial(actor, current?.status === 'ready');
+      if (denial) return NextResponse.json({ error: denial, needsSubscription: true }, { status: 402 });
+    }
     if ('builder_config' in updateData || ['color_primary', 'color_secondary', 'color_accent'].some(key => key in updateData)) {
       const { data: current, error } = await supabaseAdmin.from('invitations').select('builder_config,color_primary,color_secondary,color_accent,template').eq('id', id).maybeSingle();
       if (error) throw error;
@@ -151,7 +179,6 @@ export async function PUT(request: NextRequest) {
 
 // DELETE — Delete invitation
 export async function DELETE(request: NextRequest) {
-  if (!(await getAdminSession())) return unauthenticated();
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -159,6 +186,7 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: 'ID es requerido' }, { status: 400 });
     }
+    if (!(await invitationActor(id))) return unauthenticated();
 
     const { error } = await supabaseAdmin
       .from('invitations')

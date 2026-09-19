@@ -34,9 +34,9 @@ function resolveDolceVitaTheme(t?: TemplateTheme): DVPalette {
 }
 
 const F = {
-  script: "'Great Vibes', cursive",
-  serif: "'Cormorant Garamond', serif",
-  body: "'Cormorant Garamond', serif",
+  script: "var(--ek-font-script, 'Great Vibes', cursive)",
+  serif: "var(--ek-font-heading, 'Cormorant Garamond', serif)",
+  body: "var(--ek-font-body, 'Outfit', sans-serif)",
 };
 
 // ── Ramita botánica (acuarela aproximada) ─────────────────────────────────────────
@@ -85,8 +85,8 @@ function LeafBtn({ children, href }: { children: React.ReactNode; href: string }
   const C = useC();
   return (
     <a href={href} target="_blank" rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 px-7 py-2.5 text-[12px] tracking-[0.12em] uppercase transition-all duration-300 hover:brightness-110"
-      style={{ background: C.green, color: C.cream, borderRadius: '2px 16px 2px 16px', fontFamily: F.serif }}>
+      className="ek-cta inline-flex min-h-12 items-center justify-center gap-2 px-7 py-3 text-[14px] tracking-[0.04em] transition-all duration-300 hover:brightness-110"
+      style={{ background: C.green, color: C.cream, borderRadius: '2px 16px 2px 16px', fontFamily: F.body }}>
       {children}
     </a>
   );
@@ -163,7 +163,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
 
   return (
     <ThemeCtx.Provider value={C}>
-    <div className="relative w-full overflow-x-hidden" style={{ background: C.paper, color: C.ink, fontFamily: F.body }}>
+    <div className="ek-invite ek-dolcevita relative w-full overflow-x-clip" style={{ background: C.paper, color: C.ink, fontFamily: F.body, lineHeight: 1.7 }}>
       <style>{`@keyframes dvSpin{to{transform:rotate(360deg)}} @keyframes dvFade{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
       {data.musicUrl && <audio ref={audioRef} src={data.musicUrl} loop />}
@@ -175,7 +175,7 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       </button>)}
 
       {/* ════════ PORTADA ════════ */}
-      <section className="relative md:grid md:min-h-screen md:grid-cols-2">
+      <section id="dv-inicio" className="relative md:grid md:min-h-screen md:grid-cols-2">
         <div className="relative overflow-hidden h-[42vh] md:h-auto">
           {data.coverImage && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -187,16 +187,29 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
           <LeafSprig className="pointer-events-none absolute -left-6 bottom-2 w-24 opacity-60" style={{ transform: 'scaleX(-1) rotate(20deg)' }} />
           <div className="relative z-10" style={{ animation: 'dvFade 1.1s ease' }}>
             <Caps style={{ fontSize: 'clamp(13px,2vw,16px)', color: C.greenSoft }}>Tenemos el honor<br />de invitarte a nuestra boda</Caps>
-            <Script className="mt-7" style={{ fontSize: TYPE.display }}><WriteOn>{data.groom}</WriteOn></Script>
-            <p style={{ fontFamily: F.serif, color: C.greenSoft, fontSize: '26px' }}>&amp;</p>
-            <Script style={{ fontSize: TYPE.display }}><WriteOn delay={450}>{data.bride}</WriteOn></Script>
-            <Caps className="mt-7" style={{ fontSize: '13px', color: C.greenSoft }}>¡Nos casamos!</Caps>
+            <h1 className="my-8" style={{ fontFamily: F.script, color: C.greenSoft, fontSize: TYPE.display, lineHeight: 1.2 }}>
+              <span className="block"><WriteOn>{data.groom}</WriteOn></span>
+              <span className="my-2 block text-3xl" style={{ fontFamily: F.serif }}>&amp;</span>
+              <span className="block"><WriteOn delay={450}>{data.bride}</WriteOn></span>
+            </h1>
+            <Flourish className="mx-auto w-32" />
+            <p className="mt-6 text-[15px] tracking-[0.06em]" style={{ color: C.ink }}>{data.dateDay} de {data.dateMonth} de {data.dateYear}</p>
+            <p className="mt-1 text-sm" style={{ color: C.greenSoft }}>{data.dateCity}</p>
+            <a href="#dv-fecha" className="ek-cta mt-6 inline-flex items-center gap-3 text-sm" style={{ color: C.green }}>Descubre nuestra celebración <span aria-hidden>↓</span></a>
           </div>
         </div>
       </section>
 
+      <nav aria-label="Tu guía para la boda" className="sticky top-0 z-40 border-y backdrop-blur-lg" style={{ background: `color-mix(in srgb, ${C.paper} 95%, transparent)`, borderColor: C.line }}>
+        <div className="mx-auto flex max-w-xl justify-center gap-1 px-3 py-2">
+          {[['dv-fecha', 'Fecha'], ['dv-lugares', 'Lugares'], ...(data.itinerary.length ? [['dv-itinerario', 'Programa']] : []), ['dv-confirmar', 'Confirmar']].map(([id, label]) => (
+            <a key={id} href={`#${id}`} className="ek-cta flex min-h-11 flex-1 items-center justify-center rounded px-2 text-[13px] transition-colors hover:underline" style={{ color: id === 'dv-confirmar' ? C.cream : C.green, background: id === 'dv-confirmar' ? C.green : 'transparent' }}>{label}</a>
+          ))}
+        </div>
+      </nav>
+
       {/* ════════ FECHA + COUNTDOWN ════════ */}
-      <section className={`relative overflow-hidden px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+      <section id="dv-fecha" className={`relative overflow-hidden px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
         <LeafSprig className="pointer-events-none absolute left-0 top-10 w-44 opacity-25" mono style={{ transform: 'scaleX(-1)' }} />
         <LeafSprig className="pointer-events-none absolute right-0 bottom-10 w-44 opacity-25" />
         <Reveal className="relative z-10 mx-auto max-w-2xl">
@@ -268,49 +281,51 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ CEREMONIA + DRESS CODE + ITINERARIO ════════ */}
-      <section className={`relative overflow-hidden px-6 ${SECTION.base}`} style={{ background: C.paper }}>
+      <section id="dv-lugares" className={`relative overflow-hidden px-6 ${SECTION.base}`} style={{ background: C.paper }}>
         <LeafSprig className="pointer-events-none absolute left-0 top-8 w-40 opacity-25" style={{ transform: 'scaleX(-1)' }} />
         <div className="relative z-10 mx-auto max-w-4xl">
-          <div className="grid gap-10 sm:grid-cols-3">
+          <div className="mb-10 text-center">
+            <p className="text-xs uppercase tracking-[0.2em]" style={{ color: C.greenSoft }}>El día de nuestra boda</p>
+            <h2 className="mt-3" style={{ fontFamily: F.serif, fontSize: 'clamp(32px,5vw,44px)', lineHeight: 1.2, color: C.green }}>Dónde nos encontramos</h2>
+            <p className="mt-4 text-base">Cada momento tiene un lugar especial.</p>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
             {[
               { icon: 'church', title: 'Ceremonia Religiosa', c: data.ceremonyReligious },
               ...(data.ceremonyCivil ? [{ icon: 'rings', title: 'Ceremonia Civil', c: data.ceremonyCivil }] : []),
               ...(data.reception ? [{ icon: 'gift', title: 'Recepción Social', c: data.reception }] : []),
             ].map((b, i) => (
-              <Reveal key={b.title} className="flex flex-col items-center text-center">
+              <Reveal key={b.title} className="flex h-full flex-col items-center rounded-t-[80px] border px-6 py-9 text-center" style={{ borderColor: C.line, background: 'rgba(255,255,255,.4)' }}>
                 <EventIcon name={b.icon} className="mb-2 h-12 w-12" stroke={C.greenSoft} custom={data} sec={i === 0 ? 'ceremony' : 'reception'} />
-                <Script style={{ fontSize: '28px' }}>{b.title}</Script>
-                <div className="mt-2 flex items-center justify-center gap-2" style={{ fontSize: '15px', color: C.ink }}>
-                  <span className="font-semibold">{b.c.time}</span>
-                  <span style={{ width: 1, height: 28, background: C.line }} />
-                  <span className="max-w-[130px] text-left">{b.c.place}</span>
-                </div>
-                <div className="mt-4"><LeafBtn href={b.c.maps}>Ver ubicación</LeafBtn></div>
+                <h3 className="mt-3 text-xs uppercase tracking-[0.12em]" style={{ color: C.green }}>{b.title}</h3>
+                <p className="mt-5 text-4xl tabular-nums" style={{ fontFamily: F.serif, color: C.green }}>{b.c.time}</p>
+                <span className="my-5 h-px w-10" style={{ background: C.line }} aria-hidden />
+                <p className="text-base">{b.c.place}</p>
+                {b.c.maps && <div className="mt-auto pt-6"><LeafBtn href={b.c.maps}>Cómo llegar</LeafBtn></div>}
               </Reveal>
             ))}
           </div>
 
           <Reveal className="mt-12 flex flex-col items-center text-center">
             <EventIcon name="dress" className="mb-1 h-12 w-12" stroke={C.greenSoft} custom={data} sec="dress" />
-            <Script style={{ fontSize: '28px' }}>Dress Code</Script>
-            <p style={{ fontSize: TYPE.body, color: C.ink }}>{data.dressCode}</p>
+            <h2 className="my-3" style={{ fontFamily: F.serif, fontSize: TYPE.title, color: C.green }}>Código de vestimenta</h2>
+            <p className="max-w-lg" style={{ fontSize: TYPE.body, color: C.ink }}>{data.dressCode}</p>
           </Reveal>
 
           <Flourish className="mx-auto my-10 w-40" />
 
-          <Reveal>
-            <Script className="text-center" style={{ fontSize: '40px' }}>Itinerario</Script>
-            <div className="mt-8 grid grid-cols-2 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">
+          {data.itinerary.length > 0 && <Reveal>
+            <h2 id="dv-itinerario" className="text-center" style={{ fontFamily: F.serif, fontSize: '40px', color: C.green }}>Así será nuestro día</h2>
+            <ol className="mx-auto mt-9 max-w-xl">
               {data.itinerary.map((it, i) => (
-                <div key={i} className="flex flex-col items-center text-center">
-                  <EventIcon name={it.icon ?? 'rings'} className="h-11 w-11" stroke={C.gold} custom={data} lottieColors={it.iconColors} speed={it.iconSpeed} />
-                  <p className="mt-2 text-[13px]" style={{ color: C.ink }}>{it.label}</p>
-                  <span className="my-1 block h-px w-12" style={{ background: C.line }} />
-                  <p style={{ fontFamily: F.serif, fontSize: TYPE.body, color: C.gold }}>{it.time}</p>
-                </div>
+                <li key={i} className="grid grid-cols-[82px_40px_1fr] items-center gap-4 border-b py-5 last:border-0" style={{ borderColor: C.line }}>
+                  <p className="text-sm font-medium tabular-nums" style={{ color: C.green }}>{it.time}</p>
+                  <EventIcon name={it.icon ?? 'rings'} className="h-9 w-9" stroke={C.greenSoft} custom={data} lottieColors={it.iconColors} speed={it.iconSpeed} />
+                  <p className="text-base" style={{ color: C.ink }}>{it.label}</p>
+                </li>
               ))}
-            </div>
-          </Reveal>
+            </ol>
+          </Reveal>}
         </div>
       </section>
 
@@ -403,10 +418,12 @@ export default function DolceVita({ data }: { data: DolceVitaContent }) {
       </section>
 
       {/* ════════ CONFIRMACIÓN ════════ */}
-      <section className={`relative overflow-hidden px-6 ${SECTION.base} text-center`} style={{ background: C.paper }}>
+      <section id="dv-confirmar" className={`relative overflow-hidden px-6 ${SECTION.roomy} text-center`} style={{ background: C.paper }}>
         {sew('rsvp')}
         <LeafSprig className="pointer-events-none absolute -left-4 bottom-0 w-44" style={{ transform: 'scaleX(-1) rotate(10deg)' }} />
         <Reveal className="relative z-10 mx-auto max-w-xl">
+          <p className="mb-3 text-xs uppercase tracking-[0.2em]" style={{ color: C.greenSoft }}>Nos encantará verte</p>
+          <h2 className="mb-6" style={{ fontFamily: F.serif, fontSize: 'clamp(32px,5vw,44px)', lineHeight: 1.2, color: C.green }}>¿Nos acompañas?</h2>
           <Caps style={{ fontSize: 'clamp(18px,3vw,26px)', color: C.ink }}>{data.rsvpClosing}</Caps>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="1.6" className="mx-auto my-4">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 14l6 6 6-6" />

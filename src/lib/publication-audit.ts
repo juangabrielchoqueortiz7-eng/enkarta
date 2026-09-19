@@ -72,6 +72,35 @@ export function collectPublicationResources(data: InvitationParsed): Publication
   add(data.cover_image_url, 'image', 'Portada principal');
   add(data.gallery_url, 'link', 'Galería externa');
   add(data.config?.musicUrl, 'audio', 'Música');
+  add(data.config.limone?.artImage, 'image', 'Casa Limone · acuarela');
+  add(data.config.atelier?.artImage, 'image', 'Atelier · decoración flotante');
+  add(data.config.silk?.artImage, 'image', 'Jardín de Seda · acuarela');
+  const ma=data.config.mariaMario;
+  if(ma)Object.entries(ma).forEach(([key,value])=>{if(key.endsWith('Image'))add(value,'image','María · '+key);if(key.endsWith('Video'))add(value,'video','María · '+key);if(key.endsWith('Images')&&Array.isArray(value))value.forEach(url=>add(url,'image','María · '+key));});
+  ma?.hotels?.forEach(h=>{add(h.image,'image',h.name);add(h.url,'link',h.name);});
+  add(ma?.playlistUrl,'link','Playlist');
+  const km=data.config.karlaMauricio;
+  if(km)Object.entries(km).forEach(([key,value])=>{if(key.endsWith('Image'))add(value,'image','Karla · '+key);});
+  add(km?.registryUrl,'link','Lista de regalos');
+  const pj=data.config.paulaJuanFelipe;
+  if(pj)Object.entries(pj).forEach(([key,value])=>{if(key.endsWith('Image'))add(value,'image','Paula · '+key);if(key.endsWith('Images')&&Array.isArray(value))value.forEach((url,i)=>add(url,'image','Paula · '+key+' '+(i+1)));});
+  const mj=data.config.marianaJesus;
+  if(mj)Object.entries(mj).forEach(([key,url])=>{if(key.endsWith('Image'))add(url,'image','Mariana · '+key);if(key.endsWith('Video'))add(url,'video','Mariana · '+key);});
+  add(mj?.hotelUrl,'link','Contacto hospedaje');
+  const mm=data.config.manuelMaya;
+  [mm?.coverImages,mm?.firstImages,mm?.secondImages,mm?.closingImages,mm?.collageImages,mm?.registryImages].forEach((list,group)=>list?.forEach((url,i)=>add(url,'image',`Manuel galería ${group+1} · foto ${i+1}`)));
+  [mm?.backgroundImage,mm?.entryLeftImage,mm?.entryRightImage,mm?.sealImage,mm?.churchImage].forEach((url,i)=>add(url,'image',`Manuel recurso ${i+1}`));
+  mm?.registryUrls?.forEach(url=>add(url,'link','Lista de regalos'));
+  const nf=data.config.nicoleFrancisco;
+  [nf?.collageImages,nf?.portraitImages,nf?.closingImages].forEach((list,group)=>list?.forEach((url,i)=>add(url,'image',`Nicole galería ${group+1} · foto ${i+1}`)));
+  [nf?.backgroundImage,nf?.flowersImage,nf?.monogramImage,nf?.envelopeImage,nf?.registryImage].forEach((url,i)=>add(url,'image',`Nicole recurso ${i+1}`));
+  const ry=data.config.rolyYeliana;
+  [ry?.firstImages,ry?.secondImages,ry?.thirdImages,ry?.closingImages].forEach((list,group)=>list?.forEach((url,i)=>add(url,'image',`Roly carrusel ${group+1} · foto ${i+1}`)));
+  [ry?.backgroundImage,ry?.dressImage,ry?.registryImage].forEach((url,i)=>add(url,'image',`Roly recurso ${i+1}`));
+  const la = data.config?.designKey === 'annie-y-micky' ? data.config?.annieMicky : data.config?.lauraAndres;
+  [la?.coverImages, la?.portraitImages, la?.closingImages, data.config?.annieMicky?.wideImages].forEach((list, group) => list?.forEach((url, i) => add(url, 'image', `Carrusel ${group + 1} · foto ${i + 1}`)));
+  [la?.sealImage, la?.envelopeImage, la?.dividerImage].forEach(url => add(url, 'image', 'Papelería de la invitación'));
+
   if (data.config?.entry?.enabled !== false && data.config?.entry?.style === 'cinematic') {
     add(data.config?.entry?.videoUrl, 'video', 'Entrada cinematográfica · video');
     add(data.config?.entry?.poster, 'image', 'Entrada cinematográfica · poster');

@@ -1,4 +1,14 @@
 'use client';
+import CleanDesignFields from './CleanDesignFields';
+import {isCleanDesign} from '@/lib/clean-designs';
+import MariaMarioFields from './MariaMarioFields';
+import KarlaMauricioFields from './KarlaMauricioFields';
+import PaulaJuanFelipeFields from './PaulaJuanFelipeFields';
+import MarianaJesusFields from './MarianaJesusFields';
+import ManuelMayaFields from './ManuelMayaFields';
+import NicoleFranciscoFields from './NicoleFranciscoFields';
+import RolyYelianaFields from './RolyYelianaFields';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Editor del documento por bloques. Convierte la invitación a bloques editables,
@@ -7,6 +17,8 @@
 // (registry). La selección se comparte con el LivePreview (clic en el preview →
 // abre el bloque aquí, y al revés).
 
+import AnnieMickyFields from './AnnieMickyFields';
+import LauraAndresFields from './LauraAndresFields';
 import { Reorder } from 'framer-motion';
 import { InvitationParsed, BuilderConfig, Block, BlockType, BlockLayout, BlockViewportLayout, ScrollPreset, LAYOUT_VERSION } from '@/lib/types';
 import DesignModeControl from '../DesignModeControl';
@@ -457,6 +469,17 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
     const rest = blocks.filter(b => !selectedIds.includes(b.id));
     setBlocks(front ? [...rest, ...picked] : [...picked, ...rest]);
   };
+
+  if(isCleanDesign(cfg.designKey)&&!blocks.length)return <div className="p-4"><CleanDesignFields data={data} onChange={onChange}/></div>;
+  if ((cfg.designKey === 'maria-angelica-y-mario' || isCleanDesign(cfg.designKey)) && !blocks.length) return <div className="p-4"><MariaMarioFields data={data} onChange={onChange} /></div>;
+  if (cfg.designKey === 'karla-y-mauricio' && !blocks.length) return <div className="p-4"><KarlaMauricioFields data={data} onChange={onChange} /></div>;
+  if (cfg.designKey === 'paula-y-juan-felipe' && !blocks.length) return <div className="p-4"><PaulaJuanFelipeFields data={data} onChange={onChange} /></div>;
+  if (cfg.designKey === 'mariana-y-jesus' && !blocks.length) return <div className="p-4"><MarianaJesusFields data={data} onChange={onChange} /></div>;
+  if (cfg.designKey === 'manuel-y-maya' && !blocks.length) return <div className="p-4"><ManuelMayaFields data={data} onChange={onChange} /></div>;
+  if (cfg.designKey === 'nicole-y-francisco' && !blocks.length) return <div className="p-4"><NicoleFranciscoFields data={data} onChange={onChange} /></div>;
+  if (cfg.designKey === 'roly-y-yeliana' && !blocks.length) return <div className="p-4"><RolyYelianaFields data={data} onChange={onChange} /></div>;
+  if (cfg.designKey === 'annie-y-micky' && !blocks.length) return <div className="p-4"><AnnieMickyFields data={data} onChange={onChange} /></div>;
+  if (cfg.designKey === 'laura-y-andres' && !blocks.length) return <div className="p-4"><LauraAndresFields data={data} onChange={onChange} /></div>;
 
   // ── Sin layout → CTA de conversión ──
   if (!layout || blocks.length === 0) {

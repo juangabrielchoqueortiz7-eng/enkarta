@@ -1,6 +1,18 @@
 'use client';
+import CleanDesignFields from './CleanDesignFields';
+import {isCleanDesign} from '@/lib/clean-designs';
+import MariaMarioFields from './MariaMarioFields';
+import KarlaMauricioFields from './KarlaMauricioFields';
+import PaulaJuanFelipeFields from './PaulaJuanFelipeFields';
+import MarianaJesusFields from './MarianaJesusFields';
+import ManuelMayaFields from './ManuelMayaFields';
+import NicoleFranciscoFields from './NicoleFranciscoFields';
+import RolyYelianaFields from './RolyYelianaFields';
+
 
 import { InvitationParsed, BuilderConfig } from '@/lib/types';
+import AnnieMickyFields from './AnnieMickyFields';
+import LauraAndresFields from './LauraAndresFields';
 
 interface Props {
   data: InvitationParsed;
@@ -22,6 +34,16 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 /** Editor de campos "ricos" específico de cada plantilla premium (guardados en config). */
 export default function TemplateContentFields({ data, onChange }: Props) {
+  if(isCleanDesign(data.config.designKey))return <CleanDesignFields data={data} onChange={onChange}/>;
+  if ((data.config.designKey === 'maria-angelica-y-mario' || isCleanDesign(data.config.designKey))) return <MariaMarioFields data={data} onChange={onChange} />;
+  if (data.config.designKey === 'karla-y-mauricio') return <KarlaMauricioFields data={data} onChange={onChange} />;
+  if (data.config.designKey === 'paula-y-juan-felipe') return <PaulaJuanFelipeFields data={data} onChange={onChange} />;
+  if (data.config.designKey === 'mariana-y-jesus') return <MarianaJesusFields data={data} onChange={onChange} />;
+  if (data.config.designKey === 'manuel-y-maya') return <ManuelMayaFields data={data} onChange={onChange} />;
+  if (data.config.designKey === 'nicole-y-francisco') return <NicoleFranciscoFields data={data} onChange={onChange} />;
+  if (data.config.designKey === 'roly-y-yeliana') return <RolyYelianaFields data={data} onChange={onChange} />;
+  if (data.config.designKey === 'annie-y-micky') return <AnnieMickyFields data={data} onChange={onChange} />;
+  if (data.config.designKey === 'laura-y-andres') return <LauraAndresFields data={data} onChange={onChange} />;
   const cfg = data.config ?? {};
   const setCfg = (patch: Partial<BuilderConfig>) => onChange({ config: { ...cfg, ...patch } });
 

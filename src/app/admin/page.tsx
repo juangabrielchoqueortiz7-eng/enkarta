@@ -9,6 +9,7 @@ import { formatValidityDate, invitationValidity, validityLabel } from '@/lib/inv
 import { eventDay } from '@/lib/rsvp-contract';
 import CommercialDashboard from '@/components/admin/CommercialDashboard';
 import LaunchDashboard from '@/components/admin/LaunchDashboard';
+import PartnersDashboard from '@/components/admin/PartnersDashboard';
 
 const BUILDER_TEMPLATES = ['azure','primicia','passport','paradise','obsidiana','dolcevita','grazia','carmesi_v2','napoly','euforia','rosegold','allegria'];
 
@@ -24,7 +25,7 @@ export default function AdminPage() {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  const [view, setView] = useState<'invitations' | 'confirmations' | 'commercial' | 'launch'>('invitations');
+  const [view, setView] = useState<'invitations' | 'confirmations' | 'commercial' | 'partners' | 'launch'>('invitations');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [validityFilter, setValidityFilter] = useState('all');
@@ -240,6 +241,12 @@ export default function AdminPage() {
                 Ventas
               </button>
               <button
+                onClick={() => setView('partners')}
+                className={`px-4 py-1.5 rounded-lg font-outfit text-sm transition-all ${view === 'partners' ? 'bg-white shadow-sm text-enkarta-dark font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Socios
+              </button>
+              <button
                 onClick={() => setView('launch')}
                 className={`px-4 py-1.5 rounded-lg font-outfit text-sm transition-all ${view === 'launch' ? 'bg-white shadow-sm text-enkarta-dark font-medium' : 'text-gray-500 hover:text-gray-700'}`}
               >
@@ -274,8 +281,8 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <nav className="sticky top-16 z-30 grid grid-cols-4 border-b bg-white/95 p-1.5 backdrop-blur sm:hidden" aria-label="Secciones del panel">
-        {([['invitations', 'Invitaciones'], ['confirmations', 'Confirmaciones'], ['commercial', 'Ventas'], ['launch', 'Lanzamiento']] as const).map(([key, label]) => <button key={key} type="button" onClick={() => setView(key)} className={`rounded-lg px-1 py-2 font-outfit text-[10px] ${view === key ? 'bg-[#f0ebe3] font-semibold text-enkarta-dark' : 'text-gray-500'}`}>{label}</button>)}
+      <nav className="sticky top-16 z-30 grid grid-cols-5 border-b bg-white/95 p-1.5 backdrop-blur sm:hidden" aria-label="Secciones del panel">
+        {([['invitations', 'Invitaciones'], ['confirmations', 'Confirmaciones'], ['commercial', 'Ventas'], ['partners', 'Socios'], ['launch', 'Lanzamiento']] as const).map(([key, label]) => <button key={key} type="button" onClick={() => setView(key)} className={`rounded-lg px-1 py-2 font-outfit text-[10px] ${view === key ? 'bg-[#f0ebe3] font-semibold text-enkarta-dark' : 'text-gray-500'}`}>{label}</button>)}
       </nav>
 
       {/* Content */}
@@ -288,6 +295,8 @@ export default function AdminPage() {
           </>
         ) : view === 'commercial' ? (
           <CommercialDashboard />
+        ) : view === 'partners' ? (
+          <PartnersDashboard />
         ) : view === 'launch' ? (
           <LaunchDashboard />
         ) : (

@@ -1,0 +1,10 @@
+.git
+.next
+node_modules
+.env*
+.claude
+Iconos INVITALI
+*.log
+*.tsbuildinfo
+docs
+scripts/*.py
