@@ -18,3 +18,6 @@ export function collectionCatalog() {
     };
   });
 }
+
+/** Una ficha del catálogo, tal como la consumen la home y /catalogo. */
+export type CollectionCatalogEntry = ReturnType<typeof collectionCatalog>[number];

@@ -2,63 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { motion, MotionConfig, useMotionValue, useSpring, useInView, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { motion, MotionConfig, useInView, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import { collectionCatalog } from '@/lib/collection-catalog';
 import { commercialRows, PACKAGE_CATALOG, PACKAGE_ORDER } from '@/lib/packages';
 import BrandByline from '@/components/brand/BrandByline';
+import CollectionCard from '@/components/catalog/CollectionCard';
 import CommercialLink from '@/components/commercial/CommercialLink';
 import CommercialTracker from '@/components/commercial/CommercialTracker';
-
-// ── Scroll reveal (entrada elegante al hacer scroll) ─────────────────────────
-function Reveal({ children, delay = 0, y = 32, className = '' }: {
-  children: React.ReactNode; delay?: number; y?: number; className?: string;
-}) {
-  return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-70px' }}
-      transition={{ duration: 0.85, delay, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-// ── Tilt 3D (perspectiva que sigue al cursor) ────────────────────────────────
-function Tilt3D({ children, max = 9, scale = 1.015, className = '' }: {
-  children: React.ReactNode; max?: number; scale?: number; className?: string;
-}) {
-  const rx = useMotionValue(0);
-  const ry = useMotionValue(0);
-  const srx = useSpring(rx, { stiffness: 160, damping: 20 });
-  const sry = useSpring(ry, { stiffness: 160, damping: 20 });
-  const [hover, setHover] = useState(false);
-  const reduced = useReducedMotion();
-
-  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (reduced) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width - 0.5;
-    const py = (e.clientY - r.top) / r.height - 0.5;
-    ry.set(px * max * 2);
-    rx.set(-py * max * 2);
-  };
-  const onLeave = () => { rx.set(0); ry.set(0); setHover(false); };
-
-  return (
-    <div className={className} style={{ perspective: '1400px' }} onMouseMove={onMove} onMouseEnter={() => setHover(true)} onMouseLeave={onLeave}>
-      <motion.div
-        style={{ rotateX: srx, rotateY: sry, transformStyle: 'preserve-3d' }}
-        animate={{ scale: hover ? scale : 1 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-      >
-        {children}
-      </motion.div>
-    </div>
-  );
-}
+import Reveal from '@/components/motion/Reveal';
+import Tilt3D from '@/components/motion/Tilt3D';
 
 // ── Contador animado (stats del hero) ────────────────────────────────────────
 function CountUp({ value, suffix = '' }: { value: number; suffix?: string }) {
@@ -221,128 +173,6 @@ function PhoneFrame({ bg, accent: _accent, textColor, children, className = '' }
   );
 }
 
-// ── White phone frame (catalog cards) ───────────────────────────────────────
-function CatalogPhone({ bg, textColor = '#333', children, className = '' }: {
-  bg: string; textColor?: string; children: React.ReactNode; className?: string;
-}) {
-  return (
-    <div className={`relative select-none ${className}`}>
-      <div className="relative overflow-hidden" style={{ borderRadius: '1.9rem', border: '8px solid #e0e0e0', backgroundColor: '#e0e0e0', boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.9)' }}>
-        <div className="flex items-center justify-between px-4 pt-2 pb-1 text-[8px]" style={{ backgroundColor: bg, color: textColor }}>
-          <span className="opacity-55 font-medium">9:41</span>
-          <div className="w-11 h-[11px] rounded-full bg-black/80" />
-          <div className="flex gap-[2px] opacity-50">
-            <svg width="11" height="7" viewBox="0 0 11 7" fill="currentColor" aria-hidden>
-              <rect x="0" y="3" width="2" height="4" rx="0.4" opacity="0.4"/><rect x="3" y="1.5" width="2" height="5.5" rx="0.4" opacity="0.7"/>
-              <rect x="6" y="0" width="2" height="7" rx="0.4"/><rect x="9" y="0.5" width="2" height="4.5" rx="0.7" fill="none" stroke="currentColor" strokeWidth="0.8"/>
-            </svg>
-          </div>
-        </div>
-        <div className="overflow-hidden" style={{ backgroundColor: bg }}>{children}</div>
-        <div className="flex justify-center py-1.5" style={{ backgroundColor: bg }}>
-          <div className="w-14 h-[3px] rounded-full" style={{ backgroundColor: textColor === '#ffffff' || textColor === 'white' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.18)' }} />
-        </div>
-      </div>
-      <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: '1.9rem', background: 'linear-gradient(145deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.05) 35%, transparent 55%)' }} />
-      <div className="absolute -right-[8px] top-[88px] w-[5px] h-9 rounded-r-md" style={{ backgroundColor: '#cecece' }} />
-      <div className="absolute -left-[8px] top-[72px] w-[5px] h-7 rounded-l-md" style={{ backgroundColor: '#cecece' }} />
-      <div className="absolute -left-[8px] top-[108px] w-[5px] h-7 rounded-l-md" style={{ backgroundColor: '#cecece' }} />
-    </div>
-  );
-}
-
-// ── Cover screen (photo full-bleed, no monogram) ─────────────────────────────
-function CoverScreen({ t }: { t: (typeof templates)[0] }) {
-  return (
-    <div className="relative overflow-hidden" style={{ minHeight: '230px' }}>
-      <Image src={t.img} alt={t.name} fill className="object-cover" style={{ objectPosition: 'center 15%' }} sizes="(max-width: 1024px) 30vw, 180px" draggable={false} />
-      <div className="absolute bottom-0 left-0 right-0" style={{ height: '45%', background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)' }} />
-      <div className="absolute bottom-3 left-0 right-0 text-center px-3">
-        <p className="font-great text-white leading-tight drop-shadow-lg" style={{ fontSize: '15px' }}>{t.n1}</p>
-        <p className="font-outfit text-white/60 text-[6px] my-px drop-shadow-md">&amp;</p>
-        <p className="font-great text-white leading-tight drop-shadow-lg" style={{ fontSize: '15px' }}>{t.n2}</p>
-      </div>
-    </div>
-  );
-}
-
-// ── Miniature invitation shown in the rear phone ─────────────────────────────
-function DetailScreen({ t }: { t: (typeof templates)[0] }) {
-  const headerText = '#ffffff';
-  return (
-    <div className="overflow-hidden" style={{ backgroundColor: t.bg, minHeight: '290px' }}>
-      <div className="relative text-center" style={{ background: `linear-gradient(175deg, ${t.ink} 0%, ${t.ink}e6 62%, ${t.bg} 100%)`, padding: '10px 8px 18px' }}>
-        <div className="flex justify-center items-center gap-1 opacity-30 mb-1">
-          <div className="h-px w-8" style={{ backgroundColor: headerText }} />
-          <div className="w-1 h-1 rounded-full" style={{ backgroundColor: t.accent }} />
-          <div className="h-px w-8" style={{ backgroundColor: headerText }} />
-        </div>
-        <p className="font-outfit" style={{ fontSize: '5px', textTransform: 'uppercase', letterSpacing: '0.22em', color: `${headerText}80`, marginBottom: '1px' }}>{t.tag} · {t.series}</p>
-        <p className="font-great leading-tight" style={{ fontSize: '16px', color: headerText }}>{t.n1}</p>
-        <p className="font-outfit" style={{ fontSize: '7px', color: t.accent }}>&amp;</p>
-        <p className="font-great leading-tight" style={{ fontSize: '16px', color: headerText }}>{t.n2}</p>
-      </div>
-
-      <div className="px-2 pt-1.5 pb-2">
-        <div className="flex items-start gap-1.5 mb-1.5">
-          <div className="text-center px-2 py-1 rounded-lg" style={{ backgroundColor: `${t.accent}18`, border: `1px solid ${t.accent}30`, flexShrink: 0 }}>
-            <p className="font-outfit leading-none" style={{ fontSize: '4.5px', color: t.accent, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Fecha</p>
-            <p className="font-playfair font-bold leading-none mt-1" style={{ fontSize: '11px', color: t.text }}>{t.dateStr.split(' de ')[0] || '14'}</p>
-          </div>
-          <div className="flex flex-col gap-0.5 flex-1">
-            {[['02','días'],['14','hrs'],['32','min']].map(([n, label]) => (
-              <div key={label} className="flex items-center justify-between px-1.5 py-0.5 rounded" style={{ backgroundColor: `${t.accent}18` }}>
-                <span className="font-playfair font-bold" style={{ fontSize: '9px', color: t.text }}>{n}</span>
-                <span className="font-outfit" style={{ fontSize: '4px', color: t.text, opacity: 0.55 }}>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex gap-1 mb-1.5">
-          {[['Ceremonia','5:00 PM'],['Recepción','8:00 PM']].map(([label,time]) => (
-            <div key={label} className="flex-1 text-center rounded-lg py-1.5" style={{ backgroundColor: `${t.accent}10`, border: `1px solid ${t.accent}25` }}>
-              <p className="font-outfit" style={{ fontSize: '4px', color: t.accent, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</p>
-              <p className="font-playfair font-bold" style={{ fontSize: '9px', color: t.text }}>{time}</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center gap-1 mb-1.5 flex-wrap">
-          {['Formal','♪ Música','Maps'].map(chip => (
-            <div key={chip} className="px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${t.accent}14`, border: `1px solid ${t.accent}22` }}>
-              <span className="font-outfit" style={{ fontSize: '4px', color: t.accent }}>{chip}</span>
-            </div>
-          ))}
-        </div>
-        <div className="py-1 rounded-lg flex items-center justify-center" style={{ backgroundColor: t.accent }}>
-          <p className="font-outfit font-semibold text-white" style={{ fontSize: '6px' }}>Confirmar asistencia ✓</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Original dual-phone catalogue card ───────────────────────────────────────
-function DualPhoneCard({ t }: { t: (typeof templates)[0] }) {
-  return (
-    <div className="flex flex-col items-center transition-all duration-500 group-hover:-translate-y-2">
-      <div className="relative w-full" style={{ height: '350px' }}>
-        <div className="transition-transform duration-500 group-hover:rotate-[12deg]" style={{ position: 'absolute', right: '-2%', top: '20px', width: '57%', transformOrigin: 'top center', transform: 'rotate(9deg)', zIndex: 1, filter: 'brightness(0.92) saturate(0.95) drop-shadow(0 14px 26px rgba(90,78,52,0.18))' }}>
-          <CatalogPhone bg={t.bg} textColor={t.text} className="w-full">
-            <DetailScreen t={t} />
-          </CatalogPhone>
-        </div>
-        <div className="transition-transform duration-500 group-hover:rotate-[-13deg]" style={{ position: 'absolute', left: '-2%', top: '8px', width: '57%', transformOrigin: 'top center', transform: 'rotate(-10deg)', zIndex: 2, filter: 'drop-shadow(0 22px 38px rgba(90,78,52,0.30))' }}>
-          <CatalogPhone bg={t.ink} textColor="#ffffff" className="w-full">
-            <CoverScreen t={t} />
-          </CatalogPhone>
-        </div>
-      </div>
-      <p className="font-playfair font-semibold text-xl sm:text-2xl mt-5 transition-colors duration-300" style={{ color: '#8B7D5F' }}>{t.name}</p>
-      <span className="font-outfit text-[11px] uppercase tracking-[0.22em] mt-3" style={{ color: '#B8975A' }}>Abrir invitación</span>
-    </div>
-  );
-}
-
 // The hero slideshow uses the same names, photos and dates as the samples.
 function TabletCarousel() {
   const [current, setCurrent] = useState(0);
@@ -406,6 +236,8 @@ function TabletCarousel() {
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 const templates = collectionCatalog();
+/** La home muestra una selección; el catálogo completo vive en /catalogo. */
+const featuredTemplates = templates.slice(0, 8);
 
 const features = [
   { title: 'Ubicación Maps',                desc: 'Botón directo a Google Maps incluido en cada invitación.',
@@ -705,8 +537,8 @@ export default function LandingPage() {
             </h1>
             <BrandByline tone="warm" className="mt-0.5 pl-0.5" />
           </div>
-          <div className="hidden md:flex items-center gap-7 font-outfit text-sm" style={{ color: 'rgba(44,37,25,0.55)' }}>
-            {[['Bodas','/bodas'],['XV Años','/xv-anos'],['Cumpleaños','/cumpleanos'],['Casos','/casos'],['Precios','#precios'],['Cómo funciona','/proceso']].map(([l, href]) => (
+          <div className="hidden lg:flex items-center gap-6 font-outfit text-sm" style={{ color: 'rgba(44,37,25,0.55)' }}>
+            {[['Catálogo','/catalogo'],['Bodas','/bodas'],['XV Años','/xv-anos'],['Cumpleaños','/cumpleanos'],['Casos','/casos'],['Precios','#precios'],['Cómo funciona','/proceso']].map(([l, href]) => (
               <a key={l} href={href} className="relative group transition-colors hover:text-enkarta-dark py-1">
                 {l}
                 <span className="absolute left-0 -bottom-0.5 h-px w-0 group-hover:w-full transition-all duration-300" style={{ backgroundColor: '#B8975A' }} />
@@ -714,7 +546,7 @@ export default function LandingPage() {
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <a href="/panel" className="hidden md:inline-block px-4 py-2 border rounded-lg font-outfit text-sm font-medium transition-all duration-300 hover:-translate-y-px"
+            <a href="/panel" className="hidden lg:inline-block px-4 py-2 border rounded-lg font-outfit text-sm font-medium transition-all duration-300 hover:-translate-y-px"
                style={{ borderColor: 'rgba(139,125,95,0.35)', color: 'rgba(44,37,25,0.7)' }}
                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#B8975A'; (e.currentTarget as HTMLElement).style.color = '#8B7D5F'; }}
                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(139,125,95,0.35)'; (e.currentTarget as HTMLElement).style.color = 'rgba(44,37,25,0.7)'; }}>
@@ -730,7 +562,7 @@ export default function LandingPage() {
               onClick={() => setMenuOpen(o => !o)}
               aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
               aria-expanded={menuOpen}
-              className="md:hidden w-10 h-10 flex flex-col items-center justify-center gap-[5px] rounded-lg transition-colors"
+              className="lg:hidden w-10 h-10 flex flex-col items-center justify-center gap-[5px] rounded-lg transition-colors"
               style={{ color: '#8B7D5F' }}
             >
               <span className="block h-[2px] w-5 rounded-full bg-current transition-all duration-300" style={{ transform: menuOpen ? 'translateY(7px) rotate(45deg)' : 'none' }} />
@@ -745,11 +577,11 @@ export default function LandingPage() {
           initial={false}
           animate={{ height: menuOpen ? 'auto' : 0, opacity: menuOpen ? 1 : 0 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="md:hidden overflow-hidden border-t"
+          className="lg:hidden overflow-hidden border-t"
           style={{ backgroundColor: 'rgba(250,247,242,0.97)', borderColor: 'rgba(139,125,95,0.12)' }}
         >
           <div className="px-6 py-4 flex flex-col gap-1 font-outfit text-sm">
-            {[['Bodas','/bodas'],['XV Años','/xv-anos'],['Cumpleaños','/cumpleanos'],['Casos','/casos'],['Precios','#precios'],['Cómo funciona','/proceso'],['Preguntas','#faq']].map(([l, href]) => (
+            {[['Catálogo','/catalogo'],['Bodas','/bodas'],['XV Años','/xv-anos'],['Cumpleaños','/cumpleanos'],['Casos','/casos'],['Precios','#precios'],['Cómo funciona','/proceso'],['Preguntas','#faq']].map(([l, href]) => (
               <a key={l} href={href} onClick={() => setMenuOpen(false)}
                  className="py-2.5 px-3 rounded-lg transition-colors hover:bg-enkarta-gold/10"
                  style={{ color: 'rgba(44,37,25,0.7)' }}>
@@ -844,7 +676,7 @@ export default function LandingPage() {
           transition={{ duration: 0.9, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="flex flex-col sm:flex-row items-center gap-4 mb-10">
-            <a href="#catalogo" className="relative overflow-hidden px-9 py-3.5 rounded-full font-outfit font-semibold text-white transition-all duration-300 text-sm hover:-translate-y-0.5 hover:shadow-xl group" style={{ backgroundColor: '#8B7D5F', boxShadow: '0 8px 28px rgba(139,125,95,0.3)' }}>
+            <a href="/catalogo" className="relative overflow-hidden px-9 py-3.5 rounded-full font-outfit font-semibold text-white transition-all duration-300 text-sm hover:-translate-y-0.5 hover:shadow-xl group" style={{ backgroundColor: '#8B7D5F', boxShadow: '0 8px 28px rgba(139,125,95,0.3)' }}>
               <span className="absolute inset-0 pointer-events-none overflow-hidden rounded-full">
                 <span className="absolute top-0 bottom-0 w-1/3 opacity-0 group-hover:opacity-100" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)', animation: 'shimmerSlide 1.6s ease-in-out infinite' }} />
               </span>
@@ -858,7 +690,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex gap-10 sm:gap-14">
-            {[[200, '+', 'Invitaciones'], [12, '', 'Diseños'], [100, '%', 'Satisfacción']].map(([n, suffix, l]) => (
+            {[[200, '+', 'Invitaciones'], [templates.length, '', 'Diseños'], [100, '%', 'Satisfacción']].map(([n, suffix, l]) => (
               <div key={l as string} className="text-center">
                 <p className="font-cinzel text-2xl font-semibold" style={{ color: '#5a4e34' }}>
                   <CountUp value={n as number} suffix={suffix as string} />
@@ -894,7 +726,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Catalog ── */}
+      {/* ── Catalog (vista previa · el catálogo completo vive en /catalogo) ── */}
       <section id="catalogo" className="relative overflow-hidden py-28 px-4 bg-white">
         <Butterflies zone="section" />
         <div className="relative max-w-6xl mx-auto">
@@ -904,25 +736,32 @@ export default function LandingPage() {
             <p className="font-cormorant mt-4 max-w-xl mx-auto" style={{ color: 'rgba(44,37,25,0.55)', fontSize: '20px', fontWeight: 500 }}>
               Explora universos visuales creados para convertir la personalidad de tu evento en una experiencia memorable.
             </p>
+            <p className="font-outfit text-[11px] uppercase tracking-[0.28em] mt-6" style={{ color: '#B8975A' }}>
+              {templates.length} diseños · Una selección
+            </p>
           </Reveal>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-14 sm:gap-y-24">
-            {templates.map((t, i) => {
-              return (
-              <Reveal key={t.name} delay={(i % 4) * 0.1} y={44}>
-                <a
-                  href={t.demoPath}
-                  aria-label={`Ver invitación ${t.name}`}
-                  className="group block w-full max-w-[280px] mx-auto rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4d5944]"
-                >
-                  <Tilt3D max={6} scale={1.02}>
-                    <DualPhoneCard t={t} />
-                  </Tilt3D>
-                </a>
-              </Reveal>
-              );
-            })}
+            {featuredTemplates.map((t, i) => (
+              <CollectionCard key={t.key} design={t} delay={(i % 4) * 0.1} />
+            ))}
           </div>
           <Reveal className="text-center mt-20">
+            <a
+              href="/catalogo"
+              className="group relative inline-flex items-center gap-3 overflow-hidden px-10 py-4 rounded-full font-outfit font-semibold text-white transition-all duration-300 text-sm hover:-translate-y-0.5 hover:shadow-xl"
+              style={{ backgroundColor: '#8B7D5F', boxShadow: '0 8px 28px rgba(139,125,95,0.3)' }}
+            >
+              <span className="absolute inset-0 pointer-events-none overflow-hidden rounded-full">
+                <span className="absolute top-0 bottom-0 w-1/3 opacity-0 group-hover:opacity-100" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)', animation: 'shimmerSlide 1.6s ease-in-out infinite' }} />
+              </span>
+              Ver catálogo completo · {templates.length} diseños
+              <svg className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m0 0l-6-6m6 6l-6 6" />
+              </svg>
+            </a>
+            <p className="font-outfit text-xs mt-6 mb-4" style={{ color: 'rgba(44,37,25,0.4)' }}>
+              ¿Ya sabes cuál quieres?
+            </p>
             <CommercialLink placement="catalog_bottom"
                className="inline-block px-9 py-3.5 border rounded-full font-outfit font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                style={{ borderColor: 'rgba(139,125,95,0.5)', color: '#8B7D5F' }}>
@@ -1329,11 +1168,12 @@ export default function LandingPage() {
             <p className="mt-1 font-outfit text-[10px] leading-4 text-white/20">Enkarta es una marca comercial operada por Grupo JABA.</p>
           </div>
           <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2" aria-label="Enlaces del sitio">
-            <a href="#catalogo" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Catálogo</a>
+            <a href="/catalogo" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Catálogo</a>
             <a href="#precios" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Precios</a>
             <a href="#faq" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">FAQ</a>
             <a href="/proceso" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Cómo funciona</a>
             <a href="/casos" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Casos y garantía</a>
+            <a href="/socios" className="font-outfit text-xs text-[#B8975A]/70 transition-colors hover:text-[#B8975A]">Vende con nosotros</a>
             <a href="/legal/privacidad" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Privacidad</a>
             <a href="/legal/terminos" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Términos</a>
             <a href="/legal/pagos" className="font-outfit text-xs text-white/30 transition-colors hover:text-white/60">Pagos</a>
