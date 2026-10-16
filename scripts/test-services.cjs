@@ -55,12 +55,16 @@ async function rpc(name, params) {
   return scalar(`select public.${name}(${keys.map((key,i) => `${key} => $${i+1}`).join(',')}) as result`, Object.values(params));
 }
 const queryClient = (table) => {
-  assert.ok(['guests', 'attendees', 'rsvps', 'invitations', 'builder_versions', 'builder_review_notes', 'invitation_validity_events', 'save_date_responses'].includes(table));
-  let columns = '*', filters = [], limit, update, insert, remove, sort = [];
+  assert.ok(['guests', 'attendees', 'access_log', 'rsvps', 'invitations', 'builder_versions', 'builder_review_notes', 'invitation_validity_events', 'save_date_responses'].includes(table));
+  let columns = '*', filters = [], limit, update, insert, remove, sort = [], historyCursor;
   const query = {
     select(value = '*') { columns = value; return this; },
     eq(column,value) { filters.push([column,value,'=']); return this; },
     ilike(column,value) { filters.push([column,value,'ILIKE']); return this; },
+    or(expression) {
+      const match = /^at\.lt\.([^,]+),and\(at\.eq\.([^,]+),id\.lt\.([a-f0-9-]+)\)$/.exec(expression);
+      assert.ok(match); assert.equal(match[1],match[2]); historyCursor={at:match[1],id:match[3]}; return this;
+    },
     update(value) { update=value; return this; },
     insert(value) { insert=Array.isArray(value) ? value : [value]; return this; },
     delete() { remove=true; return this; },
@@ -72,8 +76,12 @@ const queryClient = (table) => {
       try {
         if (queryFailure) return ok({data:null,error:queryFailure});
         let values = filters.map(([,value])=>value);
-        const where = filters.length ? ' where '+filters.map(([col,,op],i)=>`${col} ${op} $${i+1}`).join(' and ') : '';
-        let sql = `select ${columns} from public.${table}${where}${sort.length ? ' order by '+sort.join(',') : ''}${limit ? ' limit '+limit : ''}`;
+        const conditions=filters.map(([col,,op],i)=>`${col} ${op} $${i+1}`);
+        if(historyCursor){values.push(historyCursor.at,historyCursor.id);const n=values.length;conditions.push(`(at < $${n-1} OR (at = $${n-1} AND id < $${n}))`);}
+        const where = conditions.length ? ' where '+conditions.join(' and ') : '';
+        // PostgREST preserves timestamp microseconds; JS Date (PGlite's default) truncates them.
+        const projection=table==='access_log'?columns.replace(/\bat\b/g,`to_char(at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS at`):columns;
+        let sql = `select ${projection} from public.${table}${where}${sort.length ? ' order by '+sort.join(',') : ''}${limit ? ' limit '+limit : ''}`;
         if (update) { const entries=Object.entries(update); sql=`update public.${table} set ${entries.map(([key],i)=>`${key}=$${values.length+i+1}`).join(',')}${where} returning ${columns}`; values.push(...entries.map(([,value])=>value)); }
         if (remove) sql=`delete from public.${table}${where} returning ${columns}`;
         if (insert) { const keys=Object.keys(insert[0]); values=[]; sql=`insert into public.${table}(${keys.join(',')}) values ${insert.map(row=>'('+keys.map(key=>{values.push(row[key]);return '$'+values.length;}).join(',')+')').join(',')} returning ${columns}`; }
@@ -96,6 +104,7 @@ const { NextRequest } = require('next/server');
 const guestRoute = require('../src/app/api/guests/confirm/route.ts');
 const openRoute = require('../src/app/api/rsvp/route.ts');
 const checkinRoute = require('../src/app/api/checkin/route.ts');
+const historyRoute = require('../src/app/api/checkin/history/route.ts');
 const receptionRoute = require('../src/app/api/checkin/search/route.ts');
 const guestCrud = require('../src/app/api/guests/route.ts');
 const adminRoute = require('../src/app/api/admin/invitations/route.ts');
@@ -162,6 +171,57 @@ beforeEach(async () => {
   await db.query("INSERT INTO guests(id,invitation_id,public_id,name,passes) VALUES($1,$2,'TEST0001','Familia Prueba',5)",[guestId,invId]);
 });
 after(async () => { await db.close(); });
+
+const history = (cursor) => historyRoute.GET(req('/api/checkin/history?guestId='+guestId+(actor?.role==='door'?'&scope=door':'')+(cursor?'&cursor='+encodeURIComponent(cursor):'')));
+const historySetup = async()=>{await db.query('update invitations set builder_config=$1 where id=$2',[newServiceContract({},'exclusive'),invId]);return confirm();};
+test('history records repeated entry/exit, idempotent replays once and exposes a private whitelist',async()=>{
+ const {guest}=await historySetup();actor={role:'door',id:invId};let people=(await group()).attendees;
+ const first={attendeeId:people[0].id,action:'in',expectedRevision:0,requestId:randomUUID(),scope:'door',invitationId:invId};
+ assert.equal((await checkinRoute.POST(req('/api/checkin',first))).status,200);
+ assert.equal((await checkinRoute.POST(req('/api/checkin',first))).status,200);
+ for(const [revision,action] of [[1,'out'],[2,'in'],[3,'out'],[4,'in']])assert.equal((await checkinRoute.POST(req('/api/checkin',{...first,action,expectedRevision:revision,requestId:randomUUID()}))).status,200);
+ const response=await history();assert.equal(response.status,200);assert.match(response.headers.get('Cache-Control'),/private, no-store/);
+ const page=await response.json();assert.equal(page.movements.length,5);assert.equal(page.nextCursor,null);assert.equal(page.invitationId,invId);assert.equal(page.guestId,guestId);
+ assert.deepEqual(page.movements.map(row=>row.action),['in','out','in','out','in']);
+ assert.ok(page.movements.every(row=>row.operatorRole==='door'&&row.seatNo===1));
+ assert.deepEqual(Object.keys(page.movements[0]).sort(),['action','at','id','label','operatorRole','seatNo']);
+ const wire=JSON.stringify(page);for(const secret of [guest.accessToken,first.requestId,'door:'+invId,'password_hash','phone','message'])assert.ok(!wire.includes(secret));
+ assert.equal((await group()).attendees[0].revision,5); // History reads never register movements.
+});
+test('history keyset pagination handles tied timestamps and new rows without duplicating older pages',async()=>{
+ await historySetup();actor={role:'admin'};const people=(await group()).attendees;
+ for(let n=1;n<=43;n++)await db.query('insert into access_log(id,guest_id,attendee_id,action,at,operator) values($1,$2,$3,$4,$5,$6)',[`50000000-0000-4000-8000-${String(n).padStart(12,'0')}`,guestId,people[0].id,n%2?'in':'out','2026-01-02T12:00:00.123456Z','host:'+invId]);
+ const one=await(await history()).json();assert.equal(one.movements.length,20);assert.ok(one.nextCursor);
+ await db.query("insert into access_log(guest_id,attendee_id,action,at) values($1,$2,'in','2026-01-03T12:00:00Z')",[guestId,people[0].id]);
+ const two=await(await history(one.nextCursor)).json(),three=await(await history(two.nextCursor)).json();assert.equal(two.movements.length,20);assert.equal(three.movements.length,3);assert.equal(three.nextCursor,null);
+ const ids=[...one.movements,...two.movements,...three.movements].map(row=>row.id);assert.equal(new Set(ids).size,43);assert.equal(ids[0],'50000000-0000-4000-8000-000000000043');assert.equal(ids.at(-1),'50000000-0000-4000-8000-000000000001');
+});
+test('history denies anonymous, review, foreign event and explicit door scope cannot borrow admin cookies',async()=>{
+ await historySetup();
+ for(const role of [null,'review','host','door']){actor=role?{role,id:role==='review'?invId:otherId}:null;assert.equal((await history()).status,role===null||role==='review'?403:404);}
+ actor={role:'admin'};assert.equal((await historyRoute.GET(req('/api/checkin/history?scope=door&guestId='+guestId))).status,403);
+ actor={role:'host',id:invId};assert.equal((await history()).status,200);
+ actor={role:'door',id:invId};assert.equal((await history()).status,200);
+});
+test('history rejects rotated session, disabled QR, closed event and unconfirmed group',async()=>{
+ await historySetup();actor={role:'door',id:invId};const request=req('/api/checkin/history?scope=door&guestId='+guestId);request.headers.set('X-Enkarta-Scanner-Session','f'.repeat(64));assert.equal((await historyRoute.GET(request)).status,403);
+ await db.query('update invitations set builder_config=$1 where id=$2',[newServiceContract({},'premium'),invId]);assert.equal((await history()).status,403);
+ await db.query("update invitations set builder_config=$1,status='draft' where id=$2",[newServiceContract({},'exclusive'),invId]);assert.equal((await history()).status,403);
+ await db.query("update invitations set status='ready' where id=$1",[invId]);
+ await db.query("update guests set status='pending' where id=$1",[guestId]);assert.notEqual((await history()).status,200);
+});
+test('history validates cursor, fails closed on database faults and distinguishes a real empty history',async()=>{
+ await historySetup();actor={role:'admin'};const empty=await(await history()).json();assert.deepEqual(empty.movements,[]);assert.equal(empty.nextCursor,null);
+ for(const cursor of ['', 'invalid','2026-01-02T00:00:00.000000Z|bad', '2026-02-30T00:00:00.000000Z|'+guestId, 'x'.repeat(200)])assert.equal((await historyRoute.GET(req('/api/checkin/history?guestId='+guestId+'&cursor='+encodeURIComponent(cursor)))).status,400);
+ assert.equal((await historyRoute.GET(req('/api/checkin/history?guestId='+guestId+'&guestId='+otherId))).status,400);
+ queryFailure={code:'57014'};assert.equal((await history()).status,503);queryFailure=null;rpcFailure={message:'EVENT_CLOSED'};assert.notEqual((await history()).status,200);
+});
+test('history does not expose another group and marks old or unknown operators honestly',async()=>{
+ await historySetup();actor={role:'admin'};
+ await db.query("insert into guests(id,invitation_id,public_id,name) values($1,$2,'FOREIGNHISTORY','Otro grupo')",[otherId,otherId]);
+ await db.query("insert into access_log(guest_id,action,operator) values($1,'in','some-private-operator'),($2,'in','admin')",[guestId,otherId]);
+ const page=await(await history()).json();assert.equal(page.movements.length,1);assert.equal(page.movements[0].label,'Pase anterior');assert.equal(page.movements[0].seatNo,null);assert.equal(page.movements[0].operatorRole,'unknown');assert.ok(!JSON.stringify(page).includes('some-private-operator'));
+});
 
 const rosterRpc = (extra={}) => rpc('enkarta_host_roster',{p_invitation_id:invId,...extra});
 test('builder roster paginates and exports beyond 1000 for personal guests without granting hostPanel',async()=>{

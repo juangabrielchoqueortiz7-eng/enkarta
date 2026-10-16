@@ -12,6 +12,7 @@ import { qrLookup, validateQrImage } from '@/lib/scanner-input';
 import { parseScannerGroup, recordScan, scanFailureIsDefinitive, type ScannerGroup } from '@/lib/scanner-contract';
 import { clearScanRecovery, discardUnreadableScan, restoreScanRecovery, saveScanRecovery, scanRecoveryKey, scanRecoveryPerson, ScanRecoveryWriteError, type ScanRecovery, type ScanRecoveryScope, type ScanRecoveryStorage } from '@/lib/scan-recovery';
 import ReceptionSearch from './ReceptionSearch';
+import CheckinHistory from './CheckinHistory';
 import styles from '../operations/Operations.module.css';
 
 interface ScannerProps { recoveryScope: ScanRecoveryScope; invitationId?: string; tableSearch?: boolean; transport?: typeof fetch; storage?: ScanRecoveryStorage }
@@ -372,6 +373,7 @@ function ScannerSurface({ recoveryScope: suppliedScope, invitationId, tableSearc
               </div>
             ))}
           </div>
+          <CheckinHistory key={`${group.invitationId}:${group.guest.id}:${recoveryScope.sessionKey}`} invitationId={group.invitationId} guestId={group.guest.id} sessionKey={recoveryScope.sessionKey} scope={scope} revisionKey={group.attendees.map(person => `${person.id}:${person.revision}`).join('|')} transport={transport} />
           <button type="button" disabled={recoveryBlocked || !!busyId || readingFile || loading || searching || !!pendingScan} onClick={() => { groupRequest.current?.abort(); lastParams.current = ''; activeGroup.current = false; setGroup(null); setManual(''); setNotice(''); setError(''); }} className="w-full py-3 text-sm font-outfit text-gray-400 hover:bg-gray-50 border-t border-gray-100 disabled:opacity-50">
             Cerrar y escanear otro
           </button>

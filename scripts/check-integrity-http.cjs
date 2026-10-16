@@ -18,6 +18,7 @@ const { editorInvitation } = require('../src/lib/client-invitation.ts');
 const { newServiceContract } = require('../src/lib/packages.ts');
 const { deliveryRecoveryRecord, restoreDeliveryRecovery } = require('../src/lib/delivery-recovery.ts');
 const { parseScannerGroup, parseScanReceipt } = require('../src/lib/scanner-contract.ts');
+const { parseCheckinHistory } = require('../src/lib/checkin-history.ts');
 const { scannerSessionFingerprint } = require('../src/lib/scanner-session.ts');
 const { scanRecoveryRecord, restoreScanRecovery, scanRecoveryPerson } = require('../src/lib/scan-recovery.ts');
 const { guestEditValues, validateGuestEdit, verifyGuestEditReceipt } = require('../src/lib/guest-edit-form.ts');
@@ -61,6 +62,8 @@ const editorFixture = path.join(root, path.dirname(argument('--report') || 'tmp/
 const editorDone = path.join(path.dirname(editorFixture), 'guest-editor-done.json');
 const rosterFixture = path.join(path.dirname(editorFixture), 'roster-fixture.json');
 const rosterDone = path.join(path.dirname(editorFixture), 'roster-done.json');
+const historyFixture = path.join(path.dirname(editorFixture), 'history-fixture.json');
+const historyDone = path.join(path.dirname(editorFixture), 'history-done.json');
 function writeReport() {
   const output = argument('--report');
   if (output) { fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true }); fs.writeFileSync(output, JSON.stringify(report, null, 2) + '\n'); }
@@ -370,6 +373,47 @@ async function main() {
     const back = await request('/api/checkin', 'POST', { ...input, expectedRevision: out.data.attendee.revision, requestId: randomUUID() }, doorCookie); assert.equal(back.status, 200);
     assert.equal((await request(`/api/guests?guestId=${guest.id}&expectedRevision=${guest.responseRevision}`, 'DELETE', undefined, hostCookie)).status, 409);
   });
+  if(process.argv.includes('--checkin-history')) {
+    const historyPath=`/api/checkin/history?scope=door&guestId=${guest.id}`;
+    await check('HTTP history enforces event, role and scanner session without exposing private fields',async()=>{
+      assert.equal((await request(historyPath)).status,403);
+      assert.equal((await request(historyPath,'GET',undefined,reviewCookie)).status,403);
+      assert.equal((await request(historyPath,'GET',undefined,adminCookie)).status,403); // Explicit door cannot borrow admin.
+      assert.equal((await request(historyPath,'GET',undefined,doorCookie,{'X-Enkarta-Scanner-Session':'f'.repeat(64)})).status,403);
+      const response=await request(historyPath,'GET',undefined,doorCookie,scannerBinding());assert.equal(response.status,200);
+      const page=parseCheckinHistory(response.data,ids[1],guest.id);assert.ok(page.movements.length>0);
+      for(const item of page.movements)assert.deepEqual(Object.keys(item).sort(),['action','at','id','label','operatorRole','seatNo']);
+      assert.ok(!response.text.includes(guest.accessToken));assert.ok(!response.text.includes('door:'+ids[1]));
+      const admin=await request(historyPath.replace('scope=door','scope=host'),'GET',undefined,adminCookie);assert.equal(admin.status,200);
+      assert.equal((await request(historyPath.replace(guest.id,randomUUID()),'GET',undefined,doorCookie)).status,404);
+      assert.equal((await request(historyPath+'&cursor=invalid','GET',undefined,doorCookie)).status,400);
+    });
+    await check('HTTP history pages deliberate repeated entry/exit cycles exactly once and reads do not write',async()=>{
+      let current=(await request(`/api/checkin?scope=door&guestId=${guest.id}`,'GET',undefined,doorCookie)).data.attendees[0];
+      for(let index=0;index<24;index++){
+        const response=await request('/api/checkin','POST',{scope:'door',invitationId:ids[1],attendeeId:current.id,action:current.state==='in'?'out':'in',expectedRevision:current.revision,requestId:randomUUID()},doorCookie,scannerBinding());
+        assert.equal(response.status,200);current=response.data.attendee;
+      }
+      const before=must(await db.from('access_log').select('id').eq('guest_id',guest.id),'Read synthetic history baseline');
+      let cursor=null;const received=[];do{
+        const response=await request(historyPath+(cursor?'&cursor='+encodeURIComponent(cursor):''),'GET',undefined,doorCookie,scannerBinding());assert.equal(response.status,200);
+        const page=parseCheckinHistory(response.data,ids[1],guest.id);received.push(...page.movements);cursor=page.nextCursor;
+        assert.ok(received.length<=100,'Bounded synthetic pagination');
+      }while(cursor);
+      assert.equal(new Set(received.map(item=>item.id)).size,before.length);assert.deepEqual(received.map(item=>item.id).sort(),before.map(item=>item.id).sort());
+      const after=must(await db.from('access_log').select('id').eq('guest_id',guest.id),'Verify history read-only');assert.deepEqual(after,before);
+      report.checkinHistory={movements:received.length,pages:Math.ceil(received.length/20),additionalDeliberateMovements:24,readsWriteNothing:true};
+    });
+    await check('HTTP history respects disabled QR and event closure',async()=>{
+      const original=await row('invitations',ids[1]);
+      try {
+        must(await db.from('invitations').update({builder_config:newServiceContract({},'premium')}).eq('id',ids[1]),'Disable QR only on synthetic event');
+        assert.equal((await request(historyPath,'GET',undefined,doorCookie)).status,403);
+        must(await db.from('invitations').update({builder_config:original.builder_config,status:'draft'}).eq('id',ids[1]),'Close synthetic event');
+        assert.equal((await request(historyPath,'GET',undefined,doorCookie)).status,403);
+      }finally{must(await db.from('invitations').update({builder_config:original.builder_config,status:original.status}).eq('id',ids[1]),'Restore synthetic event');}
+    });
+  }
   await check('HTTP manual payment approval activates once; repeat approval is idempotent', async () => {
     must(await db.from('partner_subscriptions').update({ status: 'none', current_period_end: null }).eq('partner_id', partner), 'Reset synthetic paid term');
     const payment = must(await db.from('partner_payments').insert({ partner_id: partner, reference: `ENK-${randomBytes(3).toString('hex').toUpperCase()}`,
@@ -475,6 +519,16 @@ async function main() {
     assert.deepEqual(logAfter.map(item => item.id).sort(), logBefore.map(item => item.id).sort());
     report.browserGuestEdit = { changedRevisions: 1, accessMovementsUnchanged: true, fixtureScopeVerified: true };
   });
+  if (process.argv.includes('--history-browser-window')) await check('Browser reads private paginated history without registering access',async()=>{
+    const before=must(await db.from('access_log').select('id').eq('guest_id',guest.id),'Read history browser baseline');
+    fs.writeFileSync(historyFixture,JSON.stringify({tag,email,password,invitationId:ids[1],guestId:guest.id,accessCode:guest.accessCode}));
+    console.log('READY: synthetic history browser fixture; waiting up to 8 minutes for acknowledgement');
+    const deadline=Date.now()+8*60*1000;let completed=false;
+    while(Date.now()<deadline){try{const done=JSON.parse(fs.readFileSync(historyDone,'utf8'));if(done.tag===tag&&done.confirmed===true){completed=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,500));}
+    assert.ok(completed,'History browser acknowledgement timed out; fixtures will be cleaned');
+    assert.deepEqual(must(await db.from('access_log').select('id').eq('guest_id',guest.id),'Verify history browser did not write'),before);
+    report.historyBrowser={writes:0,messagesSent:0,bankCalls:0,fixtureScopeVerified:true};
+  });
   if (process.argv.includes('--browser-window')) await check('Production browser recovery adds one scoped movement despite reload and retry', async () => {
     // The preceding exhausted-passes regression deliberately leaves everyone inside.
     // Prepare one synthetic arrival with an audited exit before taking the baseline.
@@ -509,6 +563,6 @@ writeReport();
   try { await cleanup(); } catch (error) { report.cleanup = 'failed'; report.cleanupFailure = error.message; console.error('FAIL: fixture cleanup requires attention'); process.exitCode = 1; }
   try { if (JSON.parse(fs.readFileSync(browserFixture, 'utf8')).tag === tag) fs.unlinkSync(browserFixture); } catch { /* absent or another run's file */ }
   try { if (JSON.parse(fs.readFileSync(browserDone, 'utf8')).tag === tag) fs.unlinkSync(browserDone); } catch { /* absent or another run's file */ }
-  for (const file of [editorFixture, editorDone, rosterFixture, rosterDone]) { try { if (JSON.parse(fs.readFileSync(file, 'utf8')).tag === tag) fs.unlinkSync(file); } catch { /* absent or another run's file */ } }
+  for (const file of [editorFixture, editorDone, rosterFixture, rosterDone, historyFixture, historyDone]) { try { if (JSON.parse(fs.readFileSync(file, 'utf8')).tag === tag) fs.unlinkSync(file); } catch { /* absent or another run's file */ } }
   writeReport();
 });

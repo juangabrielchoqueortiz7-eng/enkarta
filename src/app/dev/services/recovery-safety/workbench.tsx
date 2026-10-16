@@ -47,6 +47,7 @@ export default function RecoverySafetyWorkbench() {
   }), []);
   const transport = useMemo<typeof fetch>(() => async (input, options) => {
     const url = String(input), state = lab.current;
+    if (url.startsWith('/api/checkin/history?')) return Response.json({invitationId:event,guestId:state.group.guest.id,movements:[],nextCursor:null,readAt:new Date().toISOString()});
     if (url.startsWith('/api/checkin?')) return Response.json(state.group);
     if (options?.method !== 'POST' || !['/api/guests', '/api/guests/delivery', '/api/checkin'].includes(url)) throw new Error('Unexpected test route');
     const operation = JSON.parse(String(options.body)), previous = state.receipts.get(operation.requestId);

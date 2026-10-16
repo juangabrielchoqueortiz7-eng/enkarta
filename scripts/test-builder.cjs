@@ -24,6 +24,32 @@ const compileTypeScript = (module, file) => {
 require.extensions['.ts'] = compileTypeScript;
 require.extensions['.tsx'] = compileTypeScript;
 
+const {historyTimestamp,parseHistoryCursor,movementCursor,historyOperator,parseCheckinHistory,readCheckinHistory}=require('../src/lib/checkin-history.ts');
+const historyEvent='10000000-0000-4000-8000-000000000001',historyGuest='20000000-0000-4000-8000-000000000001';
+const historyMovement=(n=1)=>({id:`30000000-0000-4000-8000-${String(n).padStart(12,'0')}`,at:'2026-10-16T10:00:00.123456Z',action:'in',seatNo:1,label:'Persona ficticia',operatorRole:'door'});
+const historyPage=()=>({invitationId:historyEvent,guestId:historyGuest,movements:[historyMovement()],nextCursor:null,readAt:'2026-10-16T10:00:01.000Z'});
+test('history cursors preserve exact PostgreSQL microseconds and reject invalid dates or filter injection',()=>{
+ assert.equal(historyTimestamp('2026-10-16T10:00:00.123456+00:00'),'2026-10-16T10:00:00.123456Z');assert.equal(historyTimestamp('2026-10-16T10:00:00Z'),'2026-10-16T10:00:00.000000Z');
+ const movement=historyMovement();assert.deepEqual(parseHistoryCursor(movementCursor(movement)),{at:movement.at,id:movement.id});assert.equal(parseHistoryCursor(null),null);
+ for(const cursor of ['','2026-02-30T10:00:00.000000Z|'+movement.id,movementCursor(movement)+',or(id.gt.x)','x'.repeat(81),'2026-10-16T10:00:00.123Z|'+movement.id])assert.throws(()=>parseHistoryCursor(cursor));
+});
+test('history contracts bind event and group, validate order and omit undeclared private fields',()=>{
+ const page=historyPage();assert.equal(parseCheckinHistory({...page,secret:'discard'},historyEvent,historyGuest).secret,undefined);
+ for(const changed of [{invitationId:historyGuest},{guestId:historyEvent},{movements:[historyMovement(),historyMovement()]},{movements:[historyMovement(1),historyMovement(2)]},{movements:[{...historyMovement(),action:'oops'}]},{movements:[{...historyMovement(),seatNo:21}]},{movements:[{...historyMovement(),operatorRole:'admin:secret'}]},{readAt:'bad'},{nextCursor:'invalid'}])assert.throws(()=>parseCheckinHistory({...page,...changed},historyEvent,historyGuest));
+ const movements=Array.from({length:20},(_,i)=>historyMovement(20-i));assert.equal(parseCheckinHistory({...page,movements,nextCursor:movementCursor(movements.at(-1))},historyEvent,historyGuest).movements.length,20);
+});
+test('history operator classification reveals only known roles',()=>{
+ assert.equal(historyOperator('admin'),'admin');assert.equal(historyOperator('door:'+historyEvent),'door');assert.equal(historyOperator('host:'+historyEvent),'host');for(const value of [null,'unknown-person','door:bad','host:'+historyEvent+':secret'])assert.equal(historyOperator(value),'unknown');
+});
+test('history transport is read-only, no-store, session-bound and rejects wrong scope or malformed success',async()=>{
+ const binding={invitationId:historyEvent,guestId:historyGuest,sessionKey:'a'.repeat(64),scope:'door'},signal=new AbortController().signal;
+ let seen;const result=await readCheckinHistory(binding,null,signal,async(url,init)=>{seen={url,init};return Response.json(historyPage());});assert.equal(result.movements.length,1);assert.match(seen.url,/scope=door/);assert.equal(seen.init.cache,'no-store');assert.equal(seen.init.signal,signal);assert.equal(seen.init.headers['X-Enkarta-Scanner-Session'],binding.sessionKey);assert.equal(seen.init.method,undefined);
+ await assert.rejects(readCheckinHistory(binding,null,signal,async()=>Response.json({...historyPage(),guestId:historyEvent})));
+ await assert.rejects(readCheckinHistory(binding,null,signal,async()=>new Response('invalid')));
+ await assert.rejects(readCheckinHistory(binding,null,signal,async()=>new Response('',{status:403})),error=>error.forbidden===true);
+ await assert.rejects(readCheckinHistory(binding,null,signal,async()=>new Response('',{status:503})),error=>error.forbidden===false);
+});
+
 const { marfilVivoStarter, marfilVivoDemo } = require('../src/lib/marfil-vivo.ts');
 const { invitationStarter, invitationDemo, STARTER_TEMPLATE_KEYS } = require('../src/lib/template-starters.ts');
 const { collectionCatalog } = require('../src/lib/collection-catalog.ts');
