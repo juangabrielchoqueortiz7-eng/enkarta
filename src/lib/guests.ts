@@ -1,12 +1,13 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { Guest, Attendee } from '@/lib/types';
+import { guestMetadata } from './guest-metadata';
 
 // Acceso a la tabla `guests` (Postgres). La escritura/confirmación vive en las
 // API routes; aquí están la lectura server-side (para /i[slug] y el panel) y el
 // mapeo snake_case ↔ camelCase + la materialización de asientos (attendees).
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export function mapGuestRow(r: any): Guest {
+export function mapGuestRow(r: any, includePrivateMetadata = false): Guest {
   return {
     id: r.id,
     publicId: r.public_id,
@@ -28,6 +29,8 @@ export function mapGuestRow(r: any): Guest {
     responseRevision: r.response_revision ?? 0,
     accessToken: r.access_token ?? undefined,
     accessCode: r.access_code ?? undefined,
+    ...(includePrivateMetadata && r.guest_metadata && typeof r.guest_metadata === 'object'
+      ? { ...guestMetadata(r.guest_metadata), metadataStored: true } : {}),
   };
 }
 
@@ -52,8 +55,9 @@ export async function readGuests(invitationId: string): Promise<Guest[]> {
     .select('*')
     .eq('invitation_id', invitationId)
     .order('created_at', { ascending: true });
-  if (error || !data) return [];
-  return data.map(mapGuestRow);
+  if (error) throw error;
+  if (!data) return [];
+  return data.map(row => mapGuestRow(row, true));
 }
 
 /** Un invitado por su id público (link ?g=). */

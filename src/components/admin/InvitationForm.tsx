@@ -182,6 +182,7 @@ function ItineraryEditor({
 interface Props {
   initialData?: {
     id: string;
+    draft_revision?: number;
     slug: string;
     template: InvitationTemplate;
     type: InvitationType;
@@ -304,7 +305,7 @@ export default function InvitationForm({ initialData }: Props) {
       const res = await fetch('/api/admin/invitations', {
         method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, ...(isEditing ? { expectedDraftRevision: initialData?.draft_revision ?? 0 } : {}) }),
       });
 
       if (res.ok) {

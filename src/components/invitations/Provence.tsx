@@ -1,4 +1,6 @@
 'use client';
+import Link from 'next/link';
+
 
 import { useEffect, useRef, useState, useContext, createContext } from 'react';
 import { ProvenceContent, TemplateTheme } from './types';
@@ -520,7 +522,7 @@ export default function Provence({ data }: { data: ProvenceContent }) {
           <footer className="mt-16 text-center border-t pt-8 text-xs text-stone-400 font-sans">
             <p>Con amor, {data.groom} &amp; {data.bride}</p>
             <p className="mt-2 text-[10px] tracking-widest uppercase">
-              Diseño exclusivo <a href="/" className="underline hover:text-stone-600">Enkarta</a>
+              Diseño exclusivo <Link href="/" className="underline hover:text-stone-600">Enkarta</Link>
             </p>
             <BrandByline tone="inherit" className="mt-1 justify-center" />
           </footer>

@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "configured_at": "2026-10-15",
+  "purpose": "Documentary provenance; not a Codex or application runtime manifest",
+  "skills": [
+    {
+      "name": "web-design-guidelines",
+      "repository": "https://github.com/vercel-labs/agent-skills",
+      "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "source_path": "skills/web-design-guidelines",
+      "install_scope": "codex-user-skills",
+      "upstream_files_verified": 1,
+      "git_checkout_line_endings_normalized": 0,
+      "skill_md_sha256": "f4647ca866a3accf763777f83e7682954f0187cd6bea7eea0399796652414e8f",
+      "local_adaptations": [],
+      "format_validation": true
+    },
+    {
+      "name": "vercel-react-best-practices",
+      "repository": "https://github.com/vercel-labs/agent-skills",
+      "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "source_path": "skills/react-best-practices",
+      "install_scope": "codex-user-skills",
+      "upstream_files_verified": 76,
+      "git_checkout_line_endings_normalized": 0,
+      "skill_md_sha256": "71ed7794962fa6e803ee83030517b5b93a9f70fbfeb431ec4535c5480a8d8355",
+      "local_adaptations": [],
+      "format_validation": true
+    },
+    {
+      "name": "vercel-composition-patterns",
+      "repository": "https://github.com/vercel-labs/agent-skills",
+      "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "source_path": "skills/composition-patterns",
+      "install_scope": "codex-user-skills",
+      "upstream_files_verified": 14,
+      "git_checkout_line_endings_normalized": 0,
+      "skill_md_sha256": "e38e0eaa609316b10423a9a138ed95e35099accd3f735585295c8a8f165c28a3",
+      "local_adaptations": [],
+      "format_validation": true
+    },
+    {
+      "name": "impeccable",
+      "repository": "https://github.com/pbakaus/impeccable",
+      "commit": "e3bca69842e50383aa39066bc53ee318135af59b",
+      "source_path": ".agents/skills/impeccable",
+      "install_scope": "codex-user-skills",
+      "upstream_files_verified": 62,
+      "git_checkout_line_endings_normalized": 61,
+      "skill_md_sha256": "553484720a8f20f19e30c07cfefca9a7921ff95935cfea9592df3f6b678da6e2",
+      "local_adaptations": [],
+      "format_validation": true
+    },
+    {
+      "name": "ui-ux-pro-max",
+      "repository": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+      "commit": "56ea9cf174ed86786187daa9de0e6247cb0747e4",
+      "source_path": ".claude/skills/ui-ux-pro-max",
+      "install_scope": "codex-user-skills",
+      "upstream_files_verified": 73,
+      "git_checkout_line_endings_normalized": 0,
+      "skill_md_sha256": "c31a8e92c2c65ab0adc41c28ae059f5e11b9e30e4a3b6c2c161f21cfcc229a4a",
+      "local_adaptations": [
+        "SKILL.md: replace Claude-specific script paths with the resolved skill directory for Codex/PowerShell; preserve all scripts and data"
+      ],
+      "format_validation": true
+    }
+  ],
+  "impeccable_engine": {
+    "version": "0.1.15",
+    "sha256": "981324ea15cc3c107d46b8133b5be77f639dbcd22e671f1eb7d8c69136e9693b",
+    "source": "https://github.com/pbakaus/impeccable/releases/tag/engine-v0.1.15",
+    "download_verification": "official launcher SHA-256 sidecar",
+    "automatic_hooks": false
+  },
+  "verification": {
+    "skills_validated": 5,
+    "uiux_searches_with_results": 2,
+    "impeccable_context_resolved": true,
+    "protected_folders": [
+      "src",
+      "public",
+      "Iconos INVITALI"
+    ],
+    "files_compared_by_sha256": 885,
+    "protected_files_changed": 0,
+    "protected_files_added": 0,
+    "application_tests_run": false,
+    "application_changes": false,
+    "bank_calls": false,
+    "production_deployment": false
+  }
+}

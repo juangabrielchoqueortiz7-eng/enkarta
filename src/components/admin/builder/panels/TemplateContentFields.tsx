@@ -34,6 +34,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 /** Editor de campos "ricos" específico de cada plantilla premium (guardados en config). */
 export default function TemplateContentFields({ data, onChange }: Props) {
+  if (data.config.layout?.presetKey === 'marfil-vivo') return <p className="rounded-xl bg-[#f6f2eb] p-3 text-xs leading-5 text-[#625946]">Los capítulos y textos de Marfil Vivo se editan seleccionándolos en la vista previa o desde Más herramientas → Bloques.</p>;
   if(isCleanDesign(data.config.designKey))return <CleanDesignFields data={data} onChange={onChange}/>;
   if ((data.config.designKey === 'maria-angelica-y-mario' || isCleanDesign(data.config.designKey))) return <MariaMarioFields data={data} onChange={onChange} />;
   if (data.config.designKey === 'karla-y-mauricio') return <KarlaMauricioFields data={data} onChange={onChange} />;

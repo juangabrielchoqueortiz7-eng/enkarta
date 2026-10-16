@@ -49,6 +49,20 @@ export default function EntryGate({
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revealDispatchedRef = useRef(false);
   const reducedMotion = useReducedMotion();
+  const contentRef = useRef<HTMLDivElement>(null);
+  const gateRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+    if (gone) {
+      content.removeAttribute('inert');
+      const heading = content.querySelector<HTMLElement>('h1, h2');
+      if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
+    } else {
+      content.setAttribute('inert', '');
+      gateRef.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+    }
+  }, [gone]);
 
   // Bloquea el scroll del fondo mientras la portada está visible.
   useEffect(() => {
@@ -81,7 +95,7 @@ export default function EntryGate({
     window.dispatchEvent(new CustomEvent('enkarta:enter'));
   };
 
-  const enter = (skip = false) => {
+  const enter = (skip = false, withMusic = true) => {
     // Durante un clip ya iniciado, el botón "Omitir" adelanta la salida sin
     // repetir analítica ni volver a arrancar la música.
     if (openingRef.current && phase === 'opening') {
@@ -107,11 +121,12 @@ export default function EntryGate({
     // play() diferido con setTimeout. Reintento corto por si el elemento aún
     // no estaba montado en el primer frame.
     const playAudio = () => {
-      const audio = document.querySelector('audio') as HTMLAudioElement | null;
-      audio?.play().catch(() => {});
+      const audio = contentRef.current?.querySelector<HTMLAudioElement>('audio[data-invitation-music], audio');
+      if (withMusic) audio?.play().catch(() => window.dispatchEvent(new Event('enkarta:audio-error')));
+      else audio?.pause();
       return !!audio;
     };
-    if (!playAudio()) setTimeout(playAudio, 250);
+    playAudio();
     // "Arma" las transiciones justo cuando la portada empieza a desvanecerse.
     // En la entrada cinematográfica el tiempo coincide con el clip configurado.
     const revealAfter = skip || reducedMotion ? 80 : cinematic ? cinematicWait * 1000 : 1100;
@@ -123,11 +138,24 @@ export default function EntryGate({
 
   return (
     <>
-      {children}
+      <div ref={contentRef} aria-hidden={!gone} style={{ display: 'contents' }}>{children}</div>
 
       <AnimatePresence>
         {!gone && (
           <motion.div
+            ref={gateRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={label}
+            onKeyDown={event => {
+              if (event.key === 'Escape') { event.preventDefault(); enter(true, false); }
+              if (event.key !== 'Tab') return;
+              const items = gateRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], [tabindex="0"]');
+              if (!items?.length) return;
+              const first = items[0], last = items[items.length - 1];
+              if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+              else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+            }}
             key="entry-gate"
             data-entry-gate
             data-entry-scene={theme.scene}
@@ -168,6 +196,7 @@ export default function EntryGate({
               onEnter={() => enter(false)}
               onSkip={() => enter(true)}
             />
+            {phase === 'idle' && <button type="button" onClick={event => { event.stopPropagation(); enter(false, false); }} className="absolute right-4 top-4 min-h-11 rounded-full border border-current bg-white/95 px-4 text-xs text-[#30291f]" style={{ top: 'max(16px, env(safe-area-inset-top))' }}>Abrir sin música</button>}
           </motion.div>
         )}
       </AnimatePresence>

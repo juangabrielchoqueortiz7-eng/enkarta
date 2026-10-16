@@ -1,18 +1,19 @@
-import Aurelia from '@/components/invitations/Aurelia';
-import Velada from '@/components/invitations/Velada';
-import Promesa from '@/components/invitations/Promesa';
-import CasaLimone from '@/components/invitations/CasaLimone';
-import JardinDeSeda from '@/components/invitations/JardinDeSeda';
+import dynamic from 'next/dynamic';
+const Aurelia = dynamic(() => import('@/components/invitations/Aurelia'));
+const Velada = dynamic(() => import('@/components/invitations/Velada'));
+const Promesa = dynamic(() => import('@/components/invitations/Promesa'));
+const CasaLimone = dynamic(() => import('@/components/invitations/CasaLimone'));
+const JardinDeSeda = dynamic(() => import('@/components/invitations/JardinDeSeda'));
 import {isCleanDesign} from './clean-designs';
-import CleanInvitation from '@/components/invitations/CleanInvitation';
-import MariaMario from '@/components/invitations/MariaMario';
-import KarlaMauricio from '@/components/invitations/KarlaMauricio';
-import PaulaJuanFelipe from '@/components/invitations/PaulaJuanFelipe';
-import MarianaJesus from '@/components/invitations/MarianaJesus';
-import ManuelMaya from '@/components/invitations/ManuelMaya';
-import NicoleFrancisco from '@/components/invitations/NicoleFrancisco';
-import RolyYeliana from '@/components/invitations/RolyYeliana';
-import AnnieMicky from '@/components/invitations/AnnieMicky';
+const CleanInvitation = dynamic(() => import('@/components/invitations/CleanInvitation'));
+const MariaMario = dynamic(() => import('@/components/invitations/MariaMario'));
+const KarlaMauricio = dynamic(() => import('@/components/invitations/KarlaMauricio'));
+const PaulaJuanFelipe = dynamic(() => import('@/components/invitations/PaulaJuanFelipe'));
+const MarianaJesus = dynamic(() => import('@/components/invitations/MarianaJesus'));
+const ManuelMaya = dynamic(() => import('@/components/invitations/ManuelMaya'));
+const NicoleFrancisco = dynamic(() => import('@/components/invitations/NicoleFrancisco'));
+const RolyYeliana = dynamic(() => import('@/components/invitations/RolyYeliana'));
+const AnnieMicky = dynamic(() => import('@/components/invitations/AnnieMicky'));
 /**
  * Registry central de plantillas premium: key → { Comp, map }.
  *
@@ -27,25 +28,27 @@ import {
   mapToAzure, mapToPrimicia, mapToPassport, mapToParadise,
   mapToObsidiana, mapToDolceVita, mapToGrazia, mapToProvence,
 } from '@/lib/invitation-mapper';
-import Azure from '@/components/invitations/Azure';
-import Primicia from '@/components/invitations/Primicia';
-import Passport from '@/components/invitations/Passport';
-import Paradise from '@/components/invitations/Paradise';
-import Obsidiana from '@/components/invitations/Obsidiana';
-import DolceVita from '@/components/invitations/DolceVita';
-import Grazia from '@/components/invitations/Grazia';
-import CarmesiV2 from '@/components/invitations/Carmesi';
-import Napoly from '@/components/invitations/Napoly';
-import Euforia from '@/components/invitations/Euforia';
-import RoseGold from '@/components/invitations/RoseGold';
-import Allegria from '@/components/invitations/Allegria';
-import Provence from '@/components/invitations/Provence';
-import Esmeralda from '@/components/invitations/Esmeralda';
-import LauraAndres from '@/components/invitations/LauraAndres';
+const Azure = dynamic(() => import('@/components/invitations/Azure'));
+const Primicia = dynamic(() => import('@/components/invitations/Primicia'));
+const Passport = dynamic(() => import('@/components/invitations/Passport'));
+const Paradise = dynamic(() => import('@/components/invitations/Paradise'));
+const Obsidiana = dynamic(() => import('@/components/invitations/Obsidiana'));
+const DolceVita = dynamic(() => import('@/components/invitations/DolceVita'));
+const Grazia = dynamic(() => import('@/components/invitations/Grazia'));
+const CarmesiV2 = dynamic(() => import('@/components/invitations/Carmesi'));
+const Napoly = dynamic(() => import('@/components/invitations/Napoly'));
+const Euforia = dynamic(() => import('@/components/invitations/Euforia'));
+const RoseGold = dynamic(() => import('@/components/invitations/RoseGold'));
+const Allegria = dynamic(() => import('@/components/invitations/Allegria'));
+const Provence = dynamic(() => import('@/components/invitations/Provence'));
+const Esmeralda = dynamic(() => import('@/components/invitations/Esmeralda'));
+const LauraAndres = dynamic(() => import('@/components/invitations/LauraAndres'));
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface PremiumEntry {
-  Comp: React.ComponentType<{ data: any; preview?: boolean; demo?: boolean; skipEntry?: boolean; deadlinePassed?: boolean }>;
+  // Families have heterogeneous props; each dynamic import retains its own
+  // signature and its mapper supplies the corresponding payload.
+  Comp: React.ComponentType<any>;
   /** Mapper fila → props de la plantilla (con defaults). */
   map: (inv: InvitationParsed) => any;
 }

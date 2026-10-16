@@ -1,4 +1,6 @@
 'use client';
+import Link from 'next/link';
+
 /* eslint-disable @next/next/no-img-element */
 import {useRef,useState,type CSSProperties} from 'react';
 import type {InvitationParsed} from '@/lib/types';
@@ -44,7 +46,7 @@ export default function CleanInvitation({data,preview=false,demo=false,deadlineP
  {v==='costa'&&<><div className={styles.postcard}>{photo&&<img src={photo} alt={data.names??'Novios'}/>}<h1>{names[0]}<i>&</i>{names[1]}</h1><span>EL MEJOR VIAJE ES CONTIGO</span></div>{cfg.travelRoute?.enabled&&<div className={styles.route}><p>Dos lugares. Un mismo destino.</p><TravelMap route={cfg.travelRoute}/></div>}</>}
  {v==='noche'&&<><div className={styles.orbit} aria-hidden="true"/><span className={styles.eyebrow}>Bajo el mismo cielo</span><h1>{names[0]}<i>&</i>{names[1]}</h1>{stamp}<a className={styles.button} href="#confirmacion">Acompáñanos</a>{photo&&<img className={styles.cover} src={photo} alt={data.names??'Novios'}/>}</>}
  </section>}
- <main>{v!=='costa'&&cfg.travelRoute?.enabled&&<div className={styles.route}><TravelMap route={cfg.travelRoute}/></div>}{orders[v].map(key=>show(key)&&<div key={key} data-section={key}>{['guests','itinerary','rsvp'].includes(key)&&<ArtParallax className={styles.chapterArt}><CollectionArt kind={v}/></ArtParallax>}{blocks[key]}</div>)}{show('adults')&&data.no_kids&&<section className={styles.sharing}><h2>{text('adults')}</h2><p>{text('adultsNote')}</p></section>}{show('photos')&&features.photoSharing&&data.gallery_url&&blocks.photos}</main><footer><p>{text('welcome')}</p><strong>{data.names}</strong><a href="/muestra/coleccion-limpia">Enkarta</a></footer>
+ <main>{v!=='costa'&&cfg.travelRoute?.enabled&&<div className={styles.route}><TravelMap route={cfg.travelRoute}/></div>}{orders[v].map(key=>show(key)&&<div key={key} data-section={key}>{['guests','itinerary','rsvp'].includes(key)&&<ArtParallax className={styles.chapterArt}><CollectionArt kind={v}/></ArtParallax>}{blocks[key]}</div>)}{show('adults')&&data.no_kids&&<section className={styles.sharing}><h2>{text('adults')}</h2><p>{text('adultsNote')}</p></section>}{show('photos')&&features.photoSharing&&data.gallery_url&&blocks.photos}</main><footer><p>{text('welcome')}</p><strong>{data.names}</strong><Link href="/muestra/coleccion-limpia">Enkarta</Link></footer>
  {cfg.musicUrl&&features.music&&!preview&&<><audio ref={audio} src={originalInvitationAsset(cfg.musicUrl)} loop onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)}/><button className={styles.music} aria-label={playing?'Pausar música':'Reproducir música'} onClick={()=>playing?audio.current?.pause():void audio.current?.play().catch(()=>{})}>{playing?'Ⅱ':'♫'}</button></>}
  </div>;
 }

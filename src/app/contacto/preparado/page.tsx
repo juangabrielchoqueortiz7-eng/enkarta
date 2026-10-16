@@ -15,7 +15,9 @@ export const metadata: Metadata = {
 const clean = (value: string | string[] | undefined, max = 80) => String(Array.isArray(value) ? value[0] : value || '').trim().slice(0, max);
 const safeReturn = (value: string) => value.startsWith('/') && !value.startsWith('//') ? value : '/';
 
-export default function ContactPreparedPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
+export default async function ContactPreparedPage({ searchParams: searchParamsPromise }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const searchParams = await searchParamsPromise;
+
   const packageRaw = clean(searchParams.package, 20).toLowerCase() as CommercialPackage;
   const packageKey = COMMERCIAL_PACKAGES.includes(packageRaw) ? packageRaw : 'general';
   const design = clean(searchParams.design);

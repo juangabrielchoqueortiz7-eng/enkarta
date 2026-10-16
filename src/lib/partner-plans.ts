@@ -10,7 +10,7 @@ import type { InvitationPackage } from './types';
 
 export type PartnerPlanKey = 'inicio' | 'estudio' | 'agencia';
 export type PartnerSubscriptionStatus = 'none' | 'pending' | 'active' | 'canceled';
-export type PartnerPaymentStatus = 'pending' | 'approved' | 'rejected';
+export type PartnerPaymentStatus = 'pending' | 'approved' | 'rejected' | 'canceled';
 export type PartnerPaymentMethod = 'qr' | 'transfer' | 'cash';
 
 export const PARTNER_PLAN_ORDER: PartnerPlanKey[] = ['inicio', 'estudio', 'agencia'];
@@ -42,7 +42,7 @@ export const PARTNER_PLANS = {
     summary: 'Prueba el negocio con tus primeros clientes.',
     highlights: [
       '3 invitaciones publicadas a la vez',
-      'Los 12 diseños premium del catálogo',
+      'Todos los diseños del catálogo',
       'Constructor completo y vista previa ilimitada',
       'Confirmación por WhatsApp, música y apertura tipo sobre',
     ],
@@ -169,6 +169,10 @@ export function extendPeriod(currentEnd: string | null | undefined, months: numb
   const currentMs = currentEnd ? Date.parse(currentEnd) : NaN;
   const from = Number.isFinite(currentMs) && currentMs > now.getTime() ? new Date(currentMs) : new Date(now);
   const next = new Date(from);
-  next.setMonth(next.getMonth() + Math.max(1, Math.trunc(months)));
+  const day = next.getUTCDate();
+  next.setUTCDate(1);
+  next.setUTCMonth(next.getUTCMonth() + Math.max(1, Math.trunc(months)));
+  const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
+  next.setUTCDate(Math.min(day, lastDay));
   return next;
 }

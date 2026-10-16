@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { getPartnerContext } from '@/lib/partner-session';
+import { integrityError } from '@/lib/integrity-server';
+import { paymentProviderState } from '@/lib/payments/bcp';
 import { genPaymentReference } from '@/lib/access';
 import { billingInstructions } from '@/lib/partner-billing';
 import { cyclePrice, isBillingCycle, isPartnerPlan, PARTNER_PAYMENT_METHODS, type PartnerPaymentMethod } from '@/lib/partner-plans';
@@ -30,29 +32,16 @@ export async function POST(request: NextRequest) {
     if (!PARTNER_PAYMENT_METHODS.includes(method)) return NextResponse.json({ error: 'Elige una forma de pago válida.' }, { status: 400 });
 
     const amount = cyclePrice(plan, months);
-    const now = new Date().toISOString();
+    const provider = paymentProviderState();
+    if (provider.provider === 'bcp' && !provider.ready) return NextResponse.json({ error: provider.message, code: 'BCP_NOT_CONFIGURED' }, { status: 503 });
 
-    const { data: pending } = await supabaseAdmin
-      .from('partner_payments').select('id,reference')
-      .eq('partner_id', context.partner.id).eq('status', 'pending')
-      .order('created_at', { ascending: false }).limit(1).maybeSingle();
-
-    if (pending) {
-      const { data, error } = await supabaseAdmin.from('partner_payments')
-        .update({ plan_key: plan, months, amount_bs: amount, method, updated_at: now })
-        .eq('id', pending.id).select().single();
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      return NextResponse.json({ payment: data, billing: billingInstructions() });
-    }
-
-    // La referencia es única: reintentar cubre la colisión improbable de códigos.
     for (let attempt = 0; attempt < 5; attempt++) {
-      const { data, error } = await supabaseAdmin.from('partner_payments').insert({
-        reference: genPaymentReference(), partner_id: context.partner.id,
-        plan_key: plan, months, amount_bs: amount, method, created_at: now, updated_at: now,
-      }).select().single();
-      if (!error) return NextResponse.json({ payment: data, billing: billingInstructions() }, { status: 201 });
-      if (error.code !== '23505') return NextResponse.json({ error: error.message }, { status: 400 });
+      const { data, error } = await supabaseAdmin.rpc('enkarta_payment_intent', {
+        p_partner_id: context.partner.id, p_plan: plan, p_months: months, p_amount: amount,
+        p_method: method, p_reference: genPaymentReference(), p_provider: provider.provider,
+      });
+      if (!error) return NextResponse.json({ payment: data, billing: billingInstructions() });
+      if (error.code !== '23505') return integrityError(error);
     }
     return NextResponse.json({ error: 'No se pudo generar la referencia. Intenta otra vez.' }, { status: 500 });
   } catch {
@@ -68,19 +57,8 @@ export async function DELETE(request: NextRequest) {
     const id = new URL(request.url).searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 });
 
-    const { error } = await supabaseAdmin.from('partner_payments')
-      .delete().eq('id', id).eq('partner_id', context.partner.id).eq('status', 'pending');
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-
-    // Sin pagos en revisión, la suscripción deja de anunciar una revisión en curso.
-    const { data: rest } = await supabaseAdmin.from('partner_payments')
-      .select('id').eq('partner_id', context.partner.id).eq('status', 'pending').limit(1);
-    if (!rest?.length && context.subscription.status === 'pending') {
-      await supabaseAdmin.from('partner_subscriptions')
-        .update({ status: 'none', updated_at: new Date().toISOString() })
-        .eq('partner_id', context.partner.id);
-    }
-    return NextResponse.json({ success: true });
+    const { error } = await supabaseAdmin.rpc('enkarta_cancel_payment', { p_partner_id: context.partner.id, p_payment_id: id });
+    return error ? integrityError(error) : NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }

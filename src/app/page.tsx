@@ -525,7 +525,7 @@ export default function LandingPage() {
         }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           <div className="leading-none">
-            <h1 className="font-cinzel text-xl tracking-wide" style={{
+            <span className="font-cinzel text-xl tracking-wide" style={{
               backgroundImage: 'linear-gradient(90deg, #8B7D5F 0%, #B8975A 30%, #e0c074 50%, #B8975A 70%, #8B7D5F 100%)',
               backgroundSize: '260% auto',
               WebkitBackgroundClip: 'text',
@@ -534,7 +534,7 @@ export default function LandingPage() {
               animation: 'logoShimmer 6s linear infinite',
             }}>
               <span className="font-great text-3xl">E</span>nkarta
-            </h1>
+            </span>
             <BrandByline tone="warm" className="mt-0.5 pl-0.5" />
           </div>
           <div className="hidden lg:flex items-center gap-6 font-outfit text-sm" style={{ color: 'rgba(44,37,25,0.55)' }}>
@@ -636,19 +636,21 @@ export default function LandingPage() {
 
           <motion.p variants={{ hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}
             className="font-cormorant text-center tracking-[0.18em]" style={{ color: 'rgba(44,37,25,0.55)', fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 500 }}>
-            Cada historia merece su propia forma
+            Invitaciones digitales para celebrar y organizar
           </motion.p>
           <motion.h1 variants={{ hidden: { opacity: 0, y: 28, scale: 0.97 }, show: { opacity: 1, y: 0, scale: 1, transition: { duration: 1, ease: [0.22, 1, 0.36, 1] } } }}
             className="font-great text-center" style={{ color: '#8B7D5F', fontSize: 'clamp(44px, 6.5vw, 76px)', lineHeight: 1.05 }}>
-            conviértela en una experiencia
+            Tu evento empieza aquí
           </motion.h1>
 
           <motion.div variants={{ hidden: { opacity: 0, scaleX: 0.4 }, show: { opacity: 1, scaleX: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}
             className="flex items-center gap-4 mt-4 mb-2">
             <div className="h-px w-16" style={{ backgroundColor: 'rgba(139,125,95,0.45)' }} />
-            <span className="font-outfit text-sm tracking-[0.4em]" style={{ color: 'rgba(139,125,95,0.7)' }}>2026</span>
+            <span className="font-outfit text-xs tracking-[0.12em]" style={{ color: '#5a4e34' }}>DISEÑO · CONFIRMACIONES · ACCESO</span>
             <div className="h-px w-16" style={{ backgroundColor: 'rgba(139,125,95,0.45)' }} />
           </motion.div>
+          <p className="mt-4 max-w-xl text-center font-outfit text-sm leading-6 text-[#514735]">Elige un diseño, personalízalo con nuestro equipo y comparte por WhatsApp. Añade invitados, confirmaciones y control QR según tu paquete.</p>
+          <a href="/catalogo" className="mt-4 rounded-full bg-[#514735] px-6 py-3 font-outfit text-sm font-semibold text-white">Ver diseños y elegir mi invitación</a>
         </motion.div>
 
         {/* Tablet carousel — centered, floating, 3D tilt */}
@@ -690,7 +692,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex gap-10 sm:gap-14">
-            {[[200, '+', 'Invitaciones'], [templates.length, '', 'Diseños'], [100, '%', 'Satisfacción']].map(([n, suffix, l]) => (
+            {[[templates.length, '', 'Diseños'], [3, '', 'Paquetes']].map(([n, suffix, l]) => (
               <div key={l as string} className="text-center">
                 <p className="font-cinzel text-2xl font-semibold" style={{ color: '#5a4e34' }}>
                   <CountUp value={n as number} suffix={suffix as string} />

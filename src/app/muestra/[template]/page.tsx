@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
-import { PREMIUM_REGISTRY, PREMIUM_KEYS } from '@/lib/template-registry';
+import { SampleTemplate } from '@/components/invitations/PublishedTemplate';
 import EntryGate from '@/components/invitations/EntryGate';
 import BlockRenderer from '@/components/invitations/BlockRenderer';
 import { PageMotionProvider } from '@/lib/scroll-motion';
@@ -140,10 +140,10 @@ export default async function MuestraPage({ params, searchParams }: Props) {
   }
 
   const sample = SAMPLES[key];
-  const registryEntry = PREMIUM_REGISTRY[key === 'carmesi' ? 'carmesi_v2' : key];
-  if (!sample || !registryEntry) notFound();
 
-  const { Comp } = registryEntry;
+  if (!sample) notFound();
+
+
   const data = {
     ...sample,
     guestName: m ?? sample.guestName,
@@ -177,7 +177,7 @@ export default async function MuestraPage({ params, searchParams }: Props) {
     <BlockRenderer layout={contentToLayout(data, key)} theme={data.theme ?? themeForTemplate(key)} motion={motionVal} decor={previewDecor} tokens={{ ...(data.tokens ?? tokensForTemplate(key)), ...(seam ? { seam: seam as never } : {}), ...(fx ? { seamFx: fx as never } : {}) }} musicUrl={preview === '1' ? undefined : data.musicUrl} gated={full !== '1' && preview !== '1'} previewOnly={preview === '1'} demo />
   ) : (
     <PageMotionProvider value={motionVal} gated={full !== '1'}>
-      <div className="ek-invite"><Comp data={data} /></div>
+      <div className="ek-invite"><SampleTemplate template={key === 'carmesi' ? 'carmesi_v2' : key} data={data} /></div>
     </PageMotionProvider>
   );
 
@@ -193,7 +193,7 @@ export default async function MuestraPage({ params, searchParams }: Props) {
 }
 
 export function generateStaticParams() {
-  return [...PREMIUM_KEYS, 'marfil-vivo'].map(template => ({ template }));
+  return [...Object.values(DEMO_IDENTITIES), 'marfil-vivo'].map(template => ({ template }));
 }
 
 /**

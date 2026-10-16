@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import InvitationBuilder from '@/components/admin/builder/InvitationBuilder';
 import { requireAdminPage } from '@/lib/host-session';
 import { unstable_noStore as noStore } from 'next/cache';
+import { editorInvitation } from '@/lib/client-invitation';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,10 +40,11 @@ export default async function BuilderPage({ params }: Props) {
     phone_whatsapp: raw.phone_whatsapp ?? null,
   };
 
-  return <InvitationBuilder initialData={withDefaults} />;
+  return <InvitationBuilder initialData={editorInvitation(withDefaults)} />;
 }
 
 export async function generateMetadata({ params }: Props) {
+  await requireAdminPage();
   const { id } = await params;
   const { data } = await supabaseAdmin.from('invitations').select('names').eq('id', id).single();
   return { title: `Editor — ${data?.names ?? 'Invitación'} | Enkarta Admin` };

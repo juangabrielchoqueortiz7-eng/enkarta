@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { BlockTheme } from '@/components/invitations/blocks/theme';
+import { accessPassPng, passFilename } from '@/lib/access-pass';
 
 interface Props {
   t: BlockTheme;
@@ -19,12 +20,29 @@ interface Props {
 
 export default function QrCard({ t, accessToken, accessCode, guestName, tableNo, passes }: Props) {
   const [qr, setQr] = useState<string>('');
+  const [error, setError] = useState('');
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
+    let active = true;
+    setQr(''); setError('');
     QRCode.toDataURL(accessToken, { margin: 1, width: 320, color: { dark: '#1a1a1a', light: '#ffffff' } })
-      .then(setQr)
-      .catch(() => setQr(''));
+      .then(value => { if (active) setQr(value); })
+      .catch(() => { if (active) setError('No se pudo generar el QR. Usa el ID de acceso o actualiza la página.'); });
+    return () => { active = false; };
   }, [accessToken]);
+
+  const download = async () => {
+    if (downloading) return;
+    setDownloading(true); setError('');
+    try {
+      const blob = await accessPassPng({ accessToken, accessCode, guestName, tableNo, passes });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a'); link.href = url; link.download = passFilename(accessCode); link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'No se pudo descargar el pase. Puedes guardar una captura.'); }
+    finally { setDownloading(false); }
+  };
 
   return (
     <div className="mx-auto mt-6 rounded-2xl overflow-hidden" style={{ maxWidth: 320, background: '#fff', border: `1px solid ${t.line}`, boxShadow: '0 18px 44px rgba(0,0,0,0.12)' }}>
@@ -39,7 +57,7 @@ export default function QrCard({ t, accessToken, accessCode, guestName, tableNo,
           // eslint-disable-next-line @next/next/no-img-element
           <img src={qr} alt="Código QR de acceso" className="mx-auto w-44 h-44" />
         ) : (
-          <div className="mx-auto w-44 h-44 flex items-center justify-center text-xs text-gray-400 font-outfit">Generando…</div>
+          <div role="status" className="mx-auto w-44 h-44 flex items-center justify-center text-xs text-gray-400 font-outfit">{error ? 'Usa el ID de acceso' : 'Generando…'}</div>
         )}
 
         <div className="mt-4 inline-block rounded-lg px-4 py-1.5" style={{ background: t.bg, border: `1px dashed ${t.line}` }}>
@@ -63,6 +81,9 @@ export default function QrCard({ t, accessToken, accessCode, guestName, tableNo,
         <p className="font-cormorant italic mt-4 text-sm" style={{ color: t.muted }}>
           Presenta este código en la entrada del evento.
         </p>
+        <button type="button" disabled={downloading || !qr} onClick={() => void download()} className="mt-4 min-h-11 w-full rounded-xl border px-3 py-2 text-sm font-outfit disabled:opacity-50" style={{ borderColor: t.line, color: t.text }}>{downloading ? 'Preparando imagen…' : 'Descargar pase PNG'}</button>
+        <p className="mt-2 text-xs" style={{ color: t.muted }}>Guárdalo en tu galería para mostrarlo sin conexión.</p>
+        {error && <p role="alert" className="mt-3 text-xs text-red-700">{error}</p>}
       </div>
     </div>
   );

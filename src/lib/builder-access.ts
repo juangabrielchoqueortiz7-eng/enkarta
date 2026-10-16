@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { canManageInvitation } from './host-session';
 import { getBuilderActor, partnerOwnsInvitation, publishBlockReason, type BuilderActor } from './partner-session';
-import type { OperationalService } from './packages';
+import { allowsService, type OperationalService } from './packages';
+import { invitationServiceConfig } from './package-services-server';
 
 // Puerta única del constructor. Hay dos actores que lo usan:
 //   - admin  → el equipo Enkarta, sobre cualquier invitación.
@@ -30,7 +31,8 @@ export async function invitationActor(invitationId: string): Promise<BuilderActo
 export async function canOperateInvitation(invitationId: string, service?: OperationalService): Promise<boolean> {
   if (await canManageInvitation(invitationId, service)) return true;
   const actor = await builderActor();
-  return actor?.kind === 'partner' && await partnerOwnsInvitation(actor.partnerId, invitationId);
+  return actor?.kind === 'partner' && await partnerOwnsInvitation(actor.partnerId, invitationId)
+    && (!service || allowsService((await invitationServiceConfig(invitationId)).config, service));
 }
 
 /**

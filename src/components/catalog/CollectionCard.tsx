@@ -1,9 +1,13 @@
 'use client';
+import Link from 'next/link';
+
 
 import Image from 'next/image';
 import Reveal from '@/components/motion/Reveal';
 import Tilt3D from '@/components/motion/Tilt3D';
 import type { CollectionCatalogEntry } from '@/lib/collection-catalog';
+import CommercialLink from '@/components/commercial/CommercialLink';
+import { PACKAGE_CATALOG } from '@/lib/packages';
 
 // ── White phone frame (catalog cards) ───────────────────────────────────────
 function CatalogPhone({ bg, textColor = '#333', children, className = '' }: {
@@ -151,6 +155,12 @@ export default function CollectionCard({ design, delay = 0, showMeta = false }: 
           <DualPhoneCard t={design} showMeta={showMeta} />
         </Tilt3D>
       </a>
+      {showMeta && <div className="mx-auto mt-5 max-w-[280px] rounded-2xl border border-[#d8d0c2] bg-white/80 p-4 text-center font-outfit">
+        <p className="text-sm font-semibold text-[#514735]">Desde Bs {PACKAGE_CATALOG.plus.bs} por evento</p>
+        <p className="mt-1 text-xs leading-5 text-[#625946]">Plus: invitación y respuesta por WhatsApp. Premium añade formulario; Exclusive, panel y QR.</p>
+        <CommercialLink design={design.key} placement="catalog_design" className="mt-3 block rounded-full bg-[#514735] px-4 py-3 text-sm font-semibold text-white">Elegir este diseño</CommercialLink>
+        <Link href="/#precios" className="mt-2 inline-block min-h-11 py-3 text-xs text-[#514735] underline">Comparar paquetes</Link>
+      </div>}
     </Reveal>
   );
 }

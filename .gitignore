@@ -54,3 +54,12 @@ public/audio/invitali-originales/
 public/invitali-originales.json
 public/referencias-descargas.html
 public/referencias-descargas.js
+
+# Estado local de las herramientas de diseño; conservar config.json compartido.
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
+.impeccable/live/
+
+# Verificaciones locales y credenciales de pruebas efímeras.
+/tmp/

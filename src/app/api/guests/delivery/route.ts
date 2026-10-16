@@ -13,7 +13,7 @@ export async function POST(request:NextRequest) {
   if (!owner || !(await canManageInvitation(owner,'guestManagement'))) return privateJson({error:'No autorizado'},403);
   const {data,error}=await supabaseAdmin.rpc('enkarta_record_delivery',{p_guest_id:input.guestId,p_action:input.action,p_expected_revision:input.expectedRevision,p_request_id:input.requestId});
   if (error) throw error;
-  return privateJson({guest:mapGuestRow(data.guest),replayed:data.replayed===true});
+  return privateJson({guest:mapGuestRow(data.guest,true),replayed:data.replayed===true});
  } catch(error) {
   const message=(error as {message?:string}).message;
   if (message==='STALE_GUEST') return privateJson({error:'El invitado cambió en otra sesión. Actualiza antes de continuar.',code:message},409);

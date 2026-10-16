@@ -1,0 +1,38 @@
+/* Scoped to operational tools. Never imported by invitation templates. */
+.surface :where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid #516749;
+  outline-offset: 3px;
+}
+
+.surface :where(button, a, summary) {
+  touch-action: manipulation;
+}
+
+/* Avoid iOS form zoom, without changing the invitation's typography. */
+.surface :where(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  font-size: 1rem;
+}
+
+.surface :where(button, a) {
+  overflow-wrap: anywhere;
+}
+
+.surface progress {
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.surface progress::-webkit-progress-bar {
+  background: #e5e7eb;
+}
+
+.surface progress::-webkit-progress-value {
+  background: #047857;
+}
+
+.surface progress::-moz-progress-bar {
+  background: #047857;
+}

@@ -48,7 +48,8 @@ function buildScope(inv: InvitationParsed) {
   const activeGuest = cfg.activeGuest;
   const [groom, bride] = splitNames(inv.names);
   const dp = dateParts(inv.event_date);
-  const isoDate = `${(inv.event_date ?? new Date().toISOString().slice(0, 10)).slice(0, 10)}T${(inv.ceremony_time || '16:00').slice(0, 5)}:00`;
+  // Events are scheduled in Bolivia; the instant must not change with the visitor's timezone.
+  const isoDate = `${(inv.event_date ?? new Date().toISOString().slice(0, 10)).slice(0, 10)}T${(inv.ceremony_time || '16:00').slice(0, 5)}:00-04:00`;
   const bank = parseBank(inv.bank_account);
   const dress = dressParts(inv.dress_code);
   const galleryImages = Array.isArray(cfg.galleryImages) ? cfg.galleryImages : [];

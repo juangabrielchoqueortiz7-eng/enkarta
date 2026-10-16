@@ -55,7 +55,7 @@ async function rpc(name, params) {
 }
 const queryClient = (table) => {
   assert.ok(['guests', 'attendees', 'rsvps', 'invitations', 'builder_versions', 'builder_review_notes', 'invitation_validity_events', 'save_date_responses'].includes(table));
-  let columns = '*', filters = [], limit, update, insert, remove;
+  let columns = '*', filters = [], limit, update, insert, remove, sort = [];
   const query = {
     select(value = '*') { columns = value; return this; },
     eq(column,value) { filters.push([column,value,'=']); return this; },
@@ -64,7 +64,7 @@ const queryClient = (table) => {
     insert(value) { insert=Array.isArray(value) ? value : [value]; return this; },
     delete() { remove=true; return this; },
     limit(value) { limit = value; return this; },
-    order() { return this; },
+    order(column, options = {}) { sort.push(`${column} ${options.ascending === false ? 'DESC' : 'ASC'}`); return this; },
     maybeSingle() { this.one = true; return this; },
     single() { this.one = true; return this; },
     async then(ok, fail) {
@@ -72,7 +72,7 @@ const queryClient = (table) => {
         if (queryFailure) return ok({data:null,error:queryFailure});
         let values = filters.map(([,value])=>value);
         const where = filters.length ? ' where '+filters.map(([col,,op],i)=>`${col} ${op} $${i+1}`).join(' and ') : '';
-        let sql = `select ${columns} from public.${table}${where}${limit ? ' limit '+limit : ''}`;
+        let sql = `select ${columns} from public.${table}${where}${sort.length ? ' order by '+sort.join(',') : ''}${limit ? ' limit '+limit : ''}`;
         if (update) { const entries=Object.entries(update); sql=`update public.${table} set ${entries.map(([key],i)=>`${key}=$${values.length+i+1}`).join(',')}${where} returning ${columns}`; values.push(...entries.map(([,value])=>value)); }
         if (remove) sql=`delete from public.${table}${where} returning ${columns}`;
         if (insert) { const keys=Object.keys(insert[0]); values=[]; sql=`insert into public.${table}(${keys.join(',')}) values ${insert.map(row=>'('+keys.map(key=>{values.push(row[key]);return '$'+values.length;}).join(',')+')').join(',')} returning ${columns}`; }
@@ -95,6 +95,7 @@ const { NextRequest } = require('next/server');
 const guestRoute = require('../src/app/api/guests/confirm/route.ts');
 const openRoute = require('../src/app/api/rsvp/route.ts');
 const checkinRoute = require('../src/app/api/checkin/route.ts');
+const receptionRoute = require('../src/app/api/checkin/search/route.ts');
 const guestCrud = require('../src/app/api/guests/route.ts');
 const adminRoute = require('../src/app/api/admin/invitations/route.ts');
 const credentialsRoute = require('../src/app/api/admin/host-credentials/route.ts');
@@ -141,6 +142,10 @@ before(async () => {
     await db.exec(fs.readFileSync(path.join(root,'migrations/011_verifiable_addons.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/012_commercial_funnel.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/012_commercial_funnel.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/016_guest_metadata.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/016_guest_metadata.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/017_guest_import_idempotency.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/017_guest_import_idempotency.sql'),'utf8'));
   } catch(error) { throw new Error(`Migration: ${error.message} at ${error.position}; ${migration.slice(Math.max(0,Number(error.position)-100),Number(error.position)+100)}`); }
 });
 beforeEach(async () => {
@@ -153,6 +158,212 @@ beforeEach(async () => {
 });
 after(async () => { await db.close(); });
 
+test('016 migrates legacy contacts without changing the design and never restores a cleared contact',async()=>{
+ const config={package:'exclusive',theme:{primary:'#123456'},guestMeta:{TEST0001:{phone:'7123 4567',group:'Familia',eventAccess:'ceremony',unexpected:'ignored'}}};
+ await db.query('update invitations set builder_config=$1 where id=$2',[config,invId]);
+ await db.exec('alter table guests alter column guest_metadata drop not null');
+ await db.query('update guests set guest_metadata=null where id=$1',[guestId]);
+ const sql=fs.readFileSync(path.join(root,'migrations/016_guest_metadata.sql'),'utf8');
+ await db.exec(sql);
+ assert.deepEqual(await scalar('select guest_metadata as result from guests where id=$1',[guestId]),{phone:'7123 4567',group:'Familia',eventAccess:'ceremony'});
+ assert.deepEqual(await scalar('select builder_config as result from invitations where id=$1',[invId]),config);
+ await db.query('update guests set guest_metadata=$1 where id=$2',[{},guestId]);
+ await db.exec(sql);
+ assert.deepEqual(await scalar('select guest_metadata as result from guests where id=$1',[guestId]),{});
+ for(const role of ['anon','authenticated']) assert.equal(await scalar("select has_table_privilege($1,'public.guests','SELECT') as result",[role]),false);
+ await assert.rejects(db.query("update guests set guest_metadata='[]' where id=$1",[guestId]),/guests_metadata_object/);
+});
+test('016 handles string JSON and malformed legacy values while preserving the original backup',async()=>{
+ const config=JSON.stringify({guestMeta:{TEST0001:{phone:'71234567',group:27,eventAccess:'invalid'}}});
+ await db.query('update invitations set builder_config=$1 where id=$2',[JSON.stringify(config),invId]);
+ await db.exec('alter table guests alter column guest_metadata drop not null');
+ await db.query('update guests set guest_metadata=null where id=$1',[guestId]);
+ await db.exec(fs.readFileSync(path.join(root,'migrations/016_guest_metadata.sql'),'utf8'));
+ assert.deepEqual(await scalar('select guest_metadata as result from guests where id=$1',[guestId]),{phone:'71234567'});
+ assert.equal(await scalar('select builder_config as result from invitations where id=$1',[invId]),config);
+});
+test('guest creation stores normalized contact and group atomically and invalid metadata rejects the entire batch',async()=>{
+ actor={role:'host',id:invId};
+ for(const bad of [{phone:'abc71234567'},{phone:123},{group:'x'.repeat(41)},{eventAccess:'backstage'}]) {
+  const response=await guestCrud.POST(req('/api/guests',{requestId:randomUUID(),invitationId:invId,guests:[{name:'Valid',passes:2,phone:'71234567'},{name:'Bad',...bad}]}));
+  assert.equal(response.status,400);
+ }
+ assert.equal(await scalar('select count(*)::int as result from guests'),1);
+ const response=await guestCrud.POST(req('/api/guests',{requestId:randomUUID(),invitationId:invId,name:'Familia Nueva',passes:4,phone:'7123 4567',group:' Amigos ',eventAccess:'reception'}));
+ assert.equal(response.status,200); const guest=(await response.json()).guests[0];
+ assert.equal(guest.phone,'+59171234567'); assert.equal(guest.group,'Amigos'); assert.equal(guest.metadataStored,true);
+ assert.deepEqual(await scalar('select guest_metadata as result from guests where id=$1',[guest.id]),{phone:guest.phone,group:'Amigos',eventAccess:'reception'});
+ assert.equal(await scalar('select builder_config as result from invitations where id=$1',[invId]),null);
+});
+test('guest creation requires a request identity and never writes for an obsolete client',async()=>{
+ actor={role:'host',id:invId};
+ for(const requestId of [undefined,'not-a-uuid',123]) {
+  const response=await guestCrud.POST(req('/api/guests',{invitationId:invId,requestId,name:'No crear'}));
+  assert.equal(response.status,400);assert.equal((await response.json()).code,'IMPORT_REQUEST_REQUIRED');
+ }
+ assert.equal(await scalar('select count(*)::int as result from guests'),1);
+ assert.equal(await scalar('select count(*)::int as result from guest_import_requests'),0);
+});
+test('competing retries import a batch once even though public identifiers are generated afresh',async()=>{
+ actor={role:'host',id:invId};
+ const operation={invitationId:invId,requestId:randomUUID(),guests:[{name:'Primero',passes:2,phone:'71234567'},{name:'Segundo',passes:1}]};
+ const replies=await Promise.all([1,2,3].map(()=>guestCrud.POST(req('/api/guests',operation))));
+ for(const reply of replies) assert.equal(reply.status,200,JSON.stringify(await reply.clone().json()));
+ const values=await Promise.all(replies.map(reply=>reply.json()));
+ assert.equal(values.filter(value=>!value.replayed).length,1);
+ values.forEach(value=>{assert.deepEqual(value.guests.map(g=>g.id),values[0].guests.map(g=>g.id));assert.equal(value.importedCount,2);assert.equal(value.missingCount,0);assert.equal(value.requestId,operation.requestId);});
+ assert.equal(await scalar('select count(*)::int as result from guests'),3);
+ assert.equal(await scalar('select count(*)::int as result from guest_import_requests'),1);
+});
+test('guest import client recovers an actually committed batch after losing its HTTP response',async()=>{
+ actor={role:'host',id:invId};
+ const {submitGuestImport,GuestImportError}=require('../src/lib/guest-import-operation.ts');
+ const operation={invitationId:invId,requestId:randomUUID(),guests:[{name:'Familia desconectada',passes:4,allowKids:true,eventAccess:'both'}]};
+ let lose=true;const bodies=[];
+ const transport=async(_url,options)=>{bodies.push(options.body);const result=await guestCrud.POST(req('/api/guests',JSON.parse(options.body)));assert.equal(result.status,200);if(lose){lose=false;throw new TypeError('lost after commit');}return result;};
+ await assert.rejects(submitGuestImport(operation,transport),error=>error instanceof GuestImportError && error.uncertain);
+ const result=await submitGuestImport(operation,transport);
+ assert.equal(result.replayed,true);assert.equal(result.importedCount,1);assert.equal(bodies[0],bodies[1]);
+ assert.equal(await scalar('select count(*)::int as result from guests'),2);
+});
+test('reusing an import identity with changed content or ordering is rejected atomically',async()=>{
+ actor={role:'host',id:invId};
+ const operation={invitationId:invId,requestId:randomUUID(),guests:[{name:'A',passes:2,phone:'71234567',tableNo:'7'},{name:'B',passes:1}]};
+ assert.equal((await guestCrud.POST(req('/api/guests',operation))).status,200);
+ for(const guests of [operation.guests.slice().reverse(),operation.guests.slice(0,1),...[
+  {name:'Changed'},{passes:3},{phone:'76543210'},{tableNo:'8'},{group:'VIP'},{allowKids:false},{sent:true},
+ ].map(patch=>[{...operation.guests[0],...patch},operation.guests[1]])]) {
+  const response=await guestCrud.POST(req('/api/guests',{...operation,guests}));assert.equal(response.status,409);assert.equal((await response.json()).code,'REQUEST_REUSED');
+ }
+ assert.equal(await scalar('select count(*)::int as result from guests'),3);
+});
+test('import replay returns current confirmations and contacts and never recreates a deleted row',async()=>{
+ actor={role:'host',id:invId};
+ const operation={invitationId:invId,requestId:randomUUID(),guests:[{name:'Conservar',passes:4,phone:'71234567'},{name:'Borrar',passes:1}]};
+ const first=await (await guestCrud.POST(req('/api/guests',operation))).json();const [saved,removed]=first.guests;
+ assert.equal((await guestCrud.PATCH(req('/api/guests',{id:saved.id,expectedRevision:0,phone:'76543210',group:'Nuevo'}))).status,200);
+ const confirmation=await guestRoute.POST(req('/api/guests/confirm',guestInput({publicId:saved.publicId,expectedRevision:1,passes:3})));assert.equal(confirmation.status,200);
+ assert.equal((await guestCrud.DELETE(req('/api/guests?guestId='+removed.id+'&expectedRevision=0'))).status,200);
+ const result=await (await guestCrud.POST(req('/api/guests',operation))).json();
+ assert.equal(result.replayed,true);assert.equal(result.importedCount,2);assert.equal(result.missingCount,1);assert.equal(result.guests.length,1);
+ assert.equal(result.guests[0].phone,'+59176543210');assert.equal(result.guests[0].group,'Nuevo');assert.equal(result.guests[0].status,'confirmed');assert.equal(result.guests[0].confirmedPasses,3);assert.equal(result.guests[0].responseRevision,2);
+ assert.equal(await scalar('select count(*)::int as result from guests'),2);
+});
+test('a database failure rolls back the whole import and its ledger, allowing a safe retry',async()=>{
+ const input={p_invitation_id:invId,p_request_id:randomUUID(),p_guests:[
+  {public_id:'NEWABCDE',name:'Rollback',table_no:null,passes:2,allow_kids:true,sent:false,guest_metadata:{}},
+  {public_id:'TEST0001',name:'Collision',table_no:null,passes:1,allow_kids:true,sent:false,guest_metadata:{}},
+ ]};
+ // Match an existing valid public ID to provoke a UNIQUE violation on row 2.
+ await db.query("update guests set public_id='TESTABCD' where id=$1",[guestId]);input.p_guests[1].public_id='TESTABCD';
+ await assert.rejects(rpc('enkarta_import_guests',input),/duplicate key/);
+ assert.equal(await scalar('select count(*)::int as result from guests'),1);
+ assert.equal(await scalar('select count(*)::int as result from guest_import_requests'),0);
+ input.p_guests[1].public_id='NEWBCDEF';const result=await rpc('enkarta_import_guests',input);assert.equal(result.importedCount,2);assert.equal(result.replayed,false);
+});
+test('import ledger is private, scoped to the event, reappliable, and removed with the event',async()=>{
+ actor={role:'admin'};const requestId=randomUUID();
+ for(const invitationId of [invId,otherId]) assert.equal((await guestCrud.POST(req('/api/guests',{invitationId,requestId,name:'Mismo nombre'}))).status,200);
+ await db.exec(fs.readFileSync(path.join(root,'migrations/017_guest_import_idempotency.sql'),'utf8'));
+ assert.equal(await scalar('select count(*)::int as result from guest_import_requests'),2);
+ for(const role of ['anon','authenticated']) {
+  assert.equal(await scalar(`select has_table_privilege('${role}','public.guest_import_requests','SELECT') as result`),false);
+  assert.equal(await scalar(`select has_function_privilege('${role}','public.enkarta_import_guests(uuid,uuid,jsonb,boolean)','EXECUTE') as result`),false);
+ }
+ assert.equal(await scalar("select has_function_privilege('service_role','public.enkarta_import_guests(uuid,uuid,jsonb,boolean)','EXECUTE') as result"),true);
+ const columns=(await db.query("select column_name from information_schema.columns where table_name='guest_import_requests' order by ordinal_position")).rows.map(row=>row.column_name);
+ assert.deepEqual(columns,['invitation_id','request_id','payload_hash','guest_ids','created_at']);
+ await db.query('delete from invitations where id=$1',[otherId]);assert.equal(await scalar('select count(*)::int as result from guest_import_requests'),1);
+});
+test('import retries recheck current access and a missing RPC never falls back to unprotected writes',async()=>{
+ actor={role:'host',id:invId};const operation={invitationId:invId,requestId:randomUUID(),name:'Privado'};
+ assert.equal((await guestCrud.POST(req('/api/guests',operation))).status,200);
+ for(const role of [null,'review','door','otherHost']) {actor=role?{role:role==='otherHost'?'host':role,id:otherId}:null;assert.equal((await guestCrud.POST(req('/api/guests',operation))).status,403);}
+ actor={role:'host',id:invId};rpcFailure={code:'PGRST202'};
+ const response=await guestCrud.POST(req('/api/guests',{...operation,requestId:randomUUID()}));assert.equal(response.status,503);assert.equal((await response.json()).code,'MIGRATION_REQUIRED');
+ assert.equal(await scalar('select count(*)::int as result from guests'),2);
+});
+test('a replay survives table entitlement changes without changing the original import or leaking the table',async()=>{
+ actor={role:'host',id:invId};const operation={invitationId:invId,requestId:randomUUID(),name:'Mesa privada',tableNo:'7'};
+ const first=await (await guestCrud.POST(req('/api/guests',operation))).json();assert.equal(first.guests[0].tableNo,'7');
+ await db.query('update invitations set builder_config=$1 where id=$2',[{...newServiceContract({},'exclusive'),features:{tableAssignment:false}},invId]);
+ const response=await guestCrud.POST(req('/api/guests',operation));assert.equal(response.status,200);
+ const result=await response.json();assert.equal(result.replayed,true);assert.equal(result.guests[0].tableNo,undefined);
+ assert.equal(await scalar('select table_no as result from guests where id=$1',[first.guests[0].id]),'7');
+ const created=await (await guestCrud.POST(req('/api/guests',{...operation,requestId:randomUUID(),name:'Sin mesa'}))).json();
+ assert.equal(await scalar('select table_no as result from guests where id=$1',[created.guests[0].id]),null);
+});
+test('contact and seat edits commit together, conflict atomically, and cleared values cannot fall back to old design data',async()=>{
+ actor={role:'host',id:invId};
+ await db.query('update invitations set builder_config=$1 where id=$2',[{guestMeta:{TEST0001:{phone:'old-private',group:'OLD'}}},invId]);
+ const edit=patch=>guestCrud.PATCH(req('/api/guests',{id:guestId,...patch}));
+ const response=await edit({expectedRevision:0,phone:'71234567',group:'VIP',tableNo:'9'}); assert.equal(response.status,200);
+ const guest=(await response.json()).guest; assert.equal(guest.responseRevision,1); assert.equal(guest.phone,'+59171234567'); assert.equal(guest.tableNo,'9');
+ assert.equal((await edit({expectedRevision:0,phone:'76543210',tableNo:'old'})).status,409);
+ assert.equal((await edit({expectedRevision:1,phone:'bad',tableNo:'not saved'})).status,400);
+ assert.equal(await scalar('select table_no as result from guests where id=$1',[guestId]),'9');
+ const cleared=await edit({expectedRevision:1,phone:'',group:''}); assert.equal(cleared.status,200); assert.equal((await cleared.json()).guest.responseRevision,2);
+ const list=await (await guestCrud.GET(req('/api/guests?id='+invId))).json(); assert.equal(list[0].phone,''); assert.equal(list[0].group,'');
+ const dashboard=await (await dashboardRoute.GET(req('/api/host/dashboard'))).json(); assert.equal(dashboard.guests[0].phone,''); assert.equal(dashboard.guests[0].group,'');
+ assert.equal((await scalar('select builder_config as result from invitations where id=$1',[invId])).guestMeta.TEST0001.phone,'old-private');
+});
+test('competing contact edits acknowledge only one revision and never overwrite each other',async()=>{
+ actor={role:'host',id:invId};
+ const attempts=await Promise.all(['Amigos','Familia'].map(group=>guestCrud.PATCH(req('/api/guests',{id:guestId,expectedRevision:0,group}))));
+ assert.deepEqual(attempts.map(r=>r.status).sort(),[200,409]);
+ assert.equal(await scalar('select response_revision as result from guests where id=$1',[guestId]),1);
+ const winner=await attempts.find(r=>r.status===200).json();
+ assert.equal((await scalar('select guest_metadata as result from guests where id=$1',[guestId])).group,winner.guest.group);
+});
+test('private contact is visible to organizers but absent from public RSVP and reception payloads',async()=>{
+ actor={role:'host',id:invId};
+ const contact={phone:'+59171234567',group:'PRIVATE-GROUP',eventAccess:'reception'};
+ assert.equal((await guestCrud.PATCH(req('/api/guests',{id:guestId,expectedRevision:0,...contact}))).status,200);
+ const list=await (await guestCrud.GET(req('/api/guests?id='+invId))).json(); assert.equal(list[0].phone,contact.phone);
+ const accepted=await confirm({expectedRevision:1});
+ for(const response of [accepted,await (await guestRoute.GET(req('/api/guests/confirm?slug=test-event&publicId=TEST0001'))).json()]) assert.doesNotMatch(JSON.stringify(response),/PRIVATE-GROUP|59171234567|metadataStored|guest_metadata/);
+ const reception=await checkinRoute.GET(req('/api/checkin?code='+accepted.guest.accessCode));
+ assert.equal(reception.status,200); assert.doesNotMatch(JSON.stringify(await reception.json()),/PRIVATE-GROUP|59171234567|guest_metadata/);
+ const dashboard=await (await dashboardRoute.GET(req('/api/host/dashboard'))).json(); assert.equal(dashboard.guests[0].group,contact.group);
+ for(const role of ['review','door']) { actor={role,id:invId}; assert.equal((await guestCrud.PATCH(req('/api/guests',{id:guestId,expectedRevision:2,phone:'76543210'}))).status,403); }
+});
+
+test('guest edits and deletes require a revision and reject fractional passes',async()=>{
+ actor={role:'host',id:invId};
+ let response=await guestCrud.PATCH(req('/api/guests',{id:guestId,name:'No guardar'}));
+ assert.equal(response.status,400); assert.equal((await response.json()).code,'GUEST_REVISION_REQUIRED');
+ response=await guestCrud.DELETE(req('/api/guests?guestId='+guestId));
+ assert.equal(response.status,400); assert.equal((await response.json()).code,'GUEST_REVISION_REQUIRED');
+ for(const passes of [0,21,2.5,'2']) {
+  response=await guestCrud.PATCH(req('/api/guests',{id:guestId,expectedRevision:0,passes}));
+  assert.equal(response.status,400); assert.equal((await response.json()).code,'INVALID_PASSES');
+ }
+ assert.equal(await scalar('select count(*)::int as result from guests'),1);
+ assert.equal(await scalar('select response_revision as result from guests where id=$1',[guestId]),0);
+});
+test('invalid import batches fail entirely, while 200 long names fit the body budget',async()=>{
+ actor={role:'host',id:invId};
+ for(const bad of [{name:'Error',passes:2.5},{name:'Error',passes:21},{name:'Error',passes:'2'},{name:'a'.repeat(81)},null]) {
+  const response=await guestCrud.POST(req('/api/guests',{requestId:randomUUID(),invitationId:invId,guests:[{name:'Válido',passes:2},bad]}));
+  assert.equal(response.status,400);
+ }
+ assert.equal(await scalar('select count(*)::int as result from guests'),1);
+ const guests=Array.from({length:200},(_,i)=>({name:`${i} ${'Á'.repeat(75)}`,passes:2,allowKids:true,tableNo:'8'}));
+ const response=await guestCrud.POST(req('/api/guests',{requestId:randomUUID(),invitationId:invId,guests}));
+ assert.equal(response.status,200,JSON.stringify(await response.clone().json())); assert.equal((await response.json()).guests.length,200);
+ const tooMany=await guestCrud.POST(req('/api/guests',{requestId:randomUUID(),invitationId:invId,guests:[...guests,guests[0]]})); assert.equal(tooMany.status,400);
+});
+test('guest reads report outages and guest imports reject foreign origins and oversized bodies',async()=>{
+ actor={role:'admin'};
+ queryFailure={message:'unavailable'};
+ let response=await guestCrud.GET(req('/api/guests?id='+invId)); assert.equal(response.status,503); assert.equal((await response.json()).code,'SERVICE_UNAVAILABLE');
+ queryFailure=null;
+ response=await guestCrud.POST(new NextRequest('http://localhost:3001/api/guests',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://foreign.invalid'},body:JSON.stringify({invitationId:invId,name:'No importar'})}));
+ assert.equal(response.status,400);
+ response=await guestCrud.POST(req('/api/guests',{requestId:randomUUID(),invitationId:invId,name:'Prueba',extra:'á'.repeat(66000)})); assert.equal(response.status,400);
+ assert.equal(await scalar('select count(*)::int as result from guests'),1);
+});
+
 test('WhatsApp opening is not an alleged send; retries are idempotent and stale actions fail',async()=>{
   actor={role:'host',id:invId}; const requestId=randomUUID();
   const input={guestId,action:'opened',expectedRevision:0,requestId};
@@ -162,6 +373,24 @@ test('WhatsApp opening is not an alleged send; retries are idempotent and stale 
   response=await deliveryRoute.POST(req('/api/guests/delivery',{...input,action:'manual'})); assert.equal((await response.json()).code,'REQUEST_REUSED');
   response=await deliveryRoute.POST(req('/api/guests/delivery',{...input,expectedRevision:1})); assert.equal((await response.json()).code,'REQUEST_REUSED');
   response=await deliveryRoute.POST(req('/api/guests/delivery',{...input,requestId:randomUUID()})); assert.equal((await response.json()).code,'STALE_GUEST');
+});
+
+test('queue client recovers a committed reminder after a lost HTTP response without counting it twice',async()=>{
+ actor={role:'host',id:invId};
+ const {trackGuestDelivery}=require('../src/lib/whatsapp-queue.ts');
+ const operation={guestId,action:'reminder',expectedRevision:0,requestId:randomUUID()};
+ let lost=true;const transport=async(url,init)=>{
+  const response=await deliveryRoute.POST(req(url,JSON.parse(init.body)));
+  if(lost){lost=false;assert.equal(response.status,200);throw new TypeError('response lost after commit');}
+  return response;
+ };
+ await assert.rejects(trackGuestDelivery(operation,transport),error=>error.retryable===true);
+ const saved=await trackGuestDelivery(operation,transport);assert.equal(saved.reminderCount,1);assert.equal(saved.responseRevision,1);assert.equal(saved.sent,false);
+ const manual=await trackGuestDelivery({guestId,action:'manual',expectedRevision:1,requestId:randomUUID()},transport);
+ assert.equal(manual.sent,true);assert.equal(manual.deliveryStatus,'marked');assert.equal(manual.reminderCount,1);
+ await confirm({expectedRevision:2});
+ await assert.rejects(trackGuestDelivery({guestId,action:'reminder',expectedRevision:3,requestId:randomUUID()},transport),error=>error.retryable===false);
+ assert.equal(await scalar('select reminder_count as result from guests where id=$1',[guestId]),1);
 });
 test('manual marks and reminders are distinct; answered guests cannot receive reminders',async()=>{
   actor={role:'host',id:invId};
@@ -471,6 +700,55 @@ test('scanner API denies anonymous and wrong-event operators, allows the owner',
   actor={role:'host',id:invId}; assert.equal((await checkinRoute.POST(req('/api/checkin',body))).status,200);
   assert.equal((await checkinRoute.GET(req('/api/checkin?token='+first.guest.accessToken))).status,200);
 });
+test('reception search is scoped to the signed host or door event and rejects reviewers and cross-scope sessions',async()=>{
+ await confirm();const url='/api/checkin/search?invitationId='+invId+'&q=Familia';
+ for(const role of [null,'review']) {actor=role?{role,id:invId}:null;assert.equal((await receptionRoute.GET(req(url))).status,403);}
+ actor={role:'host',id:otherId};assert.equal((await receptionRoute.GET(req(url))).status,403);
+ actor={role:'host',id:invId};assert.equal((await receptionRoute.GET(req(url+'&scope=door'))).status,403);
+ assert.equal((await receptionRoute.GET(req(url))).status,200);
+ actor={role:'door',id:invId};assert.equal((await receptionRoute.GET(req(url))).status,403);
+ const response=await receptionRoute.GET(req(url+'&scope=door'));assert.equal(response.status,200);assert.match(response.headers.get('cache-control'),/no-store/);
+ assert.equal((await receptionRoute.GET(req(url.replace(invId,otherId)+'&scope=door'))).status,403);
+ actor={role:'admin'};assert.equal((await receptionRoute.GET(req('/api/checkin/search?q=Familia'))).status,400);
+});
+test('reception search exposes only confirmed group identity, authorized table and confirmed capacity, without checking anyone in',async()=>{
+ await db.query('update guests set table_no=$1,guest_metadata=$2,message=$3 where id=$4',['7',{phone:'+59171234567',group:'PRIVATE-CONTACT'},'PRIVATE-MESSAGE',guestId]);
+ await db.query("insert into guests(invitation_id,public_id,name,passes,status) values($1,'PENDINGX','Familia pendiente',2,'pending'),($1,'DECLINEX','Familia rechazada',2,'declined'),($2,'FOREIGNX','Familia ajena',2,'confirmed')",[invId,otherId]);
+ const accepted=await confirm({passes:3,expectedRevision:1});actor={role:'door',id:invId};
+ const response=await receptionRoute.GET(req('/api/checkin/search?scope=door&q=Familia'));assert.equal(response.status,200);
+ const value=await response.json();assert.deepEqual(value,{guests:[{id:guestId,name:'Familia Prueba',tableNo:'7',passes:3}],hasMore:false});
+ assert.doesNotMatch(JSON.stringify(value),new RegExp('PRIVATE|accessToken|access_token|59171234567|'+accepted.guest.accessToken));
+ const found=await checkinRoute.GET(req('/api/checkin?scope=door&guestId='+guestId));assert.equal(found.status,200);assert.equal((await found.json()).attendees.length,3);
+ assert.equal(await scalar('select count(*)::int as result from access_log'),0);
+ assert.equal(await scalar("select count(*)::int as result from attendees where state='in'"),0);
+});
+test('reception search escapes literal wildcard characters, matches exact tables, limits results and refuses invalid input',async()=>{
+ await confirm();actor={role:'host',id:invId};
+ await db.query('update guests set name=$1,table_no=$2 where id=$3',['Familia 50%_A\\B','7',guestId]);
+ const find=(q,field='name')=>receptionRoute.GET(req('/api/checkin/search?'+new URLSearchParams({q,field})));
+ for(const q of ['50%_A\\B','%_','Familia']) {const r=await find(q);assert.equal(r.status,200);assert.equal((await r.json()).guests.length,1);}
+ const none=await find('Prueba');assert.equal((await none.json()).guests.length,0);
+ const table=await find('7','table');assert.equal(table.status,200);assert.equal((await table.json()).guests.length,1);
+ assert.equal((await (await find('07','table')).json()).guests.length,0);
+ for(const [q,field] of [['','name'],['F','name'],['x'.repeat(81),'name'],['x'.repeat(21),'table'],['a\nb','name'],['Familia','phone']]) assert.equal((await find(q,field)).status,400);
+ for(let i=0;i<23;i++)await db.query("insert into guests(invitation_id,public_id,name,status,passes,confirmed_passes) values($1,$2,$3,'confirmed',1,1)",[invId,'LIMIT'+String(i).padStart(3,'0'),'Coincidencia '+String(i).padStart(2,'0')]);
+ const limited=await (await find('Coincidencia')).json();assert.equal(limited.guests.length,20);assert.equal(limited.hasMore,true);assert.equal(limited.guests[0].name,'Coincidencia 00');
+});
+test('reception search and selection fail closed for stopped events, removed services and database outages',async()=>{
+ await confirm();actor={role:'host',id:invId};const url='/api/checkin/search?q=Familia';
+ await db.query('update invitations set is_active=false where id=$1',[invId]);assert.equal((await receptionRoute.GET(req(url))).status,403);
+ await db.query('update invitations set is_active=true,builder_config=$1 where id=$2',[newServiceContract({},'premium'),invId]);assert.equal((await receptionRoute.GET(req(url))).status,403);
+ await db.query('update invitations set builder_config=$1 where id=$2',[{...newServiceContract({},'exclusive'),features:{tableAssignment:false}},invId]);
+ assert.equal((await receptionRoute.GET(req('/api/checkin/search?q=7&field=table'))).status,403);
+ const result=await (await receptionRoute.GET(req(url))).json();assert.equal(result.guests[0].tableNo,undefined);
+ rpcFailure={code:'PGRST202'};assert.equal((await receptionRoute.GET(req(url))).status,503);
+});
+test('selection by guest ID checks scope, identifiers and current confirmation without revealing tokens',async()=>{
+ await confirm();actor={role:'door',id:invId};
+ for(const suffix of ['guestId=invalid','guestId='+guestId+'&code=ENK-TEST','guestId='+guestId+'&token=x']) assert.equal((await checkinRoute.GET(req('/api/checkin?scope=door&'+suffix))).status,400);
+ actor={role:'door',id:otherId};assert.equal((await checkinRoute.GET(req('/api/checkin?scope=door&guestId='+guestId))).status,404);
+ actor={role:'door',id:invId};await db.query("update guests set status='declined',confirmed_passes=0 where id=$1",[guestId]);assert.equal((await checkinRoute.GET(req('/api/checkin?scope=door&guestId='+guestId))).status,409);
+});
 test('database public roles cannot read personal records or bypass APIs with RPC',async()=>{
   for(const role of ['anon','authenticated']) {
     for(const table of ['invitations','guests','attendees','rsvps','access_log']) assert.equal(await scalar('select has_table_privilege($1,$2,\'SELECT\') as result',[role,table]),false);
@@ -515,7 +793,7 @@ test('Plus blocks form submissions and guest CRUD even if the body claims Exclus
   assert.equal(response.status,403); assert.equal((await response.json()).code,'SERVICE_NOT_INCLUDED');
   assert.equal((await openRoute.GET(req('/api/rsvp?slug=test-event'))).status,403);
   actor={role:'admin'};
-  assert.equal((await guestCrud.POST(req('/api/guests',{invitationId:invId,name:'Not allowed'}))).status,403);
+  assert.equal((await guestCrud.POST(req('/api/guests',{requestId:randomUUID(),invitationId:invId,name:'Not allowed'}))).status,403);
   assert.equal(await scalar('select count(*)::int as result from attendees'),0);
 });
 test('Premium confirms, exposes no QR or table, allows read-only sheet and denies scanner',async()=>{
@@ -544,7 +822,7 @@ test('review session reads only its design and cannot mutate guests, publish or 
   await usePackage('exclusive'); actor={role:'review',id:invId};
   assert.equal(await canReviewInvitation(invId),true); assert.equal(await canReviewInvitation(otherId),false);
   assert.equal(await canReadResponses(invId),false); assert.equal(await canManageInvitation(invId),false);
-  assert.equal((await guestCrud.POST(req('/api/guests',{invitationId:invId,name:'Blocked'}))).status,403);
+  assert.equal((await guestCrud.POST(req('/api/guests',{requestId:randomUUID(),invitationId:invId,name:'Blocked'}))).status,403);
   assert.equal((await openRoute.GET(req('/api/rsvp?id='+invId))).status,401);
   assert.equal((await reviewState.POST(req('/api/admin/builder-state',{invitationId:invId,action:'publish'}))).status,403);
   assert.equal((await reviewState.GET(req('/api/admin/builder-state?invitationId='+otherId))).status,401);
@@ -688,6 +966,18 @@ test('host edits compare revision atomically and prevent stale table or delivery
   assert.equal((await guestCrud.DELETE(req('/api/guests?guestId='+guestId+'&expectedRevision=1'))).status,409);
   assert.equal((await guestCrud.DELETE(req('/api/guests?guestId='+guestId+'&expectedRevision=2'))).status,200);
 });
+
+test('guest editor command roundtrip acknowledges normalized fields and rejects a stale repeat without access movements',async()=>{
+ actor={role:'host',id:invId};await usePackage('exclusive');
+ const {guestEditValues,validateGuestEdit,verifyGuestEditReceipt}=require('../src/lib/guest-edit-form.ts');
+ const guests=await (await guestCrud.GET(req('/api/guests?id='+invId))).json(),base=guests.find(guest=>guest.id===guestId);
+ const {command}=validateGuestEdit(base,{...guestEditValues(base),name:'Familia editada',phone:'76543210',group:'Amigos',tableNo:'12'},true);assert.ok(command);
+ const saved=await guestCrud.PATCH(req('/api/guests',command));assert.equal(saved.status,200);const receipt=await saved.json();
+ assert.doesNotThrow(()=>verifyGuestEditReceipt(receipt,command));assert.equal(receipt.guest.phone,'+59176543210');
+ assert.equal((await guestCrud.PATCH(req('/api/guests',command))).status,409);
+ assert.equal(await scalar('select count(*)::int as result from access_log'),0);
+ assert.equal(await scalar('select count(*)::int as result from attendees'),0);
+});
 test('door login uses independent credentials; changing or removing them invalidates sessions',async()=>{
   await usePackage('exclusive');
   const email=invId+'@door.invalid';
@@ -722,13 +1012,62 @@ test('door can scan only its event, writes attributed idempotent logs and cannot
   assert.equal(await scalar('select operator as result from access_log'),'door:'+invId);
   assert.equal(await canManageInvitation(invId),false); assert.equal(await canReadResponses(invId),false); assert.equal(await canReviewInvitation(invId),false);
   assert.equal((await guestCrud.GET(req('/api/guests?id='+invId))).status,403);
-  assert.equal((await guestCrud.POST(req('/api/guests',{invitationId:invId,name:'No autorizado'}))).status,403);
+  assert.equal((await guestCrud.POST(req('/api/guests',{requestId:randomUUID(),invitationId:invId,name:'No autorizado'}))).status,403);
   assert.equal((await guestCrud.PATCH(req('/api/guests',{id:guestId,name:'No autorizado'}))).status,403);
   assert.equal((await guestCrud.DELETE(req('/api/guests?guestId='+guestId))).status,403);
   assert.equal((await openRoute.GET(req('/api/rsvp?id='+invId))).status,401);
   actor={role:'door',id:otherId};
   assert.equal((await checkinRoute.GET(req('/api/checkin?scope=door&token='+guest.accessToken))).status,404);
   assert.equal((await checkinRoute.POST(req('/api/checkin',operation))).status,403);
+});
+
+test('scanner binding rejects a different signed session and event claim before writing',async()=>{
+ await usePackage('exclusive');const {guest}=await confirm();
+ const {scannerSessionFingerprint}=require('../src/lib/scanner-session.ts');
+ const cookie=signDoorSession(invId,doorHash);cookieJar.set('enkarta-door',cookie);
+ const binding=scannerSessionFingerprint('door',cookie);
+ const query='/api/checkin?scope=door&token='+guest.accessToken;
+ const wrong=req(query);wrong.headers.set('X-Enkarta-Scanner-Session','f'.repeat(64));assert.equal((await checkinRoute.GET(wrong)).status,403);
+ const found=req(query);found.headers.set('X-Enkarta-Scanner-Session',binding);const response=await checkinRoute.GET(found);assert.equal(response.status,200);
+ const group=await response.json();assert.equal(group.invitationId,invId);
+ const operation={scope:'door',invitationId:otherId,attendeeId:group.attendees[0].id,action:'in',expectedRevision:0,requestId:randomUUID()};
+ const write=req('/api/checkin',operation);write.headers.set('X-Enkarta-Scanner-Session',binding);assert.equal((await checkinRoute.POST(write)).status,403);
+ assert.equal(await scalar('select count(*)::int as result from access_log'),0);
+});
+
+test('QR recovery roundtrip replays exactly once and preserves a later real SQL exit',async()=>{
+ await usePackage('exclusive');const {guest}=await confirm();
+ const {scannerSessionFingerprint}=require('../src/lib/scanner-session.ts');
+ const {scanRecoveryRecord,restoreScanRecovery,scanRecoveryPerson}=require('../src/lib/scan-recovery.ts');
+ const {parseScanReceipt}=require('../src/lib/scanner-contract.ts');
+ const cookie=signDoorSession(invId,doorHash);cookieJar.set('enkarta-door',cookie);
+ const scope={role:'door',invitationId:invId,sessionKey:scannerSessionFingerprint('door',cookie)};
+ const group=await (await checkinRoute.GET(req('/api/checkin?scope=door&token='+guest.accessToken))).json();
+ const before=group.attendees[0], recovery={invitationId:invId,guestId:guest.id,seatNo:before.seatNo,operation:{attendeeId:before.id,action:'in',expectedRevision:before.revision,requestId:randomUUID()}};
+ const request=(operation)=>{const value=req('/api/checkin',{...operation,scope:'door',invitationId:invId});value.headers.set('X-Enkarta-Scanner-Session',scope.sessionKey);return value;};
+ assert.equal((await checkinRoute.POST(request(recovery.operation))).status,200);
+ const restored=restoreScanRecovery(JSON.stringify(scanRecoveryRecord(scope,recovery)),scope);
+ const replay=await checkinRoute.POST(request(restored.operation));assert.equal(replay.status,200);assert.equal((await replay.json()).replayed,true);
+ assert.equal(await scalar('select count(*)::int as result from access_log'),1);
+ assert.equal((await checkinRoute.POST(request({...restored.operation,action:'out',expectedRevision:1,requestId:randomUUID()}))).status,200);
+ const later=await (await checkinRoute.POST(request(restored.operation))).json();
+ const receipt=parseScanReceipt(later,restored.operation,scanRecoveryPerson(restored));assert.equal(receipt.attendee.state,'out');assert.equal(receipt.changedLater,true);
+ assert.equal(await scalar('select count(*)::int as result from access_log'),2);
+});
+
+test('valid reauthentication cannot reuse the prior scanner binding or borrow a different role',async()=>{
+ await usePackage('exclusive');const {guest}=await confirm();
+ const {scannerSessionFingerprint}=require('../src/lib/scanner-session.ts');
+ const old=signDoorSession(invId,doorHash);cookieJar.set('enkarta-door',old);
+ const group=await (await checkinRoute.GET(req('/api/checkin?scope=door&token='+guest.accessToken))).json();
+ const body={scope:'door',invitationId:invId,attendeeId:group.attendees[0].id,action:'in',expectedRevision:0,requestId:randomUUID()};
+ const rotated=signDoorSession(invId,doorHash,Math.floor(Date.now()/1000)+3600);assert.notEqual(old,rotated);cookieJar.set('enkarta-door',rotated);
+ const stale=req('/api/checkin',body);stale.headers.set('X-Enkarta-Scanner-Session',scannerSessionFingerprint('door',old));assert.equal((await checkinRoute.POST(stale)).status,403);
+ cookieJar.set('enkarta-host',signHostSession(invId,hostHash));
+ const borrowed=req('/api/checkin',{...body,scope:'host'});borrowed.headers.set('X-Enkarta-Scanner-Session',scannerSessionFingerprint('door',rotated));assert.equal((await checkinRoute.POST(borrowed)).status,403);
+ cookieJar.set('enkarta-admin',signAdminSession());
+ const shifted=req('/api/checkin',{...body,scope:'host'});shifted.headers.set('X-Enkarta-Scanner-Session',scannerSessionFingerprint('host',cookieJar.get('enkarta-host')));assert.equal((await checkinRoute.POST(shifted)).status,403);
+ assert.equal(await scalar('select count(*)::int as result from access_log'),0);
 });
 test('scanner scope cannot borrow another open session and package downgrade stops door access',async()=>{
   await usePackage('exclusive'); const {guest}=await confirm();

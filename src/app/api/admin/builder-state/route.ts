@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession, canReviewInvitation } from '@/lib/host-session';
-import { invitationActor, publishDenial } from '@/lib/builder-access';
+import { invitationActor } from '@/lib/builder-access';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { readReviewNoteStorage, readVersionStorageMeta, reviewNoteTextForStorage, versionSnapshotForStorage, type BuilderVersion, type ReviewNote } from '@/lib/builder-versions';
 import type { BuilderRole, ReviewStatus } from '@/lib/types';
+import { integrityError } from '@/lib/integrity-server';
+import { parseInvitation } from '@/lib/types';
+import { validateInvitationBuilder } from '@/lib/builder-validation';
+import { changesUncontractedColors } from '@/lib/package-colors';
 import { clientInvitation } from '@/lib/client-invitation';
 
 export const runtime = 'nodejs';
@@ -75,8 +79,14 @@ export async function GET(request: NextRequest) {
   ]);
   const failure = storageError(versionsResult.error || notesResult.error);
   if (failure) return failure;
+  const { data: invitation, error: anchorError } = await supabaseAdmin.from('invitations').select('*').eq('id', invitationId).maybeSingle();
+  if (anchorError) return integrityError(anchorError);
+  const anchors = [invitation?.published_version_id, invitation?.scheduled_version_id].filter((id): id is string => !!id);
+  const anchorResult = anchors.length ? await supabaseAdmin.from('builder_versions').select('*').eq('invitation_id', invitationId).in('id', anchors) : { data: [], error: null };
+  if (anchorResult.error) return integrityError(anchorResult.error);
+  const visibleVersions = Array.from(new Map([...(versionsResult.data || []), ...(anchorResult.data || [])].map(row => [row.id, row])).values());
   return NextResponse.json({
-    versions: ((versionsResult.data || []) as VersionRow[]).map(row => { const version = versionFromRow(row); return actor === 'client' ? { ...version, data: clientInvitation(version.data, true) } : version; }),
+    versions: (visibleVersions as VersionRow[]).map(row => { const version = versionFromRow(row); return { ...version, data: clientInvitation(version.data, actor === 'client') }; }),
     notes: ((notesResult.data || []) as NoteRow[]).map(noteFromRow),
   });
 }
@@ -94,49 +104,41 @@ export async function POST(request: NextRequest) {
     .slice(0, 30).map(value => versionToRow(value, invitationId)).filter((row): row is NonNullable<typeof row> => row !== null);
   const incomingNotes = [...(Array.isArray(body?.notes) ? body!.notes : []), ...(body?.note ? [body.note] : [])]
     .map(note => actor === 'client' ? { ...note, role: 'client' as const, author: 'Cliente' } : note);
-  if (actor === 'client') {
-    // Un upsert por id no debe permitir apropiarse de una nota del equipo u otro evento.
-    for (const note of incomingNotes.slice(0, 200)) {
-      const { data: existing, error } = await supabaseAdmin.from('builder_review_notes').select('invitation_id,text').eq('id', note.id).maybeSingle();
-      const failure = storageError(error); if (failure) return failure;
-      if (existing && (existing.invitation_id !== invitationId || readReviewNoteStorage(existing.text).role !== 'client')) return NextResponse.json({ error: 'Solo puedes modificar tus propias observaciones' }, { status: 403 });
+  // Early feedback; the transaction repeats this check to close insert races.
+  for (const note of incomingNotes.slice(0, 200)) {
+    const { data: existing, error } = await supabaseAdmin.from('builder_review_notes').select('invitation_id,text').eq('id', note.id).maybeSingle();
+    if (error) return integrityError(error);
+    if (existing && (existing.invitation_id !== invitationId || (actor === 'client' && readReviewNoteStorage(existing.text).role !== 'client'))) {
+      return NextResponse.json({ error: 'No puedes modificar esta observación.' }, { status: 403 });
     }
   }
   const notes = incomingNotes
     .slice(0, 200).map(value => noteToRow(value, invitationId)).filter((row): row is NonNullable<typeof row> => row !== null);
   if (!versions.length && !notes.length) return NextResponse.json({ error: 'Contenido inválido' }, { status: 400 });
 
-  if (versions.length) {
-    const { error } = await supabaseAdmin.from('builder_versions').upsert(versions, { onConflict: 'id' });
-    const failure = storageError(error); if (failure) return failure;
-    const { data: overflow } = await supabaseAdmin.from('builder_versions').select('id').eq('invitation_id', invitationId).order('created_at', { ascending: false }).range(30, 1000);
-    const ids = (overflow || []).map(row => row.id);
-    if (ids.length) await supabaseAdmin.from('builder_versions').delete().in('id', ids).eq('invitation_id', invitationId);
-  }
-  if (notes.length) {
-    const { error } = await supabaseAdmin.from('builder_review_notes').upsert(notes, { onConflict: 'id' });
-    const failure = storageError(error); if (failure) return failure;
-  }
-  if (body?.action === 'publish' && versions.some(version => version?.source === 'publish')) {
-    if (actor === 'partner') {
-      const owner = await invitationActor(invitationId);
-      const { data: current } = await supabaseAdmin.from('invitations').select('status').eq('id', invitationId).maybeSingle();
-      const denial = owner ? await publishDenial(owner, current?.status === 'ready') : 'No autorizado';
-      if (denial) {
-        const publishIds = versions.filter(version => version?.source === 'publish').map(version => version!.id);
-        if (publishIds.length) await supabaseAdmin.from('builder_versions').delete().in('id', publishIds).eq('invitation_id', invitationId);
-        return NextResponse.json({ error: denial, needsSubscription: true }, { status: 402 });
-      }
-    }
-    const { error } = await supabaseAdmin.from('invitations').update({ status: 'ready' }).eq('id', invitationId);
-    const failure = storageError(error);
-    if (failure) {
-      const publishIds = versions.filter(version => version?.source === 'publish').map(version => version!.id);
-      if (publishIds.length) await supabaseAdmin.from('builder_versions').delete().in('id', publishIds).eq('invitation_id', invitationId);
-      return failure;
+  if (body?.action) {
+    const { data: row, error } = await supabaseAdmin.from('invitations').select('*').eq('id', invitationId).maybeSingle();
+    if (error) return integrityError(error);
+    if (!row) return integrityError({ message: 'NOT_FOUND' });
+    const current = parseInvitation(row);
+    for (const version of versions.filter(item => item.source === 'publish')) {
+      const config = actor === 'partner' ? { ...version.snapshot.config, package: current.config.package, features: current.config.features,
+        serviceContract: current.config.serviceContract, additionalServices: current.config.additionalServices, qualityControl: current.config.qualityControl } : version.snapshot.config;
+      const candidate = { ...current, ...version.snapshot, config };
+      if (changesUncontractedColors(current, candidate)) return NextResponse.json({ error: 'La personalización de color no está contratada.' }, { status: 403 });
+      const validation = validateInvitationBuilder(candidate);
+      if (validation.errors.length) return NextResponse.json({ error: 'Corrige la invitación antes de publicar.', issues: validation.errors }, { status: 400 });
+      version.snapshot = clientInvitation({ ...version.snapshot, ...candidate });
     }
   }
-  return NextResponse.json({ success: true });
+
+  const owner = actor === 'partner' ? await invitationActor(invitationId) : null;
+  if (actor === 'partner' && owner?.kind !== 'partner') return NextResponse.json({ error: 'Tu acceso cambió. Vuelve a iniciar sesión.' }, { status: 403 });
+  const { error } = await supabaseAdmin.rpc('enkarta_store_builder_state', {
+    p_invitation_id: invitationId, p_partner_id: owner?.kind === 'partner' ? owner.partnerId : null,
+    p_client: actor === 'client', p_versions: versions, p_notes: notes, p_action: body?.action ?? null,
+  });
+  return error ? integrityError(error) : NextResponse.json({ success: true });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -175,6 +177,14 @@ export async function DELETE(request: NextRequest) {
     if (entity === 'version') return NextResponse.json({ error: 'El cliente no puede eliminar versiones' }, { status: 403 });
     const { data: current } = await supabaseAdmin.from('builder_review_notes').select('text').eq('id', id).eq('invitation_id', invitationId).maybeSingle();
     if (readReviewNoteStorage(current?.text || '').role !== 'client') return NextResponse.json({ error: 'Solo puedes eliminar tus propias observaciones' }, { status: 403 });
+  }
+  if (entity === 'version') {
+    const { data: version, error: readError } = await supabaseAdmin.from('builder_versions').select('source').eq('id', id).eq('invitation_id', invitationId).maybeSingle();
+    if (readError) return integrityError(readError);
+    if (version?.source === 'publish') {
+      const { error } = await supabaseAdmin.rpc('enkarta_cancel_schedule', { p_id: invitationId, p_version_id: id });
+      return error ? integrityError(error) : NextResponse.json({ success: true });
+    }
   }
   const table = entity === 'version' ? 'builder_versions' : 'builder_review_notes';
   const { error } = await supabaseAdmin.from(table).delete().eq('id', id).eq('invitation_id', invitationId);

@@ -19,7 +19,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const inputCls = "w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit";
+const inputCls = "min-w-0 w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit";
 const textareaCls = `${inputCls} resize-none`;
 
 export default function ContentPanel({ data, onChange }: Props) {
@@ -50,7 +50,7 @@ export default function ContentPanel({ data, onChange }: Props) {
           <input type="date" className={inputCls} value={data.event_date ?? ''} onChange={e => onChange({ event_date: e.target.value })} />
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 min-[1200px]:grid-cols-2">
           <div className="space-y-3 p-3 bg-gray-50 rounded-xl">
             <p className="text-xs font-outfit font-medium text-gray-600">⛪ Ceremonia</p>
             <Field label="Hora">
@@ -94,7 +94,7 @@ export default function ContentPanel({ data, onChange }: Props) {
                 <input
                   value={item.label}
                   onChange={e => updateItinerary(i, { label: e.target.value })}
-                  className="flex-1 px-2 py-1.5 text-xs rounded-lg border border-gray-200 focus:border-enkarta-gold outline-none font-outfit"
+                  className="min-w-0 flex-1 px-2 py-1.5 text-xs rounded-lg border border-gray-200 focus:border-enkarta-gold outline-none font-outfit"
                   placeholder="Ceremonia"
                 />
                 {data.itinerary.length > 1 && (

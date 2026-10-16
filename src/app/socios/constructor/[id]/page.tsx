@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { Invitation, parseInvitation, InvitationParsed } from '@/lib/types';
 import { requirePartnerPage } from '@/lib/partner-session';
 import InvitationBuilder from '@/components/admin/builder/InvitationBuilder';
+import { editorInvitation } from '@/lib/client-invitation';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,11 +33,12 @@ export default async function PartnerBuilderPage({ params }: Props) {
     phone_whatsapp: raw.phone_whatsapp ?? null,
   };
 
-  return <InvitationBuilder initialData={withDefaults} backHref="/socios/panel" builderPath="/socios/constructor" />;
+  return <InvitationBuilder initialData={editorInvitation(withDefaults)} backHref="/socios/panel" builderPath="/socios/constructor" />;
 }
 
 export async function generateMetadata({ params }: Props) {
+  const context = await requirePartnerPage();
   const { id } = await params;
-  const { data } = await supabaseAdmin.from('invitations').select('names').eq('id', id).single();
+  const { data } = await supabaseAdmin.from('invitations').select('names').eq('id', id).eq('partner_id', context.partner.id).single();
   return { title: `Editor — ${data?.names ?? 'Invitación'}` };
 }

@@ -11,6 +11,11 @@ import { validityError } from '@/lib/validity-server';
 export const runtime = 'nodejs';
 
 const unauthenticated = () => NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+function safeInvitation<T extends Record<string, unknown>>(row: T) {
+  const safe = { ...row };
+  for (const key of ['host_password_hash', 'review_password_hash', 'door_password_hash', 'phone_raw']) delete safe[key];
+  return safe;
+}
 
 // GET — List all invitations
 export async function GET() {
@@ -28,7 +33,7 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json((data || []).map(safeInvitation));
   } catch {
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
@@ -43,6 +48,7 @@ export async function POST(request: NextRequest) {
 
     let config = storedServiceConfig(body.builder_config);
     if (actor.kind === 'partner') {
+      if (body.status && body.status !== 'draft') return NextResponse.json({ error: 'Crea el borrador y publícalo desde el constructor.' }, { status: 400 });
       // El plan del socio manda: no puede asignarse un paquete que no paga.
       const { subscription, totalInvitations } = actor.context;
       if (totalInvitations >= draftCap(subscription.plan)) {
@@ -103,7 +109,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(safeInvitation(data), { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
@@ -113,31 +119,47 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, ...updateData } = body;
+    const { id, expectedDraftRevision, draft_revision: legacyRevision, ...updateData } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'ID es requerido' }, { status: 400 });
     }
     const actor = await invitationActor(id);
     if (!actor) return unauthenticated();
+    const { data: stored, error: readError } = await supabaseAdmin.from('invitations').select('*').eq('id', id).maybeSingle();
+    if (readError) return NextResponse.json({ error: 'No se pudo consultar el borrador.' }, { status: 503 });
+    if (!stored) return NextResponse.json({ error: 'Invitación no encontrada' }, { status: 404 });
+    const revision = expectedDraftRevision ?? legacyRevision;
+    if ((stored.publication_managed || revision !== undefined) && (!Number.isSafeInteger(revision) || revision < 0)) {
+      return NextResponse.json({ error: 'Actualiza el editor antes de guardar.', code: 'DRAFT_REVISION_REQUIRED' }, { status: 400 });
+    }
+    // Saving content never controls publication. Strip even if the row is still
+    // a draft: a publication may commit between this read and the UPDATE.
+    if (updateData.status === 'draft') delete updateData.status;
 
     // Las credenciales se cambian únicamente desde su endpoint dedicado, y el
     // dueño de la invitación no se reasigna desde el constructor.
     for (const key of ['host_email', 'host_password_hash', 'review_email', 'review_password_hash', 'door_email', 'door_password_hash',
-      'expires_at', 'validity_mode', 'validity_extra_days', 'validity_revision', 'partner_id']) delete updateData[key];
+      'expires_at', 'validity_mode', 'validity_extra_days', 'validity_revision', 'partner_id',
+      'publication_managed', 'published_version_id', 'scheduled_version_id', 'created_at', 'views_count']) delete updateData[key];
 
     // Publicar es lo que cobra la suscripción del socio: se verifica aquí, no en la UI.
     if (updateData.status === 'ready') {
-      const { data: current } = await supabaseAdmin.from('invitations').select('status').eq('id', id).maybeSingle();
+      const current = stored;
+      if (current?.status !== 'ready' && (actor.kind === 'partner' || current?.publication_managed)) return NextResponse.json({ error: 'Publica una versión desde el constructor.' }, { status: 409 });
       const denial = await publishDenial(actor, current?.status === 'ready');
       if (denial) return NextResponse.json({ error: denial, needsSubscription: true }, { status: 402 });
+      // A stale autosave must not resume an invitation paused in another tab.
+      if (current.status === 'ready') delete updateData.status;
     }
     if ('builder_config' in updateData || ['color_primary', 'color_secondary', 'color_accent'].some(key => key in updateData)) {
-      const { data: current, error } = await supabaseAdmin.from('invitations').select('builder_config,color_primary,color_secondary,color_accent,template').eq('id', id).maybeSingle();
-      if (error) throw error;
-      if (!current) return NextResponse.json({ error: 'Invitación no encontrada' }, { status: 404 });
+      const current = stored;
       const previous = storedServiceConfig(current.builder_config);
-      const config = 'builder_config' in updateData ? retainServiceContract(storedServiceConfig(updateData.builder_config), previous) : previous;
+      let config = 'builder_config' in updateData ? retainServiceContract(storedServiceConfig(updateData.builder_config), previous) : previous;
+      if (actor.kind === 'partner') {
+        config = { ...config, package: previous.package, features: previous.features, serviceContract: previous.serviceContract,
+          additionalServices: previous.additionalServices, qualityControl: previous.qualityControl };
+      }
       const errors = contractErrors(config);
       if (isCurrentContract(previous) && !isCurrentContract(config)) errors.push('No se puede eliminar el contrato de servicios.');
       if (errors.length) return NextResponse.json({ error: errors.join(' ') }, { status: 400 });
@@ -159,19 +181,22 @@ export async function PUT(request: NextRequest) {
       updateData.itinerary = JSON.stringify(updateData.itinerary);
     }
 
-    const { data, error } = await supabaseAdmin
+    let update = supabaseAdmin
       .from('invitations')
       .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
+      .eq('id', id);
+    if (actor.kind === 'partner') update = update.eq('partner_id', actor.partnerId);
+    if (revision !== undefined) update = update.eq('draft_revision', revision);
+    if (updateData.status === 'ready') update = update.eq('status', stored.status);
+    const { data, error } = await update.select().maybeSingle();
 
     if (error) {
       if (error.message?.startsWith('VALIDITY_')) return validityError(error);
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json(data);
+    if (!data) return NextResponse.json({ error: 'El borrador cambió en otra sesión. Conserva tus cambios y actualiza antes de guardar.', code: 'STALE_DRAFT' }, { status: 409 });
+    return NextResponse.json(safeInvitation(data));
   } catch {
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
@@ -186,12 +211,15 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: 'ID es requerido' }, { status: 400 });
     }
-    if (!(await invitationActor(id))) return unauthenticated();
+    const actor = await invitationActor(id);
+    if (!actor) return unauthenticated();
 
-    const { error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('invitations')
       .delete()
       .eq('id', id);
+    if (actor.kind === 'partner') query = query.eq('partner_id', actor.partnerId);
+    const { error } = await query;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

@@ -32,7 +32,7 @@ export function hostMetrics(guests: HostGuest[]): HostMetrics {
     return m;
   }, { total: 0, passes: 0, sent: 0, confirmed: 0, pending: 0, declined: 0, confirmedPasses: 0, checkedIn: 0, unassigned: 0 });
 }
-export interface RosterFilter { search: string; status: string; delivery: string; table: string; access: string; sort: string }
+export interface RosterFilter { search: string; status: string; delivery: string; table: string; access: string; sort: string; group?: string }
 const normalized = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim();
 export function filterRoster(guests: HostGuest[], filter: RosterFilter): HostGuest[] {
   const q = normalized(filter.search);
@@ -40,7 +40,8 @@ export function filterRoster(guests: HostGuest[], filter: RosterFilter): HostGue
     if (q && ![g.name, g.confirmName, g.phone, g.group, g.tableNo, g.accessCode].some(v => v && normalized(v).includes(q))) return false;
     if (filter.status !== 'all' && g.status !== filter.status) return false;
     if (filter.delivery && filter.delivery !== 'all' && deliveryState(g) !== filter.delivery) return false;
-    if (filter.table === 'unassigned' ? !!g.tableNo?.trim() : filter.table !== 'all' && g.tableNo !== filter.table) return false;
+    if (filter.group === 'unassigned' ? !!g.group : filter.group && filter.group !== 'all' && g.group !== filter.group) return false;
+    if (filter.table === 'unassigned' ? !!g.tableNo?.trim() : filter.table !== 'all' && g.tableNo?.trim() !== filter.table) return false;
     if (filter.access === 'inside' && !g.inside) return false;
     if (filter.access === 'waiting' && (g.status !== 'confirmed' || g.inside >= (g.confirmedPasses ?? g.passes))) return false;
     return true;
@@ -56,7 +57,8 @@ export function csvCell(value: unknown): string {
   return '"' + safe.replaceAll('"', '""') + '"';
 }
 export function rosterCsv(guests: HostGuest[], services: HostSnapshot['services']): string {
-  const header = ['Nombre', 'Grupo', 'Respuesta', 'Seguimiento', 'Recordatorios preparados', 'Pases asignados', 'Pases confirmados', ...(services.tableAssignment ? ['Mesa'] : []), ...(services.qrAccess ? ['Dentro ahora'] : [])];
-  const rows = guests.map(g => [g.name, g.group || '', RESPONSE_LABELS[g.status], DELIVERY_LABELS[deliveryState(g)], g.reminderCount ?? 0, g.passes, g.status === 'confirmed' ? g.confirmedPasses ?? g.passes : 0, ...(services.tableAssignment ? [g.tableNo || 'Sin asignar'] : []), ...(services.qrAccess ? [g.inside] : [])]);
+  const preference = { both: 'Todo el evento', ceremony: 'Ceremonia', reception: 'Recepción' };
+  const header = ['Nombre', 'Grupo', 'Preferencia informativa', 'Respuesta', 'Seguimiento', 'Recordatorios preparados', 'Pases asignados', 'Pases confirmados', ...(services.tableAssignment ? ['Mesa'] : []), ...(services.qrAccess ? ['Dentro ahora'] : [])];
+  const rows = guests.map(g => [g.name, g.group || '', preference[g.eventAccess ?? 'both'], RESPONSE_LABELS[g.status], DELIVERY_LABELS[deliveryState(g)], g.reminderCount ?? 0, g.passes, g.status === 'confirmed' ? g.confirmedPasses ?? g.passes : 0, ...(services.tableAssignment ? [g.tableNo || 'Sin asignar'] : []), ...(services.qrAccess ? [g.inside] : [])]);
   return '\uFEFF' + [header, ...rows].map(row => row.map(csvCell).join(';')).join('\r\n');
 }

@@ -6,6 +6,7 @@ import { allowsService } from './packages';
 import { responseRows } from './response-sheet';
 import { hostMetrics, type HostGuest, type HostSnapshot } from './host-dashboard';
 import { readValidity } from './validity-server';
+import { withGuestMetadata } from './guest-metadata';
 
 /** Llamar únicamente después de verificar la sesión y la propiedad del evento. */
 export async function readHostSnapshot(invitationId: string): Promise<HostSnapshot> {
@@ -21,9 +22,9 @@ export async function readHostSnapshot(invitationId: string): Promise<HostSnapsh
   if (error) throw error;
   if (!data || !Array.isArray(data.guests) || !Array.isArray(data.rsvps) || !Array.isArray(data.occupancy)) throw new Error('SERVICE_UNAVAILABLE');
   const occupancy = new Map<string, number>(data.occupancy.map((o: { guest_id: string; inside: number }) => [o.guest_id, o.inside]));
-  const mapped = data.guests.map(mapGuestRow);
+  const mapped = data.guests.map((row: Record<string, unknown>) => mapGuestRow(row, true));
   const guests: HostGuest[] = services.guestManagement ? mapped.map((g: ReturnType<typeof mapGuestRow>) => {
-    const meta = config.guestMeta?.[g.publicId];
+    const metadata = withGuestMetadata(g, config.guestMeta?.[g.publicId]);
     // Lista explícita de campos; no propagar filas SQL o metadatos arbitrarios.
     return { id: g.id, publicId: g.publicId, name: g.name, passes: g.passes, status: g.status,
       allowKids: g.allowKids, sent: g.sent, confirmedPasses: g.confirmedPasses, confirmName: g.confirmName,
@@ -32,8 +33,8 @@ export async function readHostSnapshot(invitationId: string): Promise<HostSnapsh
       lastReminderAt: g.lastReminderAt, reminderCount: g.reminderCount,
       tableNo: services.tableAssignment ? g.tableNo : undefined, accessCode: services.qrAccess ? g.accessCode : undefined,
       inside: services.qrAccess ? occupancy.get(g.id) ?? 0 : 0,
-      phone: typeof meta?.phone === 'string' ? meta.phone : undefined,
-      group: typeof meta?.group === 'string' ? meta.group : undefined,
+      phone: metadata.phone, group: metadata.group, eventAccess: metadata.eventAccess,
+      metadataStored: metadata.metadataStored,
     };
   }) : [];
   const { validity } = await readValidity(invitationId);

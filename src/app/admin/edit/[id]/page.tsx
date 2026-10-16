@@ -51,6 +51,7 @@ export default function EditInvitationPage() {
   return (
     <InvitationForm
       initialData={{
+        draft_revision: invitation.draft_revision,
         id: invitation.id,
         slug: invitation.slug,
         template: invitation.template,

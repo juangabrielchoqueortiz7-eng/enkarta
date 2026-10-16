@@ -798,8 +798,8 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 function calFmt(iso: string, addHours = 0): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return '';
-  if (addHours) d.setHours(d.getHours() + addHours);
-  return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+  if (addHours) d.setTime(d.getTime() + addHours * 3600000);
+  return `${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}${pad2(d.getUTCDate())}T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}00Z`;
 }
 const CalendarBlock: React.FC<{ block: Block }> = ({ block }) => {
   const t = useBlockTheme();

@@ -40,9 +40,487 @@ const { PACKAGE_CATALOG, PACKAGE_PRESETS, commercialRows, newServiceContract, ad
 const { changesUncontractedColors } = require('../src/lib/package-colors.ts');
 const { responseCsv, responseRows } = require('../src/lib/response-sheet.ts');
 const { filterRoster, hostMetrics, rosterCsv, formatSyncTime } = require('../src/lib/host-dashboard.ts');
+const { rosterPage, rosterTables } = require('../src/lib/roster-view.ts');
 const { createLiveSync, SyncDenied, retryDelay } = require('../src/lib/live-sync.ts');
 const { addDays, validDay, invitationValidity, parseValidityCommand, validityLabel } = require('../src/lib/invitation-validity.ts');
 const { deliveryState, guestMessage, reminderMessage, parseDeliveryInput } = require('../src/lib/guest-delivery.ts');
+const { parseGuestCsv, mapGuestCsvRows, normalizeGuestPhone, parseQuickGuestList } = require('../src/lib/guest-import.ts');
+const { mergeSavedGuest } = require('../src/lib/guest-edits.ts');
+const { scannerStatus } = require('../src/lib/scanner-status.ts');
+const { passFilename, accessPassPng } = require('../src/lib/access-pass.ts');
+const { guestMetadata, parseGuestMetadata, withGuestMetadata, publicGuest } = require('../src/lib/guest-metadata.ts');
+const { whatsappQueue, trackGuestDelivery, DeliveryTrackingError } = require('../src/lib/whatsapp-queue.ts');
+const { validateQrImage, qrLookup } = require('../src/lib/scanner-input.ts');
+const { receptionSearch, findReceptionGuests } = require('../src/lib/reception-search.ts');
+const { deliveryFailureIsDefinitive, deliveryRecoveryKey, deliveryRecoveryRecord, restoreDeliveryRecovery, saveDeliveryRecovery, clearDeliveryRecovery } = require('../src/lib/delivery-recovery.ts');
+const { parseScannerGroup, parseScanReceipt, recordScan, ScanRequestError, scanFailureIsDefinitive } = require('../src/lib/scanner-contract.ts');
+const { REVIEW_MAX_AGE, whatsappReviewKey, whatsappReviewRecord, restoreWhatsAppReview, advanceWhatsAppReview, prepareWhatsAppReview, saveWhatsAppReview, clearWhatsAppReview, canClearWhatsAppReview } = require('../src/lib/whatsapp-review.ts');
+const { scanRecoveryKey, scanRecoveryRecord, restoreScanRecovery, saveScanRecovery, clearScanRecovery, discardUnreadableScan, scanRecoveryPerson, ScanRecoveryWriteError } = require('../src/lib/scan-recovery.ts');
+const { scannerSessionFingerprint } = require('../src/lib/scanner-session.ts');
+const {guestEditValues,guestEditDirty,guestEditStale,validateGuestEdit,verifyGuestEditReceipt}=require('../src/lib/guest-edit-form.ts');
+const editFixture={id:'80000000-0000-4000-8000-000000000001',publicId:'QA-ONLY',name:'Familia ficticia',phone:'+59170000001',group:'Familia',eventAccess:'both',tableNo:'7',passes:4,allowKids:false,status:'pending',sent:false,responseRevision:2};
+test('guest editor keeps only editable fields and detects changes without including live state',()=>{
+ const values=guestEditValues({...editFixture,accessToken:'private-token',inside:1});
+ assert.deepEqual(Object.keys(values).sort(),['allowKids','eventAccess','group','name','passes','phone','tableNo']);
+ assert.equal(guestEditDirty(editFixture,values,true),false);
+ for(const [key,value] of Object.entries({name:'Otro',phone:'',group:'Amigos',eventAccess:'ceremony',passes:'5',tableNo:'8',allowKids:true}))assert.equal(guestEditDirty(editFixture,{...values,[key]:value},true),true);
+ assert.equal(guestEditDirty(editFixture,{...values,tableNo:'8'},false),false);
+ assert.equal(guestEditDirty({...editFixture,status:'confirmed',inside:2,reminderCount:3},values,true),false);
+});
+test('guest editor whitelists its command and normalizes contacts without changing IDs or response state',()=>{
+ const values={...guestEditValues(editFixture),name:'  Familia Pérez  ',phone:'76543210',group:' Amigos ',tableNo:' 9 '};
+ const {errors,command}=validateGuestEdit(editFixture,values,true);assert.deepEqual(errors,{});
+ assert.deepEqual(command,{id:editFixture.id,expectedRevision:2,name:'Familia Pérez',phone:'+59176543210',group:'Amigos',eventAccess:'both',passes:4,allowKids:false,tableNo:'9'});
+ assert.equal(validateGuestEdit(editFixture,values,false).command.tableNo,undefined);
+ const cleared=validateGuestEdit(editFixture,{...values,phone:'',group:'',tableNo:''},true).command;assert.equal(cleared.phone,'');assert.equal(cleared.group,'');assert.equal(cleared.tableNo,'');
+});
+test('guest editor rejects invalid fields and never silently truncates or converts fractional passes',()=>{
+ const values=guestEditValues(editFixture);
+ for(const [key,value]of [['name',' '],['name','a'.repeat(81)],['phone','llamar 76543210'],['phone','12'],['group','x'.repeat(41)],['tableNo','x'.repeat(21)],['eventAccess','all'],['passes',''],['passes','2.5'],['passes','0'],['passes','21']]){
+  const result=validateGuestEdit(editFixture,{...values,[key]:value},true);assert.ok(result.errors[key]);assert.equal(result.command,undefined);
+ }
+ assert.ok(validateGuestEdit(editFixture,{...values,tableNo:'x'.repeat(30)},false).command);
+ assert.equal(validateGuestEdit({...editFixture,id:'bad'},values,true).command,undefined);
+ assert.equal(validateGuestEdit({...editFixture,responseRevision:undefined},values,true).command,undefined);
+});
+test('guest editor cannot offer fewer assigned passes than an existing confirmation',()=>{
+ const values=guestEditValues(editFixture),confirmed={...editFixture,status:'confirmed',confirmedPasses:3};
+ assert.ok(validateGuestEdit(confirmed,{...values,passes:'2'},true).errors.passes);
+ assert.equal(validateGuestEdit(confirmed,{...values,passes:'3'},true).command.passes,3);
+ assert.ok(validateGuestEdit({...confirmed,confirmedPasses:undefined},{...values,passes:'3'},true).errors.passes);
+});
+test('guest editor detects a missing guest, different identity or changed revision before follow-up',()=>{
+ assert.equal(guestEditStale(editFixture,{...editFixture}),false);
+ for(const latest of [undefined,{...editFixture,id:'80000000-0000-4000-8000-000000000002'},{...editFixture,responseRevision:3}])assert.equal(guestEditStale(editFixture,latest),true);
+ assert.equal(guestEditStale(editFixture,{...editFixture,inside:1}),false);
+});
+test('guest editor accepts only a matching saved or no-op receipt',()=>{
+ const {command}=validateGuestEdit(editFixture,guestEditValues(editFixture),true);
+ for(const revision of [2,3])assert.doesNotThrow(()=>verifyGuestEditReceipt({ok:true,guest:{...editFixture,responseRevision:revision}},command));
+});
+test('guest editor retains its draft for foreign, partial or inconsistent successful responses',()=>{
+ const {command}=validateGuestEdit(editFixture,guestEditValues(editFixture),true);
+ for(const response of [null,{}, {ok:false,guest:editFixture},{ok:true,guest:null},...[
+  {id:'other'},{responseRevision:1},{responseRevision:4},{responseRevision:'3'},{name:'Ajeno'},{passes:8},{allowKids:true},{phone:'+59170000002'},{group:'VIP'},{eventAccess:'ceremony'},{tableNo:'9'},{status:['pending']},{status:'paid'}
+ ].map(patch=>({ok:true,guest:{...editFixture,...patch}}))])assert.throws(()=>verifyGuestEditReceipt(response,command),/Conservamos tu edición/);
+});
+
+const recoveryScope={role:'door',sessionKey:'d'.repeat(64),invitationId:'70000000-0000-4000-8000-000000000001'};
+const recoveryFixture={invitationId:recoveryScope.invitationId,guestId:'70000000-0000-4000-8000-000000000002',seatNo:1,operation:{attendeeId:'70000000-0000-4000-8000-000000000003',requestId:'70000000-0000-4000-8000-000000000004',action:'in',expectedRevision:0}};
+test('QR recovery persists minimal identity without names, labels, tokens, codes, contacts or cookies',()=>{
+ const record=scanRecoveryRecord(recoveryScope,{...recoveryFixture,name:'private-name',label:'private-label',accessToken:'private-token',accessCode:'private-code',phone:'private-phone',cookie:'private-cookie',operation:{...recoveryFixture.operation,message:'private-message'}});
+ assert.deepEqual(record,{version:1,role:'door',sessionKey:recoveryScope.sessionKey,recovery:recoveryFixture});
+ const raw=JSON.stringify(record);assert.ok(raw.length<=1024);assert.doesNotMatch(raw,/private-/);
+ assert.deepEqual(restoreScanRecovery(raw,recoveryScope),recoveryFixture);
+});
+test('QR recovery is isolated by event, role and signed-session fingerprint',()=>{
+ const raw=JSON.stringify(scanRecoveryRecord(recoveryScope,recoveryFixture));
+ for(const scope of [{...recoveryScope,role:'host'},{...recoveryScope,invitationId:recoveryFixture.guestId},{...recoveryScope,sessionKey:'e'.repeat(64)}]) {
+  assert.equal(restoreScanRecovery(raw,scope),null);assert.notEqual(scanRecoveryKey(scope),scanRecoveryKey(recoveryScope));
+ }
+ const admin={role:'admin',sessionKey:'a'.repeat(64)};
+ assert.equal(restoreScanRecovery(JSON.stringify(scanRecoveryRecord(admin,recoveryFixture)),admin).invitationId,recoveryScope.invitationId);
+ for(const scope of [{role:'door',sessionKey:'d'.repeat(64)},{...recoveryScope,sessionKey:['d'.repeat(64)]},{...recoveryScope,role:'review'}])assert.throws(()=>scanRecoveryKey(scope));
+});
+test('QR recovery refuses corrupted or unsupported records and never coerces operations',()=>{
+ const record=scanRecoveryRecord(recoveryScope,recoveryFixture);
+ for(const raw of [null,'bad','x'.repeat(1025),JSON.stringify({...record,version:2}),JSON.stringify({...record,role:'admin'})])assert.equal(restoreScanRecovery(raw,recoveryScope),null);
+ for(const patch of [{seatNo:0},{seatNo:21},{guestId:'unknown'},{invitationId:recoveryFixture.guestId},{operation:{...recoveryFixture.operation,action:['in']}},{operation:{...recoveryFixture.operation,expectedRevision:-1}},{operation:{...recoveryFixture.operation,requestId:'unknown'}}])assert.equal(restoreScanRecovery(JSON.stringify({...record,recovery:{...recoveryFixture,...patch}}),recoveryScope),null);
+});
+test('saving QR recovery cannot replace an unresolved request or alter the same request',()=>{
+ const values=new Map(), storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
+ assert.equal(saveScanRecovery(storage,recoveryScope,recoveryFixture),true);assert.equal(saveScanRecovery(storage,recoveryScope,recoveryFixture),true);
+ for(const patch of [{requestId:recoveryFixture.guestId},{action:'out'},{expectedRevision:1},{attendeeId:recoveryFixture.guestId}])assert.equal(saveScanRecovery(storage,recoveryScope,{...recoveryFixture,operation:{...recoveryFixture.operation,...patch}}),false);
+ assert.deepEqual(restoreScanRecovery(storage.getItem(scanRecoveryKey(recoveryScope)),recoveryScope),recoveryFixture);
+ values.set(scanRecoveryKey(recoveryScope),'bad');assert.equal(saveScanRecovery(storage,recoveryScope,recoveryFixture),false);
+});
+test('late QR acknowledgements and unreadable cleanup never remove a different pending movement',()=>{
+ const values=new Map(),storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
+ saveScanRecovery(storage,recoveryScope,recoveryFixture);
+ const oldRaw=storage.getItem(scanRecoveryKey(recoveryScope));
+ const newer={...recoveryFixture,operation:{...recoveryFixture.operation,requestId:recoveryFixture.guestId}};
+ values.set(scanRecoveryKey(recoveryScope),JSON.stringify(scanRecoveryRecord(recoveryScope,newer)));
+ assert.equal(clearScanRecovery(storage,recoveryScope,recoveryFixture),false);assert.equal(discardUnreadableScan(storage,recoveryScope,oldRaw),false);
+ assert.equal(clearScanRecovery(storage,recoveryScope,newer),true);assert.equal(clearScanRecovery(storage,recoveryScope,newer),true);
+ values.set(scanRecoveryKey(recoveryScope),'bad');assert.equal(discardUnreadableScan(storage,recoveryScope,'bad'),true);
+});
+test('QR journal distinguishes an unreadable store from a failed write with safe memory fallback',()=>{
+ const readDenied={getItem:()=>{throw new Error('read denied');},setItem:()=>{},removeItem:()=>{}};
+ assert.throws(()=>saveScanRecovery(readDenied,recoveryScope,recoveryFixture),error=>!(error instanceof ScanRecoveryWriteError));
+ const full={getItem:()=>null,setItem:()=>{throw new Error('quota');},removeItem:()=>{}};
+ assert.throws(()=>saveScanRecovery(full,recoveryScope,recoveryFixture),ScanRecoveryWriteError);
+});
+test('restored QR request retains identity and accepts a newer exit without duplicating the entry',async()=>{
+ const restored=restoreScanRecovery(JSON.stringify(scanRecoveryRecord(recoveryScope,recoveryFixture)),recoveryScope);
+ const wire={ok:true,replayed:true,attendee:{...scanRecoveryPerson(restored),revision:2,state:'out'}};
+ let body,headers;
+ const receipt=await recordScan(restored.operation,scanRecoveryPerson(restored),'door',async(_url,init)=>{body=JSON.parse(init.body);headers=init.headers;return new Response(JSON.stringify(wire));},{sessionKey:recoveryScope.sessionKey,invitationId:restored.invitationId});
+ assert.equal(body.requestId,recoveryFixture.operation.requestId);assert.equal(body.expectedRevision,0);assert.equal(body.action,'in');assert.equal(body.invitationId,recoveryFixture.invitationId);
+ assert.equal(headers['X-Enkarta-Scanner-Session'],recoveryScope.sessionKey);assert.equal(receipt.changedLater,true);assert.equal(receipt.attendee.state,'out');
+});
+test('scanner session binding is opaque and changes with cookie rotation and role',()=>{
+ const cookie='synthetic-signed-cookie-not-a-real-credential', value=scannerSessionFingerprint('door',cookie);
+ assert.match(value,/^[a-f0-9]{64}$/);assert.equal(value.includes(cookie),false);
+ assert.equal(scannerSessionFingerprint('door',cookie),value);
+ assert.notEqual(scannerSessionFingerprint('host',cookie),value);assert.notEqual(scannerSessionFingerprint('door',cookie+'-new'),value);
+});
+
+const reviewEvent='50000000-0000-4000-8000-000000000001';
+const reviewFixture={id:'50000000-0000-4000-8000-000000000002',purpose:'reminder',ids:['50000000-0000-4000-8000-000000000003','50000000-0000-4000-8000-000000000004'],position:0,prepared:[],revision:0,updatedAt:1000};
+test('WhatsApp review whitelists only progress, without private guest fields or messages',()=>{
+ const record=whatsappReviewRecord(reviewEvent,{...reviewFixture,guest:{name:'private-name'},phone:'private-phone',message:'private-message',accessToken:'private-token',url:'private-link'});
+ assert.deepEqual(record,{version:1,invitationId:reviewEvent,review:reviewFixture});
+ for(const secret of ['private-name','private-phone','private-message','private-token','private-link'])assert.ok(!JSON.stringify(record).includes(secret));
+ assert.deepEqual(restoreWhatsAppReview(JSON.stringify(record),reviewEvent,1000),reviewFixture);
+ assert.notEqual(whatsappReviewKey(reviewEvent),whatsappReviewKey(reviewFixture.id));
+});
+test('review restores the same ordered list, position and opening intent after interruption',()=>{
+ const prepared=prepareWhatsAppReview(reviewFixture,reviewFixture.ids[0],1100);
+ assert.deepEqual(prepared.prepared,[reviewFixture.ids[0]]);assert.equal(prepared.position,0);
+ assert.equal(prepareWhatsAppReview(prepared,reviewFixture.ids[0],1200),prepared);
+ const next=advanceWhatsAppReview(prepared,1200), raw=JSON.stringify(whatsappReviewRecord(reviewEvent,next));
+ assert.deepEqual(restoreWhatsAppReview(raw,reviewEvent,1300),{...next,position:1,revision:2});
+ assert.deepEqual(next.ids,reviewFixture.ids);assert.equal(prepareWhatsAppReview(next,'not-in-this-list'),next);
+ const complete=advanceWhatsAppReview(next,1400);assert.equal(advanceWhatsAppReview(complete,1500),complete);
+});
+test('review refuses corruption, another event, future timestamps and expiration',()=>{
+ const record=whatsappReviewRecord(reviewEvent,reviewFixture), raw=JSON.stringify(record);
+ for(const value of [null,'broken','x'.repeat(20001),JSON.stringify({...record,version:2}),JSON.stringify({...record,invitationId:reviewFixture.id})])assert.equal(restoreWhatsAppReview(value,reviewEvent,1000),null);
+ assert.equal(restoreWhatsAppReview(raw,reviewEvent,999),null);
+ assert.equal(restoreWhatsAppReview(raw,reviewEvent,1000+REVIEW_MAX_AGE+1),null);
+ assert.ok(restoreWhatsAppReview(raw,reviewEvent,1000+REVIEW_MAX_AGE));
+ for(const patch of [{ids:[]},{ids:[...reviewFixture.ids,reviewFixture.ids[0]]},{ids:['unknown']},{prepared:['unknown']},{prepared:[reviewFixture.ids[0],reviewFixture.ids[0]]},{position:3},{position:-1},{revision:1.5},{purpose:['reminder']}])assert.throws(()=>whatsappReviewRecord(reviewEvent,{...reviewFixture,...patch}));
+});
+test('review bounds are sufficient for 200 contacts and reject a larger list',()=>{
+ const ids=Array.from({length:200},(_,i)=>`50000000-0000-4000-8000-${String(i+10).padStart(12,'0')}`);
+ const full={...reviewFixture,ids,prepared:ids,position:200};
+ const raw=JSON.stringify(whatsappReviewRecord(reviewEvent,full));assert.ok(raw.length<20000);
+ assert.equal(restoreWhatsAppReview(raw,reviewEvent,1000).ids.length,200);
+ assert.throws(()=>whatsappReviewRecord(reviewEvent,{...full,ids:[...ids,reviewEvent]}));
+});
+test('stale review panels cannot overwrite newer progress or change a revision in place',()=>{
+ const values=new Map(), storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
+ assert.equal(saveWhatsAppReview(storage,reviewEvent,reviewFixture,1000),true);
+ const next=advanceWhatsAppReview(reviewFixture,1100);assert.equal(saveWhatsAppReview(storage,reviewEvent,next,1100),true);
+ assert.equal(saveWhatsAppReview(storage,reviewEvent,reviewFixture,1100),false);
+ assert.equal(saveWhatsAppReview(storage,reviewEvent,{...next,prepared:[next.ids[0]]},1100),false);
+ assert.equal(saveWhatsAppReview(storage,reviewEvent,{...next,id:reviewEvent},1100),false);
+ assert.deepEqual(restoreWhatsAppReview(storage.getItem(whatsappReviewKey(reviewEvent)),reviewEvent,1100),next);
+});
+test('clearing a review never clears another review, another event or newer progress',()=>{
+ const values=new Map(), storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
+ saveWhatsAppReview(storage,reviewEvent,reviewFixture,1000);saveWhatsAppReview(storage,reviewFixture.id,reviewFixture,1000);
+ const next=advanceWhatsAppReview(reviewFixture,1100);saveWhatsAppReview(storage,reviewEvent,next,1100);
+ assert.equal(canClearWhatsAppReview(next,reviewFixture,true),false);
+ assert.equal(canClearWhatsAppReview(reviewFixture,next,true),true);
+ assert.equal(canClearWhatsAppReview({...reviewFixture,id:reviewEvent},next,true),false);
+ assert.equal(clearWhatsAppReview(storage,reviewEvent,reviewFixture,1100),false);
+ assert.equal(clearWhatsAppReview(storage,reviewEvent,{...next,id:reviewEvent},1100),false);
+ assert.equal(clearWhatsAppReview(storage,reviewEvent,next,1100),true);
+ assert.ok(storage.getItem(whatsappReviewKey(reviewFixture.id)));
+ assert.equal(saveWhatsAppReview(storage,reviewEvent,next,1100),false);
+});
+test('review storage failures remain explicit instead of reporting a saved draft',()=>{
+ for(const failing of ['read','write','remove']) {
+  const raw=JSON.stringify(whatsappReviewRecord(reviewEvent,reviewFixture));
+  const storage={getItem:()=>{if(failing==='read')throw new Error('denied');return failing==='write'?null:raw;},setItem:()=>{throw new Error('quota');},removeItem:()=>{throw new Error('denied');}};
+  if(failing==='remove')assert.throws(()=>clearWhatsAppReview(storage,reviewEvent,reviewFixture,1000));
+  else assert.throws(()=>saveWhatsAppReview(storage,reviewEvent,reviewFixture,1000));
+ }
+});
+
+const scanGuest='40000000-0000-4000-8000-000000000001';
+const scanPerson={id:'40000000-0000-4000-8000-000000000101',guestId:scanGuest,seatNo:1,state:'out',revision:4};
+const scanOperation={attendeeId:scanPerson.id,action:'in',expectedRevision:4,requestId:'40000000-0000-4000-8000-000000000201'};
+const scanReceipt={ok:true,replayed:false,attendee:{...scanPerson,state:'in',revision:5}};
+
+test('scanner refuses mixed, duplicated or malformed passes before enabling entry',()=>{
+ const group={invitationId:recoveryScope.invitationId,guest:{id:scanGuest,name:'Familia ficticia',tableNo:'7',accessCode:'ENK-QA'},attendees:[scanPerson]};
+ assert.deepEqual(parseScannerGroup(group).attendees[0].id,scanPerson.id);
+ for(const attendees of [[scanPerson,scanPerson],[scanPerson,{...scanPerson,id:scanOperation.requestId}], [{...scanPerson,guestId:scanOperation.requestId}], [{...scanPerson,state:'paid'}], [{...scanPerson,state:['in']}], [{...scanPerson,revision:-1}], [{...scanPerson,seatNo:21}], [null], Array(21).fill(scanPerson)]) assert.throws(()=>parseScannerGroup({...group,attendees}));
+ assert.throws(()=>parseScannerGroup(group,scanOperation.requestId));
+ assert.throws(()=>parseScannerGroup(group,undefined,scanGuest));
+ assert.throws(()=>parseScannerGroup({guest:group.guest}));
+ assert.equal(parseScannerGroup({...group,attendees:[]}).attendees.length,0);
+});
+
+test('scanner only accepts a receipt for the exact person, family, seat and committed revision',()=>{
+ assert.equal(parseScanReceipt(scanReceipt,scanOperation,scanPerson).attendee.state,'in');
+ for(const value of [null,{}, {...scanReceipt,ok:false}, {...scanReceipt,replayed:undefined}, {...scanReceipt,attendee:{...scanReceipt.attendee,id:scanGuest}}, {...scanReceipt,attendee:{...scanReceipt.attendee,guestId:scanOperation.requestId}}, {...scanReceipt,attendee:{...scanReceipt.attendee,seatNo:2}}, {...scanReceipt,attendee:{...scanReceipt.attendee,revision:4}}, {...scanReceipt,attendee:{...scanReceipt.attendee,revision:6}}, {...scanReceipt,attendee:{...scanReceipt.attendee,state:'out'}}]) assert.throws(()=>parseScanReceipt(value,scanOperation,scanPerson),error=>error instanceof ScanRequestError && error.retryable);
+});
+
+test('a replay may report a later exit and must preserve the current server state',()=>{
+ const result=parseScanReceipt({...scanReceipt,replayed:true,attendee:{...scanPerson,state:'out',revision:6}},scanOperation,scanPerson);
+ assert.equal(result.changedLater,true);assert.equal(result.attendee.state,'out');
+ assert.equal(parseScanReceipt({...scanReceipt,replayed:true},scanOperation,scanPerson).changedLater,false);
+ assert.throws(()=>parseScanReceipt({...scanReceipt,replayed:true,attendee:{...scanPerson,revision:5}},scanOperation,scanPerson));
+});
+
+test('lost check-in reply retries the identical operation and counts only once',async()=>{
+ const bodies=[];let writes=0;
+ const transport=async(url,options)=>{assert.equal(url,'/api/checkin');assert.equal(options.method,'POST');bodies.push(JSON.parse(options.body));if(bodies.length===1){writes++;throw new TypeError('lost');}return new Response(JSON.stringify({...scanReceipt,replayed:true}));};
+ await assert.rejects(recordScan({...scanOperation,phone:'private',guestToken:'secret'},scanPerson,'door',transport),error=>error.retryable);
+ const result=await recordScan(scanOperation,scanPerson,'door',transport);
+ assert.equal(result.replayed,true);assert.equal(writes,1);assert.deepEqual(bodies[0],{...scanOperation,scope:'door'});assert.deepEqual(bodies[0],bodies[1]);
+});
+
+test('scanner retains uncertainty for incomplete replies, throttling and subsequent refusals',async()=>{
+ for(const response of [new Response('bad'),new Response(JSON.stringify({error:'later'}),{status:503}),new Response(JSON.stringify({error:'slow'}),{status:429}),new Response(JSON.stringify({...scanReceipt,attendee:{...scanReceipt.attendee,id:scanGuest}}))]) {
+  await assert.rejects(recordScan(scanOperation,scanPerson,'host',async()=>response),error=>error.retryable && !scanFailureIsDefinitive(error,false));
+ }
+ for(const status of [400,403,404,409]) await assert.rejects(recordScan(scanOperation,scanPerson,'door',async()=>new Response(JSON.stringify({error:'refused'}),{status})),error=>scanFailureIsDefinitive(error,false) && !scanFailureIsDefinitive(error,true));
+});
+
+test('a later permission or revision refusal never discards an earlier uncertain delivery', () => {
+ for(const message of ['No autorizado','Invitado modificado','Invitado eliminado']) {
+  const refusal=new DeliveryTrackingError(message,false);
+  assert.equal(deliveryFailureIsDefinitive(refusal,false),true);
+  assert.equal(deliveryFailureIsDefinitive(refusal,true),false);
+ }
+ for(const error of [new TypeError('offline'),new DeliveryTrackingError('Incomplete receipt',true),new Error('Unknown')]) {
+  assert.equal(deliveryFailureIsDefinitive(error,false),false);assert.equal(deliveryFailureIsDefinitive(error,true),false);
+ }
+});
+
+test('delivery recovery persists only scoped operation identity, never guest/contact/message or QR data', () => {
+ const id='10000000-0000-4000-8000-000000000001';
+ const operation={guestId:'20000000-0000-4000-8000-000000000001',requestId:'30000000-0000-4000-8000-000000000001',expectedRevision:7,action:'reminder'};
+ const record=deliveryRecoveryRecord(id,{...operation,phone:'private-phone',message:'private-message',accessToken:'private-token',guest:{name:'private-name'}});
+ assert.deepEqual(record,{version:1,invitationId:id,operation});
+ const serialized=JSON.stringify(record);
+ for(const secret of ['private-phone','private-message','private-token','private-name']) assert.ok(!serialized.includes(secret));
+ assert.deepEqual(restoreDeliveryRecovery(serialized,id),operation);
+ assert.notEqual(deliveryRecoveryKey(id),deliveryRecoveryKey('other'));
+ for(const bad of [null,'bad','x'.repeat(1025),JSON.stringify({...record,version:2}),JSON.stringify({...record,invitationId:'other'}),JSON.stringify({...record,operation:{...operation,action:'paid'}}),JSON.stringify({...record,operation:{...operation,expectedRevision:-1}}),JSON.stringify({...record,operation:{...operation,guestId:'invalid'}})])assert.equal(restoreDeliveryRecovery(bad,id),null);
+});
+
+test('delivery recovery refuses to replace an unresolved request or delete a newer one', () => {
+ const id='10000000-0000-4000-8000-000000000001',key=deliveryRecoveryKey(id);
+ const operation={guestId:'20000000-0000-4000-8000-000000000001',requestId:'30000000-0000-4000-8000-000000000001',expectedRevision:7,action:'reminder'};
+ const data=new Map(),storage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value),removeItem:key=>data.delete(key)};
+ assert.equal(saveDeliveryRecovery(storage,id,operation),true);
+ assert.equal(saveDeliveryRecovery(storage,id,{...operation,requestId:'30000000-0000-4000-8000-000000000002'}),false);
+ assert.equal(saveDeliveryRecovery(storage,id,{...operation,action:'manual'}),false);
+ assert.equal(saveDeliveryRecovery(storage,id,operation),true);
+ clearDeliveryRecovery(storage,id,'30000000-0000-4000-8000-000000000002');assert.ok(data.has(key));
+ clearDeliveryRecovery(storage,id,operation.requestId);assert.ok(!data.has(key));
+ data.set(key,'broken');assert.equal(saveDeliveryRecovery(storage,id,operation),false);assert.equal(data.get(key),'broken');
+});
+
+test('a delivery draft restored after reload retries the exact same body and accepts its replay receipt', async () => {
+ const id='10000000-0000-4000-8000-000000000001';
+ const operation={guestId:'20000000-0000-4000-8000-000000000001',requestId:'30000000-0000-4000-8000-000000000001',expectedRevision:7,action:'reminder'};
+ let firstBody;
+ await assert.rejects(trackGuestDelivery(operation,async(_url,options)=>{firstBody=options.body;throw new TypeError('reply lost after write');}),error=>error.retryable);
+ const restored=restoreDeliveryRecovery(JSON.stringify(deliveryRecoveryRecord(id,operation)),id);
+ const result=await trackGuestDelivery(restored,async(_url,options)=>{assert.equal(options.body,firstBody);return new Response(JSON.stringify({guest:{id:operation.guestId,responseRevision:8,reminderCount:1},replayed:true}));});
+ assert.equal(result.reminderCount,1);
+});
+
+test('roster pagination bounds large and shrinking live lists without dropping the last group', () => {
+ const guests=Array.from({length:1001},(_,index)=>({id:String(index)}));
+ const original=guests.slice();
+ const first=rosterPage(guests,1),last=rosterPage(guests,1000);
+ assert.equal(first.items.length,25);assert.equal(first.from,1);assert.equal(first.to,25);assert.equal(first.pages,41);
+ assert.deepEqual(last.items,[guests[1000]]);assert.equal(last.page,41);assert.equal(last.from,1001);assert.equal(last.to,1001);
+ const shrunk=rosterPage(guests.slice(0,26),41);assert.equal(shrunk.page,2);assert.equal(shrunk.items[0].id,'25');
+ for(const invalid of [0,-1,NaN,Infinity,1.5])assert.equal(rosterPage(guests,invalid).page,1);
+ assert.deepEqual(rosterPage([],9),{items:[],page:1,pages:1,from:0,to:0,total:0});
+ assert.deepEqual(guests,original);
+});
+
+test('pagination does not restrict the filtered CSV or WhatsApp queue to the visible page', () => {
+ const guests=Array.from({length:63},(_,index)=>({id:`qa-${index}`,publicId:`QA${index}`,name:`Familia ${String(index).padStart(3,'0')}`,passes:2,status:'pending',sent:false,allowKids:false,inside:0,group:index<60?'Familia':'Amigos',phone:'+59170000001'}));
+ const filtered=filterRoster(guests,{search:'',status:'all',delivery:'all',table:'all',access:'all',sort:'name',group:'Familia'});
+ const listing=rosterPage(filtered,2);
+ assert.equal(listing.items.length,25);assert.equal(listing.from,26);assert.equal(listing.to,50);assert.equal(listing.total,60);
+ const exported=rosterCsv(filtered,{guestManagement:true,qrAccess:true,tableAssignment:true});
+ assert.equal(exported.split('\r\n').length,61);assert.ok(exported.includes('Familia 059'));assert.ok(!exported.includes('Familia 060'));
+ const queue=whatsappQueue(filtered,'invitation');assert.equal(queue.ids.length,60);assert.ok(queue.ids.includes('qa-59'));assert.ok(!queue.ids.includes('qa-60'));
+});
+
+test('table summary and filtering agree on legacy whitespace and count confirmed people only', () => {
+ const base={publicId:'QA',allowKids:false,sent:false,inside:0};
+ const guests=[
+  {...base,id:'a',name:'A',tableNo:' 2 ',status:'confirmed',passes:4,confirmedPasses:2},
+  {...base,id:'b',name:'B',tableNo:'2',status:'confirmed',passes:3},
+  {...base,id:'c',name:'C',tableNo:'10',status:'pending',passes:6},
+  {...base,id:'d',name:'D',tableNo:'2',status:'declined',passes:5},
+  {...base,id:'e',name:'E',tableNo:' ',status:'confirmed',passes:1},
+ ];
+ assert.deepEqual(rosterTables(guests),[{name:'2',confirmed:5},{name:'10',confirmed:0}]);
+ const filtered=filterRoster(guests,{search:'',status:'all',delivery:'all',table:'2',access:'all',sort:'name'});
+ assert.deepEqual(filtered.map(g=>g.id),['a','b','d']);
+});
+
+test('reception search keeps SQL wildcards literal and bounds every field',()=>{
+ assert.deepEqual(receptionSearch('  Pérez  ','name'),{field:'name',pattern:'%Pérez%'});
+ assert.equal(receptionSearch('50%_A\\B','name').pattern,'%50\\%\\_A\\\\B%');
+ assert.equal(receptionSearch('7','table').pattern,'7');
+ for(const [q,field] of [['x','name'],['','table'],['a\nb','name'],['x'.repeat(81),'name'],['x'.repeat(21),'table'],['Test','phone']])assert.throws(()=>receptionSearch(q,field),/INVALID_INPUT/);
+});
+test('reception client checks its reply and passes scope, exact table and cancellation to the private endpoint',async()=>{
+ const controller=new AbortController();const response={guests:[{id:'qa',name:'Familia QA',passes:4,tableNo:'7'}],hasMore:false};
+ const result=await findReceptionGuests('event','door','7','table',controller.signal,async(url,options)=>{const q=new URL(url,'https://local.invalid');assert.equal(q.pathname,'/api/checkin/search');assert.equal(q.searchParams.get('scope'),'door');assert.equal(q.searchParams.get('invitationId'),'event');assert.equal(q.searchParams.get('field'),'table');assert.equal(options.signal,controller.signal);assert.equal(options.cache,'no-store');return new Response(JSON.stringify(response));});assert.deepEqual(result,response);
+ await assert.rejects(findReceptionGuests('event','door','Test','name',controller.signal,async()=>new Response('{"error":"No autorizado"}',{status:403})),/No autorizado/);
+ for(const bad of [null,{...response,hasMore:'yes'},{...response,guests:[{...response.guests[0],passes:0}]}]) await assert.rejects(findReceptionGuests('event','host','Test','name',controller.signal,async()=>new Response(JSON.stringify(bad))),/verificar/);
+});
+test('malformed delivery receipts stay retryable instead of losing their original operation',async()=>{
+ const operation={guestId:'qa',action:'reminder',expectedRevision:7,requestId:'operation'};
+ for(const value of [null,{}, {guest:{id:'qa',responseRevision:7},replayed:true},{guest:{id:'qa',responseRevision:8}},{guest:{id:'other',responseRevision:8},replayed:true}]) await assert.rejects(trackGuestDelivery(operation,async()=>new Response(JSON.stringify(value))),error=>error instanceof DeliveryTrackingError && error.retryable);
+});
+const { clearGuestImport, submitGuestImport, restoreGuestImport, guestImportStorageKey, guestImportMessage, GuestImportError } = require('../src/lib/guest-import-operation.ts');
+
+test('guest import recovery draft is bounded, scoped to its event and preserves the exact request',()=>{
+ const id='10000000-0000-4000-8000-000000000001';
+ const operation={invitationId:id,requestId:'20000000-0000-4000-8000-000000000001',guests:[{name:'Familia',passes:4,phone:'+59171234567',allowKids:false,eventAccess:'reception'}]};
+ assert.deepEqual(restoreGuestImport(JSON.stringify(operation),id),operation);
+ assert.notEqual(guestImportStorageKey(id),guestImportStorageKey('other'));
+ for(const value of [null,'{bad',JSON.stringify({...operation,invitationId:'other'}),JSON.stringify({...operation,requestId:'bad'}),JSON.stringify({...operation,guests:[]}),JSON.stringify({...operation,guests:Array(201).fill(operation.guests[0])}),JSON.stringify({...operation,guests:[{name:'Bad',passes:2.5}]}),'x'.repeat(131073)]) assert.equal(restoreGuestImport(value,id),null);
+});
+test('import transport distinguishes an uncertain result from an explicit rejection',async()=>{
+ const operation={invitationId:'qa',requestId:'qa',guests:[{name:'QA',passes:1}]};
+ for(const transport of [async()=>{throw new TypeError('offline');},async()=>new Response('bad'),async()=>new Response(JSON.stringify({error:'Busy'}),{status:503}),async()=>new Response('{}',{status:429})]) {
+  await assert.rejects(submitGuestImport(operation,transport),error=>error instanceof GuestImportError && error.uncertain);
+ }
+ for(const status of [400,403,409]) await assert.rejects(submitGuestImport(operation,async()=>new Response('{"error":"Denied"}',{status})),error=>error instanceof GuestImportError && !error.uncertain && error.message==='Denied');
+});
+test('a late import acknowledgement never clears a newer pending operation',()=>{
+ const invitationId='10000000-0000-4000-8000-000000000001',requestId='20000000-0000-4000-8000-000000000001';
+ const key=guestImportStorageKey(invitationId),data=new Map([[key,JSON.stringify({invitationId,requestId,guests:[{name:'QA',passes:1}]})]]);
+ const storage={getItem:key=>data.get(key)??null,removeItem:key=>data.delete(key)};
+ clearGuestImport(storage,invitationId,'20000000-0000-4000-8000-000000000002');assert.equal(data.size,1);
+ clearGuestImport(storage,invitationId,requestId);assert.equal(data.size,0);
+});
+test('import transport accepts only a complete receipt for the same operation and unique guest IDs',async()=>{
+ const operation={invitationId:'qa',requestId:'qa-operation',guests:[{name:'QA',passes:1}]};
+ const guest={id:'10000000-0000-4000-8000-000000000001',name:'QA',responseRevision:2};
+ const valid={requestId:operation.requestId,guests:[guest],importedCount:1,missingCount:0,replayed:true};
+ const transport=value=>async()=>new Response(JSON.stringify(value));
+ const receipt=await submitGuestImport(operation,transport(valid));assert.equal(receipt.guests[0].responseRevision,2);assert.equal(receipt.replayed,true);
+ for(const patch of [{requestId:'other'},{replayed:'true'},{importedCount:2},{missingCount:-1},{missingCount:1},{guests:[{...guest,responseRevision:-1}]},{guests:[{...guest,id:'bad'}]},{guests:[guest,guest]}]) await assert.rejects(submitGuestImport(operation,transport({...valid,...patch})),error=>error instanceof GuestImportError && error.uncertain);
+ const deleted=await submitGuestImport(operation,transport({...valid,guests:[],missingCount:1}));assert.equal(deleted.missingCount,1);assert.match(guestImportMessage(deleted),/no se volvió a crear/);
+});
+
+test('CSV review reports exact records and never guesses ambiguous columns or invalid preferences',()=>{
+ const parsed=parseGuestCsv('Nombre;Pases;Grupo;Niños;Preferencia\nAna;2;Amigos;Sí;Ceremonia\nError;2.5;Amigos;Sí;Todo\nAna;2;Amigos;Sí;Ceremonia\nAdultos;2;Familia;tal vez;Todo\nSitio;2;Familia;No;backstage');
+ const mapping={0:'name',1:'passes',2:'group',3:'allowKids',4:'eventAccess'};
+ const result=mapGuestCsvRows(parsed,mapping);
+ assert.equal(result.rows.length,1);assert.equal(result.invalid,3);assert.equal(result.duplicates,1);
+ assert.deepEqual(result.issues.map(issue=>issue.record),[2,3,4,5]);
+ assert.match(result.issues[0].reason,/entero/);assert.equal(result.issues[1].kind,'duplicate');assert.match(result.issues[2].reason,/Niños/);assert.match(result.issues[3].reason,/Preferencia/);
+ assert.equal(mapGuestCsvRows(parsed,{...mapping,4:'name'}).rows.length,0);
+ assert.match(mapGuestCsvRows(parsed,{...mapping,4:'name'}).mappingErrors[0],/una sola vez/);
+ assert.match(mapGuestCsvRows(parsed,{0:'ignore',1:'passes'}).mappingErrors[0],/Nombre/);
+});
+test('CSV rejects oversized groups without truncation and normalizes legacy phones for duplicates',()=>{
+ const parsed=parseGuestCsv('Nombre;Teléfono;Grupo\nAna;71234567;Amigos\nLuis;;'+ 'x'.repeat(41));
+ const result=mapGuestCsvRows(parsed,{0:'name',1:'phone',2:'group'},[{name:'Ana',phone:'7123 4567'}]);
+ assert.equal(result.rows.length,0);assert.equal(result.duplicates,1);assert.equal(result.invalid,1);assert.match(result.issues[1].reason,/40/);
+ const template=parseGuestCsv(require('../src/lib/guest-import.ts').guestImportTemplate());
+ assert.equal(mapGuestCsvRows(template,Object.fromEntries(template.headers.map((h,i)=>[i,require('../src/lib/guest-import.ts').guessGuestColumn(h)]))).rows.length,1);
+});
+test('WhatsApp queues distinguish first invitations, reminders, invalid phones and bounded filtered lists',()=>{
+ const base={name:'QA',status:'pending',sent:false,phone:'+59171234567'};
+ const guests=[{...base,id:'pending'},{...base,id:'opened',deliveryStatus:'opened'},{...base,id:'marked',sent:true},{...base,id:'answered',status:'confirmed'},{...base,id:'invalid',phone:'bad'},{...base,id:'pending'}];
+ assert.deepEqual(whatsappQueue(guests,'invitation').ids,['pending']);
+ assert.deepEqual(whatsappQueue(guests,'reminder').ids,['pending','opened','marked']);
+ assert.equal(whatsappQueue(guests,'reminder').invalidPhone,1);assert.equal(whatsappQueue(guests,'reminder').excluded,1);
+ const many=whatsappQueue(Array.from({length:205},(_,i)=>({...base,id:String(i)})),'invitation');assert.equal(many.ids.length,200);assert.equal(many.overflow,5);
+ const filter={search:'',status:'all',delivery:'all',table:'all',access:'all',sort:'name',group:'Familia'};
+ assert.deepEqual(filterRoster([{...base,id:'a',group:'Familia'},{...base,id:'b',group:'Amigos'}],filter).map(g=>g.id),['a']);
+});
+test('lost delivery responses retry the same body without changing the request identity',async()=>{
+ const operation={guestId:'qa',action:'reminder',expectedRevision:7,requestId:'request-qa'};
+ const bodies=[];let attempt=0;
+ const transport=async(url,init)=>{assert.equal(url,'/api/guests/delivery');bodies.push(init.body);if(++attempt===1)throw new Error('lost');return new Response(JSON.stringify({guest:{id:'qa',responseRevision:8},replayed:true}),{status:200});};
+ await assert.rejects(trackGuestDelivery(operation,transport),error=>error instanceof DeliveryTrackingError && error.retryable);
+ assert.equal((await trackGuestDelivery(operation,transport)).responseRevision,8);assert.equal(bodies[0],bodies[1]);
+ for(const status of [403,409]) await assert.rejects(trackGuestDelivery(operation,async()=>new Response(JSON.stringify({error:'conflict'}),{status})),error=>error.retryable===false);
+ await assert.rejects(trackGuestDelivery(operation,async()=>new Response('<html>down</html>',{status:503})),error=>error.retryable===true);
+});
+test('QR photo input validates size and format, and never treats decoded URLs as navigation',()=>{
+ for(const type of ['image/png','image/jpeg','image/webp'])assert.doesNotThrow(()=>validateQrImage({type,size:90000}));
+ for(const file of [{type:'image/svg+xml',size:100},{type:'image/png',size:0},{type:'image/png',size:10485761}])assert.throws(()=>validateQrImage(file));
+ assert.equal(qrLookup('  QA-access-token-123  '),'token=QA-access-token-123');
+ assert.equal(qrLookup('https://example.invalid/access'),'token=https%3A%2F%2Fexample.invalid%2Faccess');
+ for(const value of ['', 'contains space', 'a'.repeat(257)])assert.throws(()=>qrLookup(value));
+});
+
+test('private metadata validates explicit clears and cannot override canonical values with a legacy draft',()=>{
+ assert.deepEqual(parseGuestMetadata({phone:'7123 4567',group:' Amigos ',eventAccess:'ceremony'}),{phone:'+59171234567',group:'Amigos',eventAccess:'ceremony'});
+ assert.deepEqual(parseGuestMetadata({phone:'',group:''}),{phone:'',group:''});
+ for(const value of [{phone:'abc71234567'},{group:4},{eventAccess:['both']}]) assert.throws(()=>parseGuestMetadata(value));
+ assert.deepEqual(guestMetadata({phone:'ok',group:5,eventAccess:'bad',arbitrary:'no'}),{phone:'ok'});
+ const canonical={id:'qa',name:'QA',metadataStored:true,phone:'',group:''};
+ assert.equal(withGuestMetadata(canonical,{phone:'OLD',group:'OLD'}).phone,'');
+ assert.equal(withGuestMetadata({id:'legacy'},{phone:'OLD'}).phone,'OLD');
+ const publicValue=publicGuest({...canonical,phone:'PRIVATE-PHONE',group:'PRIVATE-GROUP'});
+ assert.equal(publicValue.phone,undefined); assert.equal(publicValue.group,undefined); assert.equal(publicValue.metadataStored,undefined);
+});
+
+test('a public invitation never serializes contact data from a preview guest',()=>{
+ const invitation=marfilVivoDemo(); invitation.config.activeGuest={id:'qa',publicId:'qa',name:'QA',passes:2,allowKids:true,sent:false,status:'pending',phone:'PRIVATE-PHONE',group:'PRIVATE-GROUP',metadataStored:true};
+ assert.doesNotMatch(JSON.stringify(require('../src/lib/client-invitation.ts').clientInvitation(invitation).config.activeGuest),/PRIVATE-PHONE|PRIVATE-GROUP|metadataStored/);
+});
+
+test('CSV preserves quoted delimiters, escaped quotes and multiline names', () => {
+ const csv = parseGuestCsv('\uFEFFNombre;Pases;Grupo\r\n"Familia\r\nPérez, \"\"VIP\"\"";4;Amigos\r\nAna;2;Familia');
+ assert.equal(csv.delimiter, ';'); assert.equal(csv.rows.length, 2);
+ const result = mapGuestCsvRows(csv, {0:'name',1:'passes',2:'group'});
+ assert.equal(result.invalid,0); assert.equal(result.rows[0].name,'Familia Pérez, "VIP"');
+ assert.equal(result.rows[0].passes,4); assert.equal(result.rows[1].group,'Familia');
+ assert.equal(parseGuestCsv('Nombre\tPases\nAna\t2').delimiter,'\t');
+ const emptyLastCell = parseGuestCsv('Nombre\tPases\tGrupo\nAna\t2\t');
+ assert.equal(emptyLastCell.invalidRows.length,0); assert.equal(emptyLastCell.rows[0][2],'');
+ assert.throws(()=>parseGuestCsv('Nombre,Pases\n"Ana,2'),/sin cerrar/);
+ assert.throws(()=>parseGuestCsv('Nombre,Pases\n"Ana"extra,2'),/fuera de/);
+});
+test('CSV rejects malformed width, fractional/excess passes and supplied invalid phones', () => {
+ const parsed = parseGuestCsv('Nombre,Pases,Teléfono\nAna,2,71234567\nMalo,2.5,71234567\nExceso,21,71234567\nCero,0,71234567\nError,2,123\nExtra,2,71234567,sobra\nIncompleto,2\nAna,2,+59171234567');
+ const result = mapGuestCsvRows(parsed, {0:'name',1:'passes',2:'phone'});
+ assert.equal(result.rows.length,1); assert.equal(result.invalid,6); assert.equal(result.duplicates,1);
+ assert.equal(result.rows[0].phone,'+59171234567');
+ assert.equal(normalizeGuestPhone('00591 7123-4567'),'+59171234567');
+ assert.equal(normalizeGuestPhone('+1234567890123456'),'');
+ assert.equal(normalizeGuestPhone('012345678'),'');
+ assert.equal(normalizeGuestPhone('abc71234567'),'');
+ assert.equal(normalizeGuestPhone("'+59171234567"),'+59171234567');
+ assert.equal(parseGuestCsv('').rows.length,0);
+ assert.throws(()=>parseGuestCsv('a'.repeat(1048577)),/1 MB/);
+});
+test('quick lists never silently clamp passes or truncate names or batches', () => {
+ assert.deepEqual(parseQuickGuestList('Ana López, 2\r\nCarlos').map(g=>[g.name,g.passes]),[['Ana López',2],['Carlos',1]]);
+ for(const value of ['Ana, 21','Ana, 0','Ana, -1','Ana, 2.5','Ana, dos','a'.repeat(81)]) assert.throws(()=>parseQuickGuestList(value),/Revisa/);
+ assert.throws(()=>parseQuickGuestList(Array(201).fill('Ana').join('\n')),/200/);
+});
+test('WhatsApp aliases resolve once and do not expand text inside guest data', () => {
+ const guest={name:'Familia {link}',passes:4,tableNo:'7',accessCode:'ENK-QA'};
+ assert.equal(guestMessage('{nombre_invitado} · {cantidad_pases} · {link_unico}',guest,'https://example.invalid/personal'),'Familia {link} · 4 · https://example.invalid/personal');
+ assert.equal(guestMessage('{nombre} · {pases} · {mesa} · {codigo}',guest,'url'),'Familia {link} · 4 · 7 · ENK-QA');
+});
+test('acknowledged guest revisions preserve newer typing and local metadata', () => {
+ const submitted={id:'qa',name:'Nombre guardado',passes:2,tableNo:'A',allowKids:true,status:'pending',responseRevision:0,phone:'+59171234567'};
+ const saved={...submitted,name:'Nombre guardado normalizado',status:'confirmed',confirmedPasses:2,responseRevision:1};
+ const latest={...submitted,name:'Nombre escrito después',tableNo:'B',group:'Amigos'};
+ const merged=mergeSavedGuest(latest,submitted,saved);
+ assert.equal(merged.name,latest.name); assert.equal(merged.tableNo,'B'); assert.equal(merged.group,'Amigos');
+ assert.equal(merged.responseRevision,1); assert.equal(merged.status,'confirmed');
+ assert.equal(mergeSavedGuest(submitted,submitted,saved).name,saved.name);
+});
+test('reception distinguishes partial entry, exhausted passes and exit for reentry', () => {
+ const attendees=[1,2,3,4].map(id=>({id:String(id),state:id<3?'in':'out'}));
+ assert.deepEqual([scannerStatus(attendees).inside,scannerStatus(attendees).remaining],[2,2]);
+ assert.match(scannerStatus(attendees).title,/2 personas/);
+ const full=attendees.map(a=>({...a,state:'in'})); assert.equal(scannerStatus(full).exhausted,true);
+ assert.match(scannerStatus(full).detail,/salida/);
+ full[0].state='out'; assert.equal(scannerStatus(full).exhausted,false); assert.match(scannerStatus(full).title,/1 persona/);
+});
+test('download names omit unsafe paths; invalid passes fail before canvas rendering', async () => {
+ assert.equal(passFilename('../../ENK-QA/<>'),'pase-ENK-QA.png');
+ assert.equal(passFilename(''),'pase-evento.png');
+ for(const passes of [0,21,2.5]) await assert.rejects(accessPassPng({accessToken:'synthetic-token',accessCode:'ENK-QA',guestName:'Prueba',passes}),/pase válido/);
+});
 const { mapToAzure } = require('../src/lib/invitation-mapper.ts');
 const { additionalServiceChecks, additionalServiceErrors, navigationCandidates, publicAdditionalServices } = require('../src/lib/additional-services.ts');
 const { activeInvitationLocale, formatInvitationDate, invitationCopy } = require('../src/lib/invitation-i18n.ts');
@@ -405,7 +883,8 @@ test('SQL TIME values with seconds produce a valid countdown date', () => {
   const demo = marfilVivoDemo();
   demo.ceremony_time = '16:00:00';
   const countdown = resolveLayoutBindings(demo.config.layout, demo).blocks.find(block => block.type === 'countdown');
-  assert.equal(countdown.props.isoDate, `${demo.event_date}T16:00:00`);
+  assert.equal(countdown.props.isoDate, `${demo.event_date}T16:00:00-04:00`);
+  assert.equal(new Date(countdown.props.isoDate).toISOString(), `${demo.event_date}T20:00:00.000Z`);
   assert.ok(Number.isFinite(new Date(countdown.props.isoDate).getTime()));
 });
 

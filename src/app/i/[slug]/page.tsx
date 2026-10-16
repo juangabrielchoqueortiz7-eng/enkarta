@@ -1,16 +1,10 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
 import {isCleanDesign} from '@/lib/clean-designs';
 import { Guest, Invitation, parseInvitation } from '@/lib/types';
-import { premiumFor } from '@/lib/template-registry';
+import PublishedTemplate from '@/components/invitations/PublishedTemplate';
 import { notFound } from 'next/navigation';
 import React from 'react';
 // Legacy
-import Perla from '@/components/templates/Perla';
-import Marmol from '@/components/templates/Marmol';
-import Terra from '@/components/templates/Terra';
-import Sobre from '@/components/templates/Sobre';
-import Carmesi from '@/components/templates/Carmesi';
-import Gerbera from '@/components/templates/Gerbera';
 import EntryGate from '@/components/invitations/EntryGate';
 import BlockRenderer from '@/components/invitations/BlockRenderer';
 import FontScope from '@/components/invitations/FontScope';
@@ -138,6 +132,10 @@ export default async function InvitationPage({ params, searchParams }: Props) {
     }
   }
 
+  if (!privatePreview && (invitation.status !== 'ready' || (invitation.publication_managed && !publishedVersion))) {
+    return <StatusScreen icon={ClockIcon} title={storedCopy.preparationTitle} text={storedCopy.preparationText} />;
+  }
+
   // ── Contador de vistas (incremento best-effort, no bloquea el render) ──
   if (!privatePreview) void supabaseAdmin.rpc('increment_invitation_views', { target_id: invitation.id }).then(async ({ error: incrementError }) => {
     // Compatibilidad mientras se aplica la migración 004.
@@ -164,8 +162,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   if (g && feats.guestNames) {
     guest = await findGuestByPublicId(invitation.id, g);
     if (guest) {
-      const meta = config.guestMeta?.[guest.publicId];
-      guest = guestForServices({ ...guest, ...meta }, config)!;
+      guest = guestForServices(guest, config)!;
       config.activeGuest = guest;
       parsed.guest_name = guest.name;
       if (feats.passes) parsed.guest_passes = guest.passes;
@@ -195,20 +192,13 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const resolvedLayout = hasBlocks ? resolveLayoutBindings(config.layout!, parsed) : null;
   const mobileForm = hasRsvpForm(resolvedLayout?.blocks ?? [], 'mobile');
   const desktopForm = hasRsvpForm(resolvedLayout?.blocks ?? [], 'desktop');
-  const premium = premiumFor(parsed);
   const nativeLaura = (config.designKey === 'laura-y-andres' || config.designKey === 'annie-y-micky' || config.designKey === 'roly-y-yeliana' || config.designKey === 'nicole-y-francisco' || config.designKey === 'manuel-y-maya' || config.designKey === 'mariana-y-jesus' || config.designKey === 'paula-y-juan-felipe' || config.designKey === 'karla-y-mauricio' || (config.designKey === 'maria-angelica-y-mario' || isCleanDesign(config.designKey))) && !hasBlocks;
   const customCinematic = nativeLaura && config.entry?.style === 'cinematic';
   let templateEl: React.ReactNode;
   if (hasBlocks) {
     templateEl = null; // se reemplaza más abajo por <BlockRenderer> (con sus providers)
-  } else if (premium) {
-    templateEl = <div className="ek-invite"><premium.Comp data={premium.map(parsed)} demo={privatePreview} skipEntry={full === '1' || customCinematic} deadlinePassed={deadlinePassed} /></div>;
   } else {
-    const templates: Partial<Record<string, React.ComponentType<{ invitation: ReturnType<typeof parseInvitation> }>>> = {
-      perla: Perla, marmol: Marmol, terra: Terra, sobre: Sobre, carmesi: Carmesi, gerbera: Gerbera,
-    };
-    const Template = templates[parsed.template] || Perla;
-    templateEl = <div className="ek-invite"><Template invitation={parsed} /></div>;
+    templateEl = <PublishedTemplate invitation={parsed} demo={privatePreview} skipEntry={full === '1' || customCinematic} deadlinePassed={deadlinePassed} />;
   }
 
   // ── Pantalla de entrada / "sobre": enlace principal la muestra; ?full=1 la salta ──
@@ -309,7 +299,7 @@ export async function generateMetadata({ params }: Props) {
   // metadataBase para resolver URLs absolutas en la vista previa al compartir.
   let metadataBase: URL | undefined;
   try {
-    const host = headers().get('host');
+    const host = (await headers()).get('host');
     if (host) metadataBase = new URL(`${host.includes('localhost') ? 'http' : 'https'}://${host}`);
   } catch { /* sin host */ }
 

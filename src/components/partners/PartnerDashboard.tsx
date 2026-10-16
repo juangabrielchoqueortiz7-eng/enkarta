@@ -20,13 +20,13 @@ export interface PartnerAccount {
   quota: { limit: number; used: number; remaining: number | null; unlimited: boolean; reached: boolean };
   totalInvitations: number;
   payments: PartnerPayment[];
-  billing: { instructions: string; qrUrl: string; whatsapp: string; configured: boolean };
+  billing: { instructions: string; qrUrl: string; whatsapp: string; configured: boolean; provider?: 'manual' | 'bcp'; ready?: boolean; message?: string };
 }
 
 export interface PartnerPayment {
   id: string; reference: string; plan_key: PartnerPlanKey; months: number;
   amount_bs: number; method: PartnerPaymentMethod; receipt_url: string; receiptUrl?: string;
-  status: 'pending' | 'approved' | 'rejected'; review_note: string;
+  status: 'pending' | 'approved' | 'rejected' | 'canceled'; review_note: string;
   created_at: string; period_end: string | null;
 }
 
@@ -51,11 +51,13 @@ const TONE: Record<SubscriptionState['tone'], string> = {
 };
 
 const PAYMENT_TONE: Record<PartnerPayment['status'], string> = {
+  canceled: 'bg-gray-100 text-gray-600',
   pending: 'bg-sky-50 text-sky-800',
   approved: 'bg-emerald-50 text-emerald-800',
   rejected: 'bg-red-50 text-red-700',
 };
 const PAYMENT_LABEL: Record<PartnerPayment['status'], string> = {
+  canceled: 'Cancelado',
   pending: 'En revisión', approved: 'Aprobado', rejected: 'Rechazado',
 };
 
@@ -88,6 +90,11 @@ export default function PartnerDashboard({ initialAccount }: { initialAccount: P
   }, []);
 
   useEffect(() => { void loadInvitations(); }, [loadInvitations]);
+  useEffect(() => {
+    if (!account.payments.some(payment => payment.status === 'pending')) return;
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void loadAccount(); }, 15000);
+    return () => window.clearInterval(timer);
+  }, [account.payments, loadAccount]);
 
   const pending = useMemo(() => account.payments.find(payment => payment.status === 'pending') ?? null, [account.payments]);
 
@@ -387,6 +394,8 @@ function SubscriptionTab({ account, pending, onRefresh, onNotice }: {
     setUploading(true);
     try {
       const form = new FormData();
+      if (!pending) return;
+      form.append('paymentId', pending.id);
       if (file) form.append('file', file);
       if (note.trim()) form.append('note', note.trim());
       const res = await fetch('/api/partner/payments/receipt', { method: 'POST', body: form });
@@ -479,7 +488,7 @@ function SubscriptionTab({ account, pending, onRefresh, onNotice }: {
           </div>
           <button
             onClick={createIntent}
-            disabled={saving}
+            disabled={saving || (account.billing.provider === 'bcp' && !account.billing.ready)}
             className="ml-auto rounded-full bg-[#2C2519] px-6 py-2.5 font-outfit text-[13px] text-[#FAF7F2] transition hover:bg-[#3d342a] disabled:opacity-50"
           >
             {saving ? 'Registrando…' : pending ? 'Actualizar mi pago' : 'Registrar el pago'}
@@ -534,6 +543,7 @@ function SubscriptionTab({ account, pending, onRefresh, onNotice }: {
       </div>
 
       <aside className="h-fit rounded-3xl border border-[#2C2519]/10 bg-white p-6">
+        {account.billing.message && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{account.billing.message}</p>}
         <p className="font-outfit text-[11px] uppercase tracking-[0.22em] text-[#B8975A]">Dónde pagar</p>
         {account.billing.configured ? (
           <>

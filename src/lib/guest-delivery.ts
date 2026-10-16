@@ -11,9 +11,10 @@ export function deliveryState(guest: Pick<Guest,'status'|'deliveryStatus'|'sent'
   return 'pending';
 }
 export function guestMessage(template: string | undefined, guest: Pick<Guest,'name'|'passes'|'tableNo'|'accessCode'>, link: string) {
+  const values: Record<string, string> = { nombre: guest.name, nombre_invitado: guest.name, link, link_unico: link,
+    pases: String(guest.passes), cantidad_pases: String(guest.passes), mesa: guest.tableNo || 'por asignar', codigo: guest.accessCode || 'disponible al confirmar' };
   return (template?.trim() || '¡Hola {nombre}! Aquí tienes tu invitación personal: {link}')
-    .replaceAll('{nombre}',guest.name).replaceAll('{link}',link).replaceAll('{pases}',String(guest.passes))
-    .replaceAll('{mesa}',guest.tableNo || 'por asignar').replaceAll('{codigo}',guest.accessCode || 'disponible al confirmar');
+    .replace(/\{(nombre|nombre_invitado|link|link_unico|pases|cantidad_pases|mesa|codigo)\}/g, (_, key: string) => values[key]);
 }
 export function reminderMessage(template: string | undefined, guest: Pick<Guest,'name'|'passes'|'tableNo'|'accessCode'>, link: string) {
   return guestMessage(template || 'Hola {nombre}, te recordamos confirmar tu asistencia aquí: {link}',guest,link);

@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { activePublishedVersion, readVersionStorageMeta, type BuilderVersion } from '@/lib/builder-versions';
 import { parseInvitation, type Invitation, type InvitationParsed } from '@/lib/types';
 import { isCurrentContract } from './packages';
+import { partnerServesInvitation } from './partner-session';
+import { eventDay } from './rsvp-contract';
 
 interface PublishedRow {
   id: string;
@@ -18,13 +20,16 @@ export interface PublishedInvitationVersion {
 }
 
 export async function latestPublishedInvitation(invitation: Invitation): Promise<PublishedInvitationVersion | null> {
-  const { data, error } = await supabaseAdmin
+  const anchors = [invitation.published_version_id, invitation.scheduled_version_id].filter((id): id is string => !!id);
+  if (invitation.publication_managed && !anchors.length) return null;
+  let query = supabaseAdmin
     .from('builder_versions')
     .select('id,snapshot,created_at')
     .eq('invitation_id', invitation.id)
     .eq('source', 'publish')
-    .order('created_at', { ascending: false })
-    .limit(30);
+    .order('created_at', { ascending: false });
+  if (invitation.publication_managed) query = query.in('id', anchors);
+  const { data, error } = await query.limit(30);
   if (error || !data?.length) return null;
   const versions = (data as PublishedRow[]).map(row => {
     const decoded = readVersionStorageMeta(row.snapshot);
@@ -37,9 +42,6 @@ export async function latestPublishedInvitation(invitation: Invitation): Promise
   const selected = activePublishedVersion(versions);
   if (!selected) return null;
   const currentConfig = parseInvitation(invitation).config;
-  if (selected.publicationState === 'scheduled' && invitation.status === 'draft') {
-    await supabaseAdmin.from('invitations').update({ status: 'ready' }).eq('id', invitation.id).eq('status', 'draft');
-  }
   return {
     id: selected.id,
     summary: selected.summary,
@@ -66,8 +68,12 @@ export async function latestPublishedInvitation(invitation: Invitation): Promise
   };
 }
 
-/** Publicación si existe; fila actual para invitaciones legacy. */
-export async function publicInvitationData(invitation: Invitation): Promise<InvitationParsed> {
+/** A single availability policy for pages, social metadata and image previews. */
+export async function publicInvitationData(invitation: Invitation): Promise<InvitationParsed | null> {
+  if (invitation.status !== 'ready' || invitation.is_active === false
+    || (invitation.validity_mode === 'automatic' && !invitation.expires_at)
+    || (invitation.expires_at && invitation.expires_at.slice(0, 10) < eventDay())
+    || !(await partnerServesInvitation(invitation.partner_id))) return null;
   const version = await latestPublishedInvitation(invitation);
-  return version?.data ?? parseInvitation(invitation);
+  return version?.data ?? (invitation.publication_managed ? null : parseInvitation(invitation));
 }

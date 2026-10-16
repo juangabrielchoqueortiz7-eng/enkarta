@@ -17,7 +17,7 @@ export function serviceError(error: unknown) {
   return privateJson({ error: 'No se pudo completar la operación. Reintenta sin cambiar los datos.', code: 'SERVICE_UNAVAILABLE' }, 503);
 }
 
-export async function serviceBody(request: NextRequest): Promise<Record<string, unknown>> {
+export async function serviceBody(request: NextRequest, maxBytes = 8192): Promise<Record<string, unknown>> {
   const origin = request.headers.get('origin');
   if (origin) {
     let host: string;
@@ -26,7 +26,7 @@ export async function serviceBody(request: NextRequest): Promise<Record<string, 
   }
   if (!request.headers.get('content-type')?.includes('application/json')) throw new Error('INVALID_INPUT');
   const text = await request.text();
-  if (text.length > 8192) throw new Error('INVALID_INPUT');
+  if (Buffer.byteLength(text, 'utf8') > maxBytes) throw new Error('INVALID_INPUT');
   let body;
   try { body = JSON.parse(text); } catch { throw new Error('INVALID_INPUT'); }
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('INVALID_INPUT');

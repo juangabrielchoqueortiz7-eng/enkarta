@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { getPartnerContext, packageForPlan, partnerContextFor, publishBlockReason } from '@/lib/partner-session';
+import { getPartnerContext, packageForPlan, partnerContextFor } from '@/lib/partner-session';
 import { invitationStarter, STARTER_TEMPLATE_KEYS, type StarterTemplateKey } from '@/lib/template-starters';
 import { newServiceContract } from '@/lib/packages';
 import { storedServiceConfig } from '@/lib/package-services-server';
+import { integrityError } from '@/lib/integrity-server';
 import { draftCap } from '@/lib/partner-plans';
 
 export const runtime = 'nodejs';
@@ -80,14 +81,12 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invitación no encontrada' }, { status: 404 });
     }
 
-    if (status === 'ready') {
-      const blocked = publishBlockReason(context, current.status === 'ready');
-      if (blocked) return NextResponse.json({ error: blocked, needsSubscription: true }, { status: 402 });
-    }
-
-    const { data, error } = await supabaseAdmin.from('invitations')
-      .update({ status }).eq('id', id).eq('partner_id', context.partner.id).select(LIST_COLUMNS).single();
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    const { error } = await supabaseAdmin.rpc('enkarta_set_publication', {
+      p_id: id, p_partner_id: context.partner.id, p_enabled: status === 'ready',
+    });
+    if (error) return integrityError(error);
+    const { data, error: readError } = await supabaseAdmin.from('invitations').select(LIST_COLUMNS).eq('id', id).eq('partner_id', context.partner.id).single();
+    if (readError) return integrityError(readError);
 
     const fresh = await partnerContextFor(context.partner);
     return NextResponse.json({ invitation: data, quota: fresh.quota });

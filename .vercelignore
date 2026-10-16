@@ -7,4 +7,9 @@ Iconos INVITALI
 *.log
 *.tsbuildinfo
 docs
+tmp
 scripts/*.py
+.impeccable
+AGENTS.md
+PRODUCT.md
+DESIGN.md

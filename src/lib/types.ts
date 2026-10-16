@@ -712,9 +712,11 @@ export interface Guest {
   tableNo?: string;      // mesa (opcional)
   passes: number;
   allowKids: boolean;    // false → la invitación muestra el párrafo "no niños"
-  phone?: string;        // metadata del constructor, normalizado para WhatsApp
+  phone?: string;        // contacto privado del invitado, normalizado para WhatsApp
   group?: string;        // familia, VIP, proveedores, etc.
   eventAccess?: GuestEventAccess;
+  /** DTO operativo: los metadatos de guests prevalecen incluso al vaciarlos. */
+  metadataStored?: boolean;
   sent: boolean;         // "invitación enviada" (manual)
   deliveryStatus?: 'pending' | 'opened' | 'marked';
   whatsappOpenedAt?: string;
@@ -756,6 +758,12 @@ export interface PageLayout {
 }
 
 export interface Invitation extends ValidityFields {
+  /** Publication identity is controlled only by server-side transactions. */
+  publication_managed?: boolean;
+  draft_revision?: number;
+  published_version_id?: string | null;
+  scheduled_version_id?: string | null;
+  partner_id?: string | null;
   id: string;
   slug: string;
   status: InvitationStatus;

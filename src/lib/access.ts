@@ -53,46 +53,50 @@ export function verifyPassword(password: string, stored?: string | null): boolea
 // ── Cookie de sesión del anfitrión (HMAC, sin JWT) ───────────────────────────
 
 // Secreto del servidor; el service role key siempre está presente en el server.
-const SECRET = process.env.HOST_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || 'enkarta-dev-secret';
+const SECRET = process.env.HOST_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY
+  || (process.env.NODE_ENV === 'production' ? null : 'enkarta-dev-secret');
 
 /** Firma `<invitationId>.<hmac>` para la cookie httpOnly del anfitrión. */
-export function signHostSession(invitationId: string, credentialHash: string): string {
-  const sig = createHmac('sha256', SECRET).update(`host:${invitationId}:${credentialHash}`).digest('base64url');
-  return `${invitationId}.${sig}`;
+export const PRIVATE_SESSION_SECONDS = 60 * 60 * 24 * 7;
+function signExpiringSession(scope: string, id: string, credential: string, expiry: number) {
+  if (!SECRET) throw new Error('SESSION_SECRET_REQUIRED');
+  const payload = `${id}.${expiry}`;
+  return `${payload}.${createHmac('sha256', SECRET).update(`${scope}:${payload}:${credential}`).digest('base64url')}`;
+}
+function verifyExpiringSession(value: string | null | undefined, scope: string, credential: string): string | null {
+  if (!SECRET) return null;
+  const [id, expiry, signature, extra] = (value || '').split('.');
+  if (!id || !signature || extra !== undefined || !/^\d{10}$/.test(expiry || '') || Number(expiry) <= Math.floor(Date.now() / 1000)) return null;
+  const expected = Buffer.from(signExpiringSession(scope, id, credential, Number(expiry)));
+  const actual = Buffer.from(value!);
+  return expected.length === actual.length && timingSafeEqual(expected, actual) ? id : null;
+}
+export function signHostSession(invitationId: string, credentialHash: string, expiresAt = Math.floor(Date.now() / 1000) + PRIVATE_SESSION_SECONDS): string {
+  return signExpiringSession('host', invitationId, credentialHash, expiresAt);
 }
 
 /** Verifica la cookie y devuelve el invitationId, o null si es inválida. */
 export function verifyHostSession(value: string | null | undefined, credentialHash: string): string | null {
-  if (!value || !value.includes('.')) return null;
-  const idx = value.lastIndexOf('.');
-  const invitationId = value.slice(0, idx);
-  const sig = value.slice(idx + 1);
-  const expected = signHostSession(invitationId, credentialHash).slice(idx + 1);
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-  return invitationId;
+  return verifyExpiringSession(value, 'host', credentialHash);
 }
 
 /** Dominio de firma distinto: una cookie de revisión nunca es una de operación. */
-export function signReviewSession(invitationId: string, credentialHash: string): string {
-  const sig = createHmac('sha256', SECRET).update(`review:${invitationId}:${credentialHash}`).digest('base64url');
-  return `${invitationId}.${sig}`;
+export function signReviewSession(invitationId: string, credentialHash: string, expiresAt = Math.floor(Date.now() / 1000) + PRIVATE_SESSION_SECONDS): string {
+  return signExpiringSession('review', invitationId, credentialHash, expiresAt);
 }
 export function verifyReviewSession(value: string, credentialHash: string): boolean {
-  const id = value.slice(0, value.lastIndexOf('.'));
-  const expected = Buffer.from(signReviewSession(id, credentialHash));
-  const actual = Buffer.from(value);
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
+  return !!verifyExpiringSession(value, 'review', credentialHash);
 }
 
 /** El personal de puerta tiene una firma distinta de anfitrión y revisión. */
 export const DOOR_SESSION_SECONDS = 60 * 60 * 12;
 export function signDoorSession(invitationId: string, credentialHash: string, expiresAt = Math.floor(Date.now() / 1000) + DOOR_SESSION_SECONDS): string {
+  if (!SECRET) throw new Error('SESSION_SECRET_REQUIRED');
   const payload = `${invitationId}.${expiresAt}`;
   return `${payload}.${createHmac('sha256', SECRET).update(`door:${payload}:${credentialHash}`).digest('base64url')}`;
 }
 export function verifyDoorSession(value: string, credentialHash: string): boolean {
+  if (!SECRET) return false;
   const [id, expiry, signature, extra] = value.split('.');
   if (!id || !signature || extra !== undefined || !/^\d{10}$/.test(expiry || '') || Number(expiry) <= Math.floor(Date.now() / 1000)) return false;
   const actual = Buffer.from(value);
@@ -103,21 +107,11 @@ export function verifyDoorSession(value: string, credentialHash: string): boolea
 // ── Cookie de sesión del admin (equipo Enkarta), firmada para que no se falsifique ─
 
 /** Valor firmado para la cookie httpOnly del admin. */
-export function signAdminSession(): string {
-  const payload = 'enkarta-admin';
-  const sig = createHmac('sha256', SECRET).update(payload).digest('base64url');
-  return `${payload}.${sig}`;
+export function signAdminSession(expiresAt = Math.floor(Date.now() / 1000) + PRIVATE_SESSION_SECONDS): string {
+  return signExpiringSession('admin', 'enkarta-admin', process.env.ADMIN_PASSWORD || '', expiresAt);
 }
 
 /** true si la cookie de admin es válida (firma correcta). */
 export function verifyAdminSession(value?: string | null): boolean {
-  if (!value || !value.includes('.')) return false;
-  const idx = value.lastIndexOf('.');
-  const payload = value.slice(0, idx);
-  const sig = value.slice(idx + 1);
-  if (payload !== 'enkarta-admin') return false;
-  const expected = createHmac('sha256', SECRET).update(payload).digest('base64url');
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  return verifyExpiringSession(value, 'admin', process.env.ADMIN_PASSWORD || '') === 'enkarta-admin';
 }

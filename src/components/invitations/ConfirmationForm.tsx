@@ -67,9 +67,11 @@ export default function ConfirmationForm({ slug, guest, guestName, maxPasses, de
     if (!slug) { setError(copy.unavailable); setLoading(false); setMustRefresh(true); return; }
     setLoading(true);
     setError('');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
     try {
       const query = new URLSearchParams({ slug, ...(publicId ? { publicId } : {}) });
-      const response = await fetch(`${endpoint}?${query}`, { cache: 'no-store' });
+      const response = await fetch(`${endpoint}?${query}`, { cache: 'no-store', signal: controller.signal });
       const value = await response.json();
       if (!response.ok) throw new Error(value.error || copy.queryFailed);
       if (!alive.current) return;
@@ -80,7 +82,7 @@ export default function ConfirmationForm({ slug, guest, guestName, maxPasses, de
       if (!alive.current) return;
       setError(cause instanceof TypeError ? copy.offline : cause instanceof Error ? cause.message : copy.queryFailed);
       setMustRefresh(true);
-    } finally { if (alive.current) setLoading(false); }
+    } finally { clearTimeout(timeout); if (alive.current) setLoading(false); }
   }, [demo, deadlinePassed, guest, slug, publicId, endpoint, applyState, copy]);
 
   useEffect(() => { alive.current = true; void refresh(); return () => { alive.current = false; }; }, [refresh]);
@@ -95,12 +97,14 @@ export default function ConfirmationForm({ slug, guest, guestName, maxPasses, de
     }
     inFlight.current = true;
     setBusy(true); setError('');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     if (!pending.current) {
       const requestId = crypto.randomUUID();
       pending.current = { requestId, body: { slug, publicId, name: name.trim(), confirmName: name.trim(), attending, passes, message, requestId, expectedRevision: entry?.revision ?? currentGuest?.responseRevision ?? 0 } };
     }
     try {
-      const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pending.current.body) });
+      const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pending.current.body), signal: controller.signal });
       const result = await response.json();
       if (!response.ok) {
         if (response.status < 500) { pending.current = null; setMustRefresh(true); }
@@ -111,8 +115,8 @@ export default function ConfirmationForm({ slug, guest, guestName, maxPasses, de
       emitInvitationAnalytics('rsvp_submit', { attending, passes: attending === 'yes' ? passes : 0, personalized: Boolean(publicId) });
       if (publicId) router.refresh(); // Actualiza también pases y bloques condicionales.
     } catch (cause) {
-      setError(cause instanceof TypeError ? copy.uncertain : cause instanceof Error ? cause.message : copy.saveFailed);
-    } finally { inFlight.current = false; setBusy(false); }
+      setError(controller.signal.aborted || cause instanceof TypeError ? copy.uncertain : cause instanceof Error ? cause.message : copy.saveFailed);
+    } finally { clearTimeout(timeout); inFlight.current = false; setBusy(false); }
   };
 
   return <div className="mx-auto text-left" style={{ maxWidth: 420 }}>

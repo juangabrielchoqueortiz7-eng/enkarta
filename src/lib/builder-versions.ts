@@ -54,6 +54,10 @@ function mergeById<T extends { id: string }>(local: T[], cloud: T[]) {
   cloud.forEach(item => merged.set(item.id, item));
   return Array.from(merged.values());
 }
+function retainVersions(versions: BuilderVersion[]) {
+  let drafts = 0;
+  return versions.sort((a, b) => b.createdAt - a.createdAt).filter(version => version.source === 'publish' || ++drafts <= 30);
+}
 
 export function listBuilderVersions(invitationId: string): BuilderVersion[] {
   const versions = read<BuilderVersion>(VERSION_KEY).filter(version => version.invitationId === invitationId);
@@ -75,7 +79,7 @@ function createBuilderVersion(data: InvitationParsed, label: string, source: Bui
   const createdAt = Math.max(Date.now(), (latest?.createdAt ?? 0) + 1);
   const version: BuilderVersion = { id: `version-${createdAt.toString(36)}-${Math.random().toString(36).slice(2, 7)}`, invitationId: data.id, label: label.trim() || 'Versión sin nombre', createdAt, source, summary: summary.trim() || undefined, role, ...publication, data: clean };
   const other = all.filter(item => item.invitationId !== data.id);
-  const nextForInvitation = [version, ...current].sort((a, b) => b.createdAt - a.createdAt).slice(0, 30);
+  const nextForInvitation = retainVersions([version, ...current]);
   write(VERSION_KEY, [...other, ...nextForInvitation]);
   return { versions: nextForInvitation, version };
 }
@@ -223,16 +227,16 @@ export function deleteReviewNote(invitationId: string, id: string): ReviewNote[]
 export async function hydrateBuilderState(invitationId: string): Promise<{ versions: BuilderVersion[]; notes: ReviewNote[]; cloud: boolean }> {
   const localVersions = listBuilderVersions(invitationId);
   const localNotes = listReviewNotes(invitationId);
-  if (typeof window === 'undefined') return { versions: localVersions, notes: localNotes, cloud: false };
+  if (typeof window === 'undefined') return { versions: localVersions.filter(version => version.source !== 'publish'), notes: localNotes, cloud: false };
   try {
     const response = await fetch(`${API}?invitationId=${encodeURIComponent(invitationId)}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('cloud-unavailable');
     const payload = await response.json() as { versions?: BuilderVersion[]; notes?: ReviewNote[] };
-    const versions = mergeById(localVersions, Array.isArray(payload.versions) ? payload.versions : []).sort((a, b) => b.createdAt - a.createdAt).slice(0, 30);
+    const versions = retainVersions(mergeById(localVersions.filter(version => version.source !== 'publish'), Array.isArray(payload.versions) ? payload.versions : []));
     const notes = mergeById(localNotes, Array.isArray(payload.notes) ? payload.notes : []).sort((a, b) => b.createdAt - a.createdAt);
     replaceInvitationItems(VERSION_KEY, invitationId, versions);
     replaceInvitationItems(NOTE_KEY, invitationId, notes);
-    if (localVersions.length || localNotes.length) queueCloud({ invitationId, versions: localVersions, notes: localNotes });
+    if (localVersions.length || localNotes.length) queueCloud({ invitationId, versions: localVersions.filter(version => version.source !== 'publish'), notes: localNotes });
     return { versions, notes, cloud: true };
   } catch {
     return { versions: localVersions, notes: localNotes, cloud: false };

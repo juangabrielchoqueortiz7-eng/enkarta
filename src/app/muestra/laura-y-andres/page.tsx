@@ -9,7 +9,9 @@ export const metadata: Metadata = {
   alternates: { canonical: '/muestra/laura-y-andres' },
 };
 
-export default function Page({searchParams}:{searchParams:{full?:string}}) {
+export default async function Page({searchParams: searchParamsPromise}:{searchParams:Promise<{full?:string}>}) {
+  const searchParams = await searchParamsPromise;
+
   const data=lauraAndresDemo();
   return <PageMotionProvider value={data.config.motion}><LauraAndres data={data} demo skipEntry={searchParams.full==='1'} /></PageMotionProvider>;
 }

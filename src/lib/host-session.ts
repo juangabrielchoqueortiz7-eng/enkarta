@@ -6,6 +6,8 @@ import { isUuid } from './rsvp-contract';
 import { allowsService, isCurrentContract, type OperationalService } from './packages';
 import { invitationServiceConfig } from './package-services-server';
 import { isPartnerOwnerOf } from './partner-session';
+import { scannerSessionFingerprint } from './scanner-session';
+import type { ScannerRole, ScanRecoveryScope } from './scan-recovery';
 
 // Sesiones del servidor. Hay tres accesos independientes:
 //  - Admin (equipo Enkarta): cookie 'enkarta-admin' (password global, /admin).
@@ -17,6 +19,14 @@ export const HOST_COOKIE = 'enkarta-host';
 export const REVIEW_COOKIE = 'enkarta-review';
 export const DOOR_COOKIE = 'enkarta-door';
 
+/** Call after verifying the selected role's session. Never serialize its cookie. */
+export async function scannerRecoveryScope(role: ScannerRole, invitationId?: string): Promise<ScanRecoveryScope> {
+  const name = role === 'admin' ? 'enkarta-admin' : role === 'door' ? DOOR_COOKIE : HOST_COOKIE;
+  const value = (await cookies()).get(name)?.value;
+  if (!value) throw new Error('FORBIDDEN');
+  return { role, sessionKey: scannerSessionFingerprint(role, value), ...(invitationId ? { invitationId } : {}) };
+}
+
 export async function getDoorSession(): Promise<string | null> {
   const value = (await cookies()).get(DOOR_COOKIE)?.value;
   if (!value) return null;
@@ -26,7 +36,7 @@ export async function getDoorSession(): Promise<string | null> {
   return !error && data?.door_email && data?.door_password_hash && verifyDoorSession(value, data.door_password_hash) ? id : null;
 }
 
-/** No reutilizar este permiso para listas, exportaciones o edición de invitados. */
+/** Solo validación y búsqueda mínima de recepción; nunca padrón, contactos, exportaciones o edición. */
 export async function canScanInvitation(invitationId: string): Promise<boolean> {
   if (await getDoorSession() === invitationId) return allowsService((await invitationServiceConfig(invitationId)).config, 'qrAccess');
   return canManageInvitation(invitationId, 'qrAccess');
@@ -36,7 +46,7 @@ export async function canScanInvitation(invitationId: string): Promise<boolean> 
 export async function getHostSession(strict = false): Promise<string | null> {
   const c = (await cookies()).get(HOST_COOKIE)?.value;
   if (!c) return null;
-  const id = c.slice(0, c.lastIndexOf('.'));
+  const id = c.split('.')[0];
   if (!isUuid(id)) return null;
   const { data, error } = await supabaseAdmin.from('invitations').select('host_email,host_password_hash').eq('id', id).maybeSingle();
   // El panel en vivo debe distinguir una caída de conexión de una revocación real.
@@ -47,13 +57,14 @@ export async function getHostSession(strict = false): Promise<string | null> {
 export async function getReviewSession(): Promise<string | null> {
   const value = (await cookies()).get(REVIEW_COOKIE)?.value;
   if (!value) return null;
-  const id = value.slice(0, value.lastIndexOf('.'));
+  const id = value.split('.')[0];
   if (!isUuid(id)) return null;
   const { data, error } = await supabaseAdmin.from('invitations').select('review_email,review_password_hash').eq('id', id).maybeSingle();
   return !error && data?.review_email && data?.review_password_hash && verifyReviewSession(value, data.review_password_hash) ? id : null;
 }
 export async function canReviewInvitation(invitationId: string): Promise<boolean> {
   if (await getAdminSession()) return true;
+  if (await isPartnerOwnerOf(invitationId)) return true;
   if (await getReviewSession() === invitationId) return true;
   // Los contratos anteriores conservan el acceso combinado; los nuevos separan los alcances.
   if (await getHostSession() !== invitationId) return false;
@@ -79,10 +90,11 @@ export async function canManageInvitation(invitationId: string, service?: Operat
   const admin = await getAdminSession();
   // El socio dueño gestiona su invitación con los mismos límites de paquete que
   // el anfitrión: su plan define qué servicios están incluidos.
-  const owner = admin || await getHostSession() === invitationId || await isPartnerOwnerOf(invitationId);
+  const partner = await isPartnerOwnerOf(invitationId);
+  const owner = admin || partner || await getHostSession() === invitationId;
   if (!owner) return false;
   const { config } = await invitationServiceConfig(invitationId);
-  if (!admin && !allowsService(config, 'hostPanel')) return false;
+  if (!admin && !partner && !allowsService(config, 'hostPanel')) return false;
   return !service || allowsService(config, service);
 }
 

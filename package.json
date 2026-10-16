@@ -10,8 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test:builder": "node scripts/test-builder.cjs",
     "test:services": "node scripts/test-services.cjs",
+    "test:integrity": "node scripts/test-integrity.cjs",
     "monitor:production": "node scripts/check-production-health.cjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:builder && npm run test:services && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm run test:builder && npm run test:services && npm run test:integrity && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -20,11 +21,14 @@
     "framer-motion": "^12.40.0",
     "html5-qrcode": "^2.3.8",
     "lottie-react": "^2.4.1",
-    "next": "14.2.35",
+    "next": "15.5.28",
     "qrcode": "^1.5.4",
     "react": "^18",
     "react-dom": "^18",
     "tailwind-merge": "^3.6.0"
+  },
+  "overrides": {
+    "postcss": "$postcss"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
@@ -33,8 +37,8 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",
-    "eslint-config-next": "14.2.35",
-    "postcss": "^8",
+    "eslint-config-next": "15.5.28",
+    "postcss": "8.5.30",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

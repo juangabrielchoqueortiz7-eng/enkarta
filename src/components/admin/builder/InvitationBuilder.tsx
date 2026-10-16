@@ -92,9 +92,11 @@ interface Props {
   backHref?: string;
   /** Prefijo del editor para abrir otra invitación (al duplicar). */
   builderPath?: string;
+  /** Development-only visual fixture: never persists or publishes documents. */
+  fixtureMode?: boolean;
 }
 
-export default function InvitationBuilder({ initialData, backHref = '/admin', builderPath = '/admin/builder' }: Props) {
+export default function InvitationBuilder({ initialData, backHref = '/admin', builderPath = '/admin/builder', fixtureMode = false }: Props) {
   const router = useRouter();
   const [data, setData] = useState<InvitationParsed>(initialData);
   const [activeTab, setActiveTab] = useState<Tab>('content');
@@ -103,6 +105,9 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saveState, setSaveState] = useState<'clean' | 'dirty' | 'saving' | 'saved' | 'offline' | 'error'>('clean');
+  const [saveError, setSaveError] = useState('');
+  const [advancedTools, setAdvancedTools] = useState(false);
+  const [mobileWorkspace, setMobileWorkspace] = useState<'edit' | 'preview'>('edit');
   const [contractNotice, setContractNotice] = useState('');
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishLabel, setPublishLabel] = useState('');
@@ -140,6 +145,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, []);
 
   useEffect(() => {
+    if (fixtureMode) return;
     let active = true;
     hydrateBuilderState(initialData.id).then(state => {
       if (!active) return;
@@ -147,7 +153,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
       setScheduledVersion(nextScheduledVersion(state.versions));
     });
     return () => { active = false; };
-  }, [initialData.id]);
+  }, [initialData.id, fixtureMode]);
 
   useEffect(() => {
     const online = () => setSaveState(hasChanges.current ? 'dirty' : 'saved');
@@ -160,6 +166,13 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   // ── Historial (deshacer / rehacer) ──
   const dataRef = useRef<InvitationParsed>(initialData);
+  const draftRevision = useRef(initialData.draft_revision ?? 0);
+  const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  useEffect(() => {
+    const protect = (event: BeforeUnloadEvent) => { if (hasChanges.current) { event.preventDefault(); event.returnValue = ''; } };
+    window.addEventListener('beforeunload', protect);
+    return () => window.removeEventListener('beforeunload', protect);
+  }, []);
   const past = useRef<InvitationParsed[]>([]);
   const future = useRef<InvitationParsed[]>([]);
   const lastCommit = useRef(0);
@@ -448,18 +461,29 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, []);
 
   const storeDraft = useCallback(async (snapshot: InvitationParsed) => {
+    if (fixtureMode) return dataRef.current === snapshot;
+    const save = saveQueue.current.catch(() => {}).then(async () => {
     const response = await fetch('/api/admin/invitations', {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadFrom(snapshot)),
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payloadFrom(snapshot), expectedDraftRevision: draftRevision.current }),
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
+      setSaveError(payload.error || 'No se pudo guardar. Conservamos los cambios en esta pestaña.');
       throw new Error(payload.error || 'No se pudo guardar el borrador');
     }
     const stored = await response.json();
+    setSaveError('');
+    draftRevision.current = stored.draft_revision ?? draftRevision.current;
     const unchanged = dataRef.current === snapshot;
     syncValidity(stored);
     return unchanged;
-  }, [payloadFrom, syncValidity]);
+    });
+    saveQueue.current = save;
+    return save.catch(error => {
+      setSaveError(error instanceof TypeError ? 'Sin conexión. Conservamos los cambios en esta pestaña; puedes descargar un respaldo.' : error instanceof Error ? error.message : 'No se pudo guardar el borrador.');
+      throw error;
+    });
+  }, [payloadFrom, syncValidity, fixtureMode]);
 
   // Autoguardado silencioso con estado explícito y recuperación al reconectar.
   const silentSave = useCallback(async () => {
@@ -468,9 +492,9 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     try {
       if (!await storeDraft(dataRef.current)) { setSaveState('dirty'); return; }
       setSavedAt(new Date()); hasChanges.current = false; setSaveState('saved');
-      saveBuilderVersion(dataRef.current, 'Autoguardado', 'save');
+      if (!fixtureMode) saveBuilderVersion(dataRef.current, 'Autoguardado', 'save');
     } catch { setSaveState(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error'); }
-  }, [storeDraft]);
+  }, [storeDraft, fixtureMode]);
 
   // Dispara el autoguardado 2.5s después del último cambio.
   useEffect(() => {
@@ -491,7 +515,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     try {
       if (!await storeDraft(dataRef.current)) { setSaveState('dirty'); return; }
       setSavedAt(new Date()); hasChanges.current = false; setSaveState('saved');
-      saveBuilderVersion(dataRef.current, 'Guardado manual', 'save');
+      if (!fixtureMode) saveBuilderVersion(dataRef.current, 'Guardado manual', 'save');
     } catch (error) {
       setSaveState(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error');
       alert(error instanceof Error ? error.message : 'Error de conexión');
@@ -534,7 +558,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     try {
       const now = new Date().toISOString();
       const isSchedule = publishMode === 'schedule';
-      const nextStatus = isSchedule ? (dataRef.current.status === 'disabled' ? 'draft' : publishedVersion ? 'ready' : 'draft') : 'ready';
+      const nextStatus = 'ready';
       const workflow = dataRef.current.config?.workflow ?? {};
       const snapshot: InvitationParsed = {
         ...dataRef.current,
@@ -670,7 +694,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-[100dvh] bg-gray-50">
 
       {/* ── Header ── */}
       <header className="bg-white border-b border-gray-200 z-40 flex-shrink-0">
@@ -774,6 +798,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             </button>
             <button
               onClick={handleDuplicate}
+              disabled={fixtureMode}
               title="Duplicar invitación"
               className="hidden sm:flex w-9 h-9 items-center justify-center text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-gray-700 transition-all"
             >
@@ -799,7 +824,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             </button>
             <button
               onClick={openPublish}
-              disabled={saving}
+              disabled={saving || fixtureMode}
               className="flex items-center gap-1.5 px-4 py-2 text-xs font-outfit font-semibold text-white rounded-xl transition-all duration-300 hover:-translate-y-px disabled:opacity-50"
               style={{ background: 'linear-gradient(90deg, #B8975A, #cda964)', boxShadow: '0 4px 14px rgba(184,151,90,0.35)' }}
             >
@@ -810,14 +835,23 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
         </div>
       </header>
       {contractNotice && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 font-outfit"><span>{contractNotice}</span><button type="button" onClick={() => setActiveTab('config')} className="font-semibold underline">Ver paquete y adicionales</button></div>}
+      {saveError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"><span>{saveError}</span><button type="button" className="min-h-11 underline" onClick={() => {
+        const url = URL.createObjectURL(new Blob([JSON.stringify(dataRef.current, null, 2)], { type: 'application/json' }));
+        const link = document.createElement('a'); link.href = url; link.download = `${data.slug}-respaldo.json`; link.click(); URL.revokeObjectURL(url);
+      }}>Descargar respaldo de mis cambios</button></div>}
+      <div className="flex shrink-0 items-center gap-2 overflow-x-auto [scrollbar-width:none] border-b border-[#e7e1d9] bg-white px-3 py-2 font-outfit" aria-label="Pasos de personalización">
+        {([['content', '1. Datos'], ['media', '2. Fotos y música'], ['style', '3. Estilo'], ['versions', '4. Revisar']] as [Tab, string][]).map(([tab, label]) => <button key={tab} type="button" onClick={() => { setActiveTab(tab); setMobileWorkspace('edit'); }} aria-pressed={activeTab === tab} className={`min-h-11 shrink-0 rounded-xl px-3 text-xs ${activeTab === tab ? 'bg-[#514735] text-white' : 'bg-[#f7f3ed] text-[#514735]'}`}>{label}</button>)}
+        <button type="button" onClick={() => setAdvancedTools(value => !value)} aria-pressed={advancedTools} className="min-h-11 shrink-0 rounded-xl border px-3 text-xs text-[#514735]">{advancedTools ? 'Ocultar herramientas avanzadas' : 'Más herramientas'}</button>
+        <button type="button" onClick={() => setMobileWorkspace(value => value === 'edit' ? 'preview' : 'edit')} className="order-first min-h-11 shrink-0 rounded-xl border px-3 text-xs lg:hidden">{mobileWorkspace === 'edit' ? 'Ver invitación' : 'Volver a editar'}</button>
+      </div>
 
       {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden">
 
         {/* Panel izquierdo: navegación clara + inspector */}
-        <div className="flex w-[430px] flex-shrink-0 border-r border-[#e7e1d9] bg-white xl:w-[500px] 2xl:w-[540px]">
+        <div className={`${mobileWorkspace === 'edit' ? 'flex' : 'hidden'} w-full flex-shrink-0 border-r border-[#e7e1d9] bg-white lg:flex lg:w-[430px] xl:w-[500px] 2xl:w-[540px]`}>
           <nav className="flex w-[76px] flex-shrink-0 flex-col gap-1 overflow-y-auto border-r border-[#e8e1d6] bg-[linear-gradient(180deg,#faf7f2_0%,#f5efe7_100%)] px-1.5 py-2" aria-label="Herramientas del constructor">
-            {TABS.map(tab => {
+            {TABS.filter(tab => advancedTools || ['content', 'media', 'style', 'versions', 'guests', 'config'].includes(tab.id) || tab.id === activeTab).map(tab => {
               const active = activeTab === tab.id;
               return (
                 <button
@@ -869,7 +903,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
         </div>
 
         {/* Panel derecho: preview en tiempo real */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className={`${mobileWorkspace === 'preview' ? 'flex' : 'hidden'} min-w-0 flex-1 flex-col overflow-hidden lg:flex`}>
           <div className="flex h-11 flex-shrink-0 items-center justify-between gap-3 border-b border-[#ded8d0] bg-white/95 px-3 shadow-sm">
             <div className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
               {VIEWPORT_PRESETS.map(preset => (
