@@ -5,8 +5,7 @@ import { privateJson, serviceBody, serviceError } from '@/lib/services-server';
 import { requireInvitationService } from '@/lib/package-services-server';
 import { parseRosterQuery } from '@/lib/roster-query';
 import { readHostRosterCsv } from '@/lib/host-dashboard-server';
-import { supabaseAdmin } from '@/lib/supabase/server';
-import { parseGuestMetadata } from '@/lib/guest-metadata';
+import { readRosterDuplicates } from '@/lib/roster-duplicates-server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,14 +32,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const id = await eventAccess(request), body = await serviceBody(request, 120000);
-    if (!Array.isArray(body.candidates) || body.candidates.length > 200) throw new Error('INVALID_INPUT');
-    const candidates = body.candidates.map(item => {
-      if (!item || typeof item !== 'object' || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 80) throw new Error('INVALID_INPUT');
-      return { name: item.name, phone: parseGuestMetadata({ phone: item.phone }).phone || '' };
-    });
-    const { data, error } = await supabaseAdmin.rpc('enkarta_roster_duplicates', { p_invitation_id: id, p_candidates: candidates });
-    if (error) throw error;
-    if (!Array.isArray(data) || data.some(index => !Number.isInteger(index) || index < 0 || index >= candidates.length)) throw new Error('SERVICE_UNAVAILABLE');
-    return privateJson({ duplicates: data });
+    return privateJson(await readRosterDuplicates(id, body));
   } catch(error) { return failure(error); }
 }

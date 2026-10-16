@@ -63,6 +63,31 @@ const { scanRecoveryKey, scanRecoveryRecord, restoreScanRecovery, saveScanRecove
 const { scannerSessionFingerprint } = require('../src/lib/scanner-session.ts');
 const {guestEditValues,guestEditDirty,guestEditStale,validateGuestEdit,verifyGuestEditReceipt}=require('../src/lib/guest-edit-form.ts');
 const editFixture={id:'80000000-0000-4000-8000-000000000001',publicId:'QA-ONLY',name:'Familia ficticia',phone:'+59170000001',group:'Familia',eventAccess:'both',tableNo:'7',passes:4,allowKids:false,status:'pending',sent:false,responseRevision:2};
+const {rosterRequestUrl,parseRosterQuery:parseBuilderRosterQuery,rosterParams:builderRosterParams,defaultRosterQuery:defaultBuilderRosterQuery}=require('../src/lib/roster-query.ts');
+const {parseManagedGuestPreview}=require('../src/lib/managed-guest-preview.ts');
+const {managedRosterCsv}=require('../src/lib/managed-roster-csv.ts');
+test('builder CSV keeps contacts and personal links, escapes formulas and respects QR/table services',()=>{
+ const guest={...editFixture,name:'=SUM(A1)',inside:1,accessToken:'never-export-this-token',reminderCount:2};
+ const text=managedRosterCsv([guest],{guestManagement:true,qrAccess:true,tableAssignment:true},'https://qa.invalid','evento seguro');
+ assert.ok(text.startsWith('\uFEFF'));assert.ok(text.includes('Teléfono'));assert.ok(text.includes("'=SUM(A1)"));assert.ok(text.includes("'+59170000001"));assert.ok(text.includes('https://qa.invalid/i/evento%20seguro?g=QA-ONLY'));assert.ok(!text.includes(guest.accessToken));
+ const limited=managedRosterCsv([guest],{guestManagement:true,qrAccess:false,tableAssignment:false},'https://qa.invalid','test');assert.ok(!limited.includes('Dentro ahora'));assert.ok(!limited.includes('Mesa'));assert.ok(limited.includes('Enlace personal'));
+});
+test('builder roster requests retain CSV flags and exact literal filters with an isolated event ID',()=>{
+ const query={...defaultBuilderRosterQuery(),page:3,filter:{...defaultBuilderRosterQuery().filter,search:'Pérez & 100%_+',group:'Amigos'}};
+ const params=builderRosterParams(query);params.set('id',editFixture.id);const url=new URL(rosterRequestUrl('/api/guests/roster?format=csv&id=old',params),'https://qa.invalid');
+ assert.equal(url.searchParams.get('format'),'csv');assert.equal(url.searchParams.getAll('id').length,1);assert.equal(url.searchParams.get('id'),editFixture.id);assert.deepEqual(parseBuilderRosterQuery(url.searchParams),query);
+ for(const endpoint of ['https://other.invalid','//other.invalid','/\\other.invalid'])assert.throws(()=>rosterRequestUrl(endpoint,params),/INVALID_ROSTER_ENDPOINT/);
+});
+test('builder guest preview preserves canvas inputs and QR only when explicitly returned and strips unknown fields',()=>{
+ const original={...editFixture,accessToken:'synthetic-token',accessCode:'ENK-QA',cookie:'secret-cookie',host_password_hash:'secret-hash'};
+ const preview=parseManagedGuestPreview({guest:original},editFixture.id);for(const field of ['name','publicId','passes','allowKids','phone','group','eventAccess','accessToken','accessCode'])assert.equal(preview[field],original[field]);assert.ok(!JSON.stringify(preview).includes('secret-'));
+ const limited=parseManagedGuestPreview({guest:editFixture},editFixture.id);assert.equal(limited.accessToken,undefined);
+ assert.equal(parseManagedGuestPreview({guest:{...editFixture,status:'declined',confirmedPasses:0}},editFixture.id).confirmedPasses,0);
+});
+test('builder guest preview rejects an unrelated guest, malformed fields or unverified revisions',()=>{
+ for(const patch of [{id:'90000000-0000-4000-8000-000000000001'},{passes:2.5},{passes:21},{responseRevision:-1},{publicId:''},{name:''},{allowKids:1},{status:['pending']},{accessToken:{}},{confirmedPasses:5}])assert.throws(()=>parseManagedGuestPreview({guest:{...editFixture,...patch}},editFixture.id),/No pudimos verificar/);
+ assert.throws(()=>parseManagedGuestPreview(null,editFixture.id));
+});
 test('guest editor keeps only editable fields and detects changes without including live state',()=>{
  const values=guestEditValues({...editFixture,accessToken:'private-token',inside:1});
  assert.deepEqual(Object.keys(values).sort(),['allowKids','eventAccess','group','name','passes','phone','tableNo']);

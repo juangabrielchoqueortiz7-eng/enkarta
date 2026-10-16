@@ -35,3 +35,11 @@ export function rosterParams(query: RosterQuery): URLSearchParams {
   query.selected.forEach(id => params.append('selected', id));
   return params;
 }
+
+/** Internal endpoints only. Preserve flags such as CSV format without a second '?'. */
+export function rosterRequestUrl(endpoint: string, params: URLSearchParams) {
+  if (!endpoint.startsWith('/') || endpoint.startsWith('//') || endpoint.includes('\\')) throw new Error('INVALID_ROSTER_ENDPOINT');
+  const url = new URL(endpoint, 'https://enkarta.invalid');
+  for (const key of new Set(params.keys())) { url.searchParams.delete(key); params.getAll(key).forEach(value => url.searchParams.append(key, value)); }
+  return url.pathname + (url.search ? url.search : '');
+}

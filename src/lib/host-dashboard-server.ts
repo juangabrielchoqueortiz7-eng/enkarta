@@ -8,11 +8,24 @@ import { hostMetrics, rosterCsv, type HostGuest, type HostSnapshot } from './hos
 import { readValidity } from './validity-server';
 import { withGuestMetadata } from './guest-metadata';
 import { defaultRosterQuery, type RosterQuery } from './roster-query';
+import { managedRosterCsv } from './managed-roster-csv';
+import { SITE_URL } from './site';
 
 /** Llamar únicamente después de verificar la sesión y la propiedad del evento. */
-export async function readHostSnapshot(invitationId: string, query: RosterQuery = defaultRosterQuery(), pageSize: 25 | 250 = 25): Promise<HostSnapshot> {
+export function readHostSnapshot(invitationId: string, query: RosterQuery = defaultRosterQuery(), pageSize: 25 | 250 = 25): Promise<HostSnapshot> {
+  return readRosterSnapshot(invitationId, query, pageSize, 'host');
+}
+
+/** Builder callers must first pass canManageInvitation(id, 'guestManagement').
+ * Personal guests do not grant the hostPanel service or any reception access. */
+export function readManagedGuestSnapshot(invitationId: string, query: RosterQuery = defaultRosterQuery()): Promise<HostSnapshot> {
+  return readRosterSnapshot(invitationId, query, 25, 'management');
+}
+
+async function readRosterSnapshot(invitationId: string, query: RosterQuery, pageSize: 25 | 250, context: 'host' | 'management'): Promise<HostSnapshot> {
   const { config } = await invitationServiceConfig(invitationId);
-  const operational = allowsService(config, 'hostPanel');
+  if (context === 'management' && !allowsService(config, 'guestManagement')) throw new Error('SERVICE_NOT_INCLUDED');
+  const operational = context === 'management' || allowsService(config, 'hostPanel');
   if (!operational && !allowsService(config, 'rsvp')) throw new Error('SERVICE_NOT_INCLUDED');
   const services = {
     guestManagement: operational && allowsService(config, 'guestManagement'),
@@ -46,22 +59,35 @@ export async function readHostSnapshot(invitationId: string, query: RosterQuery 
   const guests: HostGuest[] = services.guestManagement ? mapped.map(operationalGuest) : [];
   const { validity } = await readValidity(invitationId);
   return { syncedAt: data.syncedAt, mode: operational ? 'operations' : 'responses', services, validity,
-    guests, rows: responseRows(paginated ? [] : mapped, data.rsvps.map(mapRsvpRow)), metrics: paginated ? data.metrics : operational ? hostMetrics(guests) : null,
+    guests, rows: context === 'management' ? [] : responseRows(paginated ? [] : mapped, data.rsvps.map(mapRsvpRow)), metrics: paginated ? data.metrics : operational ? hostMetrics(guests) : null,
     ...(paginated ? { roster: data.roster, selectedGuests: data.selectedGuests.map((row: Record<string, unknown>) => operationalGuest(mapGuestRow(row, true))) } : {}) };
 }
 
 /** Explicit export only: bounded SQL batches, no truncation at PostgREST's row cap.
  * If edits/access change between batches, discard the entire export. */
-export async function readHostRosterCsv(invitationId: string, query: RosterQuery): Promise<string> {
-  let version: string | undefined, serviceKey: string | undefined; const parts: string[] = [];
+export function readHostRosterCsv(invitationId: string, query: RosterQuery): Promise<string> {
+  return readRosterCsv(invitationId, query, 'host');
+}
+export function readManagedGuestCsv(invitationId: string, query: RosterQuery): Promise<string> {
+  return readRosterCsv(invitationId, query, 'management');
+}
+async function readRosterCsv(invitationId: string, query: RosterQuery, context: 'host' | 'management'): Promise<string> {
+  let version: string | undefined, serviceKey: string | undefined, slug: string | undefined; const parts: string[] = [];
   for (let page = 1; ; page++) {
-    const snapshot = await readHostSnapshot(invitationId, { ...query, page, selected: [] }, 250);
+    const snapshot = await readRosterSnapshot(invitationId, { ...query, page, selected: [] }, 250, context);
     if (!snapshot.roster || !snapshot.services.guestManagement) throw new Error('SERVICE_NOT_INCLUDED');
     const currentServices = JSON.stringify(snapshot.services);
     if (version !== undefined && (version !== snapshot.roster.version || serviceKey !== currentServices)) throw new Error('ROSTER_CHANGED');
     version = snapshot.roster.version;
     serviceKey = currentServices;
-    const csv = rosterCsv(snapshot.guests, snapshot.services);
+    if (context === 'management') {
+      const invitation = await supabaseAdmin.from('invitations').select('slug').eq('id', invitationId).maybeSingle();
+      if (invitation.error) throw invitation.error;
+      if (!invitation.data || typeof invitation.data.slug !== 'string') throw new Error('NOT_FOUND');
+      if (slug !== undefined && slug !== invitation.data.slug) throw new Error('ROSTER_CHANGED');
+      slug = invitation.data.slug;
+    }
+    const csv = context === 'management' ? managedRosterCsv(snapshot.guests, snapshot.services, SITE_URL, slug!) : rosterCsv(snapshot.guests, snapshot.services);
     parts.push(page === 1 ? csv : csv.slice(csv.indexOf('\r\n') + 2));
     if (page >= snapshot.roster.pages) return parts.filter(Boolean).join('\r\n');
   }

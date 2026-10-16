@@ -1,11 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { GuestImportRow } from '@/lib/guest-import';
+import { rosterRequestUrl } from '@/lib/roster-query';
 
 /** Candidate-specific, abortable verification. No roster-wide contact download. */
-export function useImportDuplicates(invitationId: string, candidates: GuestImportRow[] | null, readVersion = '') {
+export function useImportDuplicates(invitationId: string, candidates: GuestImportRow[] | null, readVersion = '', endpoint = '/api/host/roster') {
   const key = candidates ? JSON.stringify(candidates.map(({name,phone}) => ({ name, phone: phone || '' }))) : '';
-  const scope = JSON.stringify([invitationId, readVersion, key]);
+  const scope = JSON.stringify([invitationId, endpoint, readVersion, key]);
   const [result, setResult] = useState<{ key: string; matches: {name: string; phone: string}[]; error: string } | null>(null);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -14,7 +15,7 @@ export function useImportDuplicates(invitationId: string, candidates: GuestImpor
     const timeout = setTimeout(() => controller.abort(), 12000);
     void (async () => {
       try {
-        const response = await fetch(`/api/host/roster?id=${encodeURIComponent(invitationId)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidates: JSON.parse(key) }), cache: 'no-store', signal: controller.signal });
+        const response = await fetch(rosterRequestUrl(endpoint, new URLSearchParams({ id: invitationId })), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidates: JSON.parse(key) }), cache: 'no-store', signal: controller.signal });
         const value = await response.json();
         const entries: {name: string; phone: string}[] = JSON.parse(key);
         if (!response.ok) throw new Error(value.error || 'No se pudieron comprobar los duplicados.');
@@ -24,6 +25,6 @@ export function useImportDuplicates(invitationId: string, candidates: GuestImpor
       finally { clearTimeout(timeout); }
     })();
     return () => { active = false; clearTimeout(timeout); controller.abort(); };
-  }, [invitationId, key, scope, retry]);
+  }, [invitationId, key, scope, retry, endpoint]);
   return { matches: result?.key === scope ? result.matches : [], ready: !key || (result?.key === scope && !result.error), error: result?.key === scope ? result.error : '', retry: () => { setResult(null); setRetry(value => value + 1); } };
 }

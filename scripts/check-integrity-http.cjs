@@ -419,7 +419,25 @@ async function main() {
       const response=await request('/api/host/roster','POST',{candidates},hostCookie);assert.equal(response.status,200);assert.deepEqual(response.data.duplicates,[]);
       const count=await db.from('guests').select('id',{head:true,count:'exact'}).eq('invitation_id',ids[1]);must(count,'Verify preview writes no guests');assert.equal(count.count,expectedTotal);
     });
-    if(process.argv.includes('--roster-window') || process.argv.includes('--csv-window'))await check(process.argv.includes('--csv-window') ? 'Production browser downloads the complete filtered CSV without writes' : 'Production browser paginates and resumes an off-page WhatsApp contact without writes',async()=>{
+    await check('HTTP builder roster reads all filtered pages, preserves contact CSV and checks duplicates without host-panel coupling',async()=>{
+      const path='/api/guests/roster?id='+ids[1];
+      const first=await request(path+'&search='+encodeURIComponent('QA Padrón'),'GET',undefined,adminCookie);assert.equal(first.status,200);assert.equal(first.data.guests.length,25);assert.equal(first.data.metrics.total,expectedTotal);assert.equal(first.data.roster.total,1001);assert.equal(first.data.roster.invitationQueue.overflow,801);assert.deepEqual(first.data.rows,[]);assert.equal(first.text.includes('accessToken'),false);
+      const last=await request(path+'&page=1000000','GET',undefined,adminCookie);assert.equal(last.data.roster.to,expectedTotal);
+      const csv=await request(path+'&format=csv&search='+encodeURIComponent('QA Padrón'),'GET',undefined,adminCookie);assert.equal(csv.status,200);assert.equal(csv.text.split('\r\n').length,1002);assert.ok(csv.text.includes('Teléfono'));assert.ok(csv.text.includes('QA Padrón 1000'));assert.ok(csv.text.includes('/i/'+tag+'-1?g='));assert.equal(csv.text.includes(guest.accessToken),false);
+      const duplicate=await request(path,'POST',{candidates:[{name:'QA Padrón 1000',phone:'70000001'}]},adminCookie);assert.equal(duplicate.status,200);assert.deepEqual(duplicate.data.duplicates,[0]);
+      const deniedPackage=await request('/api/guests/roster?id='+ids[0],'GET',undefined,adminCookie);assert.equal(deniedPackage.status,403);
+    });
+    await check('HTTP builder preview is explicit and event-scoped; list, CSV, preview and duplicate lookup deny foreign roles',async()=>{
+      const path='/api/guests/roster?id='+ids[1];
+      const preview=await request(path+'&format=preview&guestId='+guest.id,'GET',undefined,adminCookie);assert.equal(preview.status,200);assert.equal(preview.data.guest.id,guest.id);assert.equal(preview.data.guest.accessToken,guest.accessToken);
+      assert.equal((await request(path+'&format=preview&guestId='+randomUUID(),'GET',undefined,adminCookie)).status,404);
+      for(const cookie of ['',reviewCookie,doorCookie]){
+        for(const suffix of ['','&format=csv','&format=preview&guestId='+guest.id])assert.equal((await request(path+suffix,'GET',undefined,cookie)).status,403);
+        assert.equal((await request(path,'POST',{candidates:[]},cookie)).status,403);
+      }
+      assert.equal((await request('/api/guests/roster?id='+ids[0],'GET',undefined,hostCookie)).status,403);
+    });
+    if(process.argv.includes('--roster-window') || process.argv.includes('--csv-window') || process.argv.includes('--builder-roster-window'))await check(process.argv.includes('--builder-roster-window') ? 'Production builder paginates and loads a scoped personal preview without writes' : process.argv.includes('--csv-window') ? 'Production browser downloads the complete filtered CSV without writes' : 'Production browser paginates and resumes an off-page WhatsApp contact without writes',async()=>{
       const before=await row('guests',guest.id), accessBefore=must(await db.from('access_log').select('id').eq('guest_id',guest.id),'Read browser access baseline');
       fs.writeFileSync(rosterFixture,JSON.stringify({tag,email,password,invitationId:ids[1],guestId:guest.id,total:expectedTotal}));
       console.log('READY: synthetic roster browser fixture; waiting for acknowledgement');

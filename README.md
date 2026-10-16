@@ -16,6 +16,10 @@ permite fusionar a `main` sin publicar copias que omitan los originales.
 La [recuperación operativa segura](docs/RECUPERACION_OPERATIVA_SEGURA.md) documenta
 los bloqueos y reintentos de invitados, WhatsApp y QR ante fallos de almacenamiento.
 
+El [padrón compartido del constructor](docs/PADRON_COMPARTIDO_CONSTRUCTOR.md) conserva
+la vista personal y usa paginación, edición segura y CSV completo con los permisos
+específicos del servicio de invitados.
+
 Los recursos originales se conservan en su biblioteca maestra; los archivos
 excluidos del repositorio no se reemplazan ni se descargan durante CI. Para
 publicar desde otro equipo hace falta la distribución original verificada.

@@ -105,6 +105,7 @@ const hostAuth = require('../src/app/api/host/auth/route.ts');
 const doorAuth = require('../src/app/api/door/auth/route.ts');
 const dashboardRoute = require('../src/app/api/host/dashboard/route.ts');
 const rosterRoute = require('../src/app/api/host/roster/route.ts');
+const managedRosterRoute = require('../src/app/api/guests/roster/route.ts');
 const reviewState = require('../src/app/api/admin/builder-state/route.ts');
 const botRoute = require('../src/app/api/invitations/route.ts');
 const validityRoute = require('../src/app/api/admin/invitations/validity/route.ts');
@@ -163,6 +164,48 @@ beforeEach(async () => {
 after(async () => { await db.close(); });
 
 const rosterRpc = (extra={}) => rpc('enkarta_host_roster',{p_invitation_id:invId,...extra});
+test('builder roster paginates and exports beyond 1000 for personal guests without granting hostPanel',async()=>{
+ actor={role:'admin'};await db.query('update invitations set builder_config=$1 where id=$2',[newServiceContract({},'premium'),invId]);
+ assert.equal(allowsService(newServiceContract({},'premium'),'hostPanel'),false);
+ await db.query("insert into guests(invitation_id,public_id,name,passes,guest_metadata) select $1,'BUILDER'||n,'Familia '||lpad(n::text,4,'0'),2,jsonb_build_object('phone','+59170000001') from generate_series(1,1001) n",[invId]);
+ const first=await managedRosterRoute.GET(req('/api/guests/roster?id='+invId));assert.equal(first.status,200);assert.match(first.headers.get('Cache-Control'),/no-store/);const page=await first.json();assert.equal(page.guests.length,25);assert.equal(page.metrics.total,1002);assert.deepEqual(page.rows,[]);assert.equal(page.services.qrAccess,false);assert.equal(page.services.tableAssignment,false);
+ const last=await managedRosterRoute.GET(req('/api/guests/roster?id='+invId+'&page=41'));assert.equal((await last.json()).guests.length,2);
+ const csv=await managedRosterRoute.GET(req('/api/guests/roster?id='+invId+'&format=csv'));assert.equal(csv.status,200);const text=await csv.text();assert.equal(text.split('\r\n').length,1003);assert.ok(text.includes('Familia 1001'));assert.ok(!text.includes('Dentro ahora'));assert.ok(text.includes('Teléfono'));assert.ok(text.includes('/i/test-event?g=BUILDER1001'));
+ const duplicates=await managedRosterRoute.POST(req('/api/guests/roster?id='+invId,{candidates:[{name:'Familia 1001',phone:'70000001'}]}));assert.deepEqual((await duplicates.json()).duplicates,[0]);
+ actor={role:'host',id:invId};assert.equal((await managedRosterRoute.GET(req('/api/guests/roster?id='+invId))).status,403);assert.equal((await dashboardRoute.GET(req('/api/host/dashboard'))).status,200); // Response-only access remains separate.
+});
+test('builder preview is explicit, single-event and service-gated while ordinary pages omit QR tokens',async()=>{
+ await db.query('update invitations set builder_config=$1 where id=$2',[newServiceContract({},'exclusive'),invId]);const{guest}=await confirm();actor={role:'admin'};
+ const list=await managedRosterRoute.GET(req('/api/guests/roster?id='+invId));assert.equal(list.status,200);assert.ok(!(await list.text()).includes(guest.accessToken));
+ const preview=await managedRosterRoute.GET(req('/api/guests/roster?id='+invId+'&format=preview&guestId='+guestId));assert.equal(preview.status,200);assert.match(preview.headers.get('Cache-Control'),/no-store/);assert.equal((await preview.json()).guest.accessToken,guest.accessToken);
+ await db.query("insert into guests(id,invitation_id,public_id,name) values($1,$2,'OTHERPREVIEW','Otro evento')",[otherId,otherId]);assert.equal((await managedRosterRoute.GET(req('/api/guests/roster?id='+invId+'&format=preview&guestId='+otherId))).status,404);
+ await db.query('update invitations set builder_config=$1 where id=$2',[newServiceContract({},'premium'),invId]);
+ const limited=await (await managedRosterRoute.GET(req('/api/guests/roster?id='+invId+'&format=preview&guestId='+guestId))).json();assert.equal(limited.guest.accessToken,undefined);assert.equal(limited.guest.accessCode,undefined);assert.equal(limited.guest.tableNo,undefined);
+});
+test('builder roster denies anonymous, reviewer, door and foreign host across list, CSV, preview and duplicate checks',async()=>{
+ for(const role of [null,'review','door','host']){
+  actor=role?{role,id:role==='host'?otherId:invId}:null;
+  for(const suffix of ['','&format=csv','&format=preview&guestId='+guestId])assert.equal((await managedRosterRoute.GET(req('/api/guests/roster?id='+invId+suffix))).status,403);
+  assert.equal((await managedRosterRoute.POST(req('/api/guests/roster?id='+invId,{candidates:[]}))).status,403);
+ }
+ actor={role:'admin'};await db.query('update invitations set builder_config=$1 where id=$2',[newServiceContract({},'plus'),invId]);assert.equal((await managedRosterRoute.GET(req('/api/guests/roster?id='+invId))).status,403);
+});
+test('builder CSV rejects concurrent edits and feature downgrades without returning a partial file',async()=>{
+ actor={role:'admin'};await db.query("insert into guests(invitation_id,public_id,name) select $1,'BUILDERCHANGE'||n,'Nombre '||n from generate_series(1,251) n",[invId]);
+ rpcObserver=async(name,args)=>{if(name==='enkarta_host_roster'&&args.p_page===1){rpcObserver=null;await db.query("update guests set name='Otra revisión' where id=$1",[guestId]);}};
+ const changed=await managedRosterRoute.GET(req('/api/guests/roster?id='+invId+'&format=csv'));assert.equal(changed.status,409);assert.equal((await changed.json()).code,'ROSTER_CHANGED');
+ rpcObserver=async(name,args)=>{if(name==='enkarta_host_roster'&&args.p_page===1){rpcObserver=null;await db.query('update invitations set builder_config=$1 where id=$2',[newServiceContract({},'premium'),invId]);}};
+ assert.equal((await managedRosterRoute.GET(req('/api/guests/roster?id='+invId+'&format=csv'))).status,409);
+ rpcObserver=async(name,args)=>{if(name==='enkarta_host_roster'&&args.p_page===2){rpcObserver=null;await db.query("update invitations set slug='changed-during-export' where id=$1",[invId]);}};
+ assert.equal((await managedRosterRoute.GET(req('/api/guests/roster?id='+invId+'&format=csv'))).status,409);
+});
+test('builder roster validates filters, preview IDs and full UTF-8 duplicate batches and fails closed without pagination SQL',async()=>{
+ actor={role:'admin'};
+ for(const suffix of ['&page=0','&sort=unsafe','&format=unknown','&format=preview&guestId=bad'])assert.equal((await managedRosterRoute.GET(req('/api/guests/roster?id='+invId+suffix))).status,400);
+ for(const candidates of [[{name:'',phone:'70000001'}],Array(201).fill({name:'QA'})])assert.equal((await managedRosterRoute.POST(req('/api/guests/roster?id='+invId,{candidates}))).status,400);
+ const unicode=await managedRosterRoute.POST(req('/api/guests/roster?id='+invId,{candidates:Array.from({length:200},()=>({name:'界'.repeat(80),phone:'+59170000001'}))}));assert.equal(unicode.status,200);assert.deepEqual((await unicode.json()).duplicates,[]);
+ rpcFailure={code:'42883',message:'function unavailable'};assert.equal((await managedRosterRoute.GET(req('/api/guests/roster?id='+invId))).status,503);
+});
 test('018 WhatsApp phone eligibility agrees with the browser, including legacy and invalid values',async()=>{
  const {normalizeGuestPhone}=require('../src/lib/guest-import.ts');
  for(const phone of ['', '7123 4567', '+59170000001', '0059170000001', "'+59170000001", 'abc71234567', '00000000', '+001', '1'.repeat(16), '(591) 7000-0001'])assert.equal(await scalar('select public.enkarta_roster_phone($1) as result',[phone]),normalizeGuestPhone(phone));
