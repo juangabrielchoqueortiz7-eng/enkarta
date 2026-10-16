@@ -13,8 +13,8 @@ interface Props { params: Promise<{ id: string }> }
 /** Mismo constructor que usa el equipo Enkarta, montado en el espacio del socio. */
 export default async function PartnerBuilderPage({ params }: Props) {
   noStore();
-  const context = await requirePartnerPage();
   const { id } = await params;
+  const context = await requirePartnerPage(`/socios/constructor/${id}`);
 
   const { data, error } = await supabaseAdmin.from('invitations').select('*').eq('id', id).single();
   if (error || !data) notFound();

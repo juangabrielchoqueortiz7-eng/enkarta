@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { safePartnerNext } from '@/lib/partner-journey';
 
 // Barrera de UX para las subrutas del admin: si no hay cookie de sesión, redirige
 // al login (/admin) antes de renderizar. La verificación REAL de la firma se hace
@@ -32,12 +33,16 @@ async function partnerSession(request: NextRequest): Promise<NextResponse> {
     const { data } = await client.auth.getUser();
     if (!data.user && !isPartnerPublic(request.nextUrl.pathname)) {
       const login = new URL('/socios', request.url);
-      login.searchParams.set('next', request.nextUrl.pathname);
+      login.searchParams.set('next', safePartnerNext(request.nextUrl.pathname + request.nextUrl.search));
       return NextResponse.redirect(login);
     }
   } catch {
     // Un fallo de red con Auth no debe tumbar la página pública del programa.
-    if (!isPartnerPublic(request.nextUrl.pathname)) return NextResponse.redirect(new URL('/socios', request.url));
+    if (!isPartnerPublic(request.nextUrl.pathname)) {
+      const login = new URL('/socios', request.url);
+      login.searchParams.set('next', safePartnerNext(request.nextUrl.pathname + request.nextUrl.search));
+      return NextResponse.redirect(login);
+    }
   }
   return response;
 }

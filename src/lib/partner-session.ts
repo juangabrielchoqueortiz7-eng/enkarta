@@ -5,6 +5,7 @@ import { supabaseAdmin } from './supabase/server';
 import { createAuthServerClient } from './supabase/auth';
 import { verifyAdminSession } from './access';
 import { isUuid } from './rsvp-contract';
+import { safePartnerNext, partnerEntryPath } from './partner-journey';
 import {
   PARTNER_PLANS, planQuota, servesPublished, subscriptionState,
   type PartnerPlanKey, type QuotaState, type SubscriptionState,
@@ -157,13 +158,13 @@ export function serializePartner(context: PartnerContext) {
 }
 
 /** Guard para páginas server del socio: sin sesión, al inicio del programa. */
-export async function requirePartnerPage(): Promise<PartnerContext> {
+export async function requirePartnerPage(next = '/socios/panel'): Promise<PartnerContext> {
   // Sin la migración 013 el programa no existe: mejor el aviso de /socios que un 500.
   const context = await getPartnerContext().catch(error => {
     if (error instanceof PartnerSchemaMissing) redirect('/socios?error=migracion');
     throw error;
   });
-  if (!context) redirect('/socios');
+  if (!context) redirect(partnerEntryPath(safePartnerNext(next)));
   if (context.partner.status === 'suspended') redirect('/socios?estado=suspendido');
   return context;
 }

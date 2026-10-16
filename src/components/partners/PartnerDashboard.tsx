@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   BILLING_CYCLES, cyclePrice, formatBs, PARTNER_PLANS, PARTNER_PLAN_ORDER, PAYMENT_METHOD_LABELS,
-  type PartnerPaymentMethod, type PartnerPlanKey, type SubscriptionState,
+  draftCap, type PartnerPaymentMethod, type PartnerPlanKey, type SubscriptionState,
 } from '@/lib/partner-plans';
+import { checkoutPaymentLabel, checkoutQuoteMatches, paymentUnderReview, partnerRequest, validCheckoutPayment } from '@/lib/partner-checkout';
 
 // Panel del socio: estado de la mensualidad, su cartera de invitaciones y el
 // registro del pago con comprobante. Todo pasa por /api/partner/*; este
@@ -28,6 +29,7 @@ export interface PartnerPayment {
   amount_bs: number; method: PartnerPaymentMethod; receipt_url: string; receiptUrl?: string;
   status: 'pending' | 'approved' | 'rejected' | 'canceled'; review_note: string;
   created_at: string; period_end: string | null;
+  quote_locked_at?: string | null;
 }
 
 export interface PartnerInvitation {
@@ -56,19 +58,15 @@ const PAYMENT_TONE: Record<PartnerPayment['status'], string> = {
   approved: 'bg-emerald-50 text-emerald-800',
   rejected: 'bg-red-50 text-red-700',
 };
-const PAYMENT_LABEL: Record<PartnerPayment['status'], string> = {
-  canceled: 'Cancelado',
-  pending: 'En revisión', approved: 'Aprobado', rejected: 'Rechazado',
-};
-
 const dateLabel = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
 
-export default function PartnerDashboard({ initialAccount }: { initialAccount: PartnerAccount }) {
+export default function PartnerDashboard({ initialAccount, initialTab = 'invitaciones', selectedPlan }: { initialAccount: PartnerAccount; initialTab?: Tab; selectedPlan?: PartnerPlanKey }) {
   const router = useRouter();
   const [account, setAccount] = useState(initialAccount);
   const [invitations, setInvitations] = useState<PartnerInvitation[] | null>(null);
-  const [tab, setTab] = useState<Tab>('invitaciones');
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const [invitationError, setInvitationError] = useState('');
   const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -79,22 +77,25 @@ export default function PartnerDashboard({ initialAccount }: { initialAccount: P
   }, []);
 
   const loadAccount = useCallback(async () => {
-    const res = await fetch('/api/partner/account');
-    if (res.ok) setAccount(await res.json());
+    const value = await partnerRequest<PartnerAccount>('/api/partner/account');
+    if (!value.profile || !value.subscription || !Array.isArray(value.payments)) throw new Error('No pudimos verificar tu cuenta. Actualiza los datos.');
+    setAccount(value);
   }, []);
 
   const loadInvitations = useCallback(async () => {
-    const res = await fetch('/api/partner/invitations');
-    if (res.ok) setInvitations((await res.json()).invitations ?? []);
-    else setInvitations([]);
+    try {
+      const value = await partnerRequest<{ invitations: PartnerInvitation[] }>('/api/partner/invitations');
+      if (!Array.isArray(value.invitations)) throw new Error('No pudimos verificar la lista. Vuelve a consultarla.');
+      setInvitations(value.invitations); setInvitationError('');
+    } catch (failure) { setInvitationError(failure instanceof Error ? failure.message : 'No se pudo consultar la lista.'); }
   }, []);
 
   useEffect(() => { void loadInvitations(); }, [loadInvitations]);
   useEffect(() => {
     if (!account.payments.some(payment => payment.status === 'pending')) return;
-    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void loadAccount(); }, 15000);
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void loadAccount().catch(() => say('error', 'No pudimos actualizar el pago. Conservamos el último estado consultado. Pulsa «Actualizar estado».')); }, 15000);
     return () => window.clearInterval(timer);
-  }, [account.payments, loadAccount]);
+  }, [account.payments, loadAccount, say]);
 
   const pending = useMemo(() => account.payments.find(payment => payment.status === 'pending') ?? null, [account.payments]);
 
@@ -110,13 +111,14 @@ export default function PartnerDashboard({ initialAccount }: { initialAccount: P
       const result = await res.json();
       if (!res.ok) {
         say('error', result.error || 'No se pudo cambiar el estado');
-        if (result.needsSubscription) setTab('suscripcion');
+        if (result.needsSubscription || ['SUBSCRIPTION_REQUIRED', 'QUOTA_REACHED'].includes(result.code)) setTab('suscripcion');
         return;
       }
       setInvitations(list => (list ?? []).map(item => (item.id === invitation.id ? result.invitation : item)));
       await loadAccount();
       say('ok', next === 'ready' ? 'Invitación publicada. Ya puedes compartir el enlace.' : 'Invitación despublicada.');
-    } finally {
+    } catch { say('error', 'No pudimos comprobar el estado. Actualiza la lista antes de volver a publicar.'); }
+    finally {
       setBusy(null);
     }
   };
@@ -129,15 +131,15 @@ export default function PartnerDashboard({ initialAccount }: { initialAccount: P
       if (!res.ok) { say('error', 'No se pudo eliminar'); return; }
       setInvitations(list => (list ?? []).filter(item => item.id !== invitation.id));
       await loadAccount();
-    } finally {
+    } catch { say('error', 'No pudimos comprobar la eliminación. Actualiza la lista antes de repetirla.'); }
+    finally {
       setBusy(null);
     }
   };
 
-  const copyLink = (slug: string) => {
-    void navigator.clipboard.writeText(`${window.location.origin}/i/${slug}`);
-    setCopied(slug);
-    window.setTimeout(() => setCopied(null), 2000);
+  const copyLink = async (slug: string) => {
+    try { await navigator.clipboard.writeText(`${window.location.origin}/i/${slug}`); setCopied(slug); window.setTimeout(() => setCopied(null), 2000); }
+    catch { say('error', 'No se pudo copiar el enlace. Abre la invitación y copia su dirección.'); }
   };
 
   const signOut = async () => {
@@ -170,7 +172,7 @@ export default function PartnerDashboard({ initialAccount }: { initialAccount: P
 
       <main className="mx-auto max-w-6xl px-5 pb-20 pt-8 sm:px-8">
         {notice && (
-          <p className={`mb-5 rounded-2xl border px-4 py-3 font-outfit text-[13px] ${notice.tone === 'ok' ? 'border-emerald-300/60 bg-emerald-50 text-emerald-800' : 'border-red-300/60 bg-red-50 text-red-700'}`}>
+          <p role="status" className={`mb-5 rounded-2xl border px-4 py-3 font-outfit text-[13px] ${notice.tone === 'ok' ? 'border-emerald-300/60 bg-emerald-50 text-emerald-800' : 'border-red-300/60 bg-red-50 text-red-700'}`}>
             {notice.text}
           </p>
         )}
@@ -181,7 +183,8 @@ export default function PartnerDashboard({ initialAccount }: { initialAccount: P
           {TABS.map(item => (
             <button
               key={item.id}
-              onClick={() => setTab(item.id)}
+              onClick={() => { setTab(item.id); const url = new URL(window.location.href); url.searchParams.set('tab', item.id); window.history.replaceState(null, '', url); }}
+              aria-current={tab === item.id ? 'page' : undefined}
               className={`-mb-px whitespace-nowrap border-b-2 px-4 py-3 font-outfit text-[13px] transition ${tab === item.id ? 'border-[#B8975A] text-[#2C2519]' : 'border-transparent text-[#2C2519]/50 hover:text-[#2C2519]/80'}`}
             >
               {item.label}
@@ -192,8 +195,11 @@ export default function PartnerDashboard({ initialAccount }: { initialAccount: P
 
         <div className="pt-8">
           {tab === 'invitaciones' && (
+            <>
+            {invitationError && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{invitationError}<button type="button" onClick={() => void loadInvitations()} className="ml-2 min-h-11 underline">Volver a consultar invitaciones</button></div>}
             <InvitationsTab
               invitations={invitations}
+              failed={!!invitationError}
               busy={busy}
               copied={copied}
               quota={account.quota}
@@ -202,6 +208,7 @@ export default function PartnerDashboard({ initialAccount }: { initialAccount: P
               onToggle={togglePublish}
               onRemove={removeInvitation}
             />
+            </>
           )}
           {tab === 'suscripcion' && (
             <SubscriptionTab
@@ -209,6 +216,8 @@ export default function PartnerDashboard({ initialAccount }: { initialAccount: P
               pending={pending}
               onRefresh={loadAccount}
               onNotice={say}
+              selectedPlan={selectedPlan}
+              onPayment={payment => setAccount(current => ({ ...current, payments: [payment, ...current.payments.filter(item => item.id !== payment.id)] }))}
             />
           )}
           {tab === 'cuenta' && <AccountTab account={account} onSaved={setAccount} onNotice={say} />}
@@ -233,7 +242,7 @@ function StatusCard({ account, onGoToPlans }: { account: PartnerAccount; onGoToP
           <p className="mt-1.5 font-outfit text-[13px] opacity-80">
             {state.active || state.inGrace
               ? `Plan ${plan.label} · vigente hasta el ${dateLabel(state.periodEnd)}`
-              : 'Puedes diseñar todo lo que quieras. Para publicar y compartir el enlace necesitas la mensualidad al día.'}
+              : `Puedes crear borradores sin pagar, hasta ${draftCap(state.plan)} invitaciones creadas en este plan. Para publicar necesitas una suscripción activa.`}
           </p>
         </div>
 
@@ -263,8 +272,9 @@ function StatusCard({ account, onGoToPlans }: { account: PartnerAccount; onGoToP
 
 // ── Cartera de invitaciones ──────────────────────────────────────────────────
 
-function InvitationsTab({ invitations, busy, copied, quota, onCreate, onCopy, onToggle, onRemove }: {
+function InvitationsTab({ invitations, failed, busy, copied, quota, onCreate, onCopy, onToggle, onRemove }: {
   invitations: PartnerInvitation[] | null;
+  failed: boolean;
   busy: string | null;
   copied: string | null;
   quota: PartnerAccount['quota'];
@@ -273,7 +283,7 @@ function InvitationsTab({ invitations, busy, copied, quota, onCreate, onCopy, on
   onToggle: (invitation: PartnerInvitation) => void;
   onRemove: (invitation: PartnerInvitation) => void;
 }) {
-  if (invitations === null) return <p className="font-outfit text-[13px] text-[#2C2519]/50">Cargando tus invitaciones…</p>;
+  if (invitations === null) return failed ? null : <p role="status" className="font-outfit text-[13px] text-[#2C2519]/50">Cargando tus invitaciones…</p>;
 
   return (
     <div>
@@ -356,41 +366,70 @@ function InvitationsTab({ invitations, busy, copied, quota, onCreate, onCopy, on
 
 // ── Suscripción y pagos ──────────────────────────────────────────────────────
 
-function SubscriptionTab({ account, pending, onRefresh, onNotice }: {
+export function SubscriptionTab({ account, pending, onRefresh, onNotice, selectedPlan, onPayment }: {
   account: PartnerAccount;
   pending: PartnerPayment | null;
   onRefresh: () => Promise<void>;
   onNotice: (tone: 'ok' | 'error', text: string) => void;
+  selectedPlan?: PartnerPlanKey;
+  onPayment: (payment: PartnerPayment) => void;
 }) {
-  const [plan, setPlan] = useState<PartnerPlanKey>(pending?.plan_key ?? account.subscription.plan);
+  const [plan, setPlan] = useState<PartnerPlanKey>(pending?.plan_key ?? selectedPlan ?? account.subscription.plan);
   const [months, setMonths] = useState<number>(pending?.months ?? 1);
   const [method, setMethod] = useState<PartnerPaymentMethod>(pending?.method ?? 'qr');
   const [note, setNote] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [needsRefresh, setNeedsRefresh] = useState(false);
+  const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
+  const operation = useRef(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const total = cyclePrice(plan, months);
-  const receiptSent = Boolean(pending?.receipt_url);
+  const receiptSent = !!pending && paymentUnderReview(pending);
+  const quoteMatches = checkoutQuoteMatches(pending, plan, months, method, total);
+  const busy = saving || uploading || canceling || refreshing;
+  const blockedProvider = account.billing.provider === 'bcp' && !account.billing.ready;
+  const announce = (tone: 'ok' | 'error', text: string) => { setMessage({ tone, text }); onNotice(tone, text); };
+  const refreshAfterSave = async (success: string) => {
+    try { await onRefresh(); announce('ok', success); }
+    catch { setNeedsRefresh(true); announce('error', `${success} No pudimos actualizar tu cuenta; pulsa «Actualizar estado» antes de repetir.`); }
+  };
+  const refresh = async () => {
+    if (operation.current) return;
+    operation.current = true; setRefreshing(true);
+    try { await onRefresh(); setNeedsRefresh(false); announce('ok', 'Estado consultado. Revisa la referencia y tu suscripción.'); }
+    catch (failure) { announce('error', failure instanceof Error ? failure.message : 'No se pudo consultar el estado.'); }
+    finally { operation.current = false; setRefreshing(false); }
+  };
 
   const createIntent = async () => {
+    if (operation.current || receiptSent || blockedProvider || needsRefresh) return;
+    operation.current = true;
     setSaving(true);
     try {
-      const res = await fetch('/api/partner/payments', {
+      const result = await partnerRequest<{ payment: PartnerPayment }>('/api/partner/payments', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan, months, method }),
       });
-      const result = await res.json();
-      if (!res.ok) { onNotice('error', result.error || 'No se pudo registrar el pago'); return; }
-      await onRefresh();
-      onNotice('ok', `Referencia ${result.payment.reference} lista. Haz el pago y sube el comprobante.`);
-    } finally {
-      setSaving(false);
+      if (!validCheckoutPayment(result.payment, pending?.id) || !checkoutQuoteMatches(result.payment, plan, months, method, total)) throw new Error('No pudimos verificar la referencia. Actualiza el estado antes de continuar.');
+      onPayment(result.payment);
+      setFile(null); setNote(''); if (fileInput.current) fileInput.current.value = '';
+      await refreshAfterSave(`Referencia ${result.payment.reference} preparada. Esto no confirma un pago ni activa la suscripción. Revisa los datos de cobro antes de pagar.`);
+    } catch (failure) { setNeedsRefresh(true); announce('error', failure instanceof Error ? failure.message : 'No se pudo preparar la referencia.'); }
+    finally {
+      operation.current = false; setSaving(false);
     }
   };
 
   const sendReceipt = async () => {
-    if (!file && !note.trim()) { onNotice('error', 'Adjunta la captura o escribe el número de transacción.'); return; }
+    if (operation.current || !pending || !quoteMatches || blockedProvider || needsRefresh) return;
+    if (!file && !note.trim()) { announce('error', 'Adjunta la captura o escribe el número de transacción.'); return; }
+    if (file && (!['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'].includes(file.type) || !file.size || file.size > 6 * 1024 * 1024)) { announce('error', 'Usa JPG, PNG, WebP, HEIC o PDF con contenido y hasta 6 MB.'); return; }
+    operation.current = true;
     setUploading(true);
     try {
       const form = new FormData();
@@ -398,24 +437,29 @@ function SubscriptionTab({ account, pending, onRefresh, onNotice }: {
       form.append('paymentId', pending.id);
       if (file) form.append('file', file);
       if (note.trim()) form.append('note', note.trim());
-      const res = await fetch('/api/partner/payments/receipt', { method: 'POST', body: form });
-      const result = await res.json();
-      if (!res.ok) { onNotice('error', result.error || 'No se pudo enviar el comprobante'); return; }
+      const result = await partnerRequest<{ payment: PartnerPayment }>('/api/partner/payments/receipt', { method: 'POST', body: form });
+      if (!validCheckoutPayment(result.payment, pending.id) || result.payment.status !== 'pending' || !paymentUnderReview(result.payment)) throw new Error('No pudimos verificar la recepción del comprobante. Actualiza el estado antes de repetir.');
+      onPayment(result.payment);
       setFile(null);
       setNote('');
-      await onRefresh();
-      onNotice('ok', 'Comprobante recibido. Lo revisamos y activamos tu suscripción.');
-    } finally {
-      setUploading(false);
+      if (fileInput.current) fileInput.current.value = '';
+      await refreshAfterSave('Comprobante recibido para revisión manual. La suscripción se activará únicamente cuando el equipo apruebe el pago.');
+    } catch (failure) { setNeedsRefresh(true); announce('error', failure instanceof Error ? failure.message : 'No se pudo comprobar el comprobante.'); }
+    finally {
+      operation.current = false; setUploading(false);
     }
   };
 
   const cancelIntent = async () => {
-    if (!pending) return;
-    const res = await fetch(`/api/partner/payments?id=${pending.id}`, { method: 'DELETE' });
-    if (!res.ok) { onNotice('error', 'No se pudo retirar el pago'); return; }
-    await onRefresh();
-    onNotice('ok', 'Pago retirado.');
+    if (operation.current || !pending || needsRefresh || !window.confirm(`¿Retirar la solicitud ${pending.reference}? Esto no devuelve dinero ni cancela una transferencia bancaria. Si ya pagaste, coordina con el equipo antes de retirarla.`)) return;
+    operation.current = true; setCanceling(true);
+    try {
+      const result = await partnerRequest<{ success: boolean }>(`/api/partner/payments?id=${pending.id}`, { method: 'DELETE' });
+      if (result.success !== true) throw new Error('No pudimos comprobar la cancelación. Actualiza el estado.');
+      onPayment({ ...pending, status: 'canceled' }); setNote(''); setFile(null);
+      await refreshAfterSave('Solicitud retirada. No se realizó un reembolso ni una operación bancaria.');
+    } catch (failure) { setNeedsRefresh(true); announce('error', failure instanceof Error ? failure.message : 'No se pudo retirar la solicitud.'); }
+    finally { operation.current = false; setCanceling(false); }
   };
 
   return (
@@ -425,9 +469,11 @@ function SubscriptionTab({ account, pending, onRefresh, onNotice }: {
           {account.subscription.active ? 'Renovar o cambiar de plan' : 'Activa tu suscripción'}
         </h2>
         <p className="mt-2 max-w-lg font-outfit text-[13px] leading-relaxed text-[#2C2519]/60">
-          Elige el plan y el periodo, registra el pago y súbenos el comprobante. Activamos tu cuenta
-          en cuanto lo verifiquemos.
+          Elige plan y periodo, prepara una referencia y envía la evidencia del pago. La activación es manual después de la aprobación del equipo; preparar la referencia no realiza un cobro.
         </p>
+        <button type="button" disabled={busy} onClick={() => void refresh()} className="mt-3 min-h-11 font-outfit text-sm text-[#514735] underline underline-offset-4 disabled:opacity-50">{refreshing ? 'Consultando…' : 'Actualizar estado'}</button>
+        {message && <p role={message.tone === 'error' ? 'alert' : 'status'} className={`mt-3 rounded-xl p-3 font-outfit text-sm ${message.tone === 'error' ? 'bg-amber-50 text-amber-950' : 'bg-emerald-50 text-emerald-900'}`}>{message.text}</p>}
+        {receiptSent && <p role="status" className="mt-4 rounded-xl bg-sky-50 p-3 font-outfit text-sm text-sky-900">Comprobante en revisión. Se conservan plan, periodo, importe y referencia. Puedes actualizar la evidencia o consultar al equipo; no prepares otra transferencia.</p>}
 
         <div className="mt-7 grid gap-3 sm:grid-cols-3">
           {PARTNER_PLAN_ORDER.map(key => {
@@ -436,6 +482,7 @@ function SubscriptionTab({ account, pending, onRefresh, onNotice }: {
             return (
               <button
                 key={key}
+                type="button" disabled={busy || receiptSent} aria-pressed={selected}
                 onClick={() => setPlan(key)}
                 className={`rounded-2xl border p-4 text-left transition ${selected ? 'border-[#B8975A] bg-white shadow-[0_18px_40px_-32px_rgba(44,37,25,0.6)]' : 'border-[#2C2519]/10 bg-white/60 hover:border-[#2C2519]/25'}`}
               >
@@ -454,6 +501,7 @@ function SubscriptionTab({ account, pending, onRefresh, onNotice }: {
             <span className="font-outfit text-[11px] uppercase tracking-[0.18em] text-[#2C2519]/50">Periodo</span>
             <select
               value={months}
+              name="billing-period" disabled={busy || receiptSent}
               onChange={event => setMonths(Number(event.target.value))}
               className="mt-2 w-full rounded-xl border border-[#2C2519]/12 bg-white px-4 py-2.5 font-outfit text-[13px]"
             >
@@ -468,6 +516,7 @@ function SubscriptionTab({ account, pending, onRefresh, onNotice }: {
             <span className="font-outfit text-[11px] uppercase tracking-[0.18em] text-[#2C2519]/50">Forma de pago</span>
             <select
               value={method}
+              name="billing-method" disabled={busy || receiptSent}
               onChange={event => setMethod(event.target.value as PartnerPaymentMethod)}
               className="mt-2 w-full rounded-xl border border-[#2C2519]/12 bg-white px-4 py-2.5 font-outfit text-[13px]"
             >
@@ -488,34 +537,39 @@ function SubscriptionTab({ account, pending, onRefresh, onNotice }: {
           </div>
           <button
             onClick={createIntent}
-            disabled={saving || (account.billing.provider === 'bcp' && !account.billing.ready)}
+            disabled={busy || receiptSent || blockedProvider || quoteMatches || needsRefresh}
             className="ml-auto rounded-full bg-[#2C2519] px-6 py-2.5 font-outfit text-[13px] text-[#FAF7F2] transition hover:bg-[#3d342a] disabled:opacity-50"
           >
-            {saving ? 'Registrando…' : pending ? 'Actualizar mi pago' : 'Registrar el pago'}
+            {saving ? 'Preparando…' : receiptSent ? 'Comprobante en revisión' : quoteMatches ? 'Referencia preparada' : pending ? 'Actualizar referencia' : 'Preparar referencia'}
           </button>
         </div>
 
         {pending && (
           <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50/70 p-5">
+            <p role="status" className="mb-3 font-outfit text-sm font-semibold text-sky-900">{checkoutPaymentLabel(pending)}</p>
             <p className="font-outfit text-[11px] uppercase tracking-[0.18em] text-sky-800/70">Tu referencia</p>
             <p className="mt-1 font-playfair text-[26px] tracking-[0.06em] text-sky-900">{pending.reference}</p>
             <p className="mt-2 font-outfit text-[12.5px] leading-relaxed text-sky-900/80">
-              Escríbela en el detalle de tu transferencia por {formatBs(Number(pending.amount_bs))}. Después sube el comprobante aquí abajo.
+              {PARTNER_PLANS[pending.plan_key].label} · {pending.months} {pending.months === 1 ? 'mes' : 'meses'} · {PAYMENT_METHOD_LABELS[pending.method]} · {formatBs(Number(pending.amount_bs))}. Usa esta referencia para identificar tu pago. Prepararla no confirma que se haya pagado.
             </p>
+            {!quoteMatches && <div role="alert" className="mt-3 font-outfit text-sm text-amber-950"><p>La selección de arriba difiere de esta referencia. Actualiza la referencia antes de adjuntar un comprobante, o vuelve a seleccionar sus datos. Si ya pagaste, conserva el importe y consulta al equipo.</p><button type="button" disabled={busy} onClick={() => { setPlan(pending.plan_key); setMonths(pending.months); setMethod(pending.method); }} className="mt-2 min-h-11 underline">Usar los datos de esta referencia</button></div>}
 
             <div className="mt-5 grid gap-3">
               <label className="block">
                 <span className="font-outfit text-[11px] uppercase tracking-[0.18em] text-sky-800/70">Comprobante</span>
                 <input
+                  ref={fileInput} name="payment-receipt" disabled={busy || !quoteMatches || blockedProvider}
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
                   onChange={event => setFile(event.target.files?.[0] ?? null)}
                   className="mt-2 block w-full font-outfit text-[12.5px] file:mr-3 file:rounded-full file:border-0 file:bg-sky-600 file:px-4 file:py-2 file:font-outfit file:text-[12px] file:text-white"
                 />
+                <span className="mt-2 block font-outfit text-xs text-sky-900">JPG, PNG, WebP, HEIC o PDF; hasta 6 MB. También puedes indicar el número de transacción sin archivo.</span>
               </label>
               <label className="block">
                 <span className="font-outfit text-[11px] uppercase tracking-[0.18em] text-sky-800/70">Número de transacción (opcional)</span>
                 <input
+                  name="payment-transaction" autoComplete="off" disabled={busy || !quoteMatches || blockedProvider}
                   value={note}
                   onChange={event => setNote(event.target.value)}
                   maxLength={500}
@@ -526,13 +580,13 @@ function SubscriptionTab({ account, pending, onRefresh, onNotice }: {
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={sendReceipt}
-                  disabled={uploading}
+                  disabled={busy || !quoteMatches || blockedProvider || needsRefresh}
                   className="rounded-full bg-sky-700 px-6 py-2.5 font-outfit text-[13px] text-white transition hover:bg-sky-800 disabled:opacity-50"
                 >
                   {uploading ? 'Enviando…' : receiptSent ? 'Reemplazar comprobante' : 'Enviar comprobante'}
                 </button>
-                <button onClick={cancelIntent} className="font-outfit text-[12px] text-sky-900/60 underline-offset-4 hover:underline">
-                  Retirar este pago
+                <button type="button" disabled={busy || needsRefresh} onClick={() => void cancelIntent()} className="min-h-11 font-outfit text-[12px] text-sky-900 underline-offset-4 hover:underline disabled:opacity-50">
+                  {canceling ? 'Retirando…' : 'Retirar solicitud'}
                 </button>
               </div>
             </div>
@@ -604,7 +658,7 @@ function PaymentHistory({ payments }: { payments: PartnerPayment[] }) {
                 <td className="px-4 py-3">{PARTNER_PLANS[payment.plan_key]?.label ?? payment.plan_key} · {payment.months}m</td>
                 <td className="px-4 py-3">{formatBs(Number(payment.amount_bs))}</td>
                 <td className="px-4 py-3">
-                  <span className={`rounded-full px-2.5 py-1 text-[11px] ${PAYMENT_TONE[payment.status]}`}>{PAYMENT_LABEL[payment.status]}</span>
+                  <span className={`rounded-full px-2.5 py-1 text-[11px] ${PAYMENT_TONE[payment.status]}`}>{checkoutPaymentLabel(payment)}</span>
                   {payment.review_note && <span className="ml-2 text-[11px] text-[#2C2519]/50">{payment.review_note}</span>}
                 </td>
                 <td className="px-4 py-3 text-[#2C2519]/60">{dateLabel(payment.created_at)}</td>

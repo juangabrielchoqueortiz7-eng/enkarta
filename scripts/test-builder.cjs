@@ -24,6 +24,52 @@ const compileTypeScript = (module, file) => {
 require.extensions['.ts'] = compileTypeScript;
 require.extensions['.tsx'] = compileTypeScript;
 
+const {safePartnerNext,partnerEntryPath,partnerNewDesignPath,partnerPlanPath,partnerLoginErrorPath,selectedPartnerDesign}=require('../src/lib/partner-journey.ts');
+const {checkoutPaymentLabel,checkoutQuoteMatches,paymentUnderReview,partnerRequest,validCheckoutPayment}=require('../src/lib/partner-checkout.ts');
+test('commercial journey keeps every original design choice through the Socios continuation',()=>{
+ const {STARTER_DESIGNS}=require('../src/lib/enkarta-collections.ts');
+ for(const design of STARTER_DESIGNS){const next=partnerNewDesignPath(design.key),entry=new URL(partnerEntryPath(next),'https://enkarta.invalid');assert.equal(selectedPartnerDesign(design.key),design.key);assert.equal(entry.searchParams.get('next'),next);assert.equal(safePartnerNext(entry.searchParams.get('next')),next);}
+ assert.equal(selectedPartnerDesign('not-a-design'),undefined);assert.equal(partnerNewDesignPath('https://evil.invalid'),'/socios/panel/nueva');
+});
+test('commercial journey keeps selected plan and safe continuation after OAuth cancellation',()=>{
+ for(const plan of ['inicio','estudio','agencia']){const next=partnerPlanPath(plan);assert.equal(safePartnerNext(next),next);const cancelled=new URL(partnerLoginErrorPath('cancelado',next),'https://enkarta.invalid');assert.equal(cancelled.searchParams.get('next'),next);assert.equal(cancelled.searchParams.get('error'),'cancelado');}
+ const builder='/socios/constructor/10000000-0000-4000-8000-000000000001';assert.equal(safePartnerNext(builder),builder);
+});
+test('Socios continuation refuses external, control, backslash and unrelated routes',()=>{
+ for(const value of [undefined,'https://evil.invalid','//evil.invalid','/\\evil.invalid','/socios/panel\n','/admin','/api/auth/signout','/socios/constructor/not-a-uuid','/socios/panel#https://evil.invalid','/%2f%2fevil.invalid'])assert.equal(safePartnerNext(value),'/socios/panel',String(value));
+ assert.equal(safePartnerNext('/socios/panel?tab=suscripcion&plan=forged&secret=PRIVATE'),'/socios/panel?tab=suscripcion');
+});
+const checkoutFixture={id:'30000000-0000-4000-8000-000000000001',reference:'ENK-TEST01',plan_key:'estudio',months:1,method:'qr',amount_bs:449,receipt_url:'',quote_locked_at:null,status:'pending',created_at:'2026-10-16T12:00:00Z',period_end:null,review_note:''};
+test('checkout distinguishes prepared reference, note-only review and actual approval',()=>{
+ assert.equal(checkoutPaymentLabel(checkoutFixture),'Referencia preparada');assert.equal(paymentUnderReview(checkoutFixture),false);
+ const noteOnly={...checkoutFixture,quote_locked_at:'2026-10-16T12:01:00Z'};assert.equal(checkoutPaymentLabel(noteOnly),'Comprobante en revisión');assert.equal(paymentUnderReview(noteOnly),true);assert.equal(paymentUnderReview({...checkoutFixture,receipt_url:'private/path'}),true);
+ for(const [status,label]of [['approved','Aprobado'],['rejected','Rechazado'],['canceled','Cancelado']])assert.equal(checkoutPaymentLabel({...checkoutFixture,status}),label);
+});
+test('checkout evidence matches the exact saved plan, cycle, method and amount',()=>{
+ assert.equal(checkoutQuoteMatches({...checkoutFixture,amount_bs:'449.00'},'estudio',1,'qr',449),true);
+ for(const changed of [{plan_key:'agencia'},{months:3},{method:'cash'},{amount_bs:748},{status:'approved'}])assert.equal(checkoutQuoteMatches({...checkoutFixture,...changed},'estudio',1,'qr',449),false);
+ assert.equal(checkoutQuoteMatches(null,'estudio',1,'qr',449),false);
+});
+test('checkout rejects malformed or borrowed payment receipts before updating local state',()=>{
+ assert.equal(validCheckoutPayment(checkoutFixture,checkoutFixture.id),true);assert.equal(validCheckoutPayment({...checkoutFixture,amount_bs:'449.00'}),true);
+ for(const value of [null,{},[],{...checkoutFixture,id:'x'},{...checkoutFixture,reference:''},{...checkoutFixture,plan_key:'free'},{...checkoutFixture,months:2},{...checkoutFixture,amount_bs:'NaN'},{...checkoutFixture,receipt_url:null},{...checkoutFixture,quote_locked_at:'broken'},{...checkoutFixture,status:'paid'}])assert.equal(validCheckoutPayment(value),false);
+ assert.equal(validCheckoutPayment(checkoutFixture,'30000000-0000-4000-8000-000000000002'),false);
+});
+test('checkout request never retries writes or converts transport and incomplete replies into success',async()=>{
+ let calls=0;await assert.rejects(partnerRequest('/api/partner/payments',{method:'POST'},async()=>{calls++;throw new TypeError('offline');}),/Actualiza/);assert.equal(calls,1);
+ for(const body of ['{truncated','null','[]'])await assert.rejects(partnerRequest('/api/partner/payments',undefined,async()=>new Response(body)));
+ await assert.rejects(partnerRequest('/api/partner/payments',undefined,async()=>new Response('{"error":"Pago bloqueado"}',{status:409})),/Pago bloqueado/);
+ assert.deepEqual(await partnerRequest('/api/partner/payments',undefined,async(_url,opts)=>{assert.equal(opts.cache,'no-store');return new Response('{"success":true}');}),{success:true});
+});
+test('checkout render shows manual activation, canonical quote and locked note-only review',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),{SubscriptionTab}=require('../src/components/partners/PartnerDashboard.tsx');
+ const account={subscription:{plan:'inicio',active:false},billing:{configured:false,provider:'manual',ready:true,whatsapp:'59100000000'},payments:[]};
+ const render=pending=>renderToStaticMarkup(React.createElement(SubscriptionTab,{account,pending,onRefresh:async()=>{},onNotice:()=>{},onPayment:()=>{},selectedPlan:'agencia'}));
+ const html=render({...checkoutFixture,quote_locked_at:'2026-10-16T12:01:00Z'});assert.match(html,/Comprobante en revisión/);assert.match(html,/ENK-TEST01/);assert.match(html,/Bs 449/);assert.match(html,/activación es manual/);assert.match(html,/name="billing-period" disabled=""/);assert.match(html,/name="billing-method" disabled=""/);
+ const prepared=render(checkoutFixture);assert.match(prepared,/Referencia preparada/);assert.doesNotMatch(prepared,/Comprobante en revisión/);
+ const fresh=render(null);assert.match(fresh,/Bs 749/);assert.match(fresh,/Preparar referencia/);assert.doesNotMatch(fresh,/Enviar comprobante/);
+});
+
 const {prepareWhatsAppMessage,whatsAppMessageUrl,messageChoiceKey,MAX_WHATSAPP_MESSAGE}=require('../src/lib/whatsapp-message.ts');
 const messageGuest={id:'30000000-0000-4000-8000-000000000004',publicId:'QA-FAMILY',name:'Familia {link} Pérez & Ñandú',phone:'+59170000001',passes:4,tableNo:'7',accessCode:'ENK-QA'};
 const messageLink='https://enkarta.example.invalid/i/qa-event?g=QA-FAMILY';

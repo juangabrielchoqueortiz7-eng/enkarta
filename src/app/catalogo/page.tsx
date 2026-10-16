@@ -97,6 +97,7 @@ export default function CatalogPage() {
 
     {/* ── Explorador ── */}
     <section className="mx-auto max-w-6xl px-5 pb-24">
+      <p className="mb-8 max-w-3xl font-outfit text-sm leading-6 text-[#625946]">Puedes encargar la invitación al equipo con un paquete por evento, o usar el constructor de <Link href="/socios" className="font-semibold underline underline-offset-4">Socios</Link> con suscripción mensual. Elige la opción dentro de cada diseño.</p>
       <CatalogExplorer designs={designs} />
     </section>
 

@@ -19,7 +19,7 @@ global.fetch=async()=>new Response('',{status:404});
 const own='10000000-0000-4000-8000-000000000001',other='10000000-0000-4000-8000-000000000002';
 const partnerId='20000000-0000-4000-8000-000000000001',paymentId='30000000-0000-4000-8000-000000000001';
 const guestId='40000000-0000-4000-8000-000000000001';
-let actor='partner',rpcFailure=null,beforeInvitationUpdate=null;
+let actor='partner',rpcFailure=null,beforeInvitationUpdate=null,paymentReadFailure=false;
 const scalar=async(sql,args=[])=> (await db.query(sql,args)).rows[0]?.result;
 const row=async(table,id)=> (await db.query(`select * from ${table} where id=$1`,[id])).rows[0];
 const wire=row=>Object.fromEntries(Object.entries(row).map(([key,value])=>[key,value instanceof Date?(['event_date','expires_at','rsvp_deadline'].includes(key)?value.toISOString().slice(0,10):value.toISOString()):value]));
@@ -37,6 +37,7 @@ function queryClient(table){
   update(value){operation='update';payload=value;return this;},delete(){operation='delete';return this;},
   maybeSingle(){this.one=true;return this;},single(){this.one=true;return this;},
   async then(ok){try{
+   if(table==='partner_payments'&&operation==='read'&&paymentReadFailure)return ok({data:null,error:{code:'DATABASE_UNAVAILABLE'}});
    if(table==='invitations'&&operation==='update'&&beforeInvitationUpdate){const interleave=beforeInvitationUpdate;beforeInvitationUpdate=null;await interleave();}
    let values=[];const bind=v=>{values.push(v);return '$'+values.length;};
    const where=filters.length?' where '+filters.map(([k,v,op])=>op==='in'?`${k}=any(${bind(v)}::text[])`:`${k}=${bind(v)}`).join(' and '):'';
@@ -57,8 +58,10 @@ const {subscriptionState,planQuota,extendPeriod}=require(source('lib/partner-pla
 async function context(){const partner=await row('partners',partnerId);const sub=await scalar('select to_jsonb(s) as result from partner_subscriptions s where partner_id=$1',[partnerId]);const subscription=subscriptionState(sub);return{partner,subscription,quota:planQuota(subscription.plan,Number(await scalar("select count(*) as result from invitations where partner_id=$1 and status='ready'",[partnerId]))),totalInvitations:Number(await scalar('select count(*) as result from invitations where partner_id=$1',[partnerId]))};}
 const owns=async(partner,id)=>!!await scalar('select true as result from invitations where id=$1 and partner_id=$2',[id,partner]);
 replace(source('lib/partner-session.ts'),{
+ PartnerSchemaMissing:class PartnerSchemaMissing extends Error{},
  getBuilderActor:async()=>actor==='admin'?{kind:'admin'}:actor==='partner'?{kind:'partner',partnerId,context:await context()}:null,
  getPartnerContext:async()=>actor==='partner'?context():null,partnerContextFor:context,
+ serializePartner:ctx=>({profile:{email:ctx.partner.email},subscription:ctx.subscription,quota:ctx.quota,totalInvitations:ctx.totalInvitations}),
  requirePartnerPage:async()=>{if(actor!=='partner')throw new Error('UNAUTHORIZED_PARTNER_PAGE');return context();},
  partnerOwnsInvitation:owns,isPartnerOwnerOf:async id=>actor==='partner'&&owns(partnerId,id),
  packageForPlan:p=>({inicio:'plus',estudio:'premium',agencia:'exclusive'})[p],
@@ -74,6 +77,7 @@ const partnerInvites=require(source('app/api/partner/invitations/route.ts'));
 const approvals=require(source('app/api/admin/partners/route.ts'));
 const receipts=require(source('app/api/partner/payments/receipt/route.ts'));
 const payments=require(source('app/api/partner/payments/route.ts'));
+const accountRoute=require(source('app/api/partner/account/route.ts'));
 const guests=require(source('app/api/guests/route.ts'));
 const starterRoute=require(source('app/api/admin/invitations/starter/route.ts'));
 const {STARTER_TEMPLATE_KEYS}=require(source('lib/template-starters.ts'));
@@ -96,7 +100,7 @@ before(async()=>{
  }
 });
 beforeEach(async()=>{
- actor='partner';rpcFailure=null;beforeInvitationUpdate=null;delete process.env.PAYMENT_PROVIDER;
+ actor='partner';rpcFailure=null;beforeInvitationUpdate=null;paymentReadFailure=false;delete process.env.PAYMENT_PROVIDER;
  await db.exec('truncate invitations,partners cascade');
  await db.query("insert into partners(id,email,status) values($1,'test@example.invalid','active')",[partnerId]);
  await db.query("insert into partner_subscriptions(partner_id,plan_key,status,current_period_end) values($1,'estudio','active',now()+interval '1 month')",[partnerId]);
@@ -106,6 +110,13 @@ beforeEach(async()=>{
  await db.query("insert into partner_payments(id,reference,partner_id,plan_key,months,amount_bs) values($1,'ENK-TEST01',$2,'estudio',1,449)",[paymentId,partnerId]);
 });
 after(()=>db.close());
+test('account exposes note-only payment review without leaking payer note or activating the subscription',async()=>{
+ const before=(await context()).subscription.periodEnd;const form=new FormData();form.set('paymentId',paymentId);form.set('note','PRIVATE-TRANSACTION-QA');assert.equal((await receipts.POST(new NextRequest('http://localhost/api/test',{method:'POST',body:form}))).status,200);
+ const response=await accountRoute.GET();assert.equal(response.status,200);const result=await response.json(),payment=result.payments.find(p=>p.id===paymentId);assert.ok(payment.quote_locked_at);assert.equal(payment.receipt_url,'');assert.equal(payment.status,'pending');assert.equal(result.subscription.periodEnd,before);assert.doesNotMatch(JSON.stringify(result),/PRIVATE-TRANSACTION-QA|payer_note/);
+});
+test('account payment outage returns an error instead of a false empty history',async()=>{
+ paymentReadFailure=true;const response=await accountRoute.GET();assert.equal(response.status,500);const value=await response.json();assert.equal(value.payments,undefined);assert.doesNotMatch(JSON.stringify(value),/DATABASE_UNAVAILABLE/);
+});
 test('publication requires explicit action before storing any snapshot',async()=>{
  const response=await builder.POST(req({invitationId:own,version:version('bypass','publish')}));
  assert.equal(response.status,400);assert.equal(await scalar("select count(*) as result from builder_versions where id='bypass'"),0);

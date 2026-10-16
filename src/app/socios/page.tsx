@@ -7,6 +7,7 @@ import {
   BILLING_CYCLES, cyclePrice, formatBs, PARTNER_PLANS, PARTNER_PLAN_ORDER,
 } from '@/lib/partner-plans';
 import { collectionCatalog } from '@/lib/collection-catalog';
+import { safePartnerNext, partnerPlanPath, selectedPartnerDesign } from '@/lib/partner-journey';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,8 +26,8 @@ const ERRORS: Record<string, string> = {
 
 const STEPS = [
   { title: 'Entras con Google', text: 'Sin formularios ni contraseñas nuevas. Tu cuenta queda lista en un clic.' },
-  { title: 'Diseñas gratis', text: 'Arma la invitación completa con el constructor y muéstrasela a tu cliente antes de pagar nada.' },
-  { title: 'Pagas tu mes', text: 'Transferencia o QR, subes el comprobante y activamos tu suscripción.' },
+  { title: 'Diseñas gratis', text: 'Arma tu borrador y revisa la vista previa dentro del constructor antes de pagar. El enlace público se habilita después de publicar.' },
+  { title: 'Solicitas la activación', text: 'Elige plan y periodo, prepara una referencia y envía el comprobante. El equipo activa la suscripción después de verificar el pago.' },
   { title: 'Publicas y cobras', text: 'Compartes el enlace con tu cliente al precio que tú definas. La diferencia es tuya.' },
 ];
 
@@ -34,12 +35,14 @@ export default async function PartnersLandingPage({ searchParams }: {
   searchParams: Promise<{ error?: string; next?: string; estado?: string }>;
 }) {
   const { error, next, estado } = await searchParams;
+  const target = safePartnerNext(next);
   const context = await getPartnerContext().catch(() => null);
-  if (context && context.partner.status === 'active') redirect('/socios/panel');
+  if (context && context.partner.status === 'active') redirect(target);
 
   const message = ERRORS[estado ?? ''] ?? ERRORS[error ?? ''] ?? '';
   const designs = collectionCatalog().slice(0, 6);
-  const target = next && next.startsWith('/') && !next.startsWith('//') ? next : '/socios/panel';
+  const designKey = selectedPartnerDesign(new URL(target, 'https://enkarta.invalid').searchParams.get('design'));
+  const selectedDesign = designKey ? collectionCatalog().find(design => design.key === designKey) : undefined;
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] text-[#2C2519]">
@@ -81,6 +84,7 @@ export default async function PartnersLandingPage({ searchParams }: {
             <p className="mt-5 font-outfit text-[12px] text-[#2C2519]/50">
               Crear la cuenta y diseñar es gratis. Solo pagas cuando quieras publicar.
             </p>
+            {selectedDesign && <p role="status" className="mt-4 font-outfit text-sm text-[#514735]">Diseño elegido: <strong>{selectedDesign.name}</strong>. Al entrar podrás revisarlo y crear tu borrador.</p>}
           </div>
 
           <div className="grid grid-cols-3 gap-3">
@@ -144,7 +148,7 @@ export default async function PartnersLandingPage({ searchParams }: {
                     ))}
                   </ul>
                   <div className="mt-7 pt-1">
-                    <GoogleSignIn next={target} label={`Empezar con ${plan.label}`} />
+                    <GoogleSignIn next={partnerPlanPath(key)} label={`Elegir plan ${plan.label}`} />
                   </div>
                 </div>
               );
@@ -158,14 +162,15 @@ export default async function PartnersLandingPage({ searchParams }: {
             )).join(' · ')}
             . Ejemplo: {PARTNER_PLANS.estudio.label} por 12 meses queda en {formatBs(cyclePrice('estudio', 12))}.
           </p>
+          <p className="mt-4 font-outfit text-sm leading-6 text-[#625946]">Elegir un plan no realiza un cobro. La activación es manual tras verificar el comprobante. Los borradores tienen un límite por plan; las cuotas publicadas se muestran arriba.</p>
         </section>
 
         {/* ── Cierre ── */}
         <section className="rounded-3xl border border-[#2C2519]/8 bg-white p-10 text-center">
           <h2 className="font-playfair text-[24px]">Prueba el constructor antes de pagar</h2>
           <p className="mx-auto mt-3 max-w-xl font-outfit text-[14px] leading-relaxed text-[#2C2519]/65">
-            Crea tu cuenta, arma una invitación completa y muéstrasela a tu cliente. Solo necesitas
-            la suscripción activa cuando quieras publicarla y compartir el enlace.
+            Crea tu cuenta y revisa el borrador dentro del constructor. Para publicarlo y compartir
+            el enlace necesitas una suscripción activa y publicar una versión.
           </p>
           <div className="mt-7 flex justify-center">
             <GoogleSignIn next={target} label="Continuar con Google" />

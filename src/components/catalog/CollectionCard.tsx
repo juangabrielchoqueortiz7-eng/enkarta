@@ -8,6 +8,7 @@ import Tilt3D from '@/components/motion/Tilt3D';
 import type { CollectionCatalogEntry } from '@/lib/collection-catalog';
 import CommercialLink from '@/components/commercial/CommercialLink';
 import { PACKAGE_CATALOG } from '@/lib/packages';
+import { partnerEntryPath, partnerNewDesignPath } from '@/lib/partner-journey';
 
 // ── White phone frame (catalog cards) ───────────────────────────────────────
 function CatalogPhone({ bg, textColor = '#333', children, className = '' }: {
@@ -158,8 +159,10 @@ export default function CollectionCard({ design, delay = 0, showMeta = false }: 
       {showMeta && <div className="mx-auto mt-5 max-w-[280px] rounded-2xl border border-[#d8d0c2] bg-white/80 p-4 text-center font-outfit">
         <p className="text-sm font-semibold text-[#514735]">Desde Bs {PACKAGE_CATALOG.plus.bs} por evento</p>
         <p className="mt-1 text-xs leading-5 text-[#625946]">Plus: invitación y respuesta por WhatsApp. Premium añade formulario; Exclusive, panel y QR.</p>
-        <CommercialLink design={design.key} placement="catalog_design" className="mt-3 block rounded-full bg-[#514735] px-4 py-3 text-sm font-semibold text-white">Elegir este diseño</CommercialLink>
+        <CommercialLink design={design.key} placement="catalog_design" className="mt-3 block rounded-full bg-[#514735] px-4 py-3 text-sm font-semibold text-white">Encargar al equipo</CommercialLink>
         <Link href="/#precios" className="mt-2 inline-block min-h-11 py-3 text-xs text-[#514735] underline">Comparar paquetes</Link>
+        <Link href={partnerEntryPath(partnerNewDesignPath(design.key))} className="mt-2 flex min-h-11 items-center justify-center rounded-xl border border-[#d8d0c2] px-3 py-2 text-sm text-[#514735] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">Usar en el constructor de Socios</Link>
+        <p className="mt-2 text-xs leading-5 text-[#625946]">Socios: borrador gratis; publicación con suscripción mensual.</p>
       </div>}
     </Reveal>
   );
