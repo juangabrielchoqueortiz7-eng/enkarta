@@ -332,7 +332,7 @@ function ScannerSurface({ recoveryScope: suppliedScope, invitationId, tableSearc
       {!!lastParams.current && !busyId && <button type="button" disabled={recoveryBlocked || readingFile || loading || searching} onClick={() => void loadGroup(lastParams.current)} className="min-h-11 w-full rounded-xl border border-gray-200 bg-white text-sm disabled:opacity-50">{pendingScan ? 'Consultar estado sin descartar el reintento' : 'Actualizar grupo desde el servidor'}</button>}
 
       {/* Grupo cargado */}
-      {invitationId && <ReceptionSearch invitationId={invitationId} scope={scope} tables={tableSearch} transport={transport} disabled={recoveryBlocked || !!busyId || loading || readingFile || startingCamera || !!pending.current}
+      {invitationId && <ReceptionSearch invitationId={invitationId} sessionKey={recoveryScope.sessionKey} scope={scope} tables={tableSearch} transport={transport} disabled={recoveryBlocked || !!busyId || loading || readingFile || startingCamera || !!pending.current}
         busyChanged={value => { searchingRef.current = value; setSearching(value); }} beforeSearch={async () => { groupRequest.current?.abort(); setGroup(null); setMustRefresh(true); await stopCamera(); groupRequest.current?.abort(); lastParams.current = ''; activeGroup.current = false; }}
         selectGuest={id => { void loadGroup(`guestId=${encodeURIComponent(id)}`); }} />}
 

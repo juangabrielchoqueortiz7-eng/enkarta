@@ -910,7 +910,7 @@ test('reception search exposes only confirmed group identity, authorized table a
  await db.query("insert into guests(invitation_id,public_id,name,passes,status) values($1,'PENDINGX','Familia pendiente',2,'pending'),($1,'DECLINEX','Familia rechazada',2,'declined'),($2,'FOREIGNX','Familia ajena',2,'confirmed')",[invId,otherId]);
  const accepted=await confirm({passes:3,expectedRevision:1});actor={role:'door',id:invId};
  const response=await receptionRoute.GET(req('/api/checkin/search?scope=door&q=Familia'));assert.equal(response.status,200);
- const value=await response.json();assert.deepEqual(value,{guests:[{id:guestId,name:'Familia Prueba',tableNo:'7',passes:3}],hasMore:false});
+ const value=await response.json();assert.deepEqual(value,{invitationId:invId,guests:[{id:guestId,name:'Familia Prueba',tableNo:'7',passes:3}],hasMore:false});
  assert.doesNotMatch(JSON.stringify(value),new RegExp('PRIVATE|accessToken|access_token|59171234567|'+accepted.guest.accessToken));
  const found=await checkinRoute.GET(req('/api/checkin?scope=door&guestId='+guestId));assert.equal(found.status,200);assert.equal((await found.json()).attendees.length,3);
  assert.equal(await scalar('select count(*)::int as result from access_log'),0);
@@ -936,6 +936,27 @@ test('reception search and selection fail closed for stopped events, removed ser
  assert.equal((await receptionRoute.GET(req('/api/checkin/search?q=7&field=table'))).status,403);
  const result=await (await receptionRoute.GET(req(url))).json();assert.equal(result.guests[0].tableNo,undefined);
  rpcFailure={code:'PGRST202'};assert.equal((await receptionRoute.GET(req(url))).status,503);
+});
+
+test('reception search binds host, door and admin queries to the selected signed session without recording access',async()=>{
+ await confirm();const {scannerSessionFingerprint}=require('../src/lib/scanner-session.ts');
+ for(const role of ['host','door','admin']){actor={role,id:invId};const cookie=role==='admin'?signAdminSession():role==='door'?signDoorSession(invId,doorHash):signHostSession(invId,hostHash);
+ const url='/api/checkin/search?'+new URLSearchParams({scope:role==='door'?'door':'host',invitationId:invId,q:'Familia'});
+ const good=req(url);good.headers.set('X-Enkarta-Scanner-Session',scannerSessionFingerprint(role,cookie));const response=await receptionRoute.GET(good);assert.equal(response.status,200);assert.equal((await response.json()).invitationId,invId);
+ for(const key of ['f'.repeat(64),'',scannerSessionFingerprint(role==='door'?'host':'door',cookie)]){const bad=req(url);bad.headers.set('X-Enkarta-Scanner-Session',key);const denied=await receptionRoute.GET(bad);assert.equal(denied.status,403);assert.deepEqual(await denied.json(),{error:'No autorizado'});}
+ }
+ assert.equal(await scalar('select count(*)::int as result from access_log'),0);
+});
+
+test('reception search rejects an old binding after door credential rotation while accepting the new cookie',async()=>{
+ await confirm();actor=null;const {scannerSessionFingerprint}=require('../src/lib/scanner-session.ts');const old=signDoorSession(invId,doorHash);
+ const newHash=hashPassword('test-rotated-door-password'),rotated=signDoorSession(invId,newHash);await db.query('update invitations set door_password_hash=$1 where id=$2',[newHash,invId]);cookieJar.set('enkarta-door',rotated);
+ const url='/api/checkin/search?scope=door&invitationId='+invId+'&q=Familia';
+ const stale=req(url);stale.headers.set('X-Enkarta-Scanner-Session',scannerSessionFingerprint('door',old));const denied=await receptionRoute.GET(stale);assert.equal(denied.status,403);assert.deepEqual(await denied.json(),{error:'No autorizado'});
+ const valid=req(url);valid.headers.set('X-Enkarta-Scanner-Session',scannerSessionFingerprint('door',rotated));assert.equal((await receptionRoute.GET(valid)).status,200);
+ // Compatibility: a tab on the previous release still requires a valid signed cookie.
+ assert.equal((await receptionRoute.GET(req(url))).status,200);cookieJar.set('enkarta-door',old);assert.equal((await receptionRoute.GET(req(url))).status,403);
+ assert.equal(await scalar('select count(*)::int as result from access_log'),0);
 });
 test('selection by guest ID checks scope, identifiers and current confirmation without revealing tokens',async()=>{
  await confirm();actor={role:'door',id:invId};

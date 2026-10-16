@@ -19,6 +19,7 @@ const { newServiceContract } = require('../src/lib/packages.ts');
 const { deliveryRecoveryRecord, restoreDeliveryRecovery } = require('../src/lib/delivery-recovery.ts');
 const { parseScannerGroup, parseScanReceipt } = require('../src/lib/scanner-contract.ts');
 const { parseCheckinHistory } = require('../src/lib/checkin-history.ts');
+const { parseReceptionSearch } = require('../src/lib/reception-search.ts');
 const { readGuestCsvFile } = require('../src/lib/guest-csv-file.ts');
 const { guessGuestColumn, mapGuestCsvRows } = require('../src/lib/guest-import.ts');
 const { scannerSessionFingerprint } = require('../src/lib/scanner-session.ts');
@@ -297,7 +298,7 @@ async function main() {
     assert.equal((await request(path, 'GET', undefined, reviewCookie)).status, 403);
     assert.equal((await request(path, 'GET', undefined, hostCookie)).status, 403);
     const result = await request(path, 'GET', undefined, doorCookie); assert.equal(result.status, 200);
-    assert.deepEqual(result.data, { guests: [{ id: guest.id, name: 'QA synthetic family', tableNo: 'QA-8', passes: 4 }], hasMore: false });
+    assert.deepEqual(parseReceptionSearch(result.data, ids[1]), { invitationId: ids[1], guests: [{ id: guest.id, name: 'QA synthetic family', tableNo: 'QA-8', passes: 4 }], hasMore: false });
     assert.equal(JSON.stringify(result.data).includes(guest.accessToken), false);
     params.set('invitationId', ids[0]); assert.equal((await request('/api/checkin/search?' + params, 'GET', undefined, doorCookie)).status, 403);
     params.set('invitationId', ids[1]); params.set('field', 'table'); params.set('q', 'QA-8');
@@ -323,6 +324,27 @@ async function main() {
     assert.equal((await request('/api/checkin', 'POST', { ...operation, invitationId: ids[1] }, doorCookie, oldBinding)).status, 403);
     assert.equal((await request(query, 'GET', undefined, doorCookie, scannerBinding())).status, 200);
     assert.equal(must(await db.from('access_log').select('id').eq('guest_id', guest.id), 'Verify scoped refusal did not write').length, 0);
+  });
+  await check('HTTP reception search verifies current session bindings and rejects an old door binding without access writes', async () => {
+    const query = '/api/checkin/search?' + new URLSearchParams({ scope: 'door', invitationId: ids[1], q: 'QA synthetic', field: 'name' });
+    const oldBinding = scannerBinding();
+    const first = await request(query, 'GET', undefined, doorCookie, oldBinding);
+    assert.equal(first.status, 200); assert.equal(parseReceptionSearch(first.data, ids[1]).guests[0].id, guest.id);
+    assert.match(first.data.guests[0].name, /^QA synthetic/);
+    for (const headers of [{ 'X-Enkarta-Scanner-Session': 'f'.repeat(64) }, { 'X-Enkarta-Scanner-Session': '' }]) {
+      const denied = await request(query, 'GET', undefined, doorCookie, headers); assert.equal(denied.status, 403); assert.deepEqual(denied.data, { error: 'No autorizado' });
+    }
+    must(await db.from('invitations').update({ door_password_hash: hashPassword(password) }).eq('id', ids[1]).eq('slug', opsSlug), 'Rotate only own synthetic reception fixture');
+    const login = await request('/api/door/auth', 'POST', { email, password }); assert.equal(login.status, 200); doorCookie = login.cookie;
+    const stale = await request(query, 'GET', undefined, doorCookie, oldBinding); assert.equal(stale.status, 403); assert.deepEqual(stale.data, { error: 'No autorizado' });
+    const current = await request(query, 'GET', undefined, doorCookie, scannerBinding()); assert.equal(current.status, 200); assert.equal(parseReceptionSearch(current.data, ids[1]).guests.length, 1);
+    const rawHost = decodeURIComponent(hostCookie.slice(hostCookie.indexOf('=') + 1));
+    const hostQuery = query.replace('scope=door', 'scope=host');
+    assert.equal((await request(hostQuery, 'GET', undefined, hostCookie, scannerBinding())).status, 403);
+    const hostReply = await request(hostQuery, 'GET', undefined, hostCookie, { 'X-Enkarta-Scanner-Session': scannerSessionFingerprint('host', rawHost) });
+    assert.equal(hostReply.status, 200); assert.equal(parseReceptionSearch(hostReply.data, ids[1]).guests[0].id, guest.id);
+    assert.equal(must(await db.from('access_log').select('id').eq('guest_id', guest.id), 'Verify verified search never admits a pass').length, 0);
+    report.receptionSearch = { eventVerified: true, oldSessionDenied: true, borrowedRoleDenied: true, accessWrites: 0 };
   });
   await check('HTTP private scanner pages expose scoped recovery metadata without signed cookies', async () => {
     for (const [role, cookie, page] of [['door', doorCookie, '/puerta'], ['host', hostCookie, '/panel/scan'], ['admin', adminCookie, '/panel/scan']]) {

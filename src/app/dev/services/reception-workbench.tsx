@@ -18,7 +18,7 @@ const simulatedDelivery: typeof fetch = async (_input, options) => {
 const simulatedSearch: typeof fetch = async input => {
   const params = new URL(String(input), 'https://qa.invalid').searchParams;
   const matches = params.get('field') === 'table' ? params.get('q') === '7' : guest.name.toLowerCase().includes((params.get('q') || '').toLowerCase());
-  return new Response(JSON.stringify({ guests: matches ? [{ id: guest.id, name: guest.name, passes: 4, tableNo: '7' }] : [], hasMore: false }));
+  return new Response(JSON.stringify({ invitationId: params.get('invitationId'), guests: matches ? [{ id: guest.id, name: guest.name, passes: 4, tableNo: '7' }] : [], hasMore: false }));
 };
 export default function ReceptionWorkbench() {
   const [selected, setSelected] = useState(''), [result, setResult] = useState('');
@@ -41,7 +41,7 @@ export default function ReceptionWorkbench() {
     <button type="button" disabled={delivery.busy} onClick={() => setDenied(value => !value)} className="min-h-11 rounded-xl border bg-white px-3 text-sm">{denied ? 'Restablecer permiso ficticio' : 'Simular permiso rechazado'}</button>
     <button type="button" disabled={delivery.blocked} onClick={() => setStorageFull(value => !value)} className="min-h-11 rounded-xl border bg-white px-3 text-sm">{storageFull ? 'Restablecer almacenamiento ficticio' : 'Simular almacenamiento lleno'}</button>
     <button type="button" onClick={review.reload} className="min-h-11 rounded-xl border bg-white px-3 text-sm">Volver a consultar progreso ficticio</button>
-    <ReceptionSearch invitationId="60000000-0000-4000-8000-000000000017" scope="door" disabled={false}
+    <ReceptionSearch invitationId={scope} sessionKey={'0'.repeat(64)} scope="door" disabled={false}
       beforeSearch={async () => { setSelected(''); }} busyChanged={() => {}} transport={simulatedSearch}
       selectGuest={() => setSelected('Grupo ficticio seleccionado. Todavía no se registró ningún ingreso.')} />
     {selected && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">{selected}</p>}

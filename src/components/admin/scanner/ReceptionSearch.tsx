@@ -3,15 +3,19 @@ import { useEffect, useRef, useState } from 'react';
 import { findReceptionGuests, type ReceptionMatch, type ReceptionSearchField } from '@/lib/reception-search';
 import styles from '../operations/Operations.module.css';
 
-export default function ReceptionSearch({ invitationId, scope, disabled, beforeSearch, selectGuest, busyChanged, transport, tables = true }: {
-  invitationId: string; scope: 'host' | 'door'; disabled: boolean; beforeSearch: () => Promise<void>;
+interface ReceptionSearchProps {
+  invitationId: string; sessionKey: string; scope: 'host' | 'door'; disabled: boolean; beforeSearch: () => Promise<void>;
   selectGuest: (id: string) => void; busyChanged: (busy: boolean) => void; transport?: typeof fetch; tables?: boolean;
-}) {
+}
+export default function ReceptionSearch(props: ReceptionSearchProps) {
+  return <ReceptionSearchSurface key={`${props.invitationId}:${props.scope}:${props.sessionKey}`} {...props} />;
+}
+function ReceptionSearchSurface({ invitationId, sessionKey, scope, disabled, beforeSearch, selectGuest, busyChanged, transport, tables = true }: ReceptionSearchProps) {
   const [query, setQuery] = useState(''), [field, setField] = useState<ReceptionSearchField>('name');
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [result, setResult] = useState<{ guests: ReceptionMatch[]; hasMore: boolean } | null>(null);
   const request = useRef<AbortController | null>(null);
-  useEffect(() => () => { request.current?.abort(); }, []);
+  useEffect(() => () => { request.current?.abort(); request.current = null; }, []);
   const invalidate = () => { request.current?.abort(); request.current = null; setBusy(false); busyChanged(false); setResult(null); setError(''); };
   const search = async () => {
     if (disabled || busy || query.trim().length < (field === 'table' ? 1 : 2)) return;
@@ -21,10 +25,10 @@ export default function ReceptionSearch({ invitationId, scope, disabled, beforeS
     setBusy(true); busyChanged(true); setError(''); setResult(null);
     try {
       await beforeSearch();
-      const value = await findReceptionGuests(invitationId, scope, query, field, controller.signal, transport);
-      if (!controller.signal.aborted) setResult(value);
+      const value = await findReceptionGuests(invitationId, scope, query, field, controller.signal, sessionKey, transport);
+      if (request.current === controller && !controller.signal.aborted) setResult(value);
     } catch (failure) {
-      if (!controller.signal.aborted || controller.signal.reason === 'timeout') setError(failure instanceof Error && failure.name !== 'AbortError' ? failure.message : 'No pudimos consultar el evento. Comprueba la conexión y vuelve a buscar.');
+      if (request.current === controller && (!controller.signal.aborted || controller.signal.reason === 'timeout')) setError(failure instanceof Error && failure.name !== 'AbortError' ? failure.message : 'No pudimos consultar el evento. Comprueba la conexión y vuelve a buscar.');
     } finally {
       clearTimeout(timeout);
       if (request.current === controller) { setBusy(false); busyChanged(false); }

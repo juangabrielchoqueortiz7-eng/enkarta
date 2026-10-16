@@ -150,7 +150,7 @@ const { passFilename, accessPassPng } = require('../src/lib/access-pass.ts');
 const { guestMetadata, parseGuestMetadata, withGuestMetadata, publicGuest } = require('../src/lib/guest-metadata.ts');
 const { whatsappQueue, trackGuestDelivery, DeliveryTrackingError } = require('../src/lib/whatsapp-queue.ts');
 const { validateQrImage, qrLookup } = require('../src/lib/scanner-input.ts');
-const { receptionSearch, findReceptionGuests } = require('../src/lib/reception-search.ts');
+const { receptionSearch, findReceptionGuests, parseReceptionSearch } = require('../src/lib/reception-search.ts');
 const { deliveryFailureIsDefinitive, deliveryRecoveryKey, deliveryRecoveryRecord, restoreDeliveryRecovery, saveDeliveryRecovery, clearDeliveryRecovery, discardUnreadableDelivery, DeliveryRecoveryWriteError } = require('../src/lib/delivery-recovery.ts');
 const { parseScannerGroup, parseScanReceipt, recordScan, ScanRequestError, scanFailureIsDefinitive } = require('../src/lib/scanner-contract.ts');
 const { REVIEW_MAX_AGE, whatsappReviewKey, whatsappReviewRecord, restoreWhatsAppReview, advanceWhatsAppReview, prepareWhatsAppReview, saveWhatsAppReview, clearWhatsAppReview, canClearWhatsAppReview } = require('../src/lib/whatsapp-review.ts');
@@ -484,10 +484,36 @@ test('reception search keeps SQL wildcards literal and bounds every field',()=>{
  for(const [q,field] of [['x','name'],['','table'],['a\nb','name'],['x'.repeat(81),'name'],['x'.repeat(21),'table'],['Test','phone']])assert.throws(()=>receptionSearch(q,field),/INVALID_INPUT/);
 });
 test('reception client checks its reply and passes scope, exact table and cancellation to the private endpoint',async()=>{
- const controller=new AbortController();const response={guests:[{id:'qa',name:'Familia QA',passes:4,tableNo:'7'}],hasMore:false};
- const result=await findReceptionGuests('event','door','7','table',controller.signal,async(url,options)=>{const q=new URL(url,'https://local.invalid');assert.equal(q.pathname,'/api/checkin/search');assert.equal(q.searchParams.get('scope'),'door');assert.equal(q.searchParams.get('invitationId'),'event');assert.equal(q.searchParams.get('field'),'table');assert.equal(options.signal,controller.signal);assert.equal(options.cache,'no-store');return new Response(JSON.stringify(response));});assert.deepEqual(result,response);
- await assert.rejects(findReceptionGuests('event','door','Test','name',controller.signal,async()=>new Response('{"error":"No autorizado"}',{status:403})),/No autorizado/);
- for(const bad of [null,{...response,hasMore:'yes'},{...response,guests:[{...response.guests[0],passes:0}]}]) await assert.rejects(findReceptionGuests('event','host','Test','name',controller.signal,async()=>new Response(JSON.stringify(bad))),/verificar/);
+ const controller=new AbortController(),id='60000000-0000-4000-8000-000000000017',key='a'.repeat(64);const response={invitationId:id,guests:[{id:'60000000-0000-4000-8000-000000000001',name:'Familia QA',passes:4,tableNo:'7'}],hasMore:false};
+ const result=await findReceptionGuests(id,'door','7','table',controller.signal,key,async(url,options)=>{const q=new URL(url,'https://local.invalid');assert.equal(q.pathname,'/api/checkin/search');assert.equal(q.searchParams.get('scope'),'door');assert.equal(q.searchParams.get('invitationId'),id);assert.equal(q.searchParams.get('field'),'table');assert.equal(options.signal,controller.signal);assert.equal(options.cache,'no-store');assert.equal(new Headers(options.headers).get('X-Enkarta-Scanner-Session'),key);return new Response(JSON.stringify(response));});assert.deepEqual(result,response);
+ await assert.rejects(findReceptionGuests(id,'door','Test','name',controller.signal,key,async()=>new Response('{"error":"No autorizado"}',{status:403})),/No autorizado/);
+ for(const bad of [null,{...response,hasMore:'yes'},{...response,guests:[{...response.guests[0],passes:0}]}]) await assert.rejects(findReceptionGuests(id,'host','Test','name',controller.signal,key,async()=>new Response(JSON.stringify(bad))),/verificar/);
+});
+
+const receptionEvent='60000000-0000-4000-8000-000000000017';
+const receptionReply={invitationId:receptionEvent,guests:[{id:'60000000-0000-4000-8000-000000000001',name:'Familia Pérez',passes:4,tableNo:'7'}],hasMore:false};
+test('reception reply requires the expected event and valid unique groups before exposing selectable IDs',()=>{
+ for(const value of [null,{},[],{...receptionReply,invitationId:'60000000-0000-4000-8000-000000000018'},{...receptionReply,guests:[receptionReply.guests[0],receptionReply.guests[0]]},{...receptionReply,guests:[{...receptionReply.guests[0],id:'not-a-uuid'}]},{...receptionReply,guests:Array(21).fill(receptionReply.guests[0])}])assert.throws(()=>parseReceptionSearch(value,receptionEvent),/verificar/);
+ assert.deepEqual(parseReceptionSearch({invitationId:receptionEvent,guests:[],hasMore:false},receptionEvent),{invitationId:receptionEvent,guests:[],hasMore:false});
+});
+test('reception reply validates names, tables and capacity while returning only reception fields',()=>{
+ for(const change of [{name:null},{name:'  '},{tableNo:{}},{tableNo:7},{passes:'4'},{passes:0},{passes:21},{passes:1.5}])assert.throws(()=>parseReceptionSearch({...receptionReply,guests:[{...receptionReply.guests[0],...change}]},receptionEvent),/verificar/);
+ const value={...receptionReply,phone:'PRIVATE',guests:[{...receptionReply.guests[0],phone:'PRIVATE',accessToken:'PRIVATE',message:'PRIVATE'}]};assert.deepEqual(parseReceptionSearch(value,receptionEvent),receptionReply);assert.doesNotMatch(JSON.stringify(parseReceptionSearch(value,receptionEvent)),/PRIVATE/);
+});
+test('reception client rejects missing scope binding and pre-cancelled work without querying',async()=>{
+ let calls=0;const transport=async()=>{calls++;return new Response(JSON.stringify(receptionReply));};
+ for(const [id,scope,key]of [['event','door','a'.repeat(64)],[receptionEvent,'other','a'.repeat(64)],[receptionEvent,'door',''],[receptionEvent,'door','not-a-session']])await assert.rejects(findReceptionGuests(id,scope,'Pérez','name',new AbortController().signal,key,transport),/inicia sesión/);
+ const controller=new AbortController();controller.abort();await assert.rejects(findReceptionGuests(receptionEvent,'door','Pérez','name',controller.signal,'a'.repeat(64),transport));assert.equal(calls,0);
+});
+test('reception client discards late transport and body replies after a query or screen is cancelled',async()=>{
+ for(const during of ['transport','body']){const controller=new AbortController();let release,started;const waiting=new Promise(resolve=>{release=resolve;}),entered=new Promise(resolve=>{started=resolve;});
+ const pending=findReceptionGuests(receptionEvent,'door','Pérez','name',controller.signal,'a'.repeat(64),async()=>{if(during==='transport'){started();await waiting;return new Response(JSON.stringify(receptionReply));}return {ok:true,json:async()=>{started();await waiting;return receptionReply;}};});
+ await entered;controller.abort();release();await assert.rejects(pending,error=>error.name==='AbortError');}
+});
+test('reception client reports network and incomplete replies without accepting a stale group',async()=>{
+ const find=transport=>findReceptionGuests(receptionEvent,'host','Pérez','name',new AbortController().signal,'a'.repeat(64),transport);
+ await assert.rejects(find(async()=>{throw new TypeError('offline');}),/Sin conexión/);await assert.rejects(find(async()=>new Response('{truncated')),/incompleta/);await assert.rejects(find(async()=>new Response(JSON.stringify({error:{private:'INTERNAL'}}),{status:500})),/No se pudo buscar/);
+ await assert.rejects(find(async()=>new Response(JSON.stringify({...receptionReply,invitationId:'60000000-0000-4000-8000-000000000018'}))),/verificar/);
 });
 test('malformed delivery receipts stay retryable instead of losing their original operation',async()=>{
  const operation={guestId:'qa',action:'reminder',expectedRevision:7,requestId:'operation'};

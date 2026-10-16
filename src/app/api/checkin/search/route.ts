@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { getAdminSession, getHostSession, getDoorSession, canScanInvitation } from '@/lib/host-session';
+import { getAdminSession, getHostSession, getDoorSession, canScanInvitation, scannerRecoveryScope } from '@/lib/host-session';
 import { requireInvitationService } from '@/lib/package-services-server';
 import { allowsService } from '@/lib/packages';
 import { isUuid } from '@/lib/rsvp-contract';
@@ -16,6 +16,9 @@ export async function GET(request: NextRequest) {
     const admin = !door && await getAdminSession();
     const owner = door ? await getDoorSession() : await getHostSession();
     if (!admin && !owner) return privateJson({ error: 'No autorizado' }, 403);
+    const binding = request.headers.get('x-enkarta-scanner-session');
+    // Older tabs may omit the binding; when provided it must match the selected role.
+    if (binding !== null && binding !== (await scannerRecoveryScope(admin ? 'admin' : door ? 'door' : 'host')).sessionKey) return privateJson({ error: 'No autorizado' }, 403);
     const requested = params.get('invitationId');
     if (!admin && requested && requested !== owner) return privateJson({ error: 'No autorizado' }, 403);
     const invitationId = admin ? requested || owner : owner;
@@ -32,7 +35,7 @@ export async function GET(request: NextRequest) {
       .ilike(search.field === 'table' ? 'table_no' : 'name', search.pattern).order('name').limit(21);
     if (result.error) throw result.error;
     const rows = result.data ?? [];
-    return privateJson({ guests: rows.slice(0, 20).map(row => ({ id: row.id, name: row.name,
+    return privateJson({ invitationId, guests: rows.slice(0, 20).map(row => ({ id: row.id, name: row.name,
       ...(allowsService(config, 'tableAssignment') && row.table_no ? { tableNo: row.table_no } : {}), passes: row.confirmed_passes ?? row.passes })), hasMore: rows.length > 20 });
   } catch (error) { return serviceError(error); }
 }
