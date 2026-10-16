@@ -83,3 +83,32 @@ estos controles. La prueba no habilita BCP, WhatsApp Business ni cobros automát
 
 No hay migración SQL, dependencia, cambio de CSP, originales nuevos ni cambios a
 invitaciones públicas, presets, fotografías, música o animaciones.
+
+## Aceptación Android y contención del historial
+
+El usuario confirmó en Chrome de Android que la muestra Lunaria carga sin recortes,
+que la elección se conserva al entrar con Google y que la sesión persiste al recargar.
+El proveedor Google estaba desactivado en Supabase; tras configurarlo, la consulta
+pública de Auth confirmó el proveedor activo y la redirección a Google. El ingreso
+completo se acredita con el reporte del usuario, no con una captura automatizada.
+
+Al preparar la primera referencia ficticia, el usuario reportó una reducción aparente
+del tamaño de toda la página. La revisión encontró que el historial introduce una tabla
+de ancho mínimo 540 px dentro de una cuadrícula móvil con columna implícita y mínimo
+automático. La corrección define una columna encogible en móvil, mínimos cero en ambos
+paneles y columnas de escritorio con `minmax(0, ...)`. El formulario de archivo también
+limita su ancho. El historial conserva sus datos, tamaños de texto y desplazamiento
+horizontal propio; su región tiene nombre accesible, foco de teclado y contorno visible.
+No se oculta el desbordamiento del documento ni se restringe el zoom del navegador.
+
+Una regresión adicional de render verifica el historial al crear la primera referencia,
+su acceso por teclado, todas las filas y estados, los enlaces privados de evidencia y
+el escape de las notas. La suite suma 325 pruebas. Estas pruebas no miden el viewport:
+la confirmación de ancho y escala tras recargar sigue pendiente en el Android físico,
+porque el navegador de la sesión de trabajo continúa desactivado.
+
+La prueba humana conserva su cuenta Google, su suscripción y el borrador que ya existía.
+La referencia ficticia queda identificada de forma privada para retirarla y limpiar
+solo ese registro cuando concluya la aceptación. Las pruebas HTTP automatizadas usan
+otra cuenta descartable y solicitudes manuales sin aprobación ni operación bancaria;
+su limpieza no alcanza la cuenta ni el borrador del usuario. BCP permanece desactivado.

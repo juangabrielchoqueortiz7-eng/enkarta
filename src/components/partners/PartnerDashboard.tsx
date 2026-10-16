@@ -462,9 +462,11 @@ export function SubscriptionTab({ account, pending, onRefresh, onNotice, selecte
     finally { operation.current = false; setCanceling(false); }
   };
 
+  // Keep the history's minimum table width inside its own scroll region,
+  // including on the first payment when the table is added to the page.
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <div>
+    <div className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+      <div className="min-w-0">
         <h2 className="font-playfair text-[22px]">
           {account.subscription.active ? 'Renovar o cambiar de plan' : 'Activa tu suscripción'}
         </h2>
@@ -548,21 +550,21 @@ export function SubscriptionTab({ account, pending, onRefresh, onNotice, selecte
           <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50/70 p-5">
             <p role="status" className="mb-3 font-outfit text-sm font-semibold text-sky-900">{checkoutPaymentLabel(pending)}</p>
             <p className="font-outfit text-[11px] uppercase tracking-[0.18em] text-sky-800/70">Tu referencia</p>
-            <p className="mt-1 font-playfair text-[26px] tracking-[0.06em] text-sky-900">{pending.reference}</p>
+            <p className="mt-1 break-words font-playfair text-[26px] tracking-[0.06em] text-sky-900">{pending.reference}</p>
             <p className="mt-2 font-outfit text-[12.5px] leading-relaxed text-sky-900/80">
               {PARTNER_PLANS[pending.plan_key].label} · {pending.months} {pending.months === 1 ? 'mes' : 'meses'} · {PAYMENT_METHOD_LABELS[pending.method]} · {formatBs(Number(pending.amount_bs))}. Usa esta referencia para identificar tu pago. Prepararla no confirma que se haya pagado.
             </p>
             {!quoteMatches && <div role="alert" className="mt-3 font-outfit text-sm text-amber-950"><p>La selección de arriba difiere de esta referencia. Actualiza la referencia antes de adjuntar un comprobante, o vuelve a seleccionar sus datos. Si ya pagaste, conserva el importe y consulta al equipo.</p><button type="button" disabled={busy} onClick={() => { setPlan(pending.plan_key); setMonths(pending.months); setMethod(pending.method); }} className="mt-2 min-h-11 underline">Usar los datos de esta referencia</button></div>}
 
-            <div className="mt-5 grid gap-3">
-              <label className="block">
+            <div className="mt-5 grid min-w-0 grid-cols-1 gap-3">
+              <label className="block min-w-0">
                 <span className="font-outfit text-[11px] uppercase tracking-[0.18em] text-sky-800/70">Comprobante</span>
                 <input
                   ref={fileInput} name="payment-receipt" disabled={busy || !quoteMatches || blockedProvider}
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
                   onChange={event => setFile(event.target.files?.[0] ?? null)}
-                  className="mt-2 block w-full font-outfit text-[12.5px] file:mr-3 file:rounded-full file:border-0 file:bg-sky-600 file:px-4 file:py-2 file:font-outfit file:text-[12px] file:text-white"
+                  className="mt-2 block w-full min-w-0 max-w-full font-outfit text-[12.5px] file:mr-3 file:rounded-full file:border-0 file:bg-sky-600 file:px-4 file:py-2 file:font-outfit file:text-[12px] file:text-white"
                 />
                 <span className="mt-2 block font-outfit text-xs text-sky-900">JPG, PNG, WebP, HEIC o PDF; hasta 6 MB. También puedes indicar el número de transacción sin archivo.</span>
               </label>
@@ -596,7 +598,7 @@ export function SubscriptionTab({ account, pending, onRefresh, onNotice, selecte
         <PaymentHistory payments={account.payments} />
       </div>
 
-      <aside className="h-fit rounded-3xl border border-[#2C2519]/10 bg-white p-6">
+      <aside className="h-fit min-w-0 break-words rounded-3xl border border-[#2C2519]/10 bg-white p-6">
         {account.billing.message && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{account.billing.message}</p>}
         <p className="font-outfit text-[11px] uppercase tracking-[0.22em] text-[#B8975A]">Dónde pagar</p>
         {account.billing.configured ? (
@@ -633,9 +635,12 @@ export function SubscriptionTab({ account, pending, onRefresh, onNotice, selecte
 function PaymentHistory({ payments }: { payments: PartnerPayment[] }) {
   if (!payments.length) return null;
   return (
-    <div className="mt-10">
-      <h3 className="font-playfair text-[18px]">Historial de pagos</h3>
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-[#2C2519]/10 bg-white">
+    <div className="mt-10 min-w-0">
+      <h3 id="partner-payment-history" className="font-playfair text-[18px]">Historial de pagos</h3>
+      <div
+        role="region" aria-labelledby="partner-payment-history" tabIndex={0}
+        className="mt-4 w-full max-w-full overflow-x-auto rounded-2xl border border-[#2C2519]/10 bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#514735]"
+      >
         <table className="w-full min-w-[540px] text-left">
           <thead>
             <tr className="border-b border-[#2C2519]/8 font-outfit text-[10.5px] uppercase tracking-[0.14em] text-[#2C2519]/45">

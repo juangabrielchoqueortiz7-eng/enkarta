@@ -70,6 +70,23 @@ test('checkout render shows manual activation, canonical quote and locked note-o
  const fresh=render(null);assert.match(fresh,/Bs 749/);assert.match(fresh,/Preparar referencia/);assert.doesNotMatch(fresh,/Enviar comprobante/);
 });
 
+test('first reference exposes keyboard-accessible payment history without losing rows or evidence links',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),{SubscriptionTab}=require('../src/components/partners/PartnerDashboard.tsx');
+ const payments=['pending','approved','rejected','canceled'].map((status,index)=>({...checkoutFixture,id:`30000000-0000-4000-8000-${String(index+1).padStart(12,'0')}`,reference:`ENK-TEST0${index+1}`,status,review_note:index===2?'<revisión ficticia>':'',receiptUrl:index===1?'https://storage.example.invalid/signed/qa-receipt':undefined}));
+ const account={subscription:{plan:'inicio',active:false},billing:{configured:false,provider:'manual',ready:true,whatsapp:'59100000000'},payments};
+ const render=(list,pending)=>renderToStaticMarkup(React.createElement(SubscriptionTab,{account:{...account,payments:list},pending,onRefresh:async()=>{},onNotice:()=>{},onPayment:()=>{}}));
+ for(const list of [payments.slice(0,1),payments]){
+  const html=render(list,list[0]);
+  const region=html.match(/<div[^>]*role="region"[^>]*aria-labelledby="([^"]+)"[^>]*tabindex="0"[^>]*>([\s\S]*?<\/table>)/);
+  assert.ok(region,'History must remain reachable by keyboard as an independent scroll region');
+  assert.ok(html.includes(`id="${region[1]}"`));assert.match(region[2],/<table/);
+  assert.equal((region[2].match(/<tr /g)||[]).length,list.length+1);
+  for(const payment of list){assert.ok(region[2].includes(payment.reference));assert.ok(region[2].includes(checkoutPaymentLabel(payment)));}
+  if(list.length>1){assert.ok(region[2].includes(payments[1].receiptUrl));assert.match(region[2],/&lt;revisión ficticia&gt;/);}
+ }
+ const empty=render([],null);assert.doesNotMatch(empty,/aria-labelledby="partner-payment-history"/);assert.doesNotMatch(empty,/<table/);
+});
+
 const {prepareWhatsAppMessage,whatsAppMessageUrl,messageChoiceKey,MAX_WHATSAPP_MESSAGE}=require('../src/lib/whatsapp-message.ts');
 const messageGuest={id:'30000000-0000-4000-8000-000000000004',publicId:'QA-FAMILY',name:'Familia {link} Pérez & Ñandú',phone:'+59170000001',passes:4,tableNo:'7',accessCode:'ENK-QA'};
 const messageLink='https://enkarta.example.invalid/i/qa-event?g=QA-FAMILY';
