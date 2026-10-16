@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 }
 export async function POST(request: NextRequest) {
   try {
-    const id = await eventAccess(request), body = await serviceBody(request, 40000);
+    const id = await eventAccess(request), body = await serviceBody(request, 120000);
     if (!Array.isArray(body.candidates) || body.candidates.length > 200) throw new Error('INVALID_INPUT');
     const candidates = body.candidates.map(item => {
       if (!item || typeof item !== 'object' || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 80) throw new Error('INVALID_INPUT');

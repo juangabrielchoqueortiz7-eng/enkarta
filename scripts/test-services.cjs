@@ -189,6 +189,12 @@ test('roster export discards all batches if concurrent edits change the snapshot
  rpcObserver=async(name,args)=>{if(name==='enkarta_host_roster'&&args.p_page===1){rpcObserver=null;await db.query("update guests set name='Nueva versión' where id=$1",[guestId]);}};
  const response=await rosterRoute.GET(req('/api/host/roster'));assert.equal(response.status,409);assert.equal((await response.json()).code,'ROSTER_CHANGED');
 });
+test('roster duplicate preview accepts 200 valid names with the maximum UTF-8 length',async()=>{
+ actor={role:'host',id:invId};
+ const candidates=Array.from({length:200},()=>({name:'界'.repeat(80),phone:'+59170000001'}));
+ assert.ok(Buffer.byteLength(JSON.stringify({candidates}),'utf8')>40000);
+ const response=await rosterRoute.POST(req('/api/host/roster',{candidates}));assert.equal(response.status,200);assert.deepEqual((await response.json()).duplicates,[]);
+});
 test('roster endpoints deny anonymous, reviewer, door and foreign-event callers, validate candidates, and fail closed without 018',async()=>{
  for(const role of [null,'review','door','host']){
   actor=role?{role,id:role==='host'?otherId:invId}:null;
