@@ -124,7 +124,7 @@ export default function GuestsPanel({ data, onChange, onPreview, previewGuestId 
     setNotice(guestImportMessage(result));
   };
   const addGuests = async (rows: GuestImportRow[]) => {
-    if (addingRef.current || !importer.ready) return null;
+    if (addingRef.current || importer.blocked) return null;
     if (rows.length > 200) { setNotice('Importa hasta 200 invitados por lote. Divide la lista para continuar.'); return null; }
     loadRequest.current?.abort(); setLoading(false);
     const result = await importer.submit(rows);
@@ -221,11 +221,11 @@ export default function GuestsPanel({ data, onChange, onPreview, previewGuestId 
       <div className="rounded-2xl border border-enkarta-gold/20 bg-gradient-to-r from-enkarta-gold/5 to-white p-3 text-center"><p className="font-playfair text-2xl font-bold text-enkarta-gold">{stats.seats}<span className="text-base text-gray-300"> / {stats.capacity}</span></p><p className="text-[9px] uppercase tracking-wider text-gray-400 font-outfit">Cupos confirmados</p></div>
 
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" disabled={adding || !!importer.pending || !importer.ready || loading || loadFailed} onClick={() => addGuests([{ name: 'Nuevo invitado', passes: 1, allowKids: true, eventAccess: 'both' }])} className="rounded-xl bg-enkarta-gold py-2.5 text-sm font-medium text-white font-outfit">+ Invitado</button>
+        <button type="button" disabled={importer.blocked || loading || loadFailed} onClick={() => addGuests([{ name: 'Nuevo invitado', passes: 1, allowKids: true, eventAccess: 'both' }])} className="rounded-xl bg-enkarta-gold py-2.5 text-sm font-medium text-white font-outfit">+ Invitado</button>
         <button type="button" onClick={() => setShowImport(value => !value)} className="rounded-xl border border-gray-200 py-2.5 text-sm text-gray-600 font-outfit">Importar lista</button>
       </div>
 
-      {showImport && <fieldset disabled={adding || !!importer.pending || !importer.ready || loading || loadFailed} className="min-w-0 space-y-3 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-3 disabled:opacity-60">
+      {showImport && <fieldset disabled={importer.blocked || loading || loadFailed} className="min-w-0 space-y-3 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-3 disabled:opacity-60">
         <div><p className="text-xs font-semibold text-cyan-900 font-outfit">Importación inteligente CSV</p><GuestImportTemplate /><p className="text-[10px] text-cyan-700/70 font-outfit">Reconoce coma, punto y coma o tabulaciones; después puedes corregir cada columna.</p></div>
         <label className="block cursor-pointer rounded-xl border border-dashed border-cyan-200 bg-white px-3 py-3 text-center text-xs text-cyan-700 font-outfit">Seleccionar archivo .CSV<input type="file" accept=".csv,text/csv" className="hidden" onChange={event => readCsv(event.target.files?.[0])} /></label>
         {csv && <div className="space-y-2 rounded-xl border border-cyan-100 bg-white p-2.5">

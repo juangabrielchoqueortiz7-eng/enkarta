@@ -13,6 +13,9 @@ y [skills y alcance visual](docs/SKILLS_ENKARTA.md).
 La [protección de despliegues y descarga CSV](docs/DESPLIEGUE_ORIGINALES_Y_CSV.md)
 permite fusionar a `main` sin publicar copias que omitan los originales.
 
+La [recuperación operativa segura](docs/RECUPERACION_OPERATIVA_SEGURA.md) documenta
+los bloqueos y reintentos de invitados, WhatsApp y QR ante fallos de almacenamiento.
+
 Los recursos originales se conservan en su biblioteca maestra; los archivos
 excluidos del repositorio no se reemplazan ni se descargan durante CI. Para
 publicar desde otro equipo hace falta la distribución original verificada.

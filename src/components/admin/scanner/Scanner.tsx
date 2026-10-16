@@ -66,9 +66,9 @@ function ScannerSurface({ recoveryScope: suppliedScope, invitationId, tableSearc
         storedRaw.current = raw;
         const recovered = restoreScanRecovery(raw, recoveryScope);
         // Absence is not an acknowledgement of an uncertain server write.
-        if (!raw && pending.current) { storageBacked.current = false; setPersisted(false); return; }
-        setUnreadable(!!raw && !recovered);
-        if (raw && !recovered) { setGroup(null); setMustRefresh(true); activeGroup.current = false; }
+        if (raw === null && pending.current) { storageBacked.current = false; setPersisted(false); return; }
+        setUnreadable(raw !== null && !recovered);
+        if (raw !== null && !recovered) { setGroup(null); setMustRefresh(true); activeGroup.current = false; }
         if (recovered && JSON.stringify(recovered) !== JSON.stringify(pending.current)) {
           remember(recovered); needsLookup.current = true; setGroup(null); setMustRefresh(true);
           lastParams.current = `guestId=${encodeURIComponent(recovered.guestId)}`; loadedGroupId.current = recovered.guestId; activeGroup.current = true;

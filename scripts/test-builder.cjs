@@ -56,7 +56,7 @@ const { guestMetadata, parseGuestMetadata, withGuestMetadata, publicGuest } = re
 const { whatsappQueue, trackGuestDelivery, DeliveryTrackingError } = require('../src/lib/whatsapp-queue.ts');
 const { validateQrImage, qrLookup } = require('../src/lib/scanner-input.ts');
 const { receptionSearch, findReceptionGuests } = require('../src/lib/reception-search.ts');
-const { deliveryFailureIsDefinitive, deliveryRecoveryKey, deliveryRecoveryRecord, restoreDeliveryRecovery, saveDeliveryRecovery, clearDeliveryRecovery } = require('../src/lib/delivery-recovery.ts');
+const { deliveryFailureIsDefinitive, deliveryRecoveryKey, deliveryRecoveryRecord, restoreDeliveryRecovery, saveDeliveryRecovery, clearDeliveryRecovery, discardUnreadableDelivery, DeliveryRecoveryWriteError } = require('../src/lib/delivery-recovery.ts');
 const { parseScannerGroup, parseScanReceipt, recordScan, ScanRequestError, scanFailureIsDefinitive } = require('../src/lib/scanner-contract.ts');
 const { REVIEW_MAX_AGE, whatsappReviewKey, whatsappReviewRecord, restoreWhatsAppReview, advanceWhatsAppReview, prepareWhatsAppReview, saveWhatsAppReview, clearWhatsAppReview, canClearWhatsAppReview } = require('../src/lib/whatsapp-review.ts');
 const { scanRecoveryKey, scanRecoveryRecord, restoreScanRecovery, saveScanRecovery, clearScanRecovery, discardUnreadableScan, scanRecoveryPerson, ScanRecoveryWriteError } = require('../src/lib/scan-recovery.ts');
@@ -306,8 +306,8 @@ test('delivery recovery refuses to replace an unresolved request or delete a new
  assert.equal(saveDeliveryRecovery(storage,id,{...operation,requestId:'30000000-0000-4000-8000-000000000002'}),false);
  assert.equal(saveDeliveryRecovery(storage,id,{...operation,action:'manual'}),false);
  assert.equal(saveDeliveryRecovery(storage,id,operation),true);
- clearDeliveryRecovery(storage,id,'30000000-0000-4000-8000-000000000002');assert.ok(data.has(key));
- clearDeliveryRecovery(storage,id,operation.requestId);assert.ok(!data.has(key));
+ assert.equal(clearDeliveryRecovery(storage,id,{...operation,requestId:'30000000-0000-4000-8000-000000000002'}),false);assert.ok(data.has(key));
+ assert.equal(clearDeliveryRecovery(storage,id,operation),true);assert.ok(!data.has(key));
  data.set(key,'broken');assert.equal(saveDeliveryRecovery(storage,id,operation),false);assert.equal(data.get(key),'broken');
 });
 
@@ -373,7 +373,7 @@ test('malformed delivery receipts stay retryable instead of losing their origina
  const operation={guestId:'qa',action:'reminder',expectedRevision:7,requestId:'operation'};
  for(const value of [null,{}, {guest:{id:'qa',responseRevision:7},replayed:true},{guest:{id:'qa',responseRevision:8}},{guest:{id:'other',responseRevision:8},replayed:true}]) await assert.rejects(trackGuestDelivery(operation,async()=>new Response(JSON.stringify(value))),error=>error instanceof DeliveryTrackingError && error.retryable);
 });
-const { clearGuestImport, submitGuestImport, restoreGuestImport, guestImportStorageKey, guestImportMessage, GuestImportError } = require('../src/lib/guest-import-operation.ts');
+const { clearGuestImport, saveGuestImport, discardUnreadableGuestImport, GuestImportWriteError, submitGuestImport, restoreGuestImport, guestImportStorageKey, guestImportMessage, GuestImportError } = require('../src/lib/guest-import-operation.ts');
 
 test('guest import recovery draft is bounded, scoped to its event and preserves the exact request',()=>{
  const id='10000000-0000-4000-8000-000000000001';
@@ -393,8 +393,66 @@ test('a late import acknowledgement never clears a newer pending operation',()=>
  const invitationId='10000000-0000-4000-8000-000000000001',requestId='20000000-0000-4000-8000-000000000001';
  const key=guestImportStorageKey(invitationId),data=new Map([[key,JSON.stringify({invitationId,requestId,guests:[{name:'QA',passes:1}]})]]);
  const storage={getItem:key=>data.get(key)??null,removeItem:key=>data.delete(key)};
- clearGuestImport(storage,invitationId,'20000000-0000-4000-8000-000000000002');assert.equal(data.size,1);
- clearGuestImport(storage,invitationId,requestId);assert.equal(data.size,0);
+ const operation={invitationId,requestId,guests:[{name:'QA',passes:1}]};
+ assert.equal(clearGuestImport(storage,invitationId,{...operation,requestId:'20000000-0000-4000-8000-000000000002'}),false);assert.equal(data.size,1);
+ assert.equal(clearGuestImport(storage,invitationId,operation),true);assert.equal(data.size,0);
+});
+
+const storageEvent='10000000-0000-4000-8000-000000000001';
+const storageDelivery={guestId:'20000000-0000-4000-8000-000000000001',requestId:'30000000-0000-4000-8000-000000000001',expectedRevision:7,action:'reminder'};
+const storageImport={invitationId:storageEvent,requestId:'30000000-0000-4000-8000-000000000002',guests:[{name:'Familia ficticia',passes:2,allowKids:false,eventAccess:'both'}]};
+function memoryStorage(){const values=new Map();return{values,getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};}
+test('WhatsApp recovery distinguishes an unknown read from a failed write after a verified read',()=>{
+ const denied=new Error('read denied');let writes=0;
+ assert.throws(()=>saveDeliveryRecovery({getItem:()=>{throw denied},setItem:()=>writes++},storageEvent,storageDelivery),error=>error===denied&&!(error instanceof DeliveryRecoveryWriteError));assert.equal(writes,0);
+ assert.throws(()=>saveDeliveryRecovery({getItem:()=>null,setItem:()=>{throw new Error('full')}},storageEvent,storageDelivery),DeliveryRecoveryWriteError);
+});
+test('import recovery cannot overwrite another lot or a changed payload using the same request UUID',()=>{
+ const storage=memoryStorage();assert.equal(saveGuestImport(storage,storageImport),true);assert.equal(saveGuestImport(storage,storageImport),true);
+ for(const changed of [{...storageImport,requestId:storageDelivery.requestId},{...storageImport,guests:[{...storageImport.guests[0],passes:3}]}]){
+  assert.equal(saveGuestImport(storage,changed),false);assert.equal(clearGuestImport(storage,storageEvent,changed),false);
+ }
+ assert.deepEqual(restoreGuestImport(storage.getItem(guestImportStorageKey(storageEvent)),storageEvent),storageImport);
+ assert.equal(clearGuestImport(storage,storageEvent,storageImport),true);assert.equal(clearGuestImport(storage,storageEvent,storageImport),true);
+});
+test('import recovery never treats a storage read error as an empty draft or an allowed memory fallback',()=>{
+ const denied=new Error('read denied');let writes=0;
+ assert.throws(()=>saveGuestImport({getItem:()=>{throw denied},setItem:()=>writes++},storageImport),error=>error===denied&&!(error instanceof GuestImportWriteError));assert.equal(writes,0);
+ assert.throws(()=>saveGuestImport({getItem:()=>null,setItem:()=>{throw new Error('quota')}},storageImport),GuestImportWriteError);
+});
+test('WhatsApp acknowledgement compares the whole action and preserves any changed or corrupted recovery',()=>{
+ const storage=memoryStorage();saveDeliveryRecovery(storage,storageEvent,storageDelivery);
+ for(const changed of [{...storageDelivery,action:'manual'},{...storageDelivery,expectedRevision:8},{...storageDelivery,guestId:storageImport.requestId}])assert.equal(clearDeliveryRecovery(storage,storageEvent,changed),false);
+ assert.equal(clearDeliveryRecovery(storage,storageEvent,storageDelivery),true);assert.equal(clearDeliveryRecovery(storage,storageEvent,storageDelivery),true);
+ storage.setItem(deliveryRecoveryKey(storageEvent),'broken');assert.equal(clearDeliveryRecovery(storage,storageEvent,storageDelivery),false);
+});
+test('empty and malformed records block new imports, WhatsApp actions and QR movements instead of being overwritten',()=>{
+ for(const raw of ['', 'broken', '{}']){
+  const delivery=memoryStorage();delivery.setItem(deliveryRecoveryKey(storageEvent),raw);assert.equal(saveDeliveryRecovery(delivery,storageEvent,storageDelivery),false);assert.equal(clearDeliveryRecovery(delivery,storageEvent,storageDelivery),false);assert.equal(delivery.getItem(deliveryRecoveryKey(storageEvent)),raw);
+  const imports=memoryStorage();imports.setItem(guestImportStorageKey(storageEvent),raw);assert.equal(saveGuestImport(imports,storageImport),false);assert.equal(clearGuestImport(imports,storageEvent,storageImport),false);assert.equal(imports.getItem(guestImportStorageKey(storageEvent)),raw);
+  const scans=memoryStorage();scans.setItem(scanRecoveryKey(recoveryScope),raw);assert.equal(saveScanRecovery(scans,recoveryScope,recoveryFixture),false);assert.equal(clearScanRecovery(scans,recoveryScope,recoveryFixture),false);assert.equal(scans.getItem(scanRecoveryKey(recoveryScope)),raw);
+ }
+});
+test('discarding an unreadable import or WhatsApp draft requires the exact last observed bytes',()=>{
+ for(const [key,discard]of [[guestImportStorageKey(storageEvent),discardUnreadableGuestImport],[deliveryRecoveryKey(storageEvent),discardUnreadableDelivery]]){
+  const storage=memoryStorage();storage.setItem(key,'broken');assert.equal(discard(storage,storageEvent,'previous-broken'),false);assert.equal(storage.getItem(key),'broken');
+  storage.setItem(key,'newer');assert.equal(discard(storage,storageEvent,'broken'),false);assert.equal(storage.getItem(key),'newer');
+  assert.equal(discard(storage,storageEvent,'newer'),true);storage.setItem(key,'');assert.equal(discard(storage,storageEvent,''),true);
+ }
+});
+test('failed removal stays explicit so neither imports nor WhatsApp can acknowledge local retirement',()=>{
+ for(const [raw,clear]of [[JSON.stringify(storageImport),s=>clearGuestImport(s,storageEvent,storageImport)],[JSON.stringify(deliveryRecoveryRecord(storageEvent,storageDelivery)),s=>clearDeliveryRecovery(s,storageEvent,storageDelivery)]]){
+  let removals=0;const storage={getItem:()=>raw,removeItem:()=>{removals++;throw new Error('remove denied')}};
+  assert.throws(()=>clear(storage),/remove denied/);assert.equal(removals,1);assert.equal(storage.getItem(),raw);
+ }
+});
+test('recovering a stored import keeps its exact body across a lost reply and storage cleanup failure',async()=>{
+ const storage=memoryStorage();saveGuestImport(storage,storageImport);const restored=restoreGuestImport(storage.getItem(guestImportStorageKey(storageEvent)),storageEvent);
+ let submitted;await assert.rejects(submitGuestImport(restored,async(_url,options)=>{submitted=options.body;throw new TypeError('lost reply')}),GuestImportError);
+ const guest={id:storageDelivery.guestId,responseRevision:0};
+ const receipt=await submitGuestImport(restored,async(_url,options)=>{assert.equal(options.body,submitted);return new Response(JSON.stringify({requestId:restored.requestId,guests:[guest],replayed:true,importedCount:1,missingCount:0}))});assert.equal(receipt.replayed,true);
+ assert.throws(()=>clearGuestImport({...storage,removeItem:()=>{throw new Error('denied')}},storageEvent,restored),/denied/);
+ assert.deepEqual(restoreGuestImport(storage.getItem(guestImportStorageKey(storageEvent)),storageEvent),restored);
 });
 test('import transport accepts only a complete receipt for the same operation and unique guest IDs',async()=>{
  const operation={invitationId:'qa',requestId:'qa-operation',guests:[{name:'QA',passes:1}]};

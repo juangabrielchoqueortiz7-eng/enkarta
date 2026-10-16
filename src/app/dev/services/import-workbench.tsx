@@ -19,7 +19,7 @@ export default function ImportWorkbench() {
   return <section className="mx-auto max-w-lg space-y-4 p-5 font-outfit">
     <h1 className="font-playfair text-2xl">Recuperación de importación</h1>
     <p className="text-sm text-gray-600">Simulación en memoria con un invitado ficticio. El primer intento guarda y pierde su respuesta; el siguiente recupera el mismo resultado. No se consulta ni modifica Supabase.</p>
-    <button type="button" disabled={!importer.ready || importer.busy || !!importer.pending} onClick={async () => {
+    <button type="button" disabled={importer.blocked} onClick={async () => {
       setReceipt(''); await importer.submit([{ name: 'Familia ficticia de prueba', passes: 4, allowKids: true, eventAccess: 'both' }]);
     }} className="min-h-11 rounded-xl bg-[#516749] px-4 text-sm text-white disabled:opacity-40">Simular importación y respuesta perdida</button>
     <GuestImportRecovery importer={importer} recovered={result => setReceipt(guestImportMessage(result))} />

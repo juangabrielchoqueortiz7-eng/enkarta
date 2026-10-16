@@ -39,14 +39,14 @@ export function restoreScanRecovery(raw: string | null, scope: ScanRecoveryScope
 export function saveScanRecovery(storage: ScanRecoveryStorage, scope: ScanRecoveryScope, recovery: ScanRecovery) {
   const key = scanRecoveryKey(scope), raw = storage.getItem(key), record = scanRecoveryRecord(scope, recovery);
   const prior = restoreScanRecovery(raw, scope);
-  if (raw && (!prior || JSON.stringify(prior) !== JSON.stringify(record.recovery))) return false;
+  if (raw !== null && (!prior || JSON.stringify(prior) !== JSON.stringify(record.recovery))) return false;
   try { storage.setItem(key, JSON.stringify(record)); }
   catch { throw new ScanRecoveryWriteError('No se pudo conservar el movimiento en esta pestaña.'); }
   return true;
 }
 export function clearScanRecovery(storage: ScanRecoveryStorage, scope: ScanRecoveryScope, recovery: ScanRecovery) {
   const key = scanRecoveryKey(scope), raw = storage.getItem(key);
-  if (!raw) return true;
+  if (raw === null) return true;
   const previous = restoreScanRecovery(raw, scope);
   if (!previous || JSON.stringify(previous) !== JSON.stringify(scanRecoveryRecord(scope, recovery).recovery)) return false;
   storage.removeItem(key); return true;
