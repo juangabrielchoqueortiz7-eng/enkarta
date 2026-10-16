@@ -64,3 +64,11 @@ prueba. La emulación del navegador no certifica una nueva aceptación física e
 
 No hay migración SQL, dependencia, cambio de CSP o variables de entorno. BCP sigue
 desactivado. No se modifican los diseños, presets, música o recursos de invitaciones.
+
+## Aceptación manual de producción completada
+
+El 16 de octubre de 2026 el usuario confirmó en Android / Chrome la ficha individual,
+el recordatorio y el cambio entre contactos en la cola. El backend comprobó cero
+cambios de seguimiento o movimientos y plantillas guardadas intactas. El evento
+ficticio fue eliminado y su acceso revocado. Detalles y límites en
+[WHATSAPP_ACEPTACION_ANDROID.md](WHATSAPP_ACEPTACION_ANDROID.md).

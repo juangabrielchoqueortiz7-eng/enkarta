@@ -56,10 +56,11 @@ node scripts/check-integrity-http.cjs --exercise --production --app-url https://
 El informe registra los UUID del ámbito ficticio para permitir limpieza recuperable.
 No se necesita una ventana de navegador para estas comprobaciones HTTP.
 
-La aceptación visual de WhatsApp en producción de la entrega anterior sigue pendiente
-mientras el navegador de Work esté desactivado. Las pruebas de contrato y HTTP no
-sustituyen una aceptación visual ni acreditan cámara o sonido en un dispositivo físico.
-Este cambio conserva el marcado y los estilos de la búsqueda existente.
+La aceptación visual de WhatsApp en producción de la entrega anterior quedó completada
+manualmente por el usuario en Android / Chrome el 16 de octubre de 2026; ver
+[WHATSAPP_ACEPTACION_ANDROID.md](WHATSAPP_ACEPTACION_ANDROID.md). Las pruebas de contrato
+y HTTP no sustituyen esa aceptación visual ni acreditan cámara o sonido en un dispositivo
+físico. Este cambio conserva el marcado y los estilos de la búsqueda existente.
 
 BCP continúa desactivado; no se llama al banco ni se envían mensajes de WhatsApp.
 Las invitaciones, presets, animaciones, música y recursos originales se conservan.
