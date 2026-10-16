@@ -24,6 +24,41 @@ const compileTypeScript = (module, file) => {
 require.extensions['.ts'] = compileTypeScript;
 require.extensions['.tsx'] = compileTypeScript;
 
+const {prepareWhatsAppMessage,whatsAppMessageUrl,messageChoiceKey,MAX_WHATSAPP_MESSAGE}=require('../src/lib/whatsapp-message.ts');
+const messageGuest={id:'30000000-0000-4000-8000-000000000004',publicId:'QA-FAMILY',name:'Familia {link} Pérez & Ñandú',phone:'+59170000001',passes:4,tableNo:'7',accessCode:'ENK-QA'};
+const messageLink='https://enkarta.example.invalid/i/qa-event?g=QA-FAMILY';
+const message=(template,purpose='invitation',guest=messageGuest,link=messageLink)=>prepareWhatsAppMessage(template,guest,link,purpose);
+test('WhatsApp message review substitutes documented aliases once and keeps the recipient personal link',()=>{
+ const result=message('{nombre_invitado}: {cantidad_pases} pases, mesa {mesa}, {codigo}. {link_unico}');assert.equal(result.ready,true);assert.equal(result.text,`${messageGuest.name}: 4 pases, mesa 7, ENK-QA. ${messageLink}`);assert.deepEqual(result.issues,[]);
+ const url=new URL(whatsAppMessageUrl(result,messageGuest.phone));assert.equal(url.origin,'https://wa.me');assert.equal(url.pathname,'/59170000001');assert.equal(url.searchParams.get('text'),result.text);assert.ok(result.text.includes('{link} Pérez')); // Guest data is never evaluated as a second template.
+});
+test('WhatsApp message review rejects missing personal link and misspelled or malformed variables',()=>{
+ for(const template of ['Hola {nombree}', 'Hola { nombre }, {link}', 'Hola {{nombre}}, {link}', 'Hola {nombre, {link}', 'Hola {}, {link}', 'Hola, te esperamos']){const result=message(template);assert.equal(result.ready,false);assert.equal(whatsAppMessageUrl(result,messageGuest.phone),null);assert.ok(result.issues.length);}
+ assert.ok(message('Hola {nombree}').issues.some(issue=>issue.code==='UNKNOWN_VARIABLE'));assert.ok(message('Hola {nombre}').issues.some(issue=>issue.code==='MISSING_LINK'));
+});
+test('WhatsApp default invitation and blank reminder retain different meanings and valid personal links',()=>{
+ for(const template of [undefined,'','   ']){assert.equal(message(template).ready,true);assert.equal(message(template).defaultTemplate,true);assert.match(message(template,'reminder').text,/recordamos confirmar/);assert.equal(message(template,'reminder').ready,true);}
+ assert.match(message(undefined).text,/invitación personal/);
+});
+test('WhatsApp review binds the link to the correct guest and rejects unsafe or ambiguous URLs',()=>{
+ for(const link of ['javascript:alert(1)','/i/qa?g=QA-FAMILY','https://user:secret@example.invalid/i/qa?g=QA-FAMILY','https://example.invalid/i/qa?g=OTHER','https://example.invalid/i/qa?g=QA-FAMILY&g=QA-FAMILY','https://example.invalid/catalogo?g=QA-FAMILY']){const result=message('{link}','invitation',messageGuest,link);assert.equal(result.ready,false);assert.ok(result.issues.some(issue=>issue.code==='INVALID_LINK'));assert.equal(whatsAppMessageUrl(result,messageGuest.phone),null);}
+ assert.equal(message('{link}','invitation',messageGuest,'http://localhost:3001/i/qa?g=QA-FAMILY').ready,true);
+});
+test('WhatsApp app review limits bound both template and personalized expansion',()=>{
+ assert.equal(message('x'.repeat(1201)+'{link}').ready,false);
+ const expanded=message('{nombre}'.repeat(130)+'{link}','invitation',{...messageGuest,name:'P'.repeat(80)});assert.ok(expanded.text.length>MAX_WHATSAPP_MESSAGE);assert.ok(expanded.issues.some(issue=>issue.code==='MESSAGE_LENGTH'));assert.equal(whatsAppMessageUrl(expanded,messageGuest.phone),null);
+});
+test('WhatsApp URL encoding preserves accents, newlines, query separators and normalized Bolivian numbers',()=>{
+ const result=message('Hola {nombre}\n4 pases & regalos?\n{link}');assert.equal(result.ready,true);const url=new URL(whatsAppMessageUrl(result,'70000001'));assert.equal(url.searchParams.get('text'),result.text);assert.equal(url.searchParams.size,1);
+ for(const phone of ['', 'not-a-number','0000'])assert.equal(whatsAppMessageUrl(result,phone),null);
+});
+test('WhatsApp fallback is scoped to contact, content, purpose and template, while tracking-only revisions retain it',()=>{
+ const key=messageChoiceKey(messageGuest,'invitation','Hola {nombre}');assert.equal(key,messageChoiceKey({...messageGuest,responseRevision:10},'invitation','Hola {nombre}'));
+ for(const changed of [{id:'other'},{publicId:'other'},{name:'Otra familia'},{passes:2},{phone:'+59170000002'},{tableNo:'8'}])assert.notEqual(key,messageChoiceKey({...messageGuest,...changed},'invitation','Hola {nombre}'));
+ assert.notEqual(key,messageChoiceKey(messageGuest,'reminder','Hola {nombre}'));assert.notEqual(key,messageChoiceKey(messageGuest,'invitation','{link}'));
+ const template='Hola {nombree}';assert.equal(message(template).ready,false);assert.equal(message(undefined).ready,true);assert.equal(template,'Hola {nombree}');
+});
+
 const {readGuestCsvFile,createGuestCsvReader,MAX_GUEST_CSV_BYTES}=require('../src/lib/guest-csv-file.ts');
 const csvFile=(bytes,name='invitados.csv')=>({name,size:bytes.length,arrayBuffer:async()=>Uint8Array.from(bytes).buffer});
 const unicodeGuestCsv='Nombre\tTeléfono\tPases\tGrupo\r\n"Familia Pérez, Muñoz"\t+59170000001\t4\tFamilia\r\nAna Ñandú\t70000002\t2\tAmigos';

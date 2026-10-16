@@ -69,6 +69,8 @@ const historyDone = path.join(path.dirname(editorFixture), 'history-done.json');
 const csvFixture = path.join(path.dirname(editorFixture), 'csv-fixture.json');
 const csvDone = path.join(path.dirname(editorFixture), 'csv-done.json');
 const csvBrowserFile = path.join(path.dirname(editorFixture), 'csv-browser.txt');
+const messageFixture = path.join(path.dirname(editorFixture), 'message-fixture.json');
+const messageDone = path.join(path.dirname(editorFixture), 'message-done.json');
 function writeReport() {
   const output = argument('--report');
   if (output) { fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true }); fs.writeFileSync(output, JSON.stringify(report, null, 2) + '\n'); }
@@ -524,6 +526,26 @@ async function main() {
     assert.deepEqual(logAfter.map(item => item.id).sort(), logBefore.map(item => item.id).sort());
     report.browserGuestEdit = { changedRevisions: 1, accessMovementsUnchanged: true, fixtureScopeVerified: true };
   });
+  if (process.argv.includes('--message-browser-window')) await check('Browser reviews invalid WhatsApp templates and per-contact defaults without delivery or reception writes',async()=>{
+    const invalid={whatsappTemplate:'Hola {nombree}, tienes {pases} pases.',whatsappReminderTemplate:'Recuerda confirmar tu asistencia.'};
+    const source=await row('invitations',ids[1]);
+    must(await db.from('invitations').update({builder_config:{...source.builder_config,...invalid}}).eq('id',ids[1]),'Set messages only on own synthetic event');
+    const imported=await request('/api/guests','POST',{invitationId:ids[1],requestId:randomUUID(),guests:[
+      {name:'QA Mensaje Pérez '+tag.slice(-8),phone:'+59170000001',passes:2,allowKids:true},
+      {name:'QA Mensaje Ñandú '+tag.slice(-8),phone:'+59170000002',passes:3,allowKids:false}
+    ]},hostCookie);assert.equal(imported.status,200);assert.equal(imported.data.guests.length,2);
+    const guests=imported.data.guests,guestIds=guests.map(item=>item.id);
+    const before=must(await db.from('guests').select('id,response_revision,delivery_status,sent,reminder_count').eq('invitation_id',ids[1]).in('id',guestIds).order('id'),'Read own message baseline');
+    fs.writeFileSync(messageFixture,JSON.stringify({tag,email,password,invitationId:ids[1],slug:opsSlug,guests:guests.map(item=>({id:item.id,name:item.name,publicId:item.publicId,passes:item.passes}))}));
+    console.log('READY: synthetic message browser fixture; waiting up to 8 minutes for acknowledgement');
+    const deadline=Date.now()+8*60*1000;let completed=false;
+    while(Date.now()<deadline){try{const done=JSON.parse(fs.readFileSync(messageDone,'utf8'));if(done.tag===tag&&done.confirmed===true){completed=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,500));}
+    assert.ok(completed,'Message browser acknowledgement timed out; fixtures will be cleaned');
+    const after=must(await db.from('guests').select('id,response_revision,delivery_status,sent,reminder_count').eq('invitation_id',ids[1]).in('id',guestIds).order('id'),'Verify reviewing never marks a message opened');assert.deepEqual(after,before);
+    const saved=await row('invitations',ids[1]);for(const [key,value]of Object.entries(invalid))assert.equal(saved.builder_config[key],value,'Runtime default must preserve the saved template');
+    assert.equal(must(await db.from('access_log').select('id').in('guest_id',guestIds),'Verify preview never checks in').length,0);
+    report.messageBrowser={reviewedGroups:2,deliveryWrites:0,receptionWrites:0,savedTemplatesUnchanged:true,messagesSent:0,bankCalls:0};
+  });
   if (process.argv.includes('--csv-file-import')) await check('HTTP Unicode file imports accented names and metadata once, with recovery and no reception writes',async()=>{
     const name=`QA Archivo Pérez ${tag.slice(-8)}`;
     const bytes=Buffer.from('\uFEFFNombre\tTeléfono\tPases\tGrupo\r\n'+name+'\t70000001\t3\tArchivo ficticio','utf16le');bytes.swap16();
@@ -595,6 +617,6 @@ writeReport();
   try { if (JSON.parse(fs.readFileSync(browserDone, 'utf8')).tag === tag) fs.unlinkSync(browserDone); } catch { /* absent or another run's file */ }
   let ownedCsv=false;try{ownedCsv=JSON.parse(fs.readFileSync(csvFixture,'utf8')).tag===tag;}catch{}
   if(ownedCsv){try{fs.unlinkSync(csvBrowserFile);}catch{}}
-  for (const file of [editorFixture, editorDone, rosterFixture, rosterDone, historyFixture, historyDone, csvFixture, csvDone]) { try { if (JSON.parse(fs.readFileSync(file, 'utf8')).tag === tag) fs.unlinkSync(file); } catch { /* absent or another run's file */ } }
+  for (const file of [editorFixture, editorDone, rosterFixture, rosterDone, historyFixture, historyDone, csvFixture, csvDone, messageFixture, messageDone]) { try { if (JSON.parse(fs.readFileSync(file, 'utf8')).tag === tag) fs.unlinkSync(file); } catch { /* absent or another run's file */ } }
   writeReport();
 });

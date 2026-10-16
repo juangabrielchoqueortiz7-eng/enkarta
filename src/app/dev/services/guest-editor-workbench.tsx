@@ -12,6 +12,7 @@ export default function GuestEditorWorkbench() {
   const current = useRef(latest); current.current = latest;
   const [connected, setConnected] = useState(true), [mode, setMode] = useState('normal'), [used, setUsed] = useState(false), [tracking, setTracking] = useState(false);
   const [writes, setWrites] = useState(0), [deleted, setDeleted] = useState(0), [delivery, setDelivery] = useState('Sin preparación ficticia.');
+  const [invalidMessage, setInvalidMessage] = useState(false);
   const waiter = useRef<(() => void) | null>(null), [waiting, setWaiting] = useState(false);
   const save = async (command: GuestEditCommand) => {
     const scenario = mode;
@@ -26,6 +27,7 @@ export default function GuestEditorWorkbench() {
   };
   const controls = <div className="space-y-3 rounded-xl border border-gray-200 p-3 text-sm">
     <p className="font-medium">Simulación local de concurrencia</p>
+    <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={invalidMessage} onChange={event => setInvalidMessage(event.target.checked)} />Usar plantilla ficticia con errores</label>
     <label className="block">Respuesta ficticia<select aria-label="Respuesta del editor ficticio" value={mode} onChange={event => setMode(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border bg-white px-2 text-base"><option value="normal">Normal</option><option value="denied">Permiso revocado</option><option value="foreign">Recibo ajeno</option><option value="lost">Respuesta perdida después de guardar</option><option value="pause">Guardar con espera manual</option></select></label>
     <div className="flex flex-wrap gap-2">{[
       ['Cambiar mesa en otra sesión ficticia', () => setLatest(value => value ? { ...value, tableNo: '12', responseRevision: (value.responseRevision ?? 0) + 1 } : value)],
@@ -43,7 +45,7 @@ export default function GuestEditorWorkbench() {
     <p role="status">{latest ? `${latest.name} · Mesa ${latest.tableNo} · ${latest.phone} · Revisión ${latest.responseRevision}` : 'Invitado ficticio no disponible.'}</p>
     <button type="button" disabled={!latest} onClick={() => latest && setEditing(latest)} className="min-h-11 rounded-xl border bg-white px-4 disabled:opacity-40">Editar invitado ficticio</button>
     <button type="button" onClick={() => { setLatest({ ...fixture }); setUsed(false); setConnected(true); setTracking(false); setMode('normal'); }} className="ml-2 min-h-11 rounded-xl border bg-white px-4">Restablecer datos ficticios</button>
-    {editing && <GuestEditor key={editing.id} original={editing} latest={latest} tables connected={connected} slug="qa-no-publicada" deliveryBusy={tracking} close={() => setEditing(null)} save={save}
+    {editing && <GuestEditor key={editing.id} original={editing} latest={latest} tables connected={connected} slug="qa-no-publicada" whatsappTemplate={invalidMessage ? 'Hola {nombree}. Tienes {pases} pases.' : undefined} reminderTemplate={invalidMessage ? 'Recuerda confirmar tu asistencia.' : undefined} deliveryBusy={tracking} close={() => setEditing(null)} save={save}
       remove={async revision => { if (!current.current || current.current.responseRevision !== revision) throw new Error('Conflicto ficticio.'); if (used) throw new Error('Ya se utilizaron pases de este grupo. No se pueden cancelar esos cupos.'); setDeleted(value => value + 1); setLatest(undefined); }}
       recordDelivery={async (guest, action) => setDelivery(`${action}: ${guest.name} · ${guest.phone}`)}>{controls}</GuestEditor>}
   </main>;

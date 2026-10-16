@@ -8,6 +8,7 @@ import { parseManagedGuestPreview } from '@/lib/managed-guest-preview';
 import { useHostSnapshot } from '@/components/admin/host/useHostSnapshot';
 import HostRoster from '@/components/admin/host/HostRoster';
 import SyncStatus from '@/components/admin/host/SyncStatus';
+import WhatsAppTemplateField from './WhatsAppTemplateField';
 
 interface Props {
   data: InvitationParsed; onChange?: (patch: Partial<InvitationParsed>) => void;
@@ -62,8 +63,8 @@ export function ManagedGuestsPanel({ data, onChange, onPreview, previewGuestId, 
     <p className="text-sm leading-relaxed text-gray-600">Gestiona la lista completa y revisa cada invitación en el lienzo. Los cambios de invitados se guardan directamente; publicar el diseño es una acción separada.</p>
     <SyncStatus state={state} at={snapshot?.syncedAt} refresh={refresh} />
     <details className="rounded-xl border border-gray-200 bg-white p-3"><summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">Mensajes personalizados de WhatsApp</summary>
-      <div className="mt-3 space-y-4">{(['whatsappTemplate','whatsappReminderTemplate'] as const).map((field,index) => <label key={field} className="block text-sm">{index ? 'Recordatorio' : 'Invitación'}<textarea name={field} rows={3} maxLength={1200} value={data.config[field] ?? ''} onChange={event => onChange?.({ config: { ...data.config, [field]: event.target.value } })} placeholder={index ? 'Hola {nombre}, confirma tu asistencia aquí: {link}…' : '¡Hola {nombre}! Tu invitación personal: {link}…'} className="mt-1 w-full rounded-xl border border-gray-300 p-3 text-base" /></label>)}
-      <p className="text-sm leading-relaxed text-gray-600">Variables: {'{nombre}'}, {'{link}'}, {'{pases}'}, {'{mesa}'}, {'{codigo}'}. Las plantillas de mensaje siguen el guardado del diseño. Abrir WhatsApp no acredita envío, entrega ni lectura.</p></div>
+      <div className="mt-3 space-y-5">{(['whatsappTemplate','whatsappReminderTemplate'] as const).map((field,index) => <WhatsAppTemplateField key={field} purpose={index ? 'reminder' : 'invitation'} value={data.config[field] ?? (index ? undefined : data.whatsapp_template ?? undefined)} change={value => onChange?.({ config: { ...data.config, [field]: value } })} />)}
+      <p className="text-sm leading-relaxed text-gray-600">Abrir WhatsApp solicita la apertura; no acredita envío, entrega ni lectura.</p></div>
     </details>
     {onPreview && <section aria-label="Vista personal del invitado" className="space-y-2 border-y border-gray-200 py-3 text-sm">
       <p role="status">{previewBusy ? 'Consultando la vista personal…' : previewGuestId ? 'Vista personal activa; se actualiza con los datos guardados.' : 'Selecciona Vista en constructor en la ficha de un invitado.'}</p>
@@ -75,7 +76,7 @@ export function ManagedGuestsPanel({ data, onChange, onPreview, previewGuestId, 
       <HostRoster snapshot={snapshot} invitationId={data.id} slug={data.slug} connected={connected} refresh={refresh} demo={demo} layout="cards"
         roster={{ query, change, pending: rosterListingKey(receivedEndpoint) !== rosterListingKey(readEndpoint), selectionPending: !queryCurrent }}
         endpoints={{ csv: rosterRequestUrl(endpoint, new URLSearchParams({ format: 'csv' })), duplicates: endpoint }}
-        whatsappTemplate={data.config.whatsappTemplate || data.whatsapp_template || undefined} reminderTemplate={data.config.whatsappReminderTemplate}
+        whatsappTemplate={data.config.whatsappTemplate ?? data.whatsapp_template ?? undefined} reminderTemplate={data.config.whatsappReminderTemplate}
         guestActions={onPreview ? guest => <button type="button" disabled={!connected || previewBusy} aria-pressed={previewGuestId === guest.id} onClick={() => void readPreview(previewGuestId === guest.id ? null : guest.id, true)} className="min-h-11 rounded-xl border border-gray-300 bg-white px-3 text-xs disabled:opacity-40">{previewGuestId === guest.id ? 'Vista general' : 'Vista en constructor'}</button> : undefined} />
       </>}
   </div>;

@@ -2,7 +2,9 @@
 import { useEffect, useId, useRef, useState, type FocusEvent, type ReactNode } from 'react';
 import type { HostGuest } from '@/lib/host-dashboard';
 import { guestEditDirty, guestEditStale, guestEditValues, validateGuestEdit, type GuestEditCommand, type GuestEditValues } from '@/lib/guest-edit-form';
-import { deliveryState, DELIVERY_LABELS, guestMessage, reminderMessage, type DeliveryAction } from '@/lib/guest-delivery';
+import { deliveryState, DELIVERY_LABELS, type DeliveryAction } from '@/lib/guest-delivery';
+import { prepareWhatsAppMessage, whatsAppMessageUrl, messageChoiceKey, type MessagePurpose } from '@/lib/whatsapp-message';
+import WhatsAppMessagePreview from './WhatsAppMessagePreview';
 import { normalizeGuestPhone } from '@/lib/guest-import';
 import styles from '../operations/Operations.module.css';
 
@@ -27,11 +29,16 @@ export default function GuestEditor({ original, latest, tables, connected, save,
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [copied, setCopied] = useState(false);
   const [intent, setIntent] = useState<Confirmation | null>(null), [acknowledged, setAcknowledged] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof GuestEditValues, boolean>>>({}), [submitted, setSubmitted] = useState(false);
+  const [selectedPurpose, setSelectedPurpose] = useState<MessagePurpose>('invitation'), [defaultChoice, setDefaultChoice] = useState<string | null>(null);
   const dirty = guestEditDirty(base, draft, tables), stale = guestEditStale(base, latest);
   const validation = validateGuestEdit(base, draft, tables), current = latest ?? base;
-  const locked = busy || !!intent, trackingBlocked = locked || deliveryBusy || !connected || stale || dirty;
-  const link = typeof window !== 'undefined' ? `${window.location.origin}/i/${slug}?g=${current.publicId}` : '';
+  const locked = busy || !!intent, trackingBlocked = locked || deliveryBusy || !connected || stale || dirty || loading;
+  const link = typeof window !== 'undefined' ? `${window.location.origin}/i/${slug}?g=${encodeURIComponent(current.publicId)}` : '';
   const phone = normalizeGuestPhone(current.phone || '').replace(/\D/g, '');
+  const purpose = current.status === 'pending' ? selectedPurpose : 'invitation';
+  const template = purpose === 'reminder' ? reminderTemplate : whatsappTemplate;
+  const choice = messageChoiceKey(current, purpose, template), usingDefault = defaultChoice === choice;
+  const message = prepareWhatsAppMessage(usingDefault ? undefined : template, current, link, purpose);
   useEffect(() => { mounted.current = true;
     if (document.activeElement instanceof HTMLElement && !dialog.current?.contains(document.activeElement)) returnFocus.current = document.activeElement;
     dialog.current?.showModal();
@@ -77,8 +84,9 @@ export default function GuestEditor({ original, latest, tables, connected, save,
   };
   const track = (action: DeliveryAction) => {
     if (trackingBlocked || busyRef.current || (!phone && action !== 'manual')) return;
-    const message = action === 'reminder' ? reminderMessage(reminderTemplate, current, link) : guestMessage(whatsappTemplate, current, link);
-    void recordDelivery(current, action, action === 'manual' ? '' : `https://wa.me/${phone}?text=${encodeURIComponent(message)}`);
+    const url = whatsAppMessageUrl(message, phone);
+    if (action !== 'manual' && !url) return;
+    void recordDelivery(current, action, action === 'manual' ? '' : url!);
   };
   return <dialog ref={dialog} aria-label="Editar invitado" onKeyDown={event => { if (event.key === 'Escape' && !event.nativeEvent.isComposing) { event.preventDefault(); event.stopPropagation(); requestClose(); } }} onCancel={event => { event.preventDefault(); requestClose(); }} onClose={() => {
     // Some browser/assistive close requests cannot be cancelled. Keep the draft
@@ -113,7 +121,9 @@ export default function GuestEditor({ original, latest, tables, connected, save,
       <h3 className="font-medium">WhatsApp con los datos guardados</h3><p className="break-words">{current.name} · {current.phone || 'Sin teléfono'}</p>
       <p className="text-xs">Seguimiento: {DELIVERY_LABELS[deliveryState(current)]} · Recordatorios preparados: {current.reminderCount ?? 0}</p>
       {dirty && <p className="text-sm text-amber-950">Guarda los cambios antes de preparar WhatsApp o registrar una marca manual.</p>}
-      <div className="flex flex-wrap gap-2"><button type="button" disabled={locked || stale} onClick={async () => { try { await navigator.clipboard.writeText(link); if (mounted.current) setCopied(true); } catch { if (mounted.current) setError('No se pudo copiar. Abre la invitación desde la lista y copia su dirección.'); } }} className={buttonClass}>{copied ? 'Enlace copiado' : 'Copiar enlace'}</button><button type="button" disabled={trackingBlocked || !phone} onClick={() => track('opened')} className={buttonClass}>Abrir WhatsApp</button>{current.status === 'pending' && <button type="button" disabled={trackingBlocked || !phone} onClick={() => track('reminder')} className={buttonClass}>Preparar recordatorio</button>}<button type="button" disabled={trackingBlocked || ['marked', 'responded'].includes(deliveryState(current))} onClick={() => track('manual')} className={buttonClass}>Marcar manualmente</button></div>
+      <label className="block">Tipo de mensaje<select aria-label="Tipo de mensaje de WhatsApp" value={purpose} disabled={trackingBlocked} onChange={event => setSelectedPurpose(event.target.value as MessagePurpose)} className={`${fieldClass} mt-1 w-full`}><option value="invitation">Invitación</option>{current.status === 'pending' && <option value="reminder">Recordatorio</option>}</select></label>
+      <WhatsAppMessagePreview message={message} usingDefault={usingDefault} useDefault={trackingBlocked ? undefined : () => setDefaultChoice(choice)} />
+      <div className="flex flex-wrap gap-2"><button type="button" disabled={locked || stale} onClick={async () => { try { await navigator.clipboard.writeText(link); if (mounted.current) setCopied(true); } catch { if (mounted.current) setError('No se pudo copiar. Abre la invitación desde la lista y copia su dirección.'); } }} className={buttonClass}>{copied ? 'Enlace copiado' : 'Copiar enlace'}</button><button type="button" disabled={trackingBlocked || !phone || !message.ready} onClick={() => track(purpose === 'reminder' ? 'reminder' : 'opened')} className={buttonClass}>{purpose === 'reminder' ? 'Preparar recordatorio' : 'Abrir WhatsApp'}</button><button type="button" disabled={trackingBlocked || ['marked', 'responded'].includes(deliveryState(current))} onClick={() => track('manual')} className={buttonClass}>Marcar manualmente</button></div>
       <p className="text-xs leading-relaxed">Abrir WhatsApp no confirma envío, entrega ni lectura. La marca manual declara únicamente una acción del equipo.</p>
       {children}
     </section>
