@@ -419,15 +419,22 @@ async function main() {
       const response=await request('/api/host/roster','POST',{candidates},hostCookie);assert.equal(response.status,200);assert.deepEqual(response.data.duplicates,[]);
       const count=await db.from('guests').select('id',{head:true,count:'exact'}).eq('invitation_id',ids[1]);must(count,'Verify preview writes no guests');assert.equal(count.count,expectedTotal);
     });
-    if(process.argv.includes('--roster-window'))await check('Production browser paginates and resumes an off-page WhatsApp contact without writes',async()=>{
+    if(process.argv.includes('--roster-window') || process.argv.includes('--csv-window'))await check(process.argv.includes('--csv-window') ? 'Production browser downloads the complete filtered CSV without writes' : 'Production browser paginates and resumes an off-page WhatsApp contact without writes',async()=>{
       const before=await row('guests',guest.id), accessBefore=must(await db.from('access_log').select('id').eq('guest_id',guest.id),'Read browser access baseline');
       fs.writeFileSync(rosterFixture,JSON.stringify({tag,email,password,invitationId:ids[1],guestId:guest.id,total:expectedTotal}));
       console.log('READY: synthetic roster browser fixture; waiting for acknowledgement');
       const deadline=Date.now()+8*60*1000;let completed=false;
-      while(Date.now()<deadline){try{const done=JSON.parse(fs.readFileSync(rosterDone,'utf8'));if(done.tag===tag&&done.confirmed===true){completed=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,500));}
+      while(Date.now()<deadline){let done;try{done=JSON.parse(fs.readFileSync(rosterDone,'utf8'));}catch{}if(done?.tag===tag&&done.failed===true)throw new Error('Browser CSV verification failed; cleaning fixtures');if(done?.tag===tag&&done.confirmed===true){completed=true;break;}await new Promise(resolve=>setTimeout(resolve,500));}
       assert.ok(completed,'Roster browser exercise timed out');assert.equal((await row('guests',guest.id)).response_revision,before.response_revision);
       assert.deepEqual(must(await db.from('access_log').select('id').eq('guest_id',guest.id),'Verify no browser access writes'),accessBefore);
       report.rosterBrowser={writes:0,bankCalls:0,messagesSent:0};
+      if(process.argv.includes('--csv-window')){
+        const bytes=fs.readFileSync(path.join(path.dirname(rosterFixture),'browser-export.csv'));
+        const expected=await request('/api/host/roster?search='+encodeURIComponent('QA Padrón'),'GET',undefined,hostCookie);assert.equal(expected.status,200);
+        assert.equal(bytes.subarray(0,3).toString('hex'),'efbbbf');assert.equal(bytes.toString('utf8').split('\r\n').length,1002);
+        assert.equal(bytes.toString('utf8').slice(1),expected.text.replace(/^\uFEFF/,''));
+        report.csvDownload={rows:1001,bytes:bytes.length,utf8Bom:true,exactHttpMatch:true};
+      }
     });
   }
   if (process.argv.includes('--guest-editor-window')) await check('Production browser guest edit updates one revision and leaves access movements unchanged', async () => {

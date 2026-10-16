@@ -21,10 +21,14 @@ import styles from '../operations/Operations.module.css';
 
 const fieldClass = 'min-h-11 min-w-0 rounded-xl border border-[#e4dfd4] bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#ab8950] focus:ring-2 focus:ring-[#ab8950]/15';
 const statusClass = { confirmed: 'bg-emerald-50 text-emerald-800', pending: 'bg-amber-50 text-amber-800', declined: 'bg-rose-50 text-rose-700' };
-const exportFile = (content: string, filename: string) => {
-  const url = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8' }));
-  const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+const prepareFile = (content: string, filename: string) => {
+  const csv = content.startsWith('\uFEFF') ? content : '\uFEFF' + content;
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a'); a.href = url; a.download = filename; a.hidden = true;
+  try { document.body.append(a); a.click(); }
+  catch { /* The visible native link remains available if the automatic click is blocked. */ }
+  finally { a.remove(); }
+  return { url, filename };
 };
 
 export default function HostRoster({ snapshot, invitationId, slug, connected, refresh, demo = false, whatsappTemplate, reminderTemplate, roster }: {
@@ -55,6 +59,9 @@ export default function HostRoster({ snapshot, invitationId, slug, connected, re
   const importer = useGuestImport(invitationId);
   const busy = importer.busy;
   const [exporting, setExporting] = useState(false);
+  const [preparedDownload, setPreparedDownload] = useState<{ url: string; filename: string; filter: string } | null>(null);
+  const exportRequest = useRef<AbortController | null>(null), downloadUrl = useRef<string | null>(null), mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; exportRequest.current?.abort(); if (downloadUrl.current) URL.revokeObjectURL(downloadUrl.current); }; }, []);
   const delivery = useDeliveryTracking((_saved, _submitted, operation) => {
     if (operation.action !== 'manual') queueReview.prepare(operation.guestId);
     setNotice(operation.action === 'manual' ? 'Marca manual registrada.' : 'WhatsApp solicitado. No se confirma envío ni entrega.');
@@ -76,6 +83,7 @@ export default function HostRoster({ snapshot, invitationId, slug, connected, re
   const currentGuests = [...guests, ...(snapshot.selectedGuests ?? [])];
   const tables = tableSummary.map(table => table.name);
   const activeFilters = [filter.search.trim(), filter.group && filter.group !== 'all', filter.status !== 'all', filter.delivery !== 'all', filter.table !== 'all', filter.access !== 'all'].filter(Boolean).length;
+  const exportFilter = rosterParams({ filter, page: 1, selected: [] }).toString();
   const updateFilter = (key: keyof RosterFilter, value: string) => { if (roster) roster.change({ ...roster.query, page: 1, filter: { ...filter, [key]: value } }); else { setPage(1); setFilter(current => ({ ...current, [key]: value })); } };
   const clearFilters = () => { if (roster) roster.change({ ...roster.query, page: 1, filter: { ...DEFAULT_ROSTER_FILTER } }); else { setPage(1); setFilter({ ...DEFAULT_ROSTER_FILTER }); } };
   const changePage = (next: number) => {
@@ -84,17 +92,27 @@ export default function HostRoster({ snapshot, invitationId, slug, connected, re
     resultsHeading.current?.scrollIntoView({ block: 'start' });
   };
   const exportRoster = async () => {
-    if (exporting || !connected || loading) return;
-    if (!paginated) { exportFile(rosterCsv(visible, services), `${slug}-invitados.csv`); return; }
+    if (exportRequest.current || !connected || loading) return;
+    const controller = new AbortController(); exportRequest.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    if (downloadUrl.current) { URL.revokeObjectURL(downloadUrl.current); downloadUrl.current = null; }
+    setPreparedDownload(null);
     setExporting(true); setNotice('Preparando todos los resultados filtrados…');
     try {
-      const params = rosterParams({ filter, page: 1, selected: [] }); params.set('id', invitationId);
-      const response = await fetch(`/api/host/roster?${params}`, { cache: 'no-store', signal: AbortSignal.timeout(60000) });
-      if (!response.ok) { const value = await response.json(); throw new Error(value.error || 'No se pudo exportar el padrón. Reintenta.'); }
-      if (!response.headers.get('content-type')?.includes('text/csv')) throw new Error('La exportación está incompleta. Reintenta.');
-      const csv = await response.text(); exportFile(csv.startsWith('\uFEFF') ? csv : '\uFEFF' + csv, `${slug}-invitados.csv`); setNotice('CSV completo preparado con los filtros elegidos.');
-    } catch(error) { setNotice(error instanceof Error && error.name !== 'TimeoutError' ? error.message : 'La exportación tardó demasiado. Reintenta con un filtro más específico.'); }
-    finally { setExporting(false); }
+      let csv: string;
+      if (paginated) {
+        const params = new URLSearchParams(exportFilter); params.set('id', invitationId);
+        const response = await fetch(`/api/host/roster?${params}`, { cache: 'no-store', signal: controller.signal });
+        if (!response.ok) { const value = await response.json(); throw new Error(value.error || 'No se pudo exportar el padrón. Reintenta.'); }
+        if (!response.headers.get('content-type')?.includes('text/csv')) throw new Error('La exportación está incompleta. Reintenta.');
+        csv = await response.text();
+      } else csv = rosterCsv(visible, services);
+      if (!mounted.current || controller.signal.aborted) return;
+      const file = prepareFile(csv, `${slug}-invitados.csv`); downloadUrl.current = file.url;
+      setPreparedDownload({ ...file, filter: exportFilter });
+      setNotice('CSV completo preparado con los filtros elegidos. Si la descarga no comenzó, usa el enlace de descarga.');
+    } catch(error) { if (mounted.current) setNotice(controller.signal.aborted ? 'La exportación tardó demasiado. Reintenta con un filtro más específico.' : error instanceof Error ? error.message : 'No se pudo exportar el padrón. Reintenta.'); }
+    finally { clearTimeout(timeout); exportRequest.current = null; if (mounted.current) setExporting(false); }
   };
   const mutate = async (method: string, body?: unknown, id?: string, revision?: number) => {
     if (demo) throw new Error('Vista de prueba: no se modifican invitados reales.');
@@ -139,6 +157,7 @@ export default function HostRoster({ snapshot, invitationId, slug, connected, re
   return <section className={`${styles.surface} overflow-hidden rounded-3xl border border-[#e4dfd4] bg-white font-outfit`}>
     <div className="flex flex-wrap items-start justify-between gap-3 p-5 sm:p-6"><div><h2 className="font-playfair text-2xl text-[#303e32]">Lista de invitados</h2><p className="mt-1 text-xs text-gray-500">Grupos con enlace personal. Sus respuestas y accesos se actualizan juntos.</p></div><div className="flex gap-2"><button type="button" onClick={() => setAdding(v => !v)} className="min-h-11 rounded-xl border border-[#e4dfd4] px-3 text-xs text-[#75603d]">Añadir / importar</button><button type="button" disabled={!connected || loading || !listing.total || exporting} onClick={() => void exportRoster()} className="min-h-11 rounded-xl bg-[#516749] px-3 text-xs text-white disabled:opacity-40">{exporting ? 'Exportando…' : 'Exportar CSV'}</button></div></div>
     {notice && <p role="status" className="mx-5 mb-4 rounded-xl bg-[#f6f3eb] p-3 text-xs text-[#75603d]">{notice}</p>}
+    {connected && !loading && preparedDownload?.filter === exportFilter && <p className="mx-5 mb-4 text-sm text-gray-700"><a href={preparedDownload.url} download={preparedDownload.filename} className="inline-flex min-h-11 items-center rounded-xl border border-[#e4dfd4] bg-white px-4 underline underline-offset-4 hover:bg-[#f7f5ef]">Descargar CSV preparado</a><span className="mt-2 block text-xs text-gray-600">Incluye todos los resultados de los filtros usados al prepararlo, también los de otras páginas. Se conserva mientras mantengas esta pantalla abierta.</span></p>}
     <div className="mx-5 mb-4"><GuestImportRecovery importer={importer} recovered={acceptImport} disabled={!connected || demo} /></div>
     {!editing && <div className="mx-5 mb-4"><DeliveryRecovery tracker={delivery} disabled={!connected || demo} /></div>}
     <div className="mx-5 mb-4 space-y-2 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4"><h3 className="text-sm font-medium text-emerald-900">WhatsApp de la lista filtrada</h3><p className="text-xs leading-relaxed text-gray-600">Revisa un contacto por vez. Invitaciones: solo pendientes sin seguimiento; recordatorios: solo quienes no respondieron.</p><div className="flex flex-wrap gap-2"><button type="button" disabled={!connected || deliveryBusy || queueReview.blocked || !!queueReview.review || !invitationQueue.ids.length} onClick={() => startQueue(invitationQueue.ids,'invitation')} className="min-h-11 rounded-xl bg-emerald-700 px-3 text-xs text-white disabled:opacity-40">Preparar {invitationQueue.ids.length} {invitationQueue.ids.length === 1 ? 'invitación' : 'invitaciones'}</button><button type="button" disabled={!connected || deliveryBusy || queueReview.blocked || !!queueReview.review || !reminderQueue.ids.length} onClick={() => startQueue(reminderQueue.ids,'reminder')} className="min-h-11 rounded-xl border border-emerald-200 bg-white px-3 text-xs text-emerald-900 disabled:opacity-40">Revisar {reminderQueue.ids.length} {reminderQueue.ids.length === 1 ? 'recordatorio' : 'recordatorios'}</button></div><p className="text-[11px] text-gray-500">{reminderQueue.invalidPhone} pendientes sin teléfono válido · {reminderQueue.excluded} con respuesta. Máximo 200 contactos por revisión.{!!reminderQueue.overflow && ` Quedan ${reminderQueue.overflow} fuera de esta revisión; ajusta los filtros.`}</p></div>

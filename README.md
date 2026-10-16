@@ -10,6 +10,9 @@ La versión actual requiere las migraciones 001–018 en orden. La aplicación n
 las ejecuta automáticamente. Consultar [padrón paginado y verificación](docs/PADRON_PAGINADO_018.md)
 y [skills y alcance visual](docs/SKILLS_ENKARTA.md).
 
+La [protección de despliegues y descarga CSV](docs/DESPLIEGUE_ORIGINALES_Y_CSV.md)
+permite fusionar a `main` sin publicar copias que omitan los originales.
+
 Los recursos originales se conservan en su biblioteca maestra; los archivos
 excluidos del repositorio no se reemplazan ni se descargan durante CI. Para
 publicar desde otro equipo hace falta la distribución original verificada.

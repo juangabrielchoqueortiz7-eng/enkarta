@@ -11,8 +11,9 @@
     "test:builder": "node scripts/test-builder.cjs",
     "test:services": "node scripts/test-services.cjs",
     "test:integrity": "node scripts/test-integrity.cjs",
+    "test:deployment": "node scripts/test-deployment.cjs",
     "monitor:production": "node scripts/check-production-health.cjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:builder && npm run test:services && npm run test:integrity && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm run test:builder && npm run test:services && npm run test:integrity && npm run test:deployment && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
