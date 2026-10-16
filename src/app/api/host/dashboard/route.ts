@@ -3,6 +3,7 @@ import { getHostSession, getAdminSession } from '@/lib/host-session';
 import { readHostSnapshot } from '@/lib/host-dashboard-server';
 import { privateJson, serviceError } from '@/lib/services-server';
 import { isUuid } from '@/lib/rsvp-contract';
+import { parseRosterQuery } from '@/lib/roster-query';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,6 @@ export async function GET(request: NextRequest) {
     const requested = request.nextUrl.searchParams.get('id');
     const id = requested || host;
     if (!isUuid(id) || (host !== id && !await getAdminSession())) return privateJson({ error: 'La sesión terminó o no tiene acceso a este evento.' }, 403);
-    return privateJson(await readHostSnapshot(id));
+    return privateJson(await readHostSnapshot(id, parseRosterQuery(request.nextUrl.searchParams)));
   } catch (error) { return serviceError(error); }
 }

@@ -1,5 +1,9 @@
 # Invitados, WhatsApp y recepción: mejoras con las skills
 
+La [paginación real del padrón](PADRON_PAGINADO_018.md) sustituye la descarga
+completa del panel por páginas SQL de 25 grupos. Requiere la migración 018 y
+conserva el alcance completo de filtros, CSV, WhatsApp y métricas.
+
 La [edición segura de invitados](EDICION_SEGURA_INVITADOS.md) añade protección de
 cambios sin guardar, validación y comprobación del contacto antes de WhatsApp.
 

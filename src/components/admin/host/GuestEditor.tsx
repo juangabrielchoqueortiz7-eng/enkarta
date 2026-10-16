@@ -14,11 +14,11 @@ interface Props {
   save: (command: GuestEditCommand) => Promise<void>; remove: (revision: number) => Promise<void>; close: () => void;
   slug: string; whatsappTemplate?: string; reminderTemplate?: string;
   recordDelivery: (guest: HostGuest, action: DeliveryAction, url: string) => Promise<void>;
-  deliveryBusy: boolean; children?: ReactNode;
+  deliveryBusy: boolean; children?: ReactNode; loading?: boolean;
 }
 type Confirmation = 'close' | 'reload' | 'remove';
 
-export default function GuestEditor({ original, latest, tables, connected, save, remove, close, slug, whatsappTemplate, reminderTemplate, recordDelivery, deliveryBusy, children }: Props) {
+export default function GuestEditor({ original, latest, tables, connected, save, remove, close, slug, whatsappTemplate, reminderTemplate, recordDelivery, deliveryBusy, children, loading = false }: Props) {
   const dialog = useRef<HTMLDialogElement>(null), form = useRef<HTMLFormElement>(null), confirmation = useRef<HTMLElement>(null);
   const busyRef = useRef(false), mounted = useRef(true), returnFocus = useRef<HTMLElement | null>(null);
   const confirmationTrigger = useRef<HTMLElement | null>(null), wasConfirming = useRef(false);
@@ -32,7 +32,9 @@ export default function GuestEditor({ original, latest, tables, connected, save,
   const locked = busy || !!intent, trackingBlocked = locked || deliveryBusy || !connected || stale || dirty;
   const link = typeof window !== 'undefined' ? `${window.location.origin}/i/${slug}?g=${current.publicId}` : '';
   const phone = normalizeGuestPhone(current.phone || '').replace(/\D/g, '');
-  useEffect(() => { mounted.current = true; returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; dialog.current?.showModal();
+  useEffect(() => { mounted.current = true;
+    if (document.activeElement instanceof HTMLElement && !dialog.current?.contains(document.activeElement)) returnFocus.current = document.activeElement;
+    dialog.current?.showModal();
     return () => { mounted.current = false; if (returnFocus.current?.isConnected) returnFocus.current.focus({ preventScroll: true }); };
   }, []);
   useEffect(() => {
@@ -103,7 +105,7 @@ export default function GuestEditor({ original, latest, tables, connected, save,
         <label className="flex min-h-11 items-center gap-2 text-sm text-gray-700"><input name="guest-allowKids" type="checkbox" checked={draft.allowKids} onChange={event => change('allowKids', event.target.checked)} className="h-4 w-4 accent-[#516749]" />Permitir niños</label>
       </fieldset>
       {stale && <div role="alert" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-950">{latest ? 'Este registro cambió en otra sesión. Tu edición sigue aquí; revisa los datos actuales antes de guardar.' : 'Este invitado ya no está disponible. Tu edición sigue aquí.'}{latest && <button type="button" disabled={busy || !!intent} onClick={() => dirty ? ask('reload') : reload()} className="mt-2 block min-h-11 font-medium underline underline-offset-4">Cargar datos actuales</button>}</div>}
-      {!connected && <p role="alert" className="text-sm text-amber-950">Sin conexión. Conservamos tu edición; espera antes de guardar.</p>}
+      {loading ? <p role="status" className="text-sm text-gray-600">Consultando la versión actual del invitado…</p> : !connected && <p role="alert" className="text-sm text-amber-950">Sin conexión. Conservamos tu edición; espera antes de guardar.</p>}
       {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
       <button type="submit" disabled={locked || deliveryBusy || stale || !connected || !dirty} className="min-h-11 w-full rounded-xl bg-[#516749] px-4 text-sm text-white hover:bg-[#40523a] disabled:opacity-40">{busy ? 'Comprobando…' : 'Guardar cambios'}</button>
     </form>

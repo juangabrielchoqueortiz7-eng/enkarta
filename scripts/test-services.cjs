@@ -27,6 +27,7 @@ const receipt = createHash('sha256').update('test-only-receipt').digest('hex');
 let actor = null;
 let rpcFailure = null;
 let queryFailure = null;
+let rpcObserver = null;
 const cookieJar = new Map();
 const { hashPassword, signHostSession, signReviewSession, signDoorSession, signAdminSession, verifyHostSession, verifyReviewSession } = require('../src/lib/access.ts');
 const hostHash = hashPassword('test-host-password');
@@ -88,7 +89,7 @@ const queryClient = (table) => {
 require.cache[require.resolve('../src/lib/supabase/server.ts')] = { exports: { supabaseAdmin: {
   from: queryClient,
   storage: { from: () => ({ download: async () => ({data:null,error:{message:'No legacy fixture'}}) }) },
-  async rpc(name, params) { if(rpcFailure) return {data:null,error:rpcFailure}; try { return {data:await rpc(name,params),error:null}; } catch(error) { return {data:null,error}; } },
+  async rpc(name, params) { if(rpcFailure) return {data:null,error:rpcFailure}; try { const data=await rpc(name,params);if(rpcObserver)await rpcObserver(name,params);return {data,error:null}; } catch(error) { return {data:null,error}; } },
 } } };
 // Exercise real host/review authorization; only cookies and database transport are isolated.
 const { NextRequest } = require('next/server');
@@ -103,6 +104,7 @@ const reviewAuth = require('../src/app/api/review/auth/route.ts');
 const hostAuth = require('../src/app/api/host/auth/route.ts');
 const doorAuth = require('../src/app/api/door/auth/route.ts');
 const dashboardRoute = require('../src/app/api/host/dashboard/route.ts');
+const rosterRoute = require('../src/app/api/host/roster/route.ts');
 const reviewState = require('../src/app/api/admin/builder-state/route.ts');
 const botRoute = require('../src/app/api/invitations/route.ts');
 const validityRoute = require('../src/app/api/admin/invitations/validity/route.ts');
@@ -146,10 +148,12 @@ before(async () => {
     await db.exec(fs.readFileSync(path.join(root,'migrations/016_guest_metadata.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/017_guest_import_idempotency.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/017_guest_import_idempotency.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/018_host_roster_pagination.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/018_host_roster_pagination.sql'),'utf8'));
   } catch(error) { throw new Error(`Migration: ${error.message} at ${error.position}; ${migration.slice(Math.max(0,Number(error.position)-100),Number(error.position)+100)}`); }
 });
 beforeEach(async () => {
-  actor=null; rpcFailure=null; queryFailure=null; cookieJar.clear();
+  actor=null; rpcFailure=null; queryFailure=null; rpcObserver=null; cookieJar.clear();
   await db.exec('TRUNCATE invitations,guests,attendees,access_log,rsvps,builder_versions,save_date_responses,commercial_events,commercial_leads CASCADE');
   await db.query("INSERT INTO invitations(id,slug,status,rsvp_deadline) VALUES($1,'test-event','ready',((now() AT TIME ZONE 'America/La_Paz')::date+1)),($2,'other-event','ready',NULL)",[invId,otherId]);
   await db.query("UPDATE invitations SET host_email=id::text||'@test.invalid', host_password_hash=$1, review_email=id::text||'@review.invalid', review_password_hash=$2",[hostHash,reviewHash]);
@@ -157,6 +161,77 @@ beforeEach(async () => {
   await db.query("INSERT INTO guests(id,invitation_id,public_id,name,passes) VALUES($1,$2,'TEST0001','Familia Prueba',5)",[guestId,invId]);
 });
 after(async () => { await db.close(); });
+
+const rosterRpc = (extra={}) => rpc('enkarta_host_roster',{p_invitation_id:invId,...extra});
+test('018 WhatsApp phone eligibility agrees with the browser, including legacy and invalid values',async()=>{
+ const {normalizeGuestPhone}=require('../src/lib/guest-import.ts');
+ for(const phone of ['', '7123 4567', '+59170000001', '0059170000001', "'+59170000001", 'abc71234567', '00000000', '+001', '1'.repeat(16), '(591) 7000-0001'])assert.equal(await scalar('select public.enkarta_roster_phone($1) as result',[phone]),normalizeGuestPhone(phone));
+});
+test('roster query rejects forged sizes, pages, statuses and selections; encoding roundtrips literal filters',()=>{
+ const {parseRosterQuery,rosterParams,defaultRosterQuery,rosterListingKey}=require('../src/lib/roster-query.ts');
+ for(const query of ['page=0','page=-2','page=2.5','page=1000001','status=deleted','sort=random','selected=bad','search='+encodeURIComponent('x'.repeat(121))])assert.throws(()=>parseRosterQuery(new URLSearchParams(query)),/INVALID_INPUT/);
+ const query={...defaultRosterQuery(),page:7,filter:{...defaultRosterQuery().filter,search:'Pérez & 100%_+',group:'Amigos'},selected:[guestId]};assert.deepEqual(parseRosterQuery(rosterParams(query)),query);
+ assert.equal(parseRosterQuery(new URLSearchParams('size=99999')).page,1); // Client cannot change the SQL page size.
+ assert.equal(rosterListingKey('/api/host/dashboard?page=2&selected='+guestId),rosterListingKey('/api/host/dashboard?page=2'));
+ assert.notEqual(rosterListingKey('/api/host/dashboard?page=2'),rosterListingKey('/api/host/dashboard?page=1'));
+});
+test('host HTTP pagination bounds the payload, exports all 1002 rows and checks off-page duplicates and selection',async()=>{
+ actor={role:'host',id:invId};
+ await db.query("insert into guests(invitation_id,public_id,name,passes,guest_metadata) select $1,'HTTPPAGE'||n,'Familia '||lpad(n::text,4,'0'),2,jsonb_build_object('phone','+59170000001','group',case when n%2=0 then 'Pares' else 'Impares' end) from generate_series(1,1001) n",[invId]);
+ const page=await dashboardRoute.GET(req('/api/host/dashboard?page=41'));assert.equal(page.status,200);assert.match(page.headers.get('Cache-Control'),/no-store/);const value=await page.json();assert.equal(value.guests.length,2);assert.equal(value.roster.total,1002);assert.equal(value.metrics.total,1002);assert.deepEqual(value.rows,[]);assert.equal(JSON.stringify(value).includes('access_token'),false);
+ const selected=await dashboardRoute.GET(req('/api/host/dashboard?search=nothing&selected='+guestId));assert.equal((await selected.json()).selectedGuests[0].id,guestId);
+ const csv=await rosterRoute.GET(req('/api/host/roster'));assert.equal(csv.status,200);assert.match(csv.headers.get('Cache-Control'),/no-store/);const text=await csv.text();assert.equal(text.split('\r\n').length,1003);assert.ok(text.includes('Familia 1001'));assert.equal(text.includes('access_token'),false);
+ const filtered=await rosterRoute.GET(req('/api/host/roster?group=Pares'));assert.equal((await filtered.text()).split('\r\n').length,501);
+ const duplicate=await rosterRoute.POST(req('/api/host/roster',{candidates:[{name:'Familia 1001',phone:'70000001'},{name:'Nueva',phone:'70000001'}]}));assert.equal(duplicate.status,200);assert.deepEqual((await duplicate.json()).duplicates,[0]);
+});
+test('roster export discards all batches if concurrent edits change the snapshot',async()=>{
+ actor={role:'host',id:invId};await db.query("insert into guests(invitation_id,public_id,name) select $1,'CHANGE'||n,'Nombre '||n from generate_series(1,251) n",[invId]);
+ rpcObserver=async(name,args)=>{if(name==='enkarta_host_roster'&&args.p_page===1){rpcObserver=null;await db.query("update guests set name='Nueva versión' where id=$1",[guestId]);}};
+ const response=await rosterRoute.GET(req('/api/host/roster'));assert.equal(response.status,409);assert.equal((await response.json()).code,'ROSTER_CHANGED');
+});
+test('roster endpoints deny anonymous, reviewer, door and foreign-event callers, validate candidates, and fail closed without 018',async()=>{
+ for(const role of [null,'review','door','host']){
+  actor=role?{role,id:role==='host'?otherId:invId}:null;
+  assert.equal((await rosterRoute.GET(req('/api/host/roster?id='+invId))).status,403);
+  assert.equal((await rosterRoute.POST(req('/api/host/roster?id='+invId,{candidates:[]}))).status,403);
+ }
+ actor={role:'host',id:invId};
+ for(const candidates of [[{name:'',phone:'70000001'}],[{name:'Válido',phone:123}],Array(201).fill({name:'Válido'})])assert.equal((await rosterRoute.POST(req('/api/host/roster',{candidates}))).status,400);
+ assert.equal((await rosterRoute.POST(req('/api/host/roster',{candidates:[]},undefined))).status,200);
+ rpcFailure={code:'PGRST202',message:'Missing RPC'};
+ const response=await dashboardRoute.GET(req('/api/host/dashboard'));assert.equal(response.status,503);assert.equal((await response.json()).code,'MIGRATION_REQUIRED');
+ assert.equal((await rosterRoute.GET(req('/api/host/roster'))).status,503);
+});
+test('018 paginates in PostgreSQL beyond 1000 rows, with global totals and stable unique pages',async()=>{
+ await db.query("insert into guests(invitation_id,public_id,name,passes,guest_metadata) select $1,'PAGE'||n,lpad(n::text,4,'0')||' Familia',2,jsonb_build_object('phone','+59170000001','group',case when n%2=0 then 'Familia' else 'Amigos' end) from generate_series(1,1001) n",[invId]);
+ const first=await rosterRpc();assert.equal(first.guests.length,25);assert.equal(first.roster.total,1002);assert.equal(first.roster.pages,41);assert.equal(first.metrics.passes,2007);assert.equal(first.metrics.total,1002);
+ const last=await rosterRpc({p_page:999});assert.equal(last.roster.page,41);assert.equal(last.guests.length,2);assert.equal(last.roster.from,1001);assert.equal(last.roster.to,1002);
+ const second=await rosterRpc({p_page:2});assert.equal(new Set([...first.guests,...second.guests].map(g=>g.id)).size,50);assert.equal(first.roster.version,second.roster.version);
+ assert.equal(first.roster.reminderQueue.ids.length,200);assert.equal(first.roster.reminderQueue.overflow,801);assert.equal(first.roster.reminderQueue.invalidPhone,1);
+ const filtered=await rosterRpc({p_filter:{search:'1001'}});assert.equal(filtered.guests.length,1);assert.equal(filtered.metrics.total,1002);assert.equal(filtered.roster.total,1);assert.equal(filtered.roster.groups.length,2);
+ const exportPage=await rosterRpc({p_size:250});assert.equal(exportPage.guests.length,250);assert.equal(exportPage.roster.total,1002);
+});
+test('018 scopes selected guests, duplicates and metrics to the event and revokes public execution',async()=>{
+ const foreign=randomUUID();await db.query("insert into guests(id,invitation_id,public_id,name,passes,guest_metadata) values($1,$2,'FOREIGN','Secreto',1,'{\"phone\":\"+59170000001\"}')",[foreign,otherId]);
+ const result=await rosterRpc({p_filter:{search:'No existe'},p_selected:[guestId,foreign]});assert.equal(result.guests.length,0);assert.equal(result.roster.from,0);assert.equal(result.selectedGuests.length,1);assert.equal(result.selectedGuests[0].id,guestId);assert.equal(result.metrics.total,1);
+ assert.deepEqual(await rpc('enkarta_roster_duplicates',{p_invitation_id:invId,p_candidates:[{name:'Fámilia   Prueba'},{name:'Secreto',phone:'+59170000001'}]}),[0]);
+ for(const role of ['anon','authenticated'])for(const fn of ['enkarta_host_roster(uuid,jsonb,integer,integer,uuid[],boolean,boolean)','enkarta_roster_duplicates(uuid,jsonb)'])assert.equal(await scalar('select has_function_privilege($1,$2,\'EXECUTE\') as result',[role,'public.'+fn]),false);
+ for(const args of [{p_page:0},{p_size:1000},{p_selected:[guestId,foreign,randomUUID()]}])await assert.rejects(rosterRpc(args),/INVALID_INPUT/);
+});
+test('018 matches accents and literal search, delivery, access and natural table order',async()=>{
+ await db.query("update guests set name='Álvaro 100%_literal',table_no='Mesa 10',guest_metadata='{\"phone\":\"7123 4567\",\"group\":\"Amigos\"}' where id=$1",[guestId]);
+ await db.query("insert into guests(invitation_id,public_id,name,passes,table_no) values($1,'SORT2','Alvaro','2','Mesa 2'),($1,'SORT3','Alvaro',1,null)",[invId]);
+ assert.equal((await rosterRpc({p_filter:{search:'alvaro'}})).guests.length,3);
+ assert.equal((await rosterRpc({p_filter:{search:'100%_'}})).guests.length,1);
+ assert.equal((await rosterRpc({p_filter:{search:'%not wildcard'}})).guests.length,0);
+ assert.deepEqual((await rosterRpc({p_filter:{sort:'table'}})).guests.map(g=>g.table_no),['Mesa 2','Mesa 10',null]);
+ assert.equal((await rosterRpc({p_filter:{group:'Amigos'}})).roster.total,1);
+ await confirm({passes:2,expectedRevision:1});const seats=await group();await scan(seats.attendees[0]);
+ assert.equal((await rosterRpc({p_filter:{access:'inside'}})).roster.total,1);assert.equal((await rosterRpc()).metrics.checkedIn,1);
+ assert.equal((await rosterRpc({p_filter:{delivery:'responded'}})).roster.total,1);
+ const noQr=await rosterRpc({p_qr:false,p_tables:false,p_filter:{search:'Mesa 10'}});assert.equal(noQr.roster.total,0);assert.deepEqual(noQr.roster.tables,[]);assert.equal(noQr.metrics.checkedIn,0);
+ const before=(await rosterRpc()).roster.version;await db.query("update guests set name='Otro' where id=$1",[guestId]);assert.notEqual((await rosterRpc()).roster.version,before);
+});
 
 test('016 migrates legacy contacts without changing the design and never restores a cleared contact',async()=>{
  const config={package:'exclusive',theme:{primary:'#123456'},guestMeta:{TEST0001:{phone:'7123 4567',group:'Familia',eventAccess:'ceremony',unexpected:'ignored'}}};
@@ -921,7 +996,7 @@ test('one live snapshot updates confirmations, occupancy and tables without mixi
   assert.equal(state.mode,'operations'); assert.equal(state.metrics.confirmed,1);
   assert.equal(state.metrics.confirmedPasses,2); assert.equal(state.metrics.passes,5);
   assert.equal(state.metrics.checkedIn,1); assert.equal(state.guests[0].inside,1);
-  assert.equal(state.guests[0].tableNo,'2'); assert.equal(state.rows.length,2);
+  assert.equal(state.guests[0].tableNo,'2'); assert.equal(state.rows.length,1); // Personal rows live only in the paginated roster.
   assert.doesNotMatch(JSON.stringify(state),/accessToken|access_token|receipt_hash|password_hash|last_response_request/);
   await scan((await group()).attendees[0],'out');
   assert.equal((await (await dashboardRoute.GET(req('/api/host/dashboard'))).json()).metrics.checkedIn,0);

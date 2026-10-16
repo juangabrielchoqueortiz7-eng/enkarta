@@ -59,6 +59,8 @@ const browserFixture = path.join(root, 'tmp', 'scan-recovery', 'browser-fixture.
 const browserDone = path.join(root, 'tmp', 'scan-recovery', 'browser-done.json');
 const editorFixture = path.join(root, path.dirname(argument('--report') || 'tmp/guest-editor/production-http.json'), 'guest-editor-fixture.json');
 const editorDone = path.join(path.dirname(editorFixture), 'guest-editor-done.json');
+const rosterFixture = path.join(path.dirname(editorFixture), 'roster-fixture.json');
+const rosterDone = path.join(path.dirname(editorFixture), 'roster-done.json');
 function writeReport() {
   const output = argument('--report');
   if (output) { fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true }); fs.writeFileSync(output, JSON.stringify(report, null, 2) + '\n'); }
@@ -81,13 +83,19 @@ async function cleanup() {
   const recordedPartner = must(await db.from('partners').select('id,email').eq('id', partner).maybeSingle(), 'Verify synthetic partner ownership');
   assert.ok(!recordedPartner || recordedPartner.email === email, 'HTTP partner cleanup scope mismatch');
   for (const item of owned) {
-    const guests = must(await db.from('guests').select('id').eq('invitation_id', item.id), 'Read own disposable guests');
+    const guests = [];
+    for (let offset=0; ; offset+=500) {
+      const batch=must(await db.from('guests').select('id').eq('invitation_id',item.id).order('id').range(offset,offset+499),'Read bounded cleanup scope');
+      guests.push(...batch); if(batch.length<500)break;
+    }
     if (guests.length) {
-      const guestIds = guests.map(guest => guest.id);
+      for(let start=0;start<guests.length;start+=200){
+      const guestIds = guests.slice(start,start+200).map(guest => guest.id);
       must(await db.from('access_log').delete().in('guest_id', guestIds), 'Remove synthetic access log');
       must(await db.from('attendees').delete().in('guest_id', guestIds), 'Remove synthetic used passes');
       assert.equal(must(await db.from('access_log').select('id').in('guest_id', guestIds), 'Verify access log cleanup').length, 0);
       assert.equal(must(await db.from('attendees').select('id').in('guest_id', guestIds), 'Verify pass cleanup').length, 0);
+      }
     }
     must(await db.from('invitations').update({ status: 'disabled', published_version_id: null, scheduled_version_id: null }).eq('id', item.id).eq('slug', item.slug), 'Pause HTTP fixture');
     must(await db.from('invitations').delete().eq('id', item.id).eq('slug', item.slug), 'Delete HTTP fixture');
@@ -104,6 +112,7 @@ async function main() {
   assert.ok(process.env.ADMIN_PASSWORD, 'Local admin credential unavailable');
   must(await db.from('guests').select('guest_metadata').limit(0), 'Migration 016 must be applied before testing this code');
   must(await db.from('guest_import_requests').select('request_id').limit(0), 'Migration 017 must be applied before testing this code');
+  if(process.argv.includes('--roster-pagination'))must(await db.rpc('enkarta_host_roster',{p_invitation_id:ids[1]}),'Migration 018 must be applied before testing pagination');
   started = true;
   must(await db.from('partners').insert({ id: partner, email, full_name: 'Disposable HTTP QA' }), 'Create HTTP QA partner');
   must(await db.from('partner_subscriptions').insert({ partner_id: partner, plan_key: 'inicio', status: 'active',
@@ -379,6 +388,43 @@ async function main() {
     assert.equal(response.status, 409); assert.equal(response.data.code, 'BANK_CONFIRMATION_REQUIRED');
     assert.equal((await row('partner_payments', bank.id)).status, 'pending');
   });
+  if(process.argv.includes('--roster-pagination')) {
+    let expectedTotal;
+    await check('HTTP SQL pagination returns 25 of more than 1000 synthetic groups with complete metrics and stable pages',async()=>{
+      const rows=Array.from({length:1001},(_,index)=>({invitation_id:ids[1],public_id:randomBytes(12).toString('hex'),name:`QA Padrón ${String(index).padStart(4,'0')}`,passes:2,
+        guest_metadata:{phone:'+59170000001',group:index%2?'QA-impares':'QA-pares'},table_no:String(index%10+1)}));
+      for(let offset=0;offset<rows.length;offset+=200)must(await db.from('guests').insert(rows.slice(offset,offset+200)),'Create bounded synthetic roster');
+      const count=await db.from('guests').select('id',{head:true,count:'exact'}).eq('invitation_id',ids[1]);must(count,'Count own synthetic roster');expectedTotal=count.count;
+      const first=await request('/api/host/dashboard','GET',undefined,hostCookie),second=await request('/api/host/dashboard?page=2','GET',undefined,hostCookie);
+      assert.equal(first.status,200);assert.equal(second.status,200);assert.equal(first.data.guests.length,25);assert.equal(first.data.metrics.total,expectedTotal);assert.equal(first.data.roster.total,expectedTotal);
+      assert.equal(first.data.roster.version,second.data.roster.version);assert.equal(new Set([...first.data.guests,...second.data.guests].map(g=>g.id)).size,50);
+      assert.equal(first.data.rows.some(r=>r.source==='personal'),false);assert.equal(first.text.includes('accessToken'),false);
+      const last=await request('/api/host/dashboard?page=1000000','GET',undefined,hostCookie);assert.equal(last.data.roster.to,expectedTotal);assert.ok(last.data.guests.length<=25);
+      report.rosterPagination={syntheticGroups:expectedTotal,pageSize:first.data.guests.length,pages:first.data.roster.pages};
+    });
+    await check('HTTP filtered CSV and WhatsApp cover every matching page and duplicate lookup finds an off-page group',async()=>{
+      const filtered=await request('/api/host/dashboard?search='+encodeURIComponent('QA Padrón'),'GET',undefined,hostCookie);assert.equal(filtered.status,200);
+      assert.equal(filtered.data.roster.total,1001);assert.equal(filtered.data.metrics.total,expectedTotal);assert.equal(filtered.data.roster.invitationQueue.ids.length,200);assert.equal(filtered.data.roster.invitationQueue.overflow,801);
+      const csv=await request('/api/host/roster?search='+encodeURIComponent('QA Padrón'),'GET',undefined,hostCookie);assert.equal(csv.status,200);assert.equal(csv.text.split('\r\n').length,1002);assert.ok(csv.text.includes('QA Padrón 1000'));
+      const duplicates=await request('/api/host/roster','POST',{candidates:[{name:'QA Padrón 1000',phone:'70000001'}]},hostCookie);assert.equal(duplicates.status,200);assert.deepEqual(duplicates.data.duplicates,[0]);
+      const selected=await request('/api/host/dashboard?search=unmatched&selected='+guest.id,'GET',undefined,hostCookie);assert.equal(selected.data.guests.length,0);assert.equal(selected.data.selectedGuests[0].id,guest.id);
+    });
+    await check('HTTP paginated roster and export deny anonymous, reviewer, reception and cross-event reads',async()=>{
+      for(const cookie of ['',reviewCookie,doorCookie])for(const route of ['/api/host/dashboard','/api/host/roster'])assert.equal((await request(route+'?id='+ids[1],'GET',undefined,cookie)).status,403);
+      assert.equal((await request('/api/host/roster?id='+ids[0],'GET',undefined,hostCookie)).status,403);
+      assert.equal((await request('/api/host/dashboard?page=0','GET',undefined,hostCookie)).status,400);
+    });
+    if(process.argv.includes('--roster-window'))await check('Production browser paginates and resumes an off-page WhatsApp contact without writes',async()=>{
+      const before=await row('guests',guest.id), accessBefore=must(await db.from('access_log').select('id').eq('guest_id',guest.id),'Read browser access baseline');
+      fs.writeFileSync(rosterFixture,JSON.stringify({tag,email,password,invitationId:ids[1],guestId:guest.id,total:expectedTotal}));
+      console.log('READY: synthetic roster browser fixture; waiting for acknowledgement');
+      const deadline=Date.now()+8*60*1000;let completed=false;
+      while(Date.now()<deadline){try{const done=JSON.parse(fs.readFileSync(rosterDone,'utf8'));if(done.tag===tag&&done.confirmed===true){completed=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,500));}
+      assert.ok(completed,'Roster browser exercise timed out');assert.equal((await row('guests',guest.id)).response_revision,before.response_revision);
+      assert.deepEqual(must(await db.from('access_log').select('id').eq('guest_id',guest.id),'Verify no browser access writes'),accessBefore);
+      report.rosterBrowser={writes:0,bankCalls:0,messagesSent:0};
+    });
+  }
   if (process.argv.includes('--guest-editor-window')) await check('Production browser guest edit updates one revision and leaves access movements unchanged', async () => {
     const before = await row('guests', guest.id);
     const logBefore = must(await db.from('access_log').select('id').eq('guest_id', guest.id), 'Read own editor access baseline');
@@ -433,6 +479,6 @@ writeReport();
   try { await cleanup(); } catch (error) { report.cleanup = 'failed'; report.cleanupFailure = error.message; console.error('FAIL: fixture cleanup requires attention'); process.exitCode = 1; }
   try { if (JSON.parse(fs.readFileSync(browserFixture, 'utf8')).tag === tag) fs.unlinkSync(browserFixture); } catch { /* absent or another run's file */ }
   try { if (JSON.parse(fs.readFileSync(browserDone, 'utf8')).tag === tag) fs.unlinkSync(browserDone); } catch { /* absent or another run's file */ }
-  for (const file of [editorFixture, editorDone]) { try { if (JSON.parse(fs.readFileSync(file, 'utf8')).tag === tag) fs.unlinkSync(file); } catch { /* absent or another run's file */ } }
+  for (const file of [editorFixture, editorDone, rosterFixture, rosterDone]) { try { if (JSON.parse(fs.readFileSync(file, 'utf8')).tag === tag) fs.unlinkSync(file); } catch { /* absent or another run's file */ } }
   writeReport();
 });

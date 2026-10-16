@@ -17,6 +17,15 @@ export interface HostSnapshot {
   rows: ResponseRow[];
   metrics: HostMetrics | null;
   validity?: ValiditySummary;
+  /** Operational SQL page. Absent only in response-only panels and local demos. */
+  roster?: RosterSummary;
+  selectedGuests?: HostGuest[];
+}
+export interface RosterSummary {
+  page: number; pages: number; size: number; total: number; from: number; to: number; version: string;
+  groups: string[]; tables: { name: string; confirmed: number }[];
+  invitationQueue: { ids: string[]; overflow: number; invalidPhone: number; excluded: number };
+  reminderQueue: { ids: string[]; overflow: number; invalidPhone: number; excluded: number };
 }
 /** Misma hora en SSR y navegador, independientemente de la zona del servidor. */
 export function formatSyncTime(value: string): string {

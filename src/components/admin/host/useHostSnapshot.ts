@@ -5,6 +5,7 @@ import { createLiveSync, SyncDenied, type SyncState } from '@/lib/live-sync';
 
 export function useHostSnapshot(initial: HostSnapshot | null, endpoint: string) {
   const [snapshot, setSnapshot] = useState(initial);
+  const [receivedEndpoint, setReceivedEndpoint] = useState(endpoint);
   const [state, setState] = useState<SyncState>('loading');
   const refresh = useRef<() => void>(() => {});
   useEffect(() => {
@@ -17,7 +18,7 @@ export function useHostSnapshot(initial: HostSnapshot | null, endpoint: string) 
         if (!value || !Array.isArray(value.guests) || !Array.isArray(value.rows) || !value.services || !['operations', 'responses'].includes(value.mode) || !Number.isFinite(Date.parse(value.syncedAt))) throw new Error('Lectura incompleta');
         return value;
       },
-      receive: setSnapshot,
+      receive(value) { setSnapshot(value); setReceivedEndpoint(endpoint); },
       status(next) { setState(next); if (next === 'denied') setSnapshot(null); },
     });
     const wake = () => {
@@ -26,10 +27,11 @@ export function useHostSnapshot(initial: HostSnapshot | null, endpoint: string) 
       else sync.resume();
     };
     refresh.current = () => { if (navigator.onLine) void sync.refresh(); else sync.pause('offline'); };
-    wake();
+    const firstRead = setTimeout(wake, 250);
     window.addEventListener('online', wake); window.addEventListener('offline', wake);
     document.addEventListener('visibilitychange', wake);
-    return () => { sync.stop(); refresh.current = () => {}; window.removeEventListener('online', wake); window.removeEventListener('offline', wake); document.removeEventListener('visibilitychange', wake); };
+    return () => { clearTimeout(firstRead); sync.stop(); refresh.current = () => {}; window.removeEventListener('online', wake); window.removeEventListener('offline', wake); document.removeEventListener('visibilitychange', wake); };
   }, [endpoint]);
-  return { snapshot, state, refresh: () => refresh.current() };
+  const queryCurrent = receivedEndpoint === endpoint;
+  return { snapshot, state, queryCurrent, receivedEndpoint, refresh: () => refresh.current() };
 }

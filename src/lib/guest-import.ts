@@ -132,7 +132,7 @@ function duplicateKey(name: string, phone?: string): string {
 export function mapGuestCsvRows(
   parsed: ParsedGuestCsv,
   mapping: Record<number, GuestImportField>,
-  existing: Guest[] = [],
+  existing: Pick<Guest, 'name' | 'phone'>[] = [],
 ): GuestImportResult {
   const fields = Object.entries(mapping).filter(([index, field]) => Number(index) < parsed.headers.length && field !== 'ignore').map(([,field]) => field);
   const mappingErrors: string[] = [];
