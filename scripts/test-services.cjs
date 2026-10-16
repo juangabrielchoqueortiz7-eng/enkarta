@@ -115,6 +115,8 @@ const doorAuth = require('../src/app/api/door/auth/route.ts');
 const dashboardRoute = require('../src/app/api/host/dashboard/route.ts');
 const rosterRoute = require('../src/app/api/host/roster/route.ts');
 const managedRosterRoute = require('../src/app/api/guests/roster/route.ts');
+const {readGuestCsvFile}=require('../src/lib/guest-csv-file.ts');
+const {guessGuestColumn,mapGuestCsvRows}=require('../src/lib/guest-import.ts');
 const reviewState = require('../src/app/api/admin/builder-state/route.ts');
 const botRoute = require('../src/app/api/invitations/route.ts');
 const validityRoute = require('../src/app/api/admin/invitations/validity/route.ts');
@@ -224,6 +226,14 @@ test('history does not expose another group and marks old or unknown operators h
 });
 
 const rosterRpc = (extra={}) => rpc('enkarta_host_roster',{p_invitation_id:invId,...extra});
+test('Unicode guest file imports verified names and contact data once with existing permissions and recovery',async()=>{
+ actor={role:'host',id:invId};await db.query('update invitations set builder_config=$1 where id=$2',[newServiceContract({},'exclusive'),invId]);
+ const bytes=Buffer.from('\uFEFFNombre\tTeléfono\tPases\tMesa\tGrupo\tNiños\tPreferencia\r\nFamilia Pérez\t70000001\t4\t8\tFamilia\tSí\tTodo el evento\r\nAna Ñandú\t+59170000002\t2\t9\tAmigos\tNo\tRecepción','utf16le');
+ const {parsed}=await readGuestCsvFile({name:'lista.txt',size:bytes.length,arrayBuffer:async()=>Uint8Array.from(bytes).buffer});const mapped=mapGuestCsvRows(parsed,Object.fromEntries(parsed.headers.map((name,index)=>[index,guessGuestColumn(name)])));assert.equal(mapped.rows.length,2);assert.deepEqual(mapped.issues,[]);
+ const body={invitationId:invId,requestId:randomUUID(),guests:mapped.rows};const first=await guestCrud.POST(req('/api/guests',body));assert.equal(first.status,200);const result=await first.json();assert.equal(result.importedCount,2);assert.equal(result.guests[0].name,'Familia Pérez');assert.equal(result.guests[0].phone,'+59170000001');assert.equal(result.guests[0].passes,4);assert.equal(result.guests[1].eventAccess,'reception');
+ const replay=await guestCrud.POST(req('/api/guests',body));assert.equal(replay.status,200);assert.equal((await replay.json()).replayed,true);assert.equal((await db.query('select id from guests where invitation_id=$1',[invId])).rows.length,3);
+ actor={role:'door',id:invId};assert.equal((await guestCrud.POST(req('/api/guests',{...body,requestId:randomUUID()}))).status,403);assert.equal((await db.query('select id from access_log')).rows.length,0);
+});
 test('builder roster paginates and exports beyond 1000 for personal guests without granting hostPanel',async()=>{
  actor={role:'admin'};await db.query('update invitations set builder_config=$1 where id=$2',[newServiceContract({},'premium'),invId]);
  assert.equal(allowsService(newServiceContract({},'premium'),'hostPanel'),false);

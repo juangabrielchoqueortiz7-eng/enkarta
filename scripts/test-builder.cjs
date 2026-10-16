@@ -24,6 +24,40 @@ const compileTypeScript = (module, file) => {
 require.extensions['.ts'] = compileTypeScript;
 require.extensions['.tsx'] = compileTypeScript;
 
+const {readGuestCsvFile,createGuestCsvReader,MAX_GUEST_CSV_BYTES}=require('../src/lib/guest-csv-file.ts');
+const csvFile=(bytes,name='invitados.csv')=>({name,size:bytes.length,arrayBuffer:async()=>Uint8Array.from(bytes).buffer});
+const unicodeGuestCsv='Nombre\tTeléfono\tPases\tGrupo\r\n"Familia Pérez, Muñoz"\t+59170000001\t4\tFamilia\r\nAna Ñandú\t70000002\t2\tAmigos';
+test('guest file decodes UTF-8 with or without BOM and preserves accents, delimiters and phone text',async()=>{
+ for(const prefix of ['','\uFEFF']){const result=await readGuestCsvFile(csvFile(Buffer.from(prefix+unicodeGuestCsv)));assert.equal(result.source.encoding,'UTF-8');assert.equal(result.parsed.rows.length,2);assert.equal(result.parsed.rows[0][0],'Familia Pérez, Muñoz');assert.equal(result.parsed.rows[0][1],'+59170000001');assert.equal(result.parsed.rows[1][0],'Ana Ñandú');}
+});
+test('guest file reads Excel Unicode UTF-16 LE and BE with BOM without changing names',async()=>{
+ const le=Buffer.from('\uFEFF'+unicodeGuestCsv,'utf16le'),be=Buffer.from(le);be.swap16();
+ for(const [bytes,encoding]of [[le,'UTF-16 LE'],[be,'UTF-16 BE']]){const result=await readGuestCsvFile(csvFile(bytes,'lista.TXT'));assert.equal(result.source.encoding,encoding);assert.equal(result.parsed.delimiter,'\t');assert.equal(result.parsed.rows[1][0],'Ana Ñandú');}
+});
+test('guest file rejects invalid encoding, control/binary bytes and renamed workbooks instead of corrupting names',async()=>{
+ for(const bytes of [Buffer.from('Nombre\nPérez','latin1'),Buffer.from([0xff,0xfe,0x41]),Buffer.from('Nombre\nA\0na'),Buffer.from([0x50,0x4b,3,4]),Buffer.from([0xd0,0xcf,0x11,0xe0]),Buffer.from('Nombre\nAna\ufffd')])await assert.rejects(readGuestCsvFile(csvFile(bytes)));
+});
+test('guest file rejects empty, header-only, malformed and oversized input before committing a draft',async()=>{
+ for(const bytes of [Buffer.alloc(0),Buffer.from('Nombre;Pases\r\n'),Buffer.from('Nombre\n"Sin cierre')])await assert.rejects(readGuestCsvFile(csvFile(bytes)));
+ let reads=0;await assert.rejects(readGuestCsvFile({name:'lista.csv',size:MAX_GUEST_CSV_BYTES+1,arrayBuffer:async()=>{reads++;return new ArrayBuffer(0);}}));assert.equal(reads,0);
+ await assert.rejects(readGuestCsvFile({...csvFile(Buffer.from('Nombre\nAna')),size:500}));
+ await assert.rejects(readGuestCsvFile({...csvFile(Buffer.from('Nombre\nAna')),arrayBuffer:async()=>{throw new Error('File no longer available');}}),/seleccionarlo/);
+ for(const name of ['lista.xlsx','lista.xls','lista.csv.exe','lista.json'])await assert.rejects(readGuestCsvFile(csvFile(Buffer.from('Nombre\nAna'),name)));
+});
+test('guest file reader commits only the latest selection and ignores an earlier late success',async()=>{
+ const pending=[];const reader=createGuestCsvReader('event-A',file=>new Promise(resolve=>pending.push({file,resolve})));assert.equal(reader.scope,'event-A');const one=reader.read(csvFile([1],'primero.csv')),two=reader.read(csvFile([2],'segundo.csv'));assert.equal(reader.pending,true);
+ pending[1].resolve({source:{name:'segundo.csv'}});assert.equal((await two).value.source.name,'segundo.csv');assert.equal(reader.pending,false);pending[0].resolve({source:{name:'primero.csv'}});assert.deepEqual(await one,{status:'superseded'});
+});
+test('guest file reader ignores superseded failures and never releases a newer pending selection',async()=>{
+ const pending=[];const reader=createGuestCsvReader('event-A',()=>new Promise((resolve,reject)=>pending.push({resolve,reject})));const one=reader.read(csvFile([1])),two=reader.read(csvFile([2]));pending[0].reject(new Error('old failure'));assert.deepEqual(await one,{status:'superseded'});assert.equal(reader.pending,true);pending[1].reject(new Error('current failure'));assert.deepEqual(await two,{status:'error',error:'current failure'});assert.equal(reader.pending,false);
+});
+test('guest file reader cancellation protects manual edits, closure, unmount and a different event',async()=>{
+ for(const reason of ['manual edit','close','unmount','event change']){let resolve;const reader=createGuestCsvReader('event-A',()=>new Promise(done=>{resolve=done;}));const result=reader.read(csvFile([1]));reader.cancel();assert.equal(reader.pending,false,reason);resolve({source:{name:'old.csv'}});assert.deepEqual(await result,{status:'superseded'},reason);}
+});
+test('guest file reader can reselect the same file after a read error or explicit cancellation',async()=>{
+ let calls=0;const file=csvFile([1]);const reader=createGuestCsvReader('event-A',async()=>{if(++calls===1)throw new Error('unreadable');return {source:{name:'ready.csv'}};});assert.equal((await reader.read(file)).status,'error');reader.cancel();assert.equal((await reader.read(file)).status,'ready');assert.equal(calls,2);
+});
+
 const {historyTimestamp,parseHistoryCursor,movementCursor,historyOperator,parseCheckinHistory,readCheckinHistory}=require('../src/lib/checkin-history.ts');
 const historyEvent='10000000-0000-4000-8000-000000000001',historyGuest='20000000-0000-4000-8000-000000000001';
 const historyMovement=(n=1)=>({id:`30000000-0000-4000-8000-${String(n).padStart(12,'0')}`,at:'2026-10-16T10:00:00.123456Z',action:'in',seatNo:1,label:'Persona ficticia',operatorRole:'door'});

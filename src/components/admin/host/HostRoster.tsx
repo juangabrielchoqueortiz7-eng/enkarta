@@ -2,7 +2,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { filterRoster, rosterCsv, type HostGuest, type HostSnapshot, type RosterFilter } from '@/lib/host-dashboard';
 import { RESPONSE_LABELS } from '@/lib/response-sheet';
-import { guessGuestColumn, mapGuestCsvRows, parseGuestCsv, parseQuickGuestList, type GuestImportField, type ParsedGuestCsv } from '@/lib/guest-import';
+import { guessGuestColumn, mapGuestCsvRows, parseQuickGuestList, type GuestImportField, type ParsedGuestCsv } from '@/lib/guest-import';
+import { createGuestCsvReader, type GuestCsvSource } from '@/lib/guest-csv-file';
+import GuestCsvFileInput from './GuestCsvFileInput';
 import GuestImportPreview, { GuestImportTemplate } from './GuestImportPreview';
 import GuestImportRecovery, { useGuestImport } from './GuestImportRecovery';
 import DeliveryRecovery, { useDeliveryTracking } from './DeliveryRecovery';
@@ -50,6 +52,14 @@ export default function HostRoster({ snapshot, invitationId, slug, connected, re
   const [adding, setAdding] = useState(false);
   const [input, setInput] = useState('');
   const [csv, setCsv] = useState<ParsedGuestCsv | null>(null);
+  const csvReader = useMemo(() => createGuestCsvReader(invitationId), [invitationId]);
+  const currentCsvReader = useRef(csvReader); currentCsvReader.current = csvReader;
+  const [csvReading, setCsvReading] = useState(''), [csvError, setCsvError] = useState('');
+  const [csvSource, setCsvSource] = useState<GuestCsvSource | null>(null);
+  useEffect(() => {
+    setCsvReading(''); setCsvError(''); setCsvSource(null); setCsv(null); setInput('');
+    return () => csvReader.cancel();
+  }, [csvReader]);
   const [mapping, setMapping] = useState<Record<number, GuestImportField>>({});
   const candidates = useMemo(() => csv ? mapGuestCsvRows(csv, mapping) : null, [csv, mapping]);
   const canCheckDuplicates = !!(paginated && candidates && candidates.rows.length <= 200 && !candidates.mappingErrors.length);
@@ -133,15 +143,19 @@ export default function HostRoster({ snapshot, invitationId, slug, connected, re
   };
   const readCsv = async (file?: File) => {
     if (!file) return;
-    setInput(''); setCsv(null);
-    if (file.size > 1024 * 1024) { setNotice('El archivo supera 1 MB. Divide la lista antes de importarla.'); return; }
-    let parsed;
-    try { parsed = parseGuestCsv(await file.text()); } catch (error) { setCsv(null); setNotice(error instanceof Error ? error.message : 'No se pudo leer el CSV.'); return; }
+    setCsvReading(file.name); setCsvError('');
+    const result = await csvReader.read(file);
+    if (result.status === 'superseded' || currentCsvReader.current !== csvReader) return;
+    setCsvReading('');
+    if (result.status === 'error') { setCsvError(result.error); return; }
+    const { parsed, source } = result.value;
+    setInput(''); setCsvSource(source);
     setCsv(parsed); setMapping(Object.fromEntries(parsed.headers.map((header,index) => [index, guessGuestColumn(header) === 'tableNo' && !services.tableAssignment ? 'ignore' : guessGuestColumn(header)])));
     setNotice('Revisa las columnas y los registros antes de importar.');
   };
+  const cancelCsvRead = () => { csvReader.cancel(); setCsvReading(''); };
   const add = async () => {
-    if (importer.blocked || !connected || (csv && (!duplicatesReady || !mapped?.rows.length || mapped.mappingErrors.length || mapped.rows.length > 200))) return;
+    if (csvReader.pending || csvError || importer.blocked || !connected || (csv && (!duplicatesReady || !mapped?.rows.length || mapped.mappingErrors.length || mapped.rows.length > 200))) return;
     if (demo) { setNotice('Vista de prueba: no se modifican invitados reales.'); return; }
     let rows;
     try { rows = importRows.length ? importRows : parseQuickGuestList(input); } catch (error) { setNotice(error instanceof Error ? error.message : 'Revisa la lista.'); return; }
@@ -151,19 +165,28 @@ export default function HostRoster({ snapshot, invitationId, slug, connected, re
     refresh();
   };
   const acceptImport = (result: GuestImportReceipt) => {
-    setNotice(guestImportMessage(result)); setInput(''); setCsv(null); setAdding(false); refresh();
+    cancelCsvRead(); setCsvError(''); setCsvSource(null); setNotice(guestImportMessage(result)); setInput(''); setCsv(null); setAdding(false); refresh();
   };
   const status = (g: HostGuest) => <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] ${statusClass[g.status]}`}>{RESPONSE_LABELS[g.status]}</span>;
   const action = (g: HostGuest) => <div className="flex flex-wrap gap-2">{guestActions?.(g)}<button type="button" disabled={!connected} onClick={() => setEditing(g)} className="min-h-11 rounded-xl border border-[#e4dfd4] bg-white px-3 text-xs text-[#75603d] disabled:opacity-40" aria-label={`Editar ${g.name}`}>{services.tableAssignment ? 'Editar / mesa' : 'Editar'}</button></div>;
   return <section className={`${styles.surface} overflow-hidden rounded-3xl border border-[#e4dfd4] bg-white font-outfit`}>
-    <div className="flex flex-wrap items-start justify-between gap-3 p-5 sm:p-6"><div><h2 className="font-playfair text-2xl text-[#303e32]">Lista de invitados</h2><p className="mt-1 text-xs text-gray-500">Grupos con enlace personal. Sus respuestas y accesos se actualizan juntos.</p></div><div className="flex gap-2"><button type="button" onClick={() => setAdding(v => !v)} className="min-h-11 rounded-xl border border-[#e4dfd4] px-3 text-xs text-[#75603d]">Añadir / importar</button><button type="button" disabled={!connected || loading || !listing.total || exporting} onClick={() => void exportRoster()} className="min-h-11 rounded-xl bg-[#516749] px-3 text-xs text-white disabled:opacity-40">{exporting ? 'Exportando…' : 'Exportar CSV'}</button></div></div>
+    <div className="flex flex-wrap items-start justify-between gap-3 p-5 sm:p-6"><div><h2 className="font-playfair text-2xl text-[#303e32]">Lista de invitados</h2><p className="mt-1 text-xs text-gray-500">Grupos con enlace personal. Sus respuestas y accesos se actualizan juntos.</p></div><div className="flex gap-2"><button type="button" onClick={() => { cancelCsvRead(); setAdding(v => !v); }} className="min-h-11 rounded-xl border border-[#e4dfd4] px-3 text-xs text-[#75603d]">Añadir / importar</button><button type="button" disabled={!connected || loading || !listing.total || exporting} onClick={() => void exportRoster()} className="min-h-11 rounded-xl bg-[#516749] px-3 text-xs text-white disabled:opacity-40">{exporting ? 'Exportando…' : 'Exportar CSV'}</button></div></div>
     {notice && <p role="status" className="mx-5 mb-4 rounded-xl bg-[#f6f3eb] p-3 text-xs text-[#75603d]">{notice}</p>}
     {connected && !loading && preparedDownload?.filter === exportFilter && <p className="mx-5 mb-4 text-sm text-gray-700"><a href={preparedDownload.url} download={preparedDownload.filename} className="inline-flex min-h-11 items-center rounded-xl border border-[#e4dfd4] bg-white px-4 underline underline-offset-4 hover:bg-[#f7f5ef]">Descargar CSV preparado</a><span className="mt-2 block text-xs text-gray-600">Incluye todos los resultados de los filtros usados al prepararlo, también los de otras páginas. Se conserva mientras mantengas esta pantalla abierta.</span></p>}
     <div className="mx-5 mb-4"><GuestImportRecovery importer={importer} recovered={acceptImport} disabled={!connected || demo} /></div>
     {!editing && <div className="mx-5 mb-4"><DeliveryRecovery tracker={delivery} disabled={!connected || demo} /></div>}
     <div className="mx-5 mb-4 space-y-2 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4"><h3 className="text-sm font-medium text-emerald-900">WhatsApp de la lista filtrada</h3><p className="text-xs leading-relaxed text-gray-600">Revisa un contacto por vez. Invitaciones: solo pendientes sin seguimiento; recordatorios: solo quienes no respondieron.</p><div className="flex flex-wrap gap-2"><button type="button" disabled={!connected || deliveryBusy || queueReview.blocked || !!queueReview.review || !invitationQueue.ids.length} onClick={() => startQueue(invitationQueue.ids,'invitation')} className="min-h-11 rounded-xl bg-emerald-700 px-3 text-xs text-white disabled:opacity-40">Preparar {invitationQueue.ids.length} {invitationQueue.ids.length === 1 ? 'invitación' : 'invitaciones'}</button><button type="button" disabled={!connected || deliveryBusy || queueReview.blocked || !!queueReview.review || !reminderQueue.ids.length} onClick={() => startQueue(reminderQueue.ids,'reminder')} className="min-h-11 rounded-xl border border-emerald-200 bg-white px-3 text-xs text-emerald-900 disabled:opacity-40">Revisar {reminderQueue.ids.length} {reminderQueue.ids.length === 1 ? 'recordatorio' : 'recordatorios'}</button></div><p className="text-[11px] text-gray-500">{reminderQueue.invalidPhone} pendientes sin teléfono válido · {reminderQueue.excluded} con respuesta. Máximo 200 contactos por revisión.{!!reminderQueue.overflow && ` Quedan ${reminderQueue.overflow} fuera de esta revisión; ajusta los filtros.`}</p></div>
     <div className="mx-5 mb-4"><WhatsAppReviewStatus controller={queueReview} resume={() => setQueueOpen(true)} disabled={!connected || deliveryBusy} /></div>
-    {adding && <fieldset disabled={importer.blocked || !connected} className="mx-5 mb-5 min-w-0 space-y-3 rounded-2xl border bg-[#faf9f6] p-4"><p className="text-sm font-medium text-gray-700">Añadir invitados</p><label className="block text-xs text-gray-500">Un nombre por línea, opcionalmente seguido de coma y número de pases<textarea rows={3} value={input} onChange={e => { setInput(e.target.value); setCsv(null); }} placeholder={'Ana López, 2\nCarlos Pérez, 1'} className={`${fieldClass} mt-2 w-full`} /></label><label className="block text-xs text-gray-600">O importar CSV: Nombre, Teléfono, Grupo, Preferencia, Pases, Mesa, Niños<input type="file" accept=".csv,text/csv" onChange={e => void readCsv(e.target.files?.[0])} className="mt-2 block w-full text-xs" /></label><GuestImportTemplate />{csv && paginated && <div role="status" className="text-sm text-gray-600">{!canCheckDuplicates ? 'Asigna las columnas y limita el CSV a 200 registros para comprobar duplicados.' : duplicateCheck.error || (duplicateCheck.ready ? 'Duplicados comprobados en todo el padrón.' : 'Comprobando duplicados en todo el padrón…')}{duplicateCheck.error && <button type="button" onClick={duplicateCheck.retry} className="ml-2 min-h-11 underline">Reintentar comprobación</button>}</div>}{csv && mapped && <GuestImportPreview parsed={csv} mapping={mapping} changeMapping={(index,field) => setMapping(current => ({...current,[index]:field}))} result={mapped} tables={services.tableAssignment} />}<button disabled={busy || !connected || (!input.trim() && !importRows.length) || (csv !== null && (!duplicatesReady || !mapped?.rows.length || !!mapped.mappingErrors.length || mapped.rows.length > 200))} type="button" onClick={() => void add()} className="min-h-11 rounded-xl bg-[#516749] px-4 text-sm text-white disabled:opacity-40">{busy ? 'Añadiendo…' : `Añadir${importRows.length ? ` ${importRows.length} ${importRows.length === 1 ? 'invitado' : 'invitados'}` : ' lista'}`}</button><p className="text-[11px] text-gray-500">Los datos de contacto se guardan junto con cada invitado. No hace falta publicar el diseño.</p></fieldset>}
+    {adding && <fieldset disabled={importer.blocked || !connected} aria-busy={!!csvReading || busy} className="mx-5 mb-5 min-w-0 space-y-3 rounded-2xl border bg-[#faf9f6] p-4">
+      <p className="text-sm font-medium text-gray-700">Añadir invitados</p>
+      <label className="block text-xs text-gray-500">Un nombre por línea, opcionalmente seguido de coma y número de pases<textarea name="guest-quick-list" autoComplete="off" rows={3} value={input} onChange={e => { cancelCsvRead(); setCsvError(''); setCsvSource(null); setInput(e.target.value); setCsv(null); }} placeholder={'Ana López, 2\nCarlos Pérez, 1'} className={`${fieldClass} mt-2 w-full`} /></label>
+      <GuestCsvFileInput reading={csvReading} source={csvSource} error={csvError} read={file => void readCsv(file)} cancel={cancelCsvRead} keepPrevious={csv || input.trim() ? () => setCsvError('') : undefined} />
+      <GuestImportTemplate />
+      {csv && paginated && <div role="status" className="text-sm text-gray-600">{!canCheckDuplicates ? 'Asigna las columnas y limita el CSV a 200 registros para comprobar duplicados.' : duplicateCheck.error || (duplicateCheck.ready ? 'Duplicados comprobados en todo el padrón.' : 'Comprobando duplicados en todo el padrón…')}{duplicateCheck.error && <button type="button" onClick={duplicateCheck.retry} className="ml-2 min-h-11 underline">Reintentar comprobación</button>}</div>}
+      {csv && mapped && <GuestImportPreview parsed={csv} mapping={mapping} changeMapping={(index,field) => { cancelCsvRead(); setMapping(current => ({...current,[index]:field})); }} result={mapped} tables={services.tableAssignment} />}
+      <button disabled={!!csvReading || !!csvError || busy || !connected || (!input.trim() && !importRows.length) || (csv !== null && (!duplicatesReady || !mapped?.rows.length || !!mapped.mappingErrors.length || mapped.rows.length > 200))} type="button" onClick={() => void add()} className="min-h-11 rounded-xl bg-[#516749] px-4 text-sm text-white disabled:opacity-40">{csvReading ? 'Leyendo archivo…' : busy ? 'Añadiendo…' : `Añadir${importRows.length ? ` ${importRows.length} ${importRows.length === 1 ? 'invitado' : 'invitados'}` : ' lista'}`}</button>
+      <p className="text-[11px] text-gray-500">Los datos de contacto se guardan junto con cada invitado. No hace falta publicar el diseño.</p>
+    </fieldset>}
     <div className="space-y-3 border-y border-[#eee9df] bg-[#fbfaf7] p-5">
       <label className="block text-sm font-medium text-gray-700">Buscar invitados<input name="guest-search" autoComplete="off" type="search" value={filter.search} onChange={e => updateFilter('search', e.target.value)} placeholder="Nombre, grupo, teléfono, mesa o código…" maxLength={120} className={`${fieldClass} mt-2 w-full`} /></label>
       <details className="group">

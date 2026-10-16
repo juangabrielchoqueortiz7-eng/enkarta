@@ -19,6 +19,8 @@ const { newServiceContract } = require('../src/lib/packages.ts');
 const { deliveryRecoveryRecord, restoreDeliveryRecovery } = require('../src/lib/delivery-recovery.ts');
 const { parseScannerGroup, parseScanReceipt } = require('../src/lib/scanner-contract.ts');
 const { parseCheckinHistory } = require('../src/lib/checkin-history.ts');
+const { readGuestCsvFile } = require('../src/lib/guest-csv-file.ts');
+const { guessGuestColumn, mapGuestCsvRows } = require('../src/lib/guest-import.ts');
 const { scannerSessionFingerprint } = require('../src/lib/scanner-session.ts');
 const { scanRecoveryRecord, restoreScanRecovery, scanRecoveryPerson } = require('../src/lib/scan-recovery.ts');
 const { guestEditValues, validateGuestEdit, verifyGuestEditReceipt } = require('../src/lib/guest-edit-form.ts');
@@ -64,6 +66,9 @@ const rosterFixture = path.join(path.dirname(editorFixture), 'roster-fixture.jso
 const rosterDone = path.join(path.dirname(editorFixture), 'roster-done.json');
 const historyFixture = path.join(path.dirname(editorFixture), 'history-fixture.json');
 const historyDone = path.join(path.dirname(editorFixture), 'history-done.json');
+const csvFixture = path.join(path.dirname(editorFixture), 'csv-fixture.json');
+const csvDone = path.join(path.dirname(editorFixture), 'csv-done.json');
+const csvBrowserFile = path.join(path.dirname(editorFixture), 'csv-browser.txt');
 function writeReport() {
   const output = argument('--report');
   if (output) { fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true }); fs.writeFileSync(output, JSON.stringify(report, null, 2) + '\n'); }
@@ -519,6 +524,31 @@ async function main() {
     assert.deepEqual(logAfter.map(item => item.id).sort(), logBefore.map(item => item.id).sort());
     report.browserGuestEdit = { changedRevisions: 1, accessMovementsUnchanged: true, fixtureScopeVerified: true };
   });
+  if (process.argv.includes('--csv-file-import')) await check('HTTP Unicode file imports accented names and metadata once, with recovery and no reception writes',async()=>{
+    const name=`QA Archivo Pérez ${tag.slice(-8)}`;
+    const bytes=Buffer.from('\uFEFFNombre\tTeléfono\tPases\tGrupo\r\n'+name+'\t70000001\t3\tArchivo ficticio','utf16le');bytes.swap16();
+    const {parsed}=await readGuestCsvFile({name:'qa-unicode.txt',size:bytes.length,arrayBuffer:async()=>Uint8Array.from(bytes).buffer});
+    const mapped=mapGuestCsvRows(parsed,Object.fromEntries(parsed.headers.map((header,index)=>[index,guessGuestColumn(header)])));assert.equal(mapped.rows.length,1);
+    const body={invitationId:ids[1],requestId:randomUUID(),guests:mapped.rows};
+    const one=await request('/api/guests','POST',body,hostCookie);assert.equal(one.status,200);assert.equal(one.data.guests[0].name,name);assert.equal(one.data.guests[0].phone,'+59170000001');assert.equal(one.data.guests[0].passes,3);
+    const again=await request('/api/guests','POST',body,hostCookie);assert.equal(again.status,200);assert.equal(again.data.replayed,true);
+    const stored=must(await db.from('guests').select('id,guest_metadata').eq('invitation_id',ids[1]).eq('name',name),'Verify synthetic Unicode import');assert.equal(stored.length,1);assert.equal(stored[0].guest_metadata.group,'Archivo ficticio');
+    assert.equal(must(await db.from('access_log').select('id').eq('guest_id',stored[0].id),'Verify importing does not enter a pass').length,0);
+  });
+  if (process.argv.includes('--csv-browser-window')) await check('Browser validates a Unicode guest file, retains the previous draft on error and imports exactly two groups',async()=>{
+    const names=[`QA CSV Pérez ${tag.slice(-8)}`,`QA CSV Ñandú ${tag.slice(-8)}`];
+    const bytes=Buffer.from('\uFEFFNombre\tTeléfono\tPases\tMesa\tGrupo\tNiños\tPreferencia\r\n'+names[0]+'\t70000001\t4\t8\tArchivo QA\tSí\tTodo el evento\r\n'+names[1]+'\t70000002\t2\t9\tArchivo QA\tNo\tRecepción\r\n','utf16le');
+    fs.writeFileSync(csvBrowserFile,bytes);
+    fs.writeFileSync(csvFixture,JSON.stringify({tag,email,password,invitationId:ids[1],names,file:path.resolve(csvBrowserFile)}));
+    console.log('READY: synthetic CSV browser fixture; waiting up to 8 minutes for acknowledgement');
+    const deadline=Date.now()+8*60*1000;let completed=false;
+    while(Date.now()<deadline){try{const done=JSON.parse(fs.readFileSync(csvDone,'utf8'));if(done.tag===tag&&done.failed===true)throw new Error('CSV_BROWSER_FAILED');if(done.tag===tag&&done.confirmed===true){completed=true;break;}}catch(error){if(error.message==='CSV_BROWSER_FAILED')throw error;}await new Promise(resolve=>setTimeout(resolve,500));}
+    assert.ok(completed,'CSV browser acknowledgement timed out; fixtures will be cleaned');
+    const added=must(await db.from('guests').select('id,name,passes,guest_metadata,allow_kids,table_no').eq('invitation_id',ids[1]).in('name',names),'Verify only named synthetic CSV guests');assert.equal(added.length,2);
+    for(const [index,name] of names.entries()){const entry=added.find(item=>item.name===name);assert.ok(entry);assert.equal(entry.passes,index===0?4:2);assert.equal(entry.allow_kids,index===0);assert.equal(entry.table_no,index===0?'8':'9');assert.equal(entry.guest_metadata.phone,index===0?'+59170000001':'+59170000002');assert.equal(entry.guest_metadata.group,'Archivo QA');}
+    assert.equal(must(await db.from('access_log').select('id').in('guest_id',added.map(item=>item.id)),'Verify CSV browser does not check in').length,0);
+    report.csvBrowser={createdGroups:2,assignedPasses:6,encoding:'UTF-16 LE',receptionWrites:0,messagesSent:0,bankCalls:0};
+  });
   if (process.argv.includes('--history-browser-window')) await check('Browser reads private paginated history without registering access',async()=>{
     const before=must(await db.from('access_log').select('id').eq('guest_id',guest.id),'Read history browser baseline');
     fs.writeFileSync(historyFixture,JSON.stringify({tag,email,password,invitationId:ids[1],guestId:guest.id,accessCode:guest.accessCode}));
@@ -563,6 +593,8 @@ writeReport();
   try { await cleanup(); } catch (error) { report.cleanup = 'failed'; report.cleanupFailure = error.message; console.error('FAIL: fixture cleanup requires attention'); process.exitCode = 1; }
   try { if (JSON.parse(fs.readFileSync(browserFixture, 'utf8')).tag === tag) fs.unlinkSync(browserFixture); } catch { /* absent or another run's file */ }
   try { if (JSON.parse(fs.readFileSync(browserDone, 'utf8')).tag === tag) fs.unlinkSync(browserDone); } catch { /* absent or another run's file */ }
-  for (const file of [editorFixture, editorDone, rosterFixture, rosterDone, historyFixture, historyDone]) { try { if (JSON.parse(fs.readFileSync(file, 'utf8')).tag === tag) fs.unlinkSync(file); } catch { /* absent or another run's file */ } }
+  let ownedCsv=false;try{ownedCsv=JSON.parse(fs.readFileSync(csvFixture,'utf8')).tag===tag;}catch{}
+  if(ownedCsv){try{fs.unlinkSync(csvBrowserFile);}catch{}}
+  for (const file of [editorFixture, editorDone, rosterFixture, rosterDone, historyFixture, historyDone, csvFixture, csvDone]) { try { if (JSON.parse(fs.readFileSync(file, 'utf8')).tag === tag) fs.unlinkSync(file); } catch { /* absent or another run's file */ } }
   writeReport();
 });
