@@ -414,6 +414,11 @@ async function main() {
       assert.equal((await request('/api/host/roster?id='+ids[0],'GET',undefined,hostCookie)).status,403);
       assert.equal((await request('/api/host/dashboard?page=0','GET',undefined,hostCookie)).status,400);
     });
+    await check('HTTP duplicate preview accepts a full UTF-8 batch without creating guests',async()=>{
+      const candidates=Array.from({length:200},()=>({name:'界'.repeat(80),phone:'+59170000001'}));
+      const response=await request('/api/host/roster','POST',{candidates},hostCookie);assert.equal(response.status,200);assert.deepEqual(response.data.duplicates,[]);
+      const count=await db.from('guests').select('id',{head:true,count:'exact'}).eq('invitation_id',ids[1]);must(count,'Verify preview writes no guests');assert.equal(count.count,expectedTotal);
+    });
     if(process.argv.includes('--roster-window'))await check('Production browser paginates and resumes an off-page WhatsApp contact without writes',async()=>{
       const before=await row('guests',guest.id), accessBefore=must(await db.from('access_log').select('id').eq('guest_id',guest.id),'Read browser access baseline');
       fs.writeFileSync(rosterFixture,JSON.stringify({tag,email,password,invitationId:ids[1],guestId:guest.id,total:expectedTotal}));

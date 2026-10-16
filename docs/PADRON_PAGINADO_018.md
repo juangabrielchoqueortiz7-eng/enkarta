@@ -1,5 +1,8 @@
 # Padrón paginado en PostgreSQL
 
+La [verificación de producción del 16 de octubre](VERIFICACION_PADRON_018_2026-10-16.md)
+registra resultados, despliegue, limpieza y límites de las pruebas.
+
 La migración `018_host_roster_pagination.sql` se ejecuta completa después de 017,
 antes del código. Es aditiva y reaplicable; no modifica invitados, publicaciones,
 recursos, tokens QR ni pagos. Su comprobación final es
