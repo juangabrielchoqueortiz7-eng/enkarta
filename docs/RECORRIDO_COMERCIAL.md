@@ -78,8 +78,8 @@ en Android de WhatsApp de la entrega anterior permanece válida en su ámbito.
 No se altera la oferta comercial, los importes, los plazos ni las políticas legales.
 La comprobación HTTP de contratación al equipo se limita a la elección y continuidad:
 no envía consultas reales, no paga la reserva y no simula una venta como ingresada.
-Quedan para aceptación humana el acceso Google real y el recorrido visual móvil de
-estos controles. La prueba no habilita BCP, WhatsApp Business ni cobros automáticos.
+La aceptación humana posterior del acceso Google real y del recorrido visual móvil
+se registra abajo. La prueba no habilita BCP, WhatsApp Business ni cobros automáticos.
 
 No hay migración SQL, dependencia, cambio de CSP, originales nuevos ni cambios a
 invitaciones públicas, presets, fotografías, música o animaciones.
@@ -103,12 +103,24 @@ No se oculta el desbordamiento del documento ni se restringe el zoom del navegad
 
 Una regresión adicional de render verifica el historial al crear la primera referencia,
 su acceso por teclado, todas las filas y estados, los enlaces privados de evidencia y
-el escape de las notas. La suite suma 325 pruebas. Estas pruebas no miden el viewport:
-la confirmación de ancho y escala tras recargar sigue pendiente en el Android físico,
-porque el navegador de la sesión de trabajo continúa desactivado.
+el escape de las notas. La suite suma 325 pruebas. Estas pruebas no miden el viewport.
+Después del despliegue, el usuario confirmó en su Android físico que el checkout
+recuperó su escala correcta tras recargar. Esta aceptación procede de su confirmación;
+el navegador de la sesión de trabajo continúa desactivado.
 
-La prueba humana conserva su cuenta Google, su suscripción y el borrador que ya existía.
-La referencia ficticia queda identificada de forma privada para retirarla y limpiar
-solo ese registro cuando concluya la aceptación. Las pruebas HTTP automatizadas usan
-otra cuenta descartable y solicitudes manuales sin aprobación ni operación bancaria;
-su limpieza no alcanza la cuenta ni el borrador del usuario. BCP permanece desactivado.
+El usuario también confirmó el aviso por selección distinta y la recuperación de
+Inicio, un mes y Bs 249 sin cambiar la referencia. Una nota expresamente ficticia,
+sin archivo, dejó el comprobante en revisión, bloqueó la cotización y conservó el
+estado al recargar sin activar la suscripción. El servidor corroboró esa nota, la
+cotización bloqueada y la ausencia de transacción bancaria o aprobación.
+
+El 17 de octubre de 2026 se retiró mediante la RPC de cancelación y se eliminó
+exclusivamente esa solicitud ficticia, filtrando por UUID, propietario, referencia,
+proveedor manual, estado cancelado y nota de prueba. Se verificaron cero registros
+restantes de esa referencia, la conservación íntegra del borrador anterior, de la
+suscripción y de la cuenta Google, y la ausencia de cambios en otros pagos. Los
+identificadores y comprobaciones detalladas quedan en los informes privados de QA.
+
+Las pruebas HTTP automatizadas utilizaron otra cuenta descartable, ya eliminada,
+y solicitudes manuales sin aprobación ni operación bancaria. BCP permanece
+desactivado; su integración espera documentación y credenciales oficiales del banco.
