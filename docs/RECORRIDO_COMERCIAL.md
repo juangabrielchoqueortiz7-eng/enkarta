@@ -197,3 +197,16 @@ La aceptación física se realiza mediante una campaña ficticia exclusiva, sin 
 el mensaje de WhatsApp. Sus identificadores e instrucciones de limpieza se conservan
 en el informe privado de QA, fuera de Git y de Vercel. La aceptación solo se acredita
 con el resultado comunicado por el usuario; una inspección adaptable no la sustituye.
+
+El usuario confirmó en su Android con Chrome que el botón abrió WhatsApp con Lunaria,
+Premium de 930 Bs y la referencia comercial, y que Premium y Lunaria se conservaron
+al regresar a Chrome. Esta confirmación acredita esa apertura y el regreso; no añade
+una prueba física de varios reintentos seguidos ni del botón de regreso al catálogo.
+
+Tras su confirmación se verificó el intento de la campaña ficticia: seguía como
+`whatsapp_open`, sin ingreso registrado ni historial de venta. Se eliminaron únicamente
+un intento y tres eventos de esa campaña, filtrados por sus marcadores y campos
+esperados, y se comprobaron cero filas restantes. No hubo envíos automáticos de
+mensajes ni operaciones bancarias. La limpieza no modificó cuentas, invitaciones,
+suscripciones, pagos ni recursos originales. Los informes privados de QA conservan
+el resultado y el alcance de esta aceptación. BCP continúa desactivado.
