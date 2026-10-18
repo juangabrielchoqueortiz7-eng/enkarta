@@ -158,6 +158,21 @@ con `--resume-cleanup` y su informe privado original.
 node scripts/check-commercial-contact-http.cjs --exercise --production --expect-project eodedockxqvynedwhpsp --report tmp/commercial-contact/production-http.json
 ```
 
-La validación HTTP y de render no sustituye una nueva aceptación visual en Android.
+El 18 de octubre de 2026 se publicó el commit `606640b` mediante el workspace
+completo. Vercel confirmó `Ready` para `dpl_94nq6hSB7RuPx2QNJBEkG1FSYWtg` y el
+alias `enkarta.vercel.app`. Las seis comprobaciones HTTP pasaron: los tres intentos
+ficticios y sus eventos se eliminaron al terminar, sin mensajes, cuentas ni pagos.
+Los 129 recursos originales publicados conservaron tamaño y SHA-256. CI del código
+finalizó correctamente: https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39156962245.
+
+La página preparada también se inspeccionó en el navegador de esta sesión, con
+anchos de 320, 390 y 1440 píxeles. Conservó Lunaria, el paquete Premium y el regreso
+a `/catalogo`, sin desbordamiento horizontal ni errores en consola. Los dos botones
+de continuación midieron al menos 47 píxeles de alto. Se eliminó el único evento
+de la campaña ficticia de inspección visual y se verificaron cero filas restantes.
+Capturas, medidas e informes detallados quedan en `tmp/commercial-contact/`, excluido
+de Git y del despliegue. Esta inspección adaptable no sustituye la aceptación en un
+Android físico ni prueba la apertura de la aplicación WhatsApp.
+
 Esta mejora no cambia las invitaciones originales, estilos globales, autenticación
 Google ni el checkout de Socios. BCP continúa desactivado.
