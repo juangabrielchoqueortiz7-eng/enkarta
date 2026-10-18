@@ -798,7 +798,7 @@ const { activeInvitationLocale, formatInvitationDate, invitationCopy } = require
 const { parseSaveDateInput } = require('../src/lib/save-date.ts');
 const { clientInvitation } = require('../src/lib/client-invitation.ts');
 const { qualityChecksFor, qualityProgress, releaseReady, qualityReport, updateQualityCheck } = require('../src/lib/quality-assurance.ts');
-const { commercialMessage, commercialContactPath, commercialConfirmationPath, parseCommercialContext, safeCommercialReturn, leadStatusLabel } = require('../src/lib/commercial.ts');
+const { commercialMessage, commercialContactPath, commercialConfirmationPath, commercialNavigationPaths, parseCommercialContext, safeCommercialReturn, leadStatusLabel } = require('../src/lib/commercial.ts');
 const { commercialDesignName } = require('../src/lib/commercial-designs.ts');
 const { COMMERCIAL_EVENT_PAGES, COMMERCIAL_EVENT_SLUGS } = require('../src/lib/event-pages.ts');
 const { COMMERCIAL_PROOFS, isPublishableClientProof } = require('../src/lib/commercial-proof.ts');
@@ -842,6 +842,37 @@ test('commercial return stays internal after browser URL normalization and encod
  const malicious=[undefined,'https://outside.example','//outside.example','/\\outside.example','/\n/outside.example','/%5Coutside.example','/%2Foutside.example','/%255Coutside.example','/%252Foutside.example',' /catalogo','/catalogo\u007f','/malformed%'];
  for(const value of malicious){assert.equal(safeCommercialReturn(value),'/',String(value));const confirmation=new URL(commercialConfirmationPath({landingPath:value}),'https://enkarta.example');assert.equal(confirmation.searchParams.get('from'),'/');}
  for(const value of ['/catalogo','/muestra/azure','/catalogo?buscar=Mar%C3%ADa#colecciones']){assert.equal(safeCommercialReturn(value),value);assert.equal(new URL(safeCommercialReturn(value),'https://enkarta.vercel.app').origin,'https://enkarta.vercel.app');}
+});
+
+test('commercial contact retries preserve design, package, campaign and the original catalog return',()=>{
+ const context={packageKey:'premium',design:'Lunaria',eventType:'Boda',placement:'catalog_card'};
+ const campaign=new URLSearchParams({utm_source:'qa',utm_medium:'acceptance',utm_campaign:'qa-commercial-retry',utm_content:'Lunaria',utm_term:'Boda'});
+ let location={pathname:'/catalogo',search:'?'+campaign},returnPath;
+ for(let attempt=0;attempt<4;attempt++){
+  const targets=commercialNavigationPaths(context,location,returnPath),contact=new URL(targets.href,'https://enkarta.invalid'),prepared=new URL(targets.confirmationHref,'https://enkarta.invalid');
+  for(const [key,value]of campaign){assert.equal(contact.searchParams.get(key),value);assert.equal(prepared.searchParams.get(key),value);}
+  for(const params of [contact.searchParams,prepared.searchParams]){assert.equal(params.get('design'),'Lunaria');assert.equal(params.get('package'),'premium');assert.equal(params.get('event_type'),'Boda');}
+  assert.equal(prepared.searchParams.get('from'),'/catalogo');assert.equal(contact.searchParams.get('landing_path'),location.pathname);
+  returnPath=prepared.searchParams.get('from');location={pathname:prepared.pathname,search:prepared.search};
+ }
+});
+
+test('commercial continuation copies only bounded campaign fields and rejects unsafe return overrides',()=>{
+ for(const returnPath of ['//outside.example','/\\outside.example','/%255Coutside.example']){
+  const targets=commercialNavigationPaths({placement:'contact_retry'},{pathname:'/contacto/preparado',search:'?utm_source=qa%0A&next=https://outside.example&access_token=secret&utm_campaign='+ 'x'.repeat(180)},returnPath);
+  const contact=new URL(targets.href,'https://enkarta.invalid'),prepared=new URL(targets.confirmationHref,'https://enkarta.invalid');
+  assert.equal(prepared.searchParams.get('from'),'/');
+  for(const url of [contact,prepared]){assert.equal(url.searchParams.get('utm_source'),'qa');assert.equal(url.searchParams.get('utm_campaign').length,120);assert.equal(url.searchParams.has('next'),false);assert.equal(url.searchParams.has('access_token'),false);}
+ }
+});
+
+test('prepared page passes its validated return destination to the actual retry component',async()=>{
+ const React=require('react'),Page=require('../src/app/contacto/preparado/page.tsx').default,CommercialLink=require('../src/components/commercial/CommercialLink.tsx').default;
+ for(const [from,expected]of [['/catalogo','/catalogo'],['/muestra/azure','/muestra/azure'],['/\\outside.example','/']]){
+  const tree=await Page({searchParams:Promise.resolve({package:'premium',design:'azure',from})});let retry;
+  const visit=element=>{if(!React.isValidElement(element))return;if(element.type===CommercialLink)retry=element;React.Children.forEach(element.props.children,visit);};visit(tree);
+  assert.ok(retry);assert.equal(retry.props.returnPath,expected);assert.equal(retry.props.design,'Lunaria');assert.equal(retry.props.packageKey,'premium');
+ }
 });
 
 test('prepared commercial page keeps the chosen public name and safe return without claiming WhatsApp opened',async()=>{

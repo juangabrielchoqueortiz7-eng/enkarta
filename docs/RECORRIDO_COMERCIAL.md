@@ -176,3 +176,24 @@ Android físico ni prueba la apertura de la aplicación WhatsApp.
 
 Esta mejora no cambia las invitaciones originales, estilos globales, autenticación
 Google ni el checkout de Socios. BCP continúa desactivado.
+
+## Reintentos de contacto y aceptación Android
+
+Al preparar la aceptación física se encontró que «Volver a abrir WhatsApp» calculaba
+el regreso desde `/contacto/preparado`, perdiendo el catálogo original. La continuación
+tampoco conservaba las etiquetas de campaña. El componente ahora recibe el regreso
+validado por la página y conserva exclusivamente los cinco campos UTM admitidos,
+limitados a 120 caracteres, tanto en el enlace de contacto como en la continuación.
+La ubicación donde se solicita cada intento se registra por separado; no reemplaza
+el destino original del botón «Volver a la página».
+
+Tres regresiones nuevas comprueban cuatro reintentos seguidos con Lunaria, Premium,
+el tipo de evento y la campaña; rechazan regresos externos y parámetros ajenos a la
+atribución; y verifican que la página pase el regreso validado al componente real.
+La suite suma 333 pruebas. No se cambian precios, estados comerciales, mensajes,
+permisos, diseños, recursos originales ni el bloqueo del adaptador BCP.
+
+La aceptación física se realiza mediante una campaña ficticia exclusiva, sin enviar
+el mensaje de WhatsApp. Sus identificadores e instrucciones de limpieza se conservan
+en el informe privado de QA, fuera de Git y de Vercel. La aceptación solo se acredita
+con el resultado comunicado por el usuario; una inspección adaptable no la sustituye.

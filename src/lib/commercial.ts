@@ -92,6 +92,23 @@ export function commercialConfirmationPath({ packageKey = 'general', design = ''
   return `/contacto/preparado?${params}`;
 }
 
+/** Keep the original return destination and campaign through every contact retry. */
+export function commercialNavigationPaths(context: Partial<CommercialContext> & { placement: string }, location: { pathname: string; search: string }, returnPath?: string) {
+  const current = new URLSearchParams(location.search);
+  const attribution = parseCommercialContext({ ...context, landingPath: location.pathname });
+  const contact = new URLSearchParams(commercialContactPath(attribution).split('?')[1]);
+  const confirmation = new URLSearchParams(commercialConfirmationPath({ ...attribution, landingPath: returnPath ?? attribution.landingPath }).split('?')[1]);
+  for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']) {
+    const value = clean(current.get(key), 120);
+    if (value) {
+      contact.set(key, value);
+      confirmation.set(key, value);
+    }
+  }
+  contact.set('landing_path', attribution.landingPath);
+  return { href: `/contacto/whatsapp?${contact}`, confirmationHref: `/contacto/preparado?${confirmation}` };
+}
+
 export function leadStatusLabel(status: CommercialLeadStatus): string {
   return ({ whatsapp_open: 'Intento de contacto', contacted: 'Conversación', reserved: 'Reserva', won: 'Venta', lost: 'No concretó' })[status];
 }
