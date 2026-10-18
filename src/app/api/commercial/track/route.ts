@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { COMMERCIAL_VIEW_EVENTS, parseCommercialContext } from '@/lib/commercial';
+import { commercialDesignName } from '@/lib/commercial-designs';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
     const session = sessionValue(request);
     const { error } = await supabaseAdmin.from('commercial_events').insert({
       session_hash: sessionHash(session), event_type: event, package_key: context.packageKey,
-      design: context.design, event_category: context.eventType, placement: context.placement,
+      design: commercialDesignName(context.design), event_category: context.eventType, placement: context.placement,
       landing_path: context.landingPath, referrer_host: context.referrerHost,
       utm_source: context.utmSource, utm_medium: context.utmMedium, utm_campaign: context.utmCampaign,
       utm_content: context.utmContent, utm_term: context.utmTerm,

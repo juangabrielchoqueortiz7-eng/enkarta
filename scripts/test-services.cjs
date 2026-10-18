@@ -55,11 +55,12 @@ async function rpc(name, params) {
   return scalar(`select public.${name}(${keys.map((key,i) => `${key} => $${i+1}`).join(',')}) as result`, Object.values(params));
 }
 const queryClient = (table) => {
-  assert.ok(['guests', 'attendees', 'access_log', 'rsvps', 'invitations', 'builder_versions', 'builder_review_notes', 'invitation_validity_events', 'save_date_responses'].includes(table));
+  assert.ok(['guests', 'attendees', 'access_log', 'rsvps', 'invitations', 'builder_versions', 'builder_review_notes', 'invitation_validity_events', 'save_date_responses', 'commercial_leads', 'commercial_events'].includes(table));
   let columns = '*', filters = [], limit, update, insert, remove, sort = [], historyCursor;
   const query = {
     select(value = '*') { columns = value; return this; },
     eq(column,value) { filters.push([column,value,'=']); return this; },
+    gte(column,value) { filters.push([column,value,'>=']); return this; },
     ilike(column,value) { filters.push([column,value,'ILIKE']); return this; },
     or(expression) {
       const match = /^at\.lt\.([^,]+),and\(at\.eq\.([^,]+),id\.lt\.([a-f0-9-]+)\)$/.exec(expression);
@@ -113,6 +114,8 @@ const reviewAuth = require('../src/app/api/review/auth/route.ts');
 const hostAuth = require('../src/app/api/host/auth/route.ts');
 const doorAuth = require('../src/app/api/door/auth/route.ts');
 const dashboardRoute = require('../src/app/api/host/dashboard/route.ts');
+const commercialContact = require('../src/app/contacto/whatsapp/route.ts');
+const commercialAdmin = require('../src/app/api/admin/commercial/route.ts');
 const rosterRoute = require('../src/app/api/host/roster/route.ts');
 const managedRosterRoute = require('../src/app/api/guests/roster/route.ts');
 const {readGuestCsvFile}=require('../src/lib/guest-csv-file.ts');
@@ -643,6 +646,27 @@ test('commercial attribution is private, constrained and independent from guest 
   }
   await assert.rejects(db.query("insert into commercial_leads(reference,session_hash,status) values('BAD',$1,'sold')",[hash]));
   assert.equal(await scalar('select count(*)::int as result from guests'),1);
+});
+
+test('commercial handoff records only an intent and preserves public design, package and campaign',async()=>{
+ const session=randomUUID(),request=new NextRequest('https://enkarta.test/contacto/whatsapp?package=premium&design=azure&placement=qa_contact&utm_campaign=qa_campaign',{headers:{Cookie:`enkarta-commercial=${session}`}});
+ const response=await commercialContact.GET(request);assert.equal(response.status,302);assert.equal(response.headers.get('cache-control'),'no-store');
+ const destination=new URL(response.headers.get('location'));assert.equal(destination.origin,'https://wa.me');const message=destination.searchParams.get('text');assert.match(message,/diseño Lunaria/);assert.match(message,/Premium de 930 Bs/);
+ const lead=(await db.query('select * from commercial_leads')).rows[0];assert.equal(lead.design,'Lunaria');assert.equal(lead.status,'whatsapp_open');assert.equal(lead.utm_campaign,'qa_campaign');assert.equal(lead.session_hash,createHash('sha256').update('enkarta-commercial:'+session).digest('hex'));assert.ok(message.includes(lead.reference));assert.equal(lead.revenue_bs,null);
+ assert.equal(await scalar("select count(*)::int as result from commercial_events where event_type='whatsapp_open'"),1);
+ await db.query('update commercial_leads set design=$1 where id=$2',['azure',lead.id]); // Historical technical key, not a data migration.
+ actor={role:'admin'};const dashboard=await commercialAdmin.GET();assert.equal(dashboard.status,200);const body=await dashboard.json();
+ assert.equal(body.leads[0].design,'Lunaria');assert.equal(body.designs[0].label,'Lunaria');assert.equal(body.statuses[0].label,'Intento de contacto');assert.equal(body.summary.contacts,0);
+ assert.equal(await scalar('select design as result from commercial_leads where id=$1',[lead.id]),'azure','Reading the panel must not rewrite legacy records');
+ actor=null;assert.equal((await commercialAdmin.GET()).status,401);
+});
+
+test('commercial handoff infers original preset names and the legacy carmesi demo correctly',async()=>{
+ for(const [demo,name]of [['nicole-y-francisco','Nicole y Francisco'],['carmesi','Granate']]){
+  const response=await commercialContact.GET(new NextRequest('https://enkarta.test/contacto/whatsapp?placement=qa_demo',{headers:{referer:'https://enkarta.test/muestra/'+demo}}));
+  assert.equal(response.status,302);const message=new URL(response.headers.get('location')).searchParams.get('text');assert.ok(message.includes('diseño '+name));assert.ok(!message.includes('Edición Enkarta'));
+ }
+ assert.equal(await scalar("select count(*)::int as result from commercial_leads where status<>'whatsapp_open'"),0);
 });
 
 const validityInput = (extra={}) => ({ id:invId, action:'extend', days:30, reason:'Ampliación acordada en prueba', expectedRevision:0, requestId:randomUUID(), ...extra });

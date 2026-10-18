@@ -6,7 +6,7 @@ Atender cada consulta con el mismo alcance, registrar su origen y no pedir una r
 
 ## Flujo de una venta
 
-1. **Nueva consulta:** responder durante el horario comercial en menos de 30 minutos cuando sea posible. Buscar la referencia `EK-XXXXXXXX` incluida en WhatsApp.
+1. **Intento de contacto:** el enlace solicitado no confirma apertura ni envío. Cuando llegue el mensaje por WhatsApp, buscar su referencia `EK-XXXXXXXX`, marcar **Conversación** y responder durante el horario comercial en menos de 30 minutos cuando sea posible.
 2. **Diagnóstico:** confirmar tipo y fecha del evento, diseño, paquete, adicionales y disponibilidad.
 3. **Propuesta:** completar el generador del panel y copiar el resumen. Verificar cliente, total, reserva, saldo, plazo y rondas antes de enviarlo.
 4. **Reserva:** solicitar 200 Bs únicamente después de la aceptación del resumen. Confirmar por escrito el importe y la referencia del pedido.
@@ -30,7 +30,7 @@ Google Analytics y Meta Pixel permanecen totalmente desactivados mientras sus va
 2. Copiar el texto y su enlace UTM desde la misma tarjeta.
 3. Publicar una sola versión del enlace; no borrar sus parámetros.
 4. Responder contactos y actualizar estado, ingreso y nota en **Admin → Ventas**.
-5. En los días 7 y 14 comparar visitas, aperturas de WhatsApp, conversaciones, reservas y ventas.
+5. En los días 7 y 14 comparar visitas, intentos de contacto, conversaciones registradas, reservas y ventas.
 6. No iniciar pauta pagada hasta completar el ciclo de atención y reconocer qué pieza genera conversaciones calificadas.
 
 ## Monitoreo

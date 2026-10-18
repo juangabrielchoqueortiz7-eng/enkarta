@@ -13,7 +13,7 @@ export type SalesQuoteInput = {
 };
 
 export const SALES_PIPELINE = [
-  { key: 'whatsapp_open', label: 'Nueva consulta', target: 'Responder en menos de 30 minutos durante el horario comercial.' },
+  { key: 'whatsapp_open', label: 'Intento de contacto', target: 'El enlace fue solicitado. Cuando llegue el mensaje, responder durante el horario comercial y marcar Conversación.' },
   { key: 'contacted', label: 'Conversación', target: 'Confirmar evento, fecha, diseño, paquete y disponibilidad.' },
   { key: 'reserved', label: 'Reserva', target: 'Enviar resumen escrito, registrar los 200 Bs y solicitar materiales.' },
   { key: 'won', label: 'Venta', target: 'Crear la invitación, registrar el total y confirmar el primer plazo.' },

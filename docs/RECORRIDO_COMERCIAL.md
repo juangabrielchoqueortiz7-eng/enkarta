@@ -124,3 +124,40 @@ identificadores y comprobaciones detalladas quedan en los informes privados de Q
 Las pruebas HTTP automatizadas utilizaron otra cuenta descartable, ya eliminada,
 y solicitudes manuales sin aprobación ni operación bancaria. BCP permanece
 desactivado; su integración espera documentación y credenciales oficiales del banco.
+
+## Encargar al equipo: nombres, regreso e intentos de contacto
+
+El mensaje comercial y su página de continuación resuelven las claves técnicas
+del catálogo a sus nombres públicos: `azure` se presenta como Lunaria y los presets
+conservan sus nombres propios. La muestra heredada `/muestra/carmesi` sigue correspondiendo
+a Granate, sin modificar el diseño Rubí ni sus recursos. Los registros históricos
+se presentan con su nombre público al leer el panel, sin migrar ni reescribir filas.
+La resolución de nombres ocurre en el servidor para conservar el tamaño de los CTAs.
+
+El enlace «Volver a la página» valida origen y normalización de URL, incluyendo
+barras invertidas, controles y separadores codificados. Los destinos externos o
+inválidos vuelven al inicio. La página anuncia un mensaje preparado y ofrece
+reintentar; no asegura que WhatsApp se haya abierto ni que exista una conversación.
+
+Ventas muestra «Intento de contacto» para el estado técnico `whatsapp_open` y explica
+qué mide. Las conversaciones siguen siendo un registro manual del equipo. Los intentos
+pueden incluir varios clics de una misma visita; por eso la razón se expresa por cada
+100 visitas, sin presentarla como porcentaje de personas que abrieron WhatsApp.
+Se mantienen los estados SQL, los precios, la reserva comercial y los permisos.
+
+Cinco regresiones nuevas cubren todas las identidades del catálogo, los retornos
+malformados, la página preparada, el mensaje real del handler, la inferencia de muestras
+y la presentación de registros heredados sin cambios en base de datos. La suite suma
+330 pruebas. `scripts/check-commercial-contact-http.cjs` comprueba el recorrido con
+una sesión comercial y campaña ficticias, sigue únicamente URLs de Enkarta y elimina
+sus eventos e intentos al terminar. Nunca sigue el salto a WhatsApp, envía mensajes,
+registra reservas, crea cuentas ni ejecuta pagos. Permite reanudar solo la limpieza
+con `--resume-cleanup` y su informe privado original.
+
+```powershell
+node scripts/check-commercial-contact-http.cjs --exercise --production --expect-project eodedockxqvynedwhpsp --report tmp/commercial-contact/production-http.json
+```
+
+La validación HTTP y de render no sustituye una nueva aceptación visual en Android.
+Esta mejora no cambia las invitaciones originales, estilos globales, autenticación
+Google ni el checkout de Socios. BCP continúa desactivado.

@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { commercialWhatsappUrl, parseCommercialContext } from '@/lib/commercial';
+import { commercialDesignName } from '@/lib/commercial-designs';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { publicTemplateName } from '@/lib/enkarta-collections';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,8 +11,7 @@ const SESSION_COOKIE = 'enkarta-commercial';
 const cleanDesignFromPath = (pathname: string) => {
   const key = pathname.match(/^\/muestra\/([a-z0-9-]+)/i)?.[1] || '';
   if (!key) return '';
-  if (key === 'marfil-vivo') return 'Marfil Vivo';
-  return publicTemplateName(key === 'carmesi' ? 'carmesi_v2' : key);
+  return commercialDesignName(key === 'carmesi' ? 'carmesi_v2' : key);
 };
 
 export async function GET(request: NextRequest) {
@@ -27,7 +26,7 @@ export async function GET(request: NextRequest) {
     ...params,
     landingPath: params.landing_path || refererPath,
     referrerHost: refererHost,
-    design: params.design || cleanDesignFromPath(refererPath),
+    design: commercialDesignName(params.design || cleanDesignFromPath(refererPath)),
   });
   const existing = request.cookies.get(SESSION_COOKIE)?.value || '';
   const session = /^[0-9a-f-]{36}$/i.test(existing) ? existing : randomUUID();

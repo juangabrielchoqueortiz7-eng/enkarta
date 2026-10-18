@@ -798,7 +798,8 @@ const { activeInvitationLocale, formatInvitationDate, invitationCopy } = require
 const { parseSaveDateInput } = require('../src/lib/save-date.ts');
 const { clientInvitation } = require('../src/lib/client-invitation.ts');
 const { qualityChecksFor, qualityProgress, releaseReady, qualityReport, updateQualityCheck } = require('../src/lib/quality-assurance.ts');
-const { commercialMessage, commercialContactPath, commercialConfirmationPath, parseCommercialContext } = require('../src/lib/commercial.ts');
+const { commercialMessage, commercialContactPath, commercialConfirmationPath, parseCommercialContext, safeCommercialReturn, leadStatusLabel } = require('../src/lib/commercial.ts');
+const { commercialDesignName } = require('../src/lib/commercial-designs.ts');
 const { COMMERCIAL_EVENT_PAGES, COMMERCIAL_EVENT_SLUGS } = require('../src/lib/event-pages.ts');
 const { COMMERCIAL_PROOFS, isPublishableClientProof } = require('../src/lib/commercial-proof.ts');
 const { LAUNCH_CALENDAR, MARKETING_CAMPAIGNS, MARKETING_FORMATS, marketingTrackingPath } = require('../src/lib/marketing-kit.ts');
@@ -828,6 +829,29 @@ test('commercial WhatsApp identifies package, design and reference without perso
   assert.equal(parseCommercialContext({ package: 'forged', landing_path: 'https://evil.test' }).landingPath, '/');
   assert.equal(commercialConfirmationPath({ packageKey: 'premium', design: 'Lunaria', eventType: 'Boda', landingPath: '/bodas' }), '/contacto/preparado?package=premium&design=Lunaria&event_type=Boda&from=%2Fbodas');
   assert.equal(commercialConfirmationPath({ landingPath: 'https://evil.test' }), '/contacto/preparado?from=%2F');
+});
+
+test('commercial names preserve every catalog identity and human-entered custom names',()=>{
+ const {STARTER_DESIGNS}=require('../src/lib/enkarta-collections.ts');
+ for(const design of STARTER_DESIGNS){assert.equal(commercialDesignName(design.key),design.name);assert.equal(commercialDesignName(design.name),design.name);}
+ assert.equal(commercialDesignName('azure'),'Lunaria');assert.equal(commercialDesignName('carmesi_v2'),'Granate');assert.equal(commercialDesignName('carmesi'),'Rubí');
+ assert.equal(commercialDesignName('Mi diseño personalizado'),'Mi diseño personalizado');assert.equal(commercialDesignName('constructor'),'constructor');assert.equal(commercialDesignName(null),'');
+});
+
+test('commercial return stays internal after browser URL normalization and encoded separators',()=>{
+ const malicious=[undefined,'https://outside.example','//outside.example','/\\outside.example','/\n/outside.example','/%5Coutside.example','/%2Foutside.example','/%255Coutside.example','/%252Foutside.example',' /catalogo','/catalogo\u007f','/malformed%'];
+ for(const value of malicious){assert.equal(safeCommercialReturn(value),'/',String(value));const confirmation=new URL(commercialConfirmationPath({landingPath:value}),'https://enkarta.example');assert.equal(confirmation.searchParams.get('from'),'/');}
+ for(const value of ['/catalogo','/muestra/azure','/catalogo?buscar=Mar%C3%ADa#colecciones']){assert.equal(safeCommercialReturn(value),value);assert.equal(new URL(safeCommercialReturn(value),'https://enkarta.vercel.app').origin,'https://enkarta.vercel.app');}
+});
+
+test('prepared commercial page keeps the chosen public name and safe return without claiming WhatsApp opened',async()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),Page=require('../src/app/contacto/preparado/page.tsx').default;
+ for(const [from,expected]of [['/catalogo','/catalogo'],['/\\outside.example','/'],['/%255Coutside.example','/']]){
+  const html=renderToStaticMarkup(await Page({searchParams:Promise.resolve({package:'premium',design:'azure',from})}));
+  assert.match(html,/diseño Lunaria/);assert.match(html,/Preparamos el mensaje/);assert.doesNotMatch(html,/Abrimos una conversación/);assert.match(html,/Todavía debes presionar/);
+  const back=html.match(/<a\b[^>]*href="([^"]+)"[^>]*>Volver a la página<\/a>/);assert.ok(back);assert.equal(back[1],expected);
+ }
+ assert.equal(leadStatusLabel('whatsapp_open'),'Intento de contacto');assert.equal(SALES_PIPELINE[0].label,leadStatusLabel('whatsapp_open'));
 });
 
 test('event landing pages are distinct, attributable and linked to real demos', () => {

@@ -25,10 +25,22 @@ export interface CommercialContext {
 }
 
 const clean = (value: unknown, max = 80) => String(value ?? '').trim().replace(/[\u0000-\u001f\u007f]/g, '').slice(0, max);
-const cleanPath = (value: unknown) => {
-  const path = clean(value, 160);
-  return path.startsWith('/') && !path.startsWith('//') ? path : '/';
-};
+/** Validate the browser's URL interpretation, including encoded separators. */
+export function safeCommercialReturn(value: unknown): string {
+  if (typeof value !== 'string' || value.length > 160 || value !== value.trim()) return '/';
+  const base = 'https://enkarta.invalid';
+  try {
+    const original = new URL(value, base);
+    let candidate = value;
+    for (let depth = 0; depth < 4; depth++) {
+      if (!candidate.startsWith('/') || candidate.startsWith('//') || /[\\\u0000-\u001f\u007f]/.test(candidate) || new URL(candidate, base).origin !== base) return '/';
+      const decoded = decodeURIComponent(candidate);
+      if (decoded === candidate) return original.pathname + original.search + original.hash;
+      candidate = decoded;
+    }
+  } catch { /* Invalid URLs fall back to the public home page. */ }
+  return '/';
+}
 
 export function parseCommercialContext(value: Record<string, unknown>): CommercialContext {
   const packageValue = clean(value.packageKey ?? value.package, 20).toLowerCase() as CommercialPackage;
@@ -37,7 +49,7 @@ export function parseCommercialContext(value: Record<string, unknown>): Commerci
     design: clean(value.design),
     eventType: clean(value.eventType ?? value.event_type, 50),
     placement: clean(value.placement, 60) || 'sin_etiqueta',
-    landingPath: cleanPath(value.landingPath ?? value.landing_path),
+    landingPath: safeCommercialReturn(value.landingPath ?? value.landing_path),
     referrerHost: clean(value.referrerHost ?? value.referrer_host, 100).toLowerCase(),
     utmSource: clean(value.utmSource ?? value.utm_source),
     utmMedium: clean(value.utmMedium ?? value.utm_medium),
@@ -81,5 +93,5 @@ export function commercialConfirmationPath({ packageKey = 'general', design = ''
 }
 
 export function leadStatusLabel(status: CommercialLeadStatus): string {
-  return ({ whatsapp_open: 'WhatsApp abierto', contacted: 'Conversación', reserved: 'Reserva', won: 'Venta', lost: 'No concretó' })[status];
+  return ({ whatsapp_open: 'Intento de contacto', contacted: 'Conversación', reserved: 'Reserva', won: 'Venta', lost: 'No concretó' })[status];
 }

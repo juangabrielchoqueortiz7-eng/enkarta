@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { COMMERCIAL_LEAD_STATUSES, type CommercialLeadStatus, leadStatusLabel } from '@/lib/commercial';
+import { commercialDesignName } from '@/lib/commercial-designs';
 import { getAdminSession } from '@/lib/host-session';
 import { isUuid } from '@/lib/rsvp-contract';
 import { supabaseAdmin } from '@/lib/supabase/server';
@@ -24,7 +25,7 @@ export async function GET() {
     return privateResponse({ error: migrationRequired ? 'Ejecuta migrations/012_commercial_funnel.sql' : 'No se pudo cargar el embudo', code: migrationRequired ? 'MIGRATION_REQUIRED' : 'READ_FAILED' }, migrationRequired ? 503 : 500);
   }
   const events = (eventsResult.data || []) as EventRow[];
-  const leads = (leadsResult.data || []) as LeadRow[];
+  const leads = ((leadsResult.data || []) as LeadRow[]).map(lead => ({ ...lead, design: commercialDesignName(lead.design) }));
   const unique = (type: string) => new Set(events.filter(event => event.event_type === type).map(event => event.session_hash)).size;
   const visits = new Set(events.filter(event => ['landing_view', 'design_view', 'process_view'].includes(event.event_type)).map(event => event.session_hash)).size;
   const whatsappOpens = leads.length;
