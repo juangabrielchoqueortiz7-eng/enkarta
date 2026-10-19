@@ -14,7 +14,7 @@ require.extensions['.ts'] = require.extensions['.tsx'] = (module, file) => modul
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true }, fileName: file,
 }).outputText, file);
 
-const { commercialRevenue, parseCommercialUpdate, commercialDraft, commercialDraftDirty, saveCommercialLead,
+const { commercialRevenue, commercialDraftRevenue, parseCommercialUpdate, prepareCommercialDraftUpdate, commercialDraft, commercialDraftDirty, saveCommercialLead,
   createCommercialEditor, commercialEditorReducer: reduce } = require('../src/lib/commercial-update.ts');
 const { parseCommercialLead, requestCommercialLead } = require('../src/lib/commercial-lookup.ts');
 const fixture = Object.freeze({
@@ -322,4 +322,237 @@ test('explicit draft reset returns to canonical values but cannot cancel an unce
   const uncertain = settle(saving, { kind: 'uncertain', message: 'Sin respuesta' });
   assert.strictEqual(reduce(saving, { type: 'reset' }), saving);
   assert.strictEqual(reduce(uncertain, { type: 'reset' }), uncertain);
+});
+
+test('draft money accepts either decimal separator with the same bounded numeric meaning', () => {
+  assert.equal(commercialDraftRevenue(''), null);
+  for (const [text, expected] of [['0', 0], ['0,00', 0], ['0.00', 0], ['0,01', 0.01], ['0.01', 0.01],
+    ['0200,00', 200], ['0200.00', 200], ['930,5', 930.5], ['930.5', 930.5], ['1000000,00', 1000000],
+    ['1000000.00', 1000000], ['0'.repeat(13) + ',00', 0]]) {
+    assert.equal(commercialDraftRevenue(text), expected, text);
+  }
+});
+
+test('draft money refuses coercion, whitespace, ambiguous separators, incomplete text and excess precision', () => {
+  for (const value of [null, undefined, true, false, 0, 930.5, [], ['200,00'], {}, NaN, Infinity,
+    ' ', '\t', '\n', ' 200,00', '200,00 ', '2 00', '2\u00a0000', '1e3', '1E3', '+200', '-0', '-1',
+    ',50', '.50', '1,', '1.', '1,,20', '1..20', '1,2.0', '1.2,0', '1,000', '1.000', '1.000,00',
+    '1,000.00', '1000000,01', '1000000.01', '0'.repeat(14) + ',00', '0'.repeat(17)]) {
+    assert.equal(commercialDraftRevenue(value), undefined, String(value));
+  }
+});
+
+test('localized draft support never widens the server update contract to raw comma amounts', async () => {
+  for (const text of ['0,00', '200,00', '930,50', '1000000,00']) {
+    assert.equal(commercialRevenue(text), undefined);
+    assert.equal(parseCommercialUpdate(command({ revenueBs: text })), null);
+  }
+  let calls = 0;
+  const result = await saveCommercialLead(command({ revenueBs: '930,50' }), fixture.reference, async () => {
+    calls++; return json(receipt());
+  });
+  assert.equal(result.kind, 'uncertain');
+  assert.equal(calls, 0);
+});
+
+test('pasted line endings cannot be silently removed from draft or canonical revenue', () => {
+  for (const suffix of ['\n', '\r', '\r\n', '\u2028', '\u2029', '\t', '\u00a0']) {
+    for (const text of ['930,50', '930.50', '0', '1000000']) {
+      const raw = text + suffix;
+      assert.equal(commercialDraftRevenue(raw), undefined, JSON.stringify(raw));
+      assert.equal(commercialRevenue(raw), undefined, JSON.stringify(raw));
+      assert.equal(parseCommercialUpdate(command({ revenueBs: raw })), null);
+      assert.equal(prepareCommercialDraftUpdate(fixture, { ...commercialDraft(fixture), revenue: raw }, command().requestId), null);
+    }
+  }
+});
+
+test('equivalent comma and point draft amounts do not manufacture edits', () => {
+  for (const text of ['200', '200,0', '200,00', '0200,00', '200.0', '200.00']) {
+    const state = edit(createCommercialEditor(fixture), { revenue: text });
+    assert.equal(state.draft.revenue, text);
+    assert.equal(commercialDraftDirty(state.draft, fixture), false, text);
+  }
+  for (const text of ['200,01', '0,00', '', '200,', '200,001']) {
+    assert.equal(commercialDraftDirty({ ...commercialDraft(fixture), revenue: text }, fixture), true, text);
+  }
+});
+
+test('zero localized revenue remains different from an explicitly empty amount', () => {
+  const emptyBase = { ...fixture, revenue_bs: null };
+  const zeroBase = { ...fixture, revenue_bs: 0 };
+  assert.equal(commercialDraftDirty({ ...commercialDraft(emptyBase), revenue: '' }, emptyBase), false);
+  assert.equal(commercialDraftDirty({ ...commercialDraft(emptyBase), revenue: '0,00' }, emptyBase), true);
+  assert.equal(commercialDraftDirty({ ...commercialDraft(zeroBase), revenue: '0,00' }, zeroBase), false);
+  assert.equal(commercialDraftDirty({ ...commercialDraft(zeroBase), revenue: '' }, zeroBase), true);
+  assert.equal(prepareCommercialDraftUpdate(emptyBase, { ...commercialDraft(emptyBase), revenue: '' }, command().requestId).revenueBs, null);
+  assert.equal(prepareCommercialDraftUpdate(zeroBase, { ...commercialDraft(zeroBase), revenue: '0,00' }, command().requestId).revenueBs, 0);
+});
+
+test('a clean comma-formatted editor follows newer server data without a false conflict', () => {
+  const state = edit(createCommercialEditor(fixture), { revenue: '0200,00' });
+  const newer = { ...fixture, revenue_bs: 400.5, revision: 5, notes: 'Edición remota' };
+  const next = received(state, newer);
+  assert.equal(next.phase, 'editing');
+  assert.deepEqual(next.base, newer);
+  assert.deepEqual(next.draft, commercialDraft(newer));
+  assert.equal(next.request, null);
+  assert.equal(commercialDraftDirty(next.draft, newer), false);
+});
+
+test('rebase adopts untouched equivalent comma money but preserves a real localized amount edit', () => {
+  const newer = { ...fixture, revenue_bs: 930.5, status: 'won', notes: 'Nota remota', revision: 5 };
+  const equivalent = edit(createCommercialEditor(fixture), { revenue: '200,00', notes: 'Mi nota pendiente' });
+  const equivalentRebase = reduce(received(equivalent, newer), { type: 'rebase' });
+  assert.deepEqual(equivalentRebase.draft, { status: 'won', revenue: '930.5', notes: 'Mi nota pendiente' });
+  const changed = edit(createCommercialEditor(fixture), { revenue: '450,50' });
+  const changedRebase = reduce(received(changed, newer), { type: 'rebase' });
+  assert.deepEqual(changedRebase.draft, { status: 'won', revenue: '450,50', notes: 'Nota remota' });
+  assert.equal(changedRebase.request, null);
+  assert.equal(commercialDraftRevenue(changedRebase.draft.revenue), 450.5);
+});
+
+test('incomplete or invalid localized revenue survives edits and conflict rebase without rounding or erasure', () => {
+  const newer = { ...fixture, revision: 5, revenue_bs: 400, notes: 'Nota remota' };
+  for (const text of ['12,', '12.', '12,345', ' 12,50', '-12,50', '1,000.00']) {
+    const state = edit(createCommercialEditor(fixture), { revenue: text });
+    assert.equal(state.draft.revenue, text);
+    const conflict = received(state, newer);
+    assert.equal(conflict.phase, 'conflict');
+    assert.equal(conflict.draft.revenue, text);
+    const rebased = reduce(conflict, { type: 'rebase' });
+    assert.equal(rebased.draft.revenue, text);
+    assert.equal(commercialDraftRevenue(rebased.draft.revenue), undefined);
+    assert.equal(commercialDraftDirty(rebased.draft, newer), true);
+    assert.equal(rebased.request, null);
+  }
+});
+
+test('a localized draft starts only its canonical command while retaining the exact displayed text', () => {
+  const input = Object.freeze(command({ revenueBs: 930.5 }));
+  const state = edit(createCommercialEditor(fixture), { status: input.status, revenue: '0930,50', notes: ' QA resumen acordado ' });
+  const next = start(state, input);
+  assert.equal(next.phase, 'saving');
+  assert.deepEqual(next.request, input);
+  assert.deepEqual(next.draft, state.draft);
+  assert.equal(next.draft.revenue, '0930,50');
+  assert.equal(next.request.revenueBs, 930.5);
+  assert.equal(next.request.requestId, input.requestId);
+  assert.deepEqual(input, command({ revenueBs: 930.5 }));
+});
+
+test('the reducer rejects guessed amounts and raw comma commands before a save starts', () => {
+  const state = edit(createCommercialEditor(fixture), { status: 'reserved', revenue: '930,50', notes: command().notes });
+  for (const input of [command({ revenueBs: 930 }), command({ revenueBs: null }), command({ revenueBs: '930,50' })]) {
+    assert.strictEqual(start(state, input), state);
+  }
+  for (const text of ['930,', '930,501', ' 930,50', '1e3']) {
+    const invalid = edit(state, { revenue: text });
+    assert.strictEqual(start(invalid, command({ revenueBs: 930.5 })), invalid);
+    assert.equal(invalid.draft.revenue, text);
+    assert.equal(invalid.request, null);
+    assert.equal(prepareCommercialDraftUpdate(invalid.base, invalid.draft, command().requestId), null);
+  }
+});
+
+test('a localized draft sends one numeric JSON amount rather than a comma string', async () => {
+  const raw = '0930,50';
+  const draft = Object.freeze({ ...commercialDraft(fixture), status: command().status, revenue: raw, notes: ' QA resumen acordado ' });
+  const update = prepareCommercialDraftUpdate(fixture, draft, command().requestId.toUpperCase());
+  assert.ok(update);
+  let calls = 0;
+  const result = await saveCommercialLead(update, fixture.reference, async (_url, options) => {
+    calls++;
+    const body = JSON.parse(options.body);
+    assert.equal(typeof body.revenueBs, 'number');
+    assert.equal(body.revenueBs, 930.5);
+    assert.deepEqual(body, command({ revenueBs: 930.5 }));
+    return json(receipt({}, update));
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.kind, 'confirmed');
+  assert.equal(result.lead.revenue_bs, 930.5);
+  assert.equal(raw, '0930,50');
+  assert.equal(draft.revenue, raw);
+  assert.equal(draft.notes, ' QA resumen acordado ');
+  for (const invalid of [{ ...draft, notes: 'x'.repeat(1001) }, { ...draft, status: 'paid' }]) {
+    assert.equal(prepareCommercialDraftUpdate(fixture, invalid, command().requestId), null);
+  }
+  assert.equal(prepareCommercialDraftUpdate(fixture, draft, 'bad'), null);
+  assert.equal(prepareCommercialDraftUpdate({ ...fixture, revision: -1 }, draft, command().requestId), null);
+});
+
+test('rechecking an uncertain localized save retains its UUID and exact canonical body', async () => {
+  const input = Object.freeze(prepareCommercialDraftUpdate(fixture, { status: command().status, revenue: '930,50', notes: command().notes }, command().requestId));
+  let state = start(edit(createCommercialEditor(fixture), { status: input.status, revenue: '930,50', notes: input.notes }), input);
+  const bodies = [];
+  const transport = async (_url, options) => {
+    bodies.push(options.body);
+    if (bodies.length === 1) throw new TypeError('lost receipt');
+    return json(receipt({ outcome: 'replayed' }, input));
+  };
+  state = settle(state, await saveCommercialLead(state.request, fixture.reference, transport));
+  assert.equal(state.phase, 'uncertain');
+  assert.strictEqual(edit(state, { revenue: '1000,00' }), state);
+  assert.strictEqual(start(state, command({ revenueBs: 930.5, requestId: fixture.id })), state);
+  assert.strictEqual(start(state, command({ revenueBs: 930.51 })), state);
+  const retained = state.request;
+  state = start(state, retained);
+  assert.deepEqual(state.request, input);
+  assert.equal(state.draft.revenue, '930,50');
+  state = settle(state, await saveCommercialLead(state.request, fixture.reference, transport));
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[0], bodies[1]);
+  assert.equal(JSON.parse(bodies[1]).requestId, input.requestId);
+  assert.equal(JSON.parse(bodies[1]).revenueBs, 930.5);
+  assert.equal(state.phase, 'editing');
+  assert.equal(state.base.revenue_bs, 930.5);
+  assert.equal(state.request, null);
+});
+
+const React = require('react');
+const { renderToStaticMarkup } = require('react-dom/server');
+const CommercialLeadEditor = require('../src/components/admin/CommercialLeadEditor.tsx').default;
+const renderEditor = (extra = {}) => renderToStaticMarkup(React.createElement(CommercialLeadEditor, {
+  lead: { ...fixture, ...extra }, onSaved: () => assert.fail('SSR must not save a contact'),
+  transport: async () => assert.fail('SSR must not send a request'),
+}));
+const revenueControl = html => html.match(/<input\b[^>]*\bname="lead-revenue"[^>]*>/)?.[0] ?? '';
+
+test('the real editor renders a decimal text keyboard without browser numeric coercion', () => {
+  const input = revenueControl(renderEditor());
+  assert.ok(input);
+  assert.match(input, /\btype="text"/);
+  assert.match(input, /\binputMode="decimal"/);
+  assert.match(input, /\bmaxLength="16"/);
+  assert.match(input, /\bautoComplete="off"/);
+  assert.match(input, /\bvalue="200"/);
+  assert.match(input, /\bplaceholder="Ej\. 930,50…"/);
+  assert.doesNotMatch(input, /\btype="number"|\bstep=|\bmin=/);
+});
+
+test('the real editor connects revenue guidance and the manual income explanation accessibly', () => {
+  const html = renderEditor();
+  const input = revenueControl(html);
+  const id = input.match(/\bid="([^"]+)-revenue"/)?.[1];
+  assert.ok(id);
+  const description = input.match(/\baria-describedby="([^"]+)"/)?.[1].split(' ');
+  assert.ok(description.includes(`${id}-revenue-hint`));
+  assert.ok(description.includes(`${id}-help`));
+  assert.ok(html.includes(`id="${id}-revenue-hint"`));
+  assert.match(html, /Usa coma o punto decimal/);
+  assert.match(html, /hasta dos decimales y sin separadores de miles/);
+  assert.match(html, /Vacío retira el ingreso registrado/);
+  assert.match(html, /Este formulario no procesa cobros/);
+  assert.match(input, /aria-invalid="false"/);
+});
+
+test('the real editor displays registered zero and an empty revenue distinctly without pending writes', () => {
+  for (const [revenue_bs, expected] of [[0, '0'], [null, '']]) {
+    const html = renderEditor({ revenue_bs });
+    assert.ok(revenueControl(html).includes(`value="${expected}"`));
+    const submit = html.match(/<button\b[^>]*\btype="submit"[^>]*>/)?.[0] ?? '';
+    assert.match(submit, /\sdisabled(?:=|[\s>])/);
+    assert.doesNotMatch(html, /Comprobar guardado|Descartar cambios…|Guardando el contacto/);
+  }
 });

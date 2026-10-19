@@ -46,4 +46,4 @@ Evidencia privada adicional en `tmp/sales-dashboard-recovery/`: `verify.log`, `b
 
 ## Pendientes separados
 
-El campo de ingresos del seguimiento aún exige punto decimal aunque el teclado móvil puede ofrecer coma. Se registra para el siguiente bloque; no se amplía el contrato del guardado ni se cambia su interpretación dentro de esta recuperación.
+El campo de ingresos del seguimiento exigía punto decimal aunque el teclado móvil podía ofrecer coma. Se resolvió en el bloque posterior [Importes decimales en Ventas](VENTAS_IMPORTES_DECIMALES.md), que acepta coma en el editor y conserva el formato canónico del PATCH; no forma parte del cambio de recuperación descrito arriba.

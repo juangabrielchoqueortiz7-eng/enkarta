@@ -13,9 +13,15 @@ export function commercialRevenue(value: unknown): number | null | undefined {
   if (value === '' || value === null) return null;
   if (typeof value !== 'number' && typeof value !== 'string') return undefined;
   const text = String(value);
-  if (text.length > 16 || !/^\d+(?:\.\d{1,2})?$/.test(text)) return undefined;
+  if (text.length > 16 || text !== text.trim() || !/^\d+(?:\.\d{1,2})?$/.test(text)) return undefined;
   const amount = Number(text);
   return Number.isFinite(amount) && amount >= 0 && amount <= 1_000_000 ? amount : undefined;
+}
+
+/** Localized text belongs to the editor; commands keep their canonical API contract. */
+export function commercialDraftRevenue(value: unknown): number | null | undefined {
+  if (typeof value !== 'string' || value.length > 16 || value !== value.trim() || (value !== '' && !/^\d+(?:[.,]\d{1,2})?$/.test(value))) return undefined;
+  return commercialRevenue(value.replace(',', '.'));
 }
 
 export function parseCommercialUpdate(value: unknown): CommercialUpdate | null {
@@ -25,9 +31,15 @@ export function parseCommercialUpdate(value: unknown): CommercialUpdate | null {
   return { id: body.id.toLowerCase(), requestId: body.requestId.toLowerCase(), expectedRevision: Number(body.expectedRevision), status: body.status as CommercialLeadStatus, revenueBs: revenue, notes: body.notes.trim() };
 }
 
+export function prepareCommercialDraftUpdate(base: CommercialLead, draft: CommercialDraft, requestId: string): CommercialUpdate | null {
+  const revenueBs = commercialDraftRevenue(draft.revenue);
+  if (revenueBs === undefined) return null;
+  return parseCommercialUpdate({ id: base.id, requestId, expectedRevision: base.revision, status: draft.status, revenueBs, notes: draft.notes });
+}
+
 export const commercialDraft = (lead: CommercialLead): CommercialDraft => ({ status: lead.status, revenue: lead.revenue_bs?.toString() ?? '', notes: lead.notes });
 export function commercialDraftDirty(draft: CommercialDraft, base: CommercialLead): boolean {
-  return draft.status !== base.status || commercialRevenue(draft.revenue) !== base.revenue_bs || draft.notes.trim() !== base.notes;
+  return draft.status !== base.status || commercialDraftRevenue(draft.revenue) !== base.revenue_bs || draft.notes.trim() !== base.notes;
 }
 
 /** One explicit attempt only. An uncertain response must replay this exact requestId/body. */
@@ -68,7 +80,7 @@ export function commercialEditorReducer(state: CommercialEditorState, action: Co
     const command = parseCommercialUpdate(action.request);
     if (!command || state.phase === 'saving' || state.phase === 'conflict') return state;
     if (state.phase === 'uncertain' && JSON.stringify(command) !== JSON.stringify(state.request)) return state;
-    if (state.phase === 'editing' && (command.id !== state.base.id || command.expectedRevision !== state.base.revision || command.status !== state.draft.status || command.notes !== state.draft.notes.trim() || command.revenueBs !== commercialRevenue(state.draft.revenue))) return state;
+    if (state.phase === 'editing' && (command.id !== state.base.id || command.expectedRevision !== state.base.revision || command.status !== state.draft.status || command.notes !== state.draft.notes.trim() || command.revenueBs !== commercialDraftRevenue(state.draft.revenue))) return state;
     return { ...state, phase: 'saving', request: command, message: '' };
   }
   if (action.type === 'receive') {
@@ -90,7 +102,7 @@ export function commercialEditorReducer(state: CommercialEditorState, action: Co
   const current = commercialDraft(state.incoming);
   const draft = {
     status: state.draft.status === state.base.status ? current.status : state.draft.status,
-    revenue: commercialRevenue(state.draft.revenue) === state.base.revenue_bs ? current.revenue : state.draft.revenue,
+    revenue: commercialDraftRevenue(state.draft.revenue) === state.base.revenue_bs ? current.revenue : state.draft.revenue,
     notes: state.draft.notes.trim() === state.base.notes ? current.notes : state.draft.notes,
   };
   return { ...createCommercialEditor(state.incoming), draft, message: 'Se conservaron solo los campos que editaste. Revisa los valores y pulsa Guardar cambios; aún no se guardaron.' };

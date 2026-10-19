@@ -936,6 +936,28 @@ test('019 commercial update atomically saves a canonical whitelist, history and 
  const lookup=await(await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=EK-A1B2C3D4'))).json();assert.equal(lookup.lead.revision,1);
 });
 
+test('localized editor revenue crosses the canonical HTTP and SQL contract without accepting raw comma payloads',async()=>{
+ const input=await commercialUpdateFixture();actor={role:'admin'};
+ const initial=(await(await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=EK-A1B2C3D4'))).json()).lead;
+ const priorCalls=rpcCalls.length;
+ for(const revenueBs of ['930,50','1.000,50','930,','0,001','930.50\n','930.50\u2028']){
+  const response=await commercialPatch({...input,revenueBs});assert.equal(response.status,400);
+  assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).code,'INVALID_UPDATE');
+ }
+ assert.equal(rpcCalls.length,priorCalls);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),0);
+ assert.equal(await scalar('select revision as result from commercial_leads where id=$1',[input.id]),0);
+ const {prepareCommercialDraftUpdate}=require('../src/lib/commercial-update.ts');
+ const command=prepareCommercialDraftUpdate(initial,{status:'won',revenue:'930,50',notes:'Ingreso ficticio para prueba local'},input.requestId);
+ assert.ok(command);assert.equal(command.revenueBs,930.5);assert.equal(typeof command.revenueBs,'number');
+ let response=await commercialPatch(command);assert.equal(response.status,200);const saved=await response.json();
+ assert.equal(saved.outcome,'saved');assert.equal(saved.lead.revenue_bs,930.5);assert.equal(saved.lead.status,'won');
+ assert.equal(Number(await scalar('select revenue_bs as result from commercial_leads where id=$1',[input.id])),930.5);
+ response=await commercialPatch(command);assert.equal(response.status,200);const replayed=await response.json();
+ assert.equal(replayed.outcome,'replayed');assert.deepEqual(replayed.lead,saved.lead);
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),1);
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),1);
+});
+
 test('019 replay preserves the original receipt after later edits and never rewrites the current lead',async()=>{
  const first=await commercialUpdateFixture();actor={role:'admin'};const firstSaved=await(await commercialPatch(first)).json();
  const second={...first,requestId:randomUUID(),expectedRevision:1,status:'reserved',revenueBs:400,notes:'Nueva revisión ficticia'};

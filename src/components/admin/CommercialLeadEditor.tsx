@@ -3,7 +3,7 @@
 import { useEffect, useId, useReducer, useRef, useState } from 'react';
 import { COMMERCIAL_LEAD_STATUSES, leadStatusLabel, type CommercialLeadStatus } from '@/lib/commercial';
 import type { CommercialLead } from '@/lib/commercial-lookup';
-import { commercialDraftDirty, commercialEditorReducer, commercialRevenue, createCommercialEditor, parseCommercialUpdate, saveCommercialLead, type CommercialSaveResult } from '@/lib/commercial-update';
+import { commercialDraftDirty, commercialEditorReducer, commercialDraftRevenue, createCommercialEditor, prepareCommercialDraftUpdate, saveCommercialLead, type CommercialSaveResult } from '@/lib/commercial-update';
 
 const control = 'min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#765f39] disabled:bg-gray-100 disabled:text-gray-600';
 const button = 'min-h-11 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#765f39] disabled:opacity-50';
@@ -29,8 +29,8 @@ export default function CommercialLeadEditor({ lead, onSaved, onActivityChange, 
     let command = state.phase === 'uncertain' ? state.request : null;
     if (!command) {
       if (!dirty) return;
-      if (commercialRevenue(state.draft.revenue) === undefined) { setValidation('Escribe un importe entre 0 y 1.000.000 Bs, con hasta dos decimales y punto decimal, o deja el campo vacío.'); revenueInput.current?.focus(); return; }
-      try { command = parseCommercialUpdate({ id: state.base.id, requestId: crypto.randomUUID(), expectedRevision: state.base.revision, status: state.draft.status, revenueBs: state.draft.revenue, notes: state.draft.notes }); }
+      if (commercialDraftRevenue(state.draft.revenue) === undefined) { setValidation('Escribe un importe entre 0 y 1.000.000 Bs, con coma o punto decimal, hasta dos decimales y sin separadores de miles, o deja el campo vacío.'); revenueInput.current?.focus(); return; }
+      try { command = prepareCommercialDraftUpdate(state.base, state.draft, crypto.randomUUID()); }
       catch { /* A browser without secure UUID support must not send an unsafe write. */ }
       if (!command) { setValidation('No se pudo preparar el cambio. Conserva tus datos y vuelve a cargar este contacto antes de continuar.'); return; }
     }
@@ -51,10 +51,11 @@ export default function CommercialLeadEditor({ lead, onSaved, onActivityChange, 
     <form onSubmit={event => { event.preventDefault(); void save(); }} aria-label={`Seguimiento de ${lead.reference}`}>
       <fieldset disabled={locked} className="grid min-w-0 gap-3 lg:grid-cols-[160px_150px_minmax(180px,1fr)_auto] lg:items-end">
         <div><label htmlFor={`${id}-status`} className="mb-1.5 block font-outfit text-sm font-medium text-gray-800">Estado</label><select id={`${id}-status`} name="lead-status" value={state.draft.status} onChange={event => edit('status', event.target.value as CommercialLeadStatus)} className={control}>{COMMERCIAL_LEAD_STATUSES.map(status => <option key={status} value={status}>{leadStatusLabel(status)}</option>)}</select></div>
-        <div><label htmlFor={`${id}-revenue`} className="mb-1.5 block font-outfit text-sm font-medium text-gray-800">Ingreso (Bs)</label><input ref={revenueInput} id={`${id}-revenue`} name="lead-revenue" type="text" inputMode="decimal" autoComplete="off" maxLength={16} value={state.draft.revenue} onChange={event => edit('revenue', event.target.value)} aria-invalid={!!validation} aria-describedby={`${id}-help${validation ? ` ${id}-error` : ''}`} placeholder="Ej. 930.00…" className={control} /></div>
+        <div><label htmlFor={`${id}-revenue`} className="mb-1.5 block font-outfit text-sm font-medium text-gray-800">Ingreso (Bs)</label><input ref={revenueInput} id={`${id}-revenue`} name="lead-revenue" type="text" inputMode="decimal" autoComplete="off" maxLength={16} value={state.draft.revenue} onChange={event => edit('revenue', event.target.value)} aria-invalid={!!validation} aria-describedby={`${id}-revenue-hint ${id}-help${validation ? ` ${id}-error` : ''}`} placeholder="Ej. 930,50…" className={control} /></div>
         <div className="min-w-0"><label htmlFor={`${id}-notes`} className="mb-1.5 block font-outfit text-sm font-medium text-gray-800">Nota de seguimiento</label><input id={`${id}-notes`} name="lead-notes" type="text" autoComplete="off" maxLength={1000} value={state.draft.notes} onChange={event => edit('notes', event.target.value)} aria-describedby={`${id}-help`} placeholder="Nota breve…" className={control} /></div>
         <button type="submit" disabled={!dirty || locked} className="min-h-11 rounded-xl bg-[#765f39] px-4 py-2 text-sm font-semibold text-white hover:bg-[#5d4a2c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#765f39] disabled:opacity-50">{state.phase === 'saving' ? 'Guardando…' : 'Guardar cambios'}</button>
       </fieldset>
+      <p id={`${id}-revenue-hint`} className="mt-2 font-outfit text-sm leading-5 text-gray-600">Usa coma o punto decimal, hasta dos decimales y sin separadores de miles. Vacío retira el ingreso registrado.</p>
     </form>
     <p id={`${id}-help`} className="font-outfit text-xs leading-5 text-gray-600">Registra solo ingresos verificados por tu equipo. Este formulario no procesa cobros. No copies conversaciones ni datos sensibles en la nota.</p>
     {validation && <p id={`${id}-error`} role="alert" className="font-outfit text-sm text-red-800">{validation}</p>}
