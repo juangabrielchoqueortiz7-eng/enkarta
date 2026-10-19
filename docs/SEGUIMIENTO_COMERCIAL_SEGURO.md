@@ -40,11 +40,11 @@ El recibo y las respuestas omiten `session_hash`, claves y campos futuros no aut
 - Un conflicto conserva los campos locales y muestra estado, ingreso y nota actuales. «Revisar mis cambios» incorpora los campos remotos que no se habían editado y exige volver a pulsar «Guardar cambios».
 - Descartar cambios requiere una confirmación explícita. No permite descartar una operación incierta como si nunca se hubiera enviado.
 - Una actualización del panel no retrocede la revisión. Conserva contactos con ediciones pendientes aunque dejen de aparecer en la consulta acotada.
-- Los filtros ocultan filas manteniendo sus editores montados; «Ver todos» permite recuperar las filas pendientes. Ventas permanece montado al cambiar de sección dentro de la misma sesión.
+- La revisión inicial conservaba los editores montados al filtrar. Con la paginación 020, los editores pendientes permanecen visibles y señalados aunque estén fuera de la página o estado actual; se retiran las filas limpias de páginas anteriores. Ventas permanece montado al cambiar de sección dentro de la misma sesión.
 - Las respuestas de cargas anteriores no sustituyen una carga nueva. Se informa si falla una actualización y quedan cifras de la carga anterior.
 - Se solicita la advertencia nativa al abandonar/recargar con cambios pendientes; el navegador decide si la muestra. Los borradores de seguimiento y UUID pendientes viven en memoria, no en almacenamiento persistente. Una recarga completa vuelve a consultar datos canónicos; cerrar sesión retira la memoria privada.
 
-La búsqueda de referencias continúa siendo de solo lectura. No se añade otro editor del mismo contacto. Las métricas y el listado mantienen sus límites actuales; su paginación/agregación completa queda como tarea independiente.
+La búsqueda de referencias continúa siendo de solo lectura. No se añade otro editor del mismo contacto. El bloque posterior de paginación y agregación completa, dependiente de 020, se documenta en [VENTAS_PAGINACION_Y_METRICAS.md](VENTAS_PAGINACION_Y_METRICAS.md); su estado de despliegue figura allí.
 
 ## Verificación y despliegue
 

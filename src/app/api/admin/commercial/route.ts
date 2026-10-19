@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { COMMERCIAL_LEAD_STATUSES, type CommercialLeadStatus, leadStatusLabel } from '@/lib/commercial';
 import { commercialDesignName } from '@/lib/commercial-designs';
+import { encodeCommercialCursor, parseCommercialDashboard, parseCommercialDashboardQuery } from '@/lib/commercial-dashboard';
+import { ENKARTA_COLLECTIONS, STARTER_DESIGNS } from '@/lib/enkarta-collections';
 import { parseCommercialLead } from '@/lib/commercial-lookup';
 import { parseCommercialUpdate } from '@/lib/commercial-update';
 import { getAdminSession } from '@/lib/host-session';
@@ -9,8 +11,6 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type EventRow = { session_hash: string; event_type: string; package_key: string; design: string; utm_source: string; utm_campaign: string; referrer_host: string; occurred_at: string };
-type LeadRow = { id: string; reference: string; status: CommercialLeadStatus; package_key: string; design: string; event_category: string; placement: string; utm_source: string; utm_medium: string; utm_campaign: string; referrer_host: string; revenue_bs: number | null; notes: string; created_at: string; updated_at: string; revision: number };
 const missing = (error: { code?: string; message?: string } | null) => !!error && (['42P01', '42703', '42883', 'PGRST202', 'PGRST204', 'PGRST205'].includes(error.code || '') || /does not exist|schema cache/i.test(error.message || ''));
 const privateResponse = (value: unknown, status = 200) => NextResponse.json(value, { status, headers: { 'Cache-Control': 'no-store' } });
 const writeUncertain = () => privateResponse({ error: 'No se pudo comprobar el guardado. Conserva tus cambios y reintenta la misma solicitud.', code: 'WRITE_UNCERTAIN' }, 500);
@@ -19,50 +19,47 @@ function publicLead(value: unknown) {
   return lead ? { ...lead, design: commercialDesignName(lead.design) } : null;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   if (!(await getAdminSession())) return privateResponse({ error: 'No autorizado' }, 401);
+  const query = parseCommercialDashboardQuery(request?.nextUrl.searchParams ?? new URLSearchParams());
+  if (!query) return privateResponse({ error: 'Filtro o página inválidos', code: 'INVALID_QUERY' }, 400);
   try {
-  const cutoff = new Date(Date.now() - 180 * 86_400_000).toISOString();
-  const [eventsResult, leadsResult] = await Promise.all([
-    supabaseAdmin.from('commercial_events').select('session_hash,event_type,package_key,design,utm_source,utm_campaign,referrer_host,occurred_at').gte('occurred_at', cutoff).order('occurred_at', { ascending: false }).limit(10000),
-    supabaseAdmin.from('commercial_leads').select('id,reference,status,package_key,design,event_category,placement,utm_source,utm_medium,utm_campaign,referrer_host,revenue_bs,notes,created_at,updated_at,revision').gte('created_at', cutoff).order('updated_at', { ascending: false }).limit(1000),
-  ]);
-  if (eventsResult.error || leadsResult.error) {
-    const migrationRequired = missing(eventsResult.error) || missing(leadsResult.error);
-    const revisionMissing = leadsResult.error?.code === '42703' || leadsResult.error?.code === 'PGRST204';
-    return privateResponse({ error: migrationRequired ? `Ejecuta migrations/${revisionMissing ? '019_commercial_lead_updates.sql' : '012_commercial_funnel.sql'}` : 'No se pudo cargar el embudo', code: migrationRequired ? 'MIGRATION_REQUIRED' : 'READ_FAILED' }, migrationRequired ? 503 : 500);
-  }
-  const events = (eventsResult.data || []) as EventRow[];
-  const mappedLeads = ((leadsResult.data || []) as unknown[]).map(publicLead);
-  if (mappedLeads.some(lead => !lead)) return privateResponse({ error: 'No se pudo cargar el embudo', code: 'READ_FAILED' }, 500);
-  const leads = mappedLeads as LeadRow[];
-  const unique = (type: string) => new Set(events.filter(event => event.event_type === type).map(event => event.session_hash)).size;
-  const visits = new Set(events.filter(event => ['landing_view', 'design_view', 'process_view'].includes(event.event_type)).map(event => event.session_hash)).size;
-  const whatsappOpens = leads.length;
-  const contacts = leads.filter(lead => lead.status !== 'whatsapp_open').length;
-  const reserved = leads.filter(lead => ['reserved', 'won'].includes(lead.status)).length;
-  const sales = leads.filter(lead => lead.status === 'won').length;
-  const revenue = leads.filter(lead => lead.status === 'won').reduce((sum, lead) => sum + Number(lead.revenue_bs || 0), 0);
-  const grouped = (selector: (lead: LeadRow) => string) => {
-    const counts = new Map<string, { opens: number; contacts: number; sales: number }>();
-    leads.forEach(lead => {
-      const label = selector(lead) || 'Directo';
-      const current = counts.get(label) || { opens: 0, contacts: 0, sales: 0 };
-      current.opens += 1; if (lead.status !== 'whatsapp_open') current.contacts += 1; if (lead.status === 'won') current.sales += 1; counts.set(label, current);
+    // Aggregate inside PostgreSQL: PostgREST's row limit must never truncate KPIs.
+    const designLabels = Object.fromEntries([
+      ...Object.values(ENKARTA_COLLECTIONS).map(design => [design.key, design.name]),
+      ...STARTER_DESIGNS.map(design => [design.key, design.name]),
+    ]);
+    const { data, error } = await supabaseAdmin.rpc('enkarta_commercial_dashboard', {
+      p_status: query.status, p_size: 25, p_as_of: query.cursor?.asOf ?? null,
+      p_after_created_at: query.cursor?.createdAt ?? null, p_after_id: query.cursor?.id ?? null,
+      p_design_labels: designLabels,
     });
-    return Array.from(counts.entries()).map(([label, value]) => ({ label, ...value })).sort((a, b) => b.opens - a.opens).slice(0, 8);
-  };
-  return privateResponse({
-    periodDays: 180,
-    summary: { visits, landingViews: unique('landing_view'), designViews: unique('design_view'), processViews: unique('process_view'), whatsappOpens, contacts, reserved, sales, revenue, intentRate: visits ? Math.round(whatsappOpens / visits * 100) : 0, conversationRate: whatsappOpens ? Math.round(contacts / whatsappOpens * 100) : 0, closeRate: contacts ? Math.round(sales / contacts * 100) : 0 },
-    sources: grouped(lead => lead.utm_source || lead.referrer_host || 'Directo'),
-    campaigns: grouped(lead => lead.utm_campaign || 'Sin campaña'),
-    packages: grouped(lead => lead.package_key === 'general' ? 'Sin paquete' : lead.package_key[0].toUpperCase() + lead.package_key.slice(1)),
-    events: grouped(lead => lead.event_category || 'Sin categoría'),
-    designs: grouped(lead => lead.design || 'Sin diseño'),
-    statuses: COMMERCIAL_LEAD_STATUSES.map(status => ({ status, label: leadStatusLabel(status), value: leads.filter(lead => lead.status === status).length })),
-    leads,
-  });
+    if (error) {
+      if (error.code === 'P0001' && error.message === 'INVALID_INPUT') return privateResponse({ error: 'Filtro o página inválidos', code: 'INVALID_QUERY' }, 400);
+      return missing(error)
+        ? privateResponse({ error: 'Ejecuta migrations/020_commercial_dashboard_pagination.sql', code: 'MIGRATION_REQUIRED' }, 503)
+        : privateResponse({ error: 'No se pudo cargar el embudo', code: 'READ_FAILED' }, 500);
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data) || !Array.isArray(data.leads) || !Array.isArray(data.statuses)
+      || !data.pagination || typeof data.pagination !== 'object' || Array.isArray(data.pagination)) throw new Error('INVALID_DASHBOARD');
+    const leads = data.leads.map(publicLead);
+    const statuses = data.statuses.map((row: unknown) => {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) return null;
+      const value = row as Record<string, unknown>;
+      if (!COMMERCIAL_LEAD_STATUSES.includes(value.status as CommercialLeadStatus)) return null;
+      return { status: value.status, label: leadStatusLabel(value.status as CommercialLeadStatus), value: value.value };
+    });
+    const next = data.pagination.next;
+    if (leads.some((lead: unknown) => !lead) || statuses.some((status: unknown) => !status)
+      || (next !== null && (!next || typeof next !== 'object' || Array.isArray(next) || typeof next.createdAt !== 'string' || typeof next.id !== 'string'))) throw new Error('INVALID_DASHBOARD');
+    const dashboard = parseCommercialDashboard({
+      periodDays: data.periodDays, asOf: data.asOf, syncedAt: data.syncedAt, summary: data.summary,
+      sources: data.sources, campaigns: data.campaigns, packages: data.packages, events: data.events, designs: data.designs,
+      statuses, leads, pagination: { size: data.pagination.size, total: data.pagination.total, hasMore: data.pagination.hasMore,
+        nextCursor: next === null ? null : encodeCommercialCursor({ asOf: data.asOf, createdAt: next.createdAt, id: next.id, status: query.status }) },
+    }, query.status);
+    if (!dashboard) throw new Error('INVALID_DASHBOARD');
+    return privateResponse(dashboard);
   } catch {
     return privateResponse({ error: 'No se pudo cargar el embudo', code: 'READ_FAILED' }, 500);
   }

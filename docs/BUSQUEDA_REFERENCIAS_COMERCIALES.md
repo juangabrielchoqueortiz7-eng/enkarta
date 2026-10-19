@@ -6,7 +6,7 @@ Admin → Ventas permite consultar una referencia comercial completa `EK-XXXXXXX
 
 La ficha es de **solo lectura** y muestra referencia, estado consultado, diseño público, paquete, fecha y nota. Se puede volver a consultar con el mismo botón. La edición permanece en las filas existentes del listado; no se monta un segundo editor independiente del mismo contacto. Una consulta no confirma mensajes enviados, reservas ni pagos, y no crea eventos de seguimiento.
 
-No cambia el período, los filtros ni los cálculos del embudo. Sus cifras y listado mantienen los límites actuales de 180 días / 1000 contactos y eventos limitados; encontrar una referencia histórica no la incorpora a esas métricas.
+La búsqueda no cambia el período ni los cálculos del embudo. En su despliegue inicial, las cifras estaban acotadas a 180 días / 1000 contactos y eventos limitados. La agregación completa del período y las páginas de 25 contactos se implementan en el bloque 020, cuyo estado figura en [VENTAS_PAGINACION_Y_METRICAS.md](VENTAS_PAGINACION_Y_METRICAS.md). Encontrar una referencia histórica no la incorpora a las métricas del período.
 
 ## Interacción y privacidad
 
@@ -29,7 +29,7 @@ No cambia el período, los filtros ni los cálculos del embudo. Sus cifras y lis
 
 ## Pendientes independientes
 
-La operación transaccional, el control de conflictos y la recuperación de guardados se implementan en un bloque posterior documentado en `docs/SEGUIMIENTO_COMERCIAL_SEGURO.md`, con migración y aceptación propias. El buscador por sí solo no acredita esos comportamientos. Sigue pendiente separar las métricas agregadas del límite de filas del listado.
+La operación transaccional, el control de conflictos y la recuperación de guardados se documentan en `docs/SEGUIMIENTO_COMERCIAL_SEGURO.md`, con migración y aceptación propias. El buscador por sí solo no acredita esos comportamientos. La separación de métricas agregadas y páginas del listado se documenta en `docs/VENTAS_PAGINACION_Y_METRICAS.md` y requiere 020.
 
 BCP sigue bloqueado. No se modificaron diseños, presets ni recursos originales.
 

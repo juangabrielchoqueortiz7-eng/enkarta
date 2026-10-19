@@ -29,6 +29,8 @@ let rpcFailure = null;
 let queryFailure = null;
 let rpcObserver = null;
 let rpcReplyOverride;
+let queryCalls = [];
+let rpcCalls = [];
 const cookieJar = new Map();
 const { hashPassword, signHostSession, signReviewSession, signDoorSession, signAdminSession, verifyHostSession, verifyReviewSession } = require('../src/lib/access.ts');
 const hostHash = hashPassword('test-host-password');
@@ -56,6 +58,7 @@ async function rpc(name, params) {
   return scalar(`select public.${name}(${keys.map((key,i) => `${key} => $${i+1}`).join(',')}) as result`, Object.values(params));
 }
 const queryClient = (table) => {
+  queryCalls.push(table);
   assert.ok(['guests', 'attendees', 'access_log', 'rsvps', 'invitations', 'builder_versions', 'builder_review_notes', 'invitation_validity_events', 'save_date_responses', 'commercial_leads', 'commercial_events'].includes(table));
   let columns = '*', filters = [], limit, update, insert, remove, sort = [], historyCursor;
   const query = {
@@ -99,7 +102,7 @@ const queryClient = (table) => {
 require.cache[require.resolve('../src/lib/supabase/server.ts')] = { exports: { supabaseAdmin: {
   from: queryClient,
   storage: { from: () => ({ download: async () => ({data:null,error:{message:'No legacy fixture'}}) }) },
-  async rpc(name, params) { if(rpcFailure) return {data:null,error:rpcFailure}; if(rpcReplyOverride!==undefined)return {data:rpcReplyOverride,error:null}; try { const data=await rpc(name,params);if(rpcObserver)await rpcObserver(name,params);return {data,error:null}; } catch(error) { return {data:null,error}; } },
+  async rpc(name, params) { rpcCalls.push({name,params}); if(rpcFailure) return {data:null,error:rpcFailure}; if(rpcReplyOverride!==undefined)return {data:rpcReplyOverride,error:null}; try { const data=await rpc(name,params);if(rpcObserver)await rpcObserver(name,params);return {data,error:null}; } catch(error) { return {data:null,error}; } },
 } } };
 // Exercise real host/review authorization; only cookies and database transport are isolated.
 const { NextRequest } = require('next/server');
@@ -164,6 +167,8 @@ before(async () => {
     await db.exec(fs.readFileSync(path.join(root,'migrations/012_commercial_funnel.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/019_commercial_lead_updates.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/019_commercial_lead_updates.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/020_commercial_dashboard_pagination.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/020_commercial_dashboard_pagination.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/016_guest_metadata.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/016_guest_metadata.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/017_guest_import_idempotency.sql'),'utf8'));
@@ -173,7 +178,7 @@ before(async () => {
   } catch(error) { throw new Error(`Migration: ${error.message} at ${error.position}; ${migration.slice(Math.max(0,Number(error.position)-100),Number(error.position)+100)}`); }
 });
 beforeEach(async () => {
-  actor=null; rpcFailure=null; queryFailure=null; rpcObserver=null; rpcReplyOverride=undefined; cookieJar.clear();
+  actor=null; rpcFailure=null; queryFailure=null; rpcObserver=null; rpcReplyOverride=undefined; queryCalls=[]; rpcCalls=[]; cookieJar.clear();
   await db.exec('TRUNCATE invitations,guests,attendees,access_log,rsvps,builder_versions,save_date_responses,commercial_events,commercial_leads CASCADE');
   await db.query("INSERT INTO invitations(id,slug,status,rsvp_deadline) VALUES($1,'test-event','ready',((now() AT TIME ZONE 'America/La_Paz')::date+1)),($2,'other-event','ready',NULL)",[invId,otherId]);
   await db.query("UPDATE invitations SET host_email=id::text||'@test.invalid', host_password_hash=$1, review_email=id::text||'@review.invalid', review_password_hash=$2",[hostHash,reviewHash]);
@@ -674,6 +679,91 @@ test('commercial handoff infers original preset names and the legacy carmesi dem
  assert.equal(await scalar("select count(*)::int as result from commercial_leads where status<>'whatsapp_open'"),0);
 });
 
+const commercialGet=(query='')=>commercialAdmin.GET(req('/api/admin/commercial'+(query?'?'+query:'')));
+const commercialDashboardFixture=async()=>{
+ const statuses=['whatsapp_open','contacted','reserved','won','lost'];
+ const createdAt=new Date(Date.now()-86_400_000).toISOString().replace(/\.\d{3}Z$/,'.123456Z');
+ for(let n=1;n<=37;n++){
+  const id=`90000000-0000-4000-8000-${String(n).padStart(12,'0')}`,hash=createHash('sha256').update('dashboard-private-'+n).digest('hex');
+  await db.query("insert into commercial_leads(id,reference,session_hash,status,package_key,design,event_category,utm_source,utm_campaign,revenue_bs,notes,created_at) values($1,$2,$3,$4,'premium',$5,'Boda','qa_source','qa_campaign',$6,'Nota ficticia',$7)",[id,'EK-'+n.toString(16).toUpperCase().padStart(8,'0'),hash,statuses[(n-1)%5],n%2?'azure':'Lunaria',statuses[(n-1)%5]==='won'?100.25:null,createdAt]);
+  await db.query("insert into commercial_events(session_hash,event_type,occurred_at) values($1,'landing_view',$2),($1,'landing_view',$2)",[hash,createdAt]);
+ }
+ const hash=createHash('sha256').update('dashboard-private-1').digest('hex');
+ await db.query("insert into commercial_events(session_hash,event_type,occurred_at) values($1,'design_view',$2),($1,'process_view',$2)",[hash,createdAt]);
+};
+test('020 commercial dashboard authenticates before validating filters or touching SQL',async()=>{
+ rpcFailure={code:'XX000',message:'private SQL must not run'};
+ for(const value of [null,{role:'host',id:invId},{role:'review',id:invId},{role:'door',id:invId},{role:'partner',id:invId}]){
+  actor=value;const response=await commercialGet('status=bad&cursor=bad');assert.equal(response.status,401);assert.equal(response.headers.get('cache-control'),'no-store');assert.deepEqual(await response.json(),{error:'No autorizado'});
+ }
+ assert.deepEqual(rpcCalls,[]);
+});
+test('020 commercial dashboard pages by immutable creation order while metrics and breakdowns include all contacts',async()=>{
+ await commercialDashboardFixture();actor={role:'admin'};queryCalls=[];rpcCalls=[];
+ const response=await commercialGet();assert.equal(response.status,200,await response.clone().text());assert.equal(response.headers.get('cache-control'),'no-store');const first=await response.json();
+ assert.equal(first.periodDays,180);assert.equal(first.leads.length,25);assert.equal(first.pagination.total,37);assert.equal(first.pagination.hasMore,true);assert.equal(first.pagination.size,25);assert.ok(first.pagination.nextCursor);
+ assert.deepEqual(first.summary,{visits:37,landingViews:37,designViews:1,processViews:1,whatsappOpens:37,contacts:29,reserved:14,sales:7,revenue:701.75,intentRate:100,conversationRate:78,closeRate:24});
+ assert.deepEqual(first.statuses.map(row=>[row.status,row.value]),[['whatsapp_open',8],['contacted',8],['reserved',7],['won',7],['lost',7]]);assert.equal(first.statuses[0].label,'Intento de contacto');
+ assert.deepEqual(first.designs,[{label:'Lunaria',opens:37,contacts:29,sales:7}]);assert.equal(first.sources[0].opens,37);assert.equal(first.campaigns[0].opens,37);assert.equal(first.packages[0].opens,37);assert.equal(first.events[0].opens,37);
+ const secondResponse=await commercialGet(new URLSearchParams({cursor:first.pagination.nextCursor}));assert.equal(secondResponse.status,200,await secondResponse.clone().text());const second=await secondResponse.json();
+ assert.equal(second.asOf,first.asOf);assert.equal(second.leads.length,12);assert.equal(second.pagination.hasMore,false);assert.equal(second.pagination.nextCursor,null);assert.deepEqual(second.summary,first.summary);assert.deepEqual(second.designs,first.designs);
+ const ids=[...first.leads,...second.leads].map(lead=>lead.id);assert.equal(new Set(ids).size,37);assert.equal(ids[0],'90000000-0000-4000-8000-000000000037');assert.equal(ids.at(-1),'90000000-0000-4000-8000-000000000001');assert.ok(first.leads.every(lead=>lead.design==='Lunaria'));
+ assert.deepEqual(queryCalls,[],'No capped row query or fallback may replace PostgreSQL aggregates');assert.equal(rpcCalls.length,2);assert.ok(rpcCalls.every(call=>call.name==='enkarta_commercial_dashboard'&&call.params.p_size===25));assert.equal(rpcCalls[0].params.p_design_labels.azure,'Lunaria');
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),0);assert.equal(await scalar('select design as result from commercial_leads order by id limit 1'),'azure');
+ const wire=JSON.stringify(first);for(const value of ['session_hash','dashboard-private','landing_path','utm_content','utm_term'])assert.ok(!wire.includes(value));
+});
+test('020 commercial status filters change only the list and total, never global metrics',async()=>{
+ await commercialDashboardFixture();actor={role:'admin'};const all=await(await commercialGet()).json();
+ for(const [status,total]of [['whatsapp_open',8],['contacted',8],['reserved',7],['won',7],['lost',7]]){
+  const response=await commercialGet('status='+status);assert.equal(response.status,200,await response.clone().text());const page=await response.json();assert.equal(page.leads.length,total);assert.equal(page.pagination.total,total);assert.ok(page.leads.every(lead=>lead.status===status));assert.equal(page.pagination.nextCursor,null);assert.deepEqual(page.summary,all.summary);assert.deepEqual(page.statuses,all.statuses);assert.deepEqual(page.designs,all.designs);
+ }
+});
+test('020 commercial cursors exclude later contacts and remain valid after an existing contact is edited',async()=>{
+ await commercialDashboardFixture();actor={role:'admin'};const first=await(await commercialGet()).json();
+ const hash=createHash('sha256').update('new-dashboard-contact').digest('hex');
+ await db.query("insert into commercial_leads(reference,session_hash,created_at) values('EK-FFFFFFFF',$1,now()+interval '1 second')",[hash]);
+ await db.query("update commercial_leads set notes='Actualizada durante lectura',updated_at=now(),revision=revision+1 where id='90000000-0000-4000-8000-000000000001'");
+ const response=await commercialGet(new URLSearchParams({cursor:first.pagination.nextCursor}));assert.equal(response.status,200,await response.clone().text());const second=await response.json();assert.equal(second.pagination.total,37);assert.equal(second.summary.whatsappOpens,37);assert.equal(second.leads.length,12);assert.ok(!second.leads.some(lead=>lead.reference==='EK-FFFFFFFF'));assert.equal(second.leads.at(-1).notes,'Actualizada durante lectura');assert.equal(second.leads.at(-1).revision,1);
+});
+test('020 commercial dashboard rejects malformed, repeated and mismatched query parameters before SQL',async()=>{
+ actor={role:'admin'};rpcFailure={code:'XX000',message:'must not reach SQL'};
+ const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
+ const cursor={v:1,asOf:'2026-10-18T12:00:00.123456Z',createdAt:'2026-10-01T12:00:00.123456Z',id:'90000000-0000-4000-8000-000000000001',status:'all'};
+ const queries=['status=','status=sold','status=all&status=all','cursor=','cursor=bad','cursor=a&cursor=b','size=10000','page=2',...[
+  {...cursor,v:2},{...cursor,status:'sold'},{...cursor,asOf:'2026-02-30T12:00:00.000000Z'},{...cursor,id:'bad'},{...cursor,createdAt:'2026-10-19T12:00:00.000000Z'},[],{},null,
+ ].map(value=>'cursor='+encode(value)),new URLSearchParams({status:'won',cursor:encode(cursor)})];
+ for(const query of queries){const response=await commercialGet(query);assert.equal(response.status,400,String(query));assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).code,'INVALID_QUERY');}
+ assert.deepEqual(rpcCalls,[]);
+});
+test('020 commercial dashboard reports migration and database failures without falling back to incomplete rows',async()=>{
+ actor={role:'admin'};queryCalls=[];
+ for(const code of ['42883','PGRST202','42703','42P01']){
+  rpcFailure={code,message:'private schema details'};const response=await commercialGet();assert.equal(response.status,503);assert.equal(response.headers.get('cache-control'),'no-store');const body=await response.json();assert.equal(body.code,'MIGRATION_REQUIRED');assert.match(body.error,/020_commercial_dashboard_pagination\.sql/);assert.ok(!JSON.stringify(body).includes('private'));
+ }
+ rpcFailure={code:'XX000',message:'private failing SQL'};const response=await commercialGet();assert.equal(response.status,500);const body=await response.json();assert.equal(body.code,'READ_FAILED');assert.ok(!JSON.stringify(body).includes('private'));assert.deepEqual(queryCalls,[]);
+});
+test('020 commercial dashboard rejects future cursor anchors using the database clock',async()=>{
+ actor={role:'admin'};
+ const cursor=Buffer.from(JSON.stringify({v:1,asOf:'2099-12-31T12:00:00.123456Z',createdAt:'2099-12-30T12:00:00.123456Z',id:'90000000-0000-4000-8000-000000000001',status:'all'})).toString('base64url');
+ const response=await commercialGet(new URLSearchParams({cursor}));assert.equal(response.status,400);assert.equal(response.headers.get('cache-control'),'no-store');assert.deepEqual(await response.json(),{error:'Filtro o página inválidos',code:'INVALID_QUERY'});assert.equal(rpcCalls.length,1);
+});
+test('020 commercial dashboard rejects malformed or truncated RPC replies and whitelists successful data',async()=>{
+ await commercialDashboardFixture();actor={role:'admin'};await commercialGet();const params=rpcCalls.at(-1).params;const raw=await rpc('enkarta_commercial_dashboard',params);const clone=()=>JSON.parse(JSON.stringify(raw));
+ const missingSummary=clone();delete missingSummary.summary;
+ const truncated=clone();truncated.leads=truncated.leads.slice(0,24);
+ const wrongRevision=clone();delete wrongRevision.leads[0].revision;
+ const wrongCount=clone();wrongCount.pagination.total=0;
+ const noNext=clone();noNext.pagination.next=null;
+ const badNext=clone();badNext.pagination.next={createdAt:'bad',id:'bad'};
+ const badStatus=clone();badStatus.statuses[0].status='sold';
+ const duplicate=clone();duplicate.leads[1]=duplicate.leads[0];
+ for(const value of [null,[],{},missingSummary,truncated,wrongRevision,wrongCount,noNext,badNext,badStatus,duplicate]){
+  rpcReplyOverride=value;const response=await commercialGet();assert.equal(response.status,500,JSON.stringify(value));assert.equal(response.headers.get('cache-control'),'no-store');const body=await response.json();assert.equal(body.code,'READ_FAILED');assert.equal(body.leads,undefined);
+ }
+ const extra=clone();extra.session_hash='private-extra';extra.leads[0].session_hash='private-extra';extra.summary.private_data='private-extra';extra.statuses[0].private_data='private-extra';extra.pagination.private_data='private-extra';rpcReplyOverride=extra;
+ const response=await commercialGet();assert.equal(response.status,200,await response.clone().text());assert.ok(!(await response.text()).includes('private-extra'));
+});
+
 test('commercial exact lookup authenticates before validating references and denies all non-admin roles',async()=>{
  queryFailure={code:'XX000',message:'private database failure'};
  for(const value of [null,{role:'host',id:invId},{role:'review',id:invId},{role:'door',id:invId},{role:'partner',id:invId}]){
@@ -830,9 +920,9 @@ test('019 malformed or mismatched RPC receipts cannot produce a success or leak 
  rpcReplyOverride={outcome:'saved',requestId:input.requestId,lead:receiptLead};const response=await commercialPatch(input);assert.equal(response.status,200);const body=await response.json();assert.equal(body.lead.design,'Lunaria');assert.equal(body.lead.session_hash,undefined);assert.equal(body.lead.landing_path,undefined);
 });
 
-test('019 missing revision columns fail dashboard and exact lookup closed with a migration diagnostic',async()=>{
+test('019 missing revision columns fail exact lookup closed with a migration diagnostic',async()=>{
  actor={role:'admin'};queryFailure={code:'42703',message:'private missing revision details'};
- for(const response of [await commercialAdmin.GET(),await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=EK-A1B2C3D4'))]){assert.equal(response.status,503);assert.equal(response.headers.get('cache-control'),'no-store');const body=await response.json();assert.equal(body.code,'MIGRATION_REQUIRED');assert.match(body.error,/019_commercial_lead_updates\.sql/);assert.ok(!JSON.stringify(body).includes('private'));assert.equal(body.leads,undefined);}
+ const response=await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=EK-A1B2C3D4'));assert.equal(response.status,503);assert.equal(response.headers.get('cache-control'),'no-store');const body=await response.json();assert.equal(body.code,'MIGRATION_REQUIRED');assert.match(body.error,/019_commercial_lead_updates\.sql/);assert.ok(!JSON.stringify(body).includes('private'));assert.equal(body.leads,undefined);
 });
 
 test('sales config is admin-only and never cacheable for other roles',async()=>{

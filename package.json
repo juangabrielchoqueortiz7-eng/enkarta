@@ -12,10 +12,12 @@
     "test:services": "node scripts/test-services.cjs",
     "test:commercial-updates": "node scripts/test-commercial-updates.cjs",
     "test:commercial-editor": "node scripts/test-commercial-editor.cjs",
+    "test:commercial-dashboard": "node scripts/test-commercial-dashboard.cjs",
+    "test:commercial-dashboard-client": "node scripts/test-commercial-dashboard-client.cjs",
     "test:integrity": "node scripts/test-integrity.cjs",
     "test:deployment": "node scripts/test-deployment.cjs",
     "monitor:production": "node scripts/check-production-health.cjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:builder && npm run test:services && npm run test:commercial-updates && npm run test:commercial-editor && npm run test:integrity && npm run test:deployment && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm run test:builder && npm run test:services && npm run test:commercial-updates && npm run test:commercial-editor && npm run test:commercial-dashboard && npm run test:commercial-dashboard-client && npm run test:integrity && npm run test:deployment && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
