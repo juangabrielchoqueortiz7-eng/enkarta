@@ -32,3 +32,14 @@ No cambia el período, los filtros ni los cálculos del embudo. Sus cifras y lis
 La edición comercial existente necesita una operación transaccional que guarde contacto e historial juntos, control de conflictos entre dispositivos y reconciliación de respuestas de escritura inciertas. Esta mejora de consulta no modifica ni acredita esos comportamientos. También queda separar las métricas agregadas del límite de filas del listado. Son cambios posteriores con regresiones propias; no se presentan como resueltos por añadir un buscador.
 
 BCP sigue bloqueado. No se modificaron diseños, presets ni recursos originales.
+
+## Resultado del despliegue, 19 de octubre de 2026
+
+- Código `74ea81d`, fusionado y publicado en `main`.
+- Vercel `dpl_J28Jz6Qpwgki3SVqPxLQfSsmJNXt`: Ready y alias `https://enkarta.vercel.app`. Despliegue inmutable: `https://enkarta-ell3evhul-juangabrielchoqueortiz7-engs-projects.vercel.app`.
+- `npm run verify`: 354 pruebas correctas (194 constructor/contratos, 124 servicios PostgreSQL, 31 integridad, 5 distribución), lint, TypeScript y build correctos. Continúan las advertencias existentes de `<img>` en invitaciones originales; no se alteraron esos componentes.
+- Navegador local: 9 comprobaciones funcionales correctas, sin desbordamiento a 390 y 1440 px, input de 16 px y controles táctiles de aproximadamente 44 px. No sustituye aceptación física en Android.
+- Producción: 6 comprobaciones HTTP correctas con un único contacto ficticio de hace dos años. Limpieza verificada: sin contacto, historial ni eventos ficticios; cookie temporal retirada del cliente. Cero usuarios creados, mensajes enviados y operaciones bancarias.
+- Conservación: 597 archivos protegidos idénticos por SHA-256; 129/129 originales de distribución publicados conservan tamaño y hash. Seis rutas públicas/de acceso también responden como se esperaba.
+- CI remoto del código: `https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39278156832`. Al cerrar la verificación estaba **en cola, sin ejecutor asignado**; no se presenta como aprobado. Los resultados locales y del despliegue anteriores sí finalizaron.
+- Evidencia privada: `tmp/commercial-lookup/verify.log`, `visual.json`, `production-http.json`, `protected-local.json`, `production-public.json`, `deployment-inspect.log` y `ci.json`. Sin credenciales ni cookies en informes.
