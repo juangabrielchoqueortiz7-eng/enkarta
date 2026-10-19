@@ -6,7 +6,7 @@ import CommercialLeadSummary from '@/components/admin/CommercialLeadSummary';
 import type { CommercialLead } from '@/lib/commercial-lookup';
 
 type Mode = 'ok' | 'offline' | 'incomplete' | 'expired' | 'mismatch' | 'slow';
-const lead: CommercialLead = { id: '30000000-0000-4000-8000-000000000001', reference: 'EK-A1B2C3D4', status: 'contacted', package_key: 'premium', design: 'Lunaria', event_category: 'Boda', placement: 'qa-lookup', utm_source: 'QA ficticio', utm_medium: '', utm_campaign: '', referrer_host: '', revenue_bs: null, notes: 'Consulta ficticia anterior a 180 días. Sin pago ni mensajes.', created_at: '2024-01-01T12:00:00Z', updated_at: '2024-01-01T12:00:00Z' };
+const lead: CommercialLead = { id: '30000000-0000-4000-8000-000000000001', reference: 'EK-A1B2C3D4', status: 'contacted', package_key: 'premium', design: 'Lunaria', event_category: 'Boda', placement: 'qa-lookup', utm_source: 'QA ficticio', utm_medium: '', utm_campaign: '', referrer_host: '', revenue_bs: null, revision: 0, notes: 'Consulta ficticia anterior a 180 días. Sin pago ni mensajes.', created_at: '2024-01-01T12:00:00Z', updated_at: '2024-01-01T12:00:00Z' };
 
 export default function CommercialLookupWorkbench() {
   const [mode, setMode] = useState<Mode>('ok'), [requests, setRequests] = useState(0), [mount, setMount] = useState(0);

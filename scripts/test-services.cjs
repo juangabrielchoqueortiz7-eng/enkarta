@@ -28,6 +28,7 @@ let actor = null;
 let rpcFailure = null;
 let queryFailure = null;
 let rpcObserver = null;
+let rpcReplyOverride;
 const cookieJar = new Map();
 const { hashPassword, signHostSession, signReviewSession, signDoorSession, signAdminSession, verifyHostSession, verifyReviewSession } = require('../src/lib/access.ts');
 const hostHash = hashPassword('test-host-password');
@@ -98,7 +99,7 @@ const queryClient = (table) => {
 require.cache[require.resolve('../src/lib/supabase/server.ts')] = { exports: { supabaseAdmin: {
   from: queryClient,
   storage: { from: () => ({ download: async () => ({data:null,error:{message:'No legacy fixture'}}) }) },
-  async rpc(name, params) { if(rpcFailure) return {data:null,error:rpcFailure}; try { const data=await rpc(name,params);if(rpcObserver)await rpcObserver(name,params);return {data,error:null}; } catch(error) { return {data:null,error}; } },
+  async rpc(name, params) { if(rpcFailure) return {data:null,error:rpcFailure}; if(rpcReplyOverride!==undefined)return {data:rpcReplyOverride,error:null}; try { const data=await rpc(name,params);if(rpcObserver)await rpcObserver(name,params);return {data,error:null}; } catch(error) { return {data:null,error}; } },
 } } };
 // Exercise real host/review authorization; only cookies and database transport are isolated.
 const { NextRequest } = require('next/server');
@@ -161,6 +162,8 @@ before(async () => {
     await db.exec(fs.readFileSync(path.join(root,'migrations/011_verifiable_addons.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/012_commercial_funnel.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/012_commercial_funnel.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/019_commercial_lead_updates.sql'),'utf8'));
+    await db.exec(fs.readFileSync(path.join(root,'migrations/019_commercial_lead_updates.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/016_guest_metadata.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/016_guest_metadata.sql'),'utf8'));
     await db.exec(fs.readFileSync(path.join(root,'migrations/017_guest_import_idempotency.sql'),'utf8'));
@@ -170,7 +173,7 @@ before(async () => {
   } catch(error) { throw new Error(`Migration: ${error.message} at ${error.position}; ${migration.slice(Math.max(0,Number(error.position)-100),Number(error.position)+100)}`); }
 });
 beforeEach(async () => {
-  actor=null; rpcFailure=null; queryFailure=null; rpcObserver=null; cookieJar.clear();
+  actor=null; rpcFailure=null; queryFailure=null; rpcObserver=null; rpcReplyOverride=undefined; cookieJar.clear();
   await db.exec('TRUNCATE invitations,guests,attendees,access_log,rsvps,builder_versions,save_date_responses,commercial_events,commercial_leads CASCADE');
   await db.query("INSERT INTO invitations(id,slug,status,rsvp_deadline) VALUES($1,'test-event','ready',((now() AT TIME ZONE 'America/La_Paz')::date+1)),($2,'other-event','ready',NULL)",[invId,otherId]);
   await db.query("UPDATE invitations SET host_email=id::text||'@test.invalid', host_password_hash=$1, review_email=id::text||'@review.invalid', review_password_hash=$2",[hostHash,reviewHash]);
@@ -658,7 +661,7 @@ test('commercial handoff records only an intent and preserves public design, pac
  assert.equal(await scalar("select count(*)::int as result from commercial_events where event_type='whatsapp_open'"),1);
  await db.query('update commercial_leads set design=$1 where id=$2',['azure',lead.id]); // Historical technical key, not a data migration.
  actor={role:'admin'};const dashboard=await commercialAdmin.GET();assert.equal(dashboard.status,200);const body=await dashboard.json();
- assert.equal(body.leads[0].design,'Lunaria');assert.equal(body.designs[0].label,'Lunaria');assert.equal(body.statuses[0].label,'Intento de contacto');assert.equal(body.summary.contacts,0);
+ assert.equal(body.leads[0].design,'Lunaria');assert.equal(body.leads[0].revision,0);assert.equal(body.designs[0].label,'Lunaria');assert.equal(body.statuses[0].label,'Intento de contacto');assert.equal(body.summary.contacts,0);
  assert.equal(await scalar('select design as result from commercial_leads where id=$1',[lead.id]),'azure','Reading the panel must not rewrite legacy records');
  actor=null;assert.equal((await commercialAdmin.GET()).status,401);
 });
@@ -686,7 +689,7 @@ test('commercial exact lookup finds historical references outside the dashboard 
  const dashboard=await(await commercialAdmin.GET()).json();assert.equal(dashboard.leads.length,0,'The reporting period excludes the old fixture');
  const response=await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=EK-A1B2C3D4'));assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');
  const body=await response.json();assert.equal(body.lead.id,id);assert.equal(body.lead.reference,'EK-A1B2C3D4');assert.equal(body.lead.design,'Lunaria');assert.equal(body.lead.notes,'Seguimiento ficticio');
- assert.deepEqual(Object.keys(body.lead).sort(),['id','reference','status','package_key','design','event_category','placement','utm_source','utm_medium','utm_campaign','referrer_host','revenue_bs','notes','created_at','updated_at'].sort());
+ assert.deepEqual(Object.keys(body.lead).sort(),['id','reference','status','package_key','design','event_category','placement','utm_source','utm_medium','utm_campaign','referrer_host','revenue_bs','notes','created_at','updated_at','revision'].sort());assert.equal(body.lead.revision,0);
  assert.ok(!JSON.stringify(body).includes(hash));assert.ok(!JSON.stringify(body).includes('private-landing'));assert.ok(!JSON.stringify(body).includes('private-content'));assert.ok(!JSON.stringify(body).includes('private-term'));
  assert.equal(await scalar('select design as result from commercial_leads where id=$1',[id]),'azure','A lookup cannot rewrite a legacy design');
  assert.equal(await scalar('select count(*)::int as result from commercial_leads'),1);assert.equal(await scalar('select count(*)::int as result from commercial_events'),0);assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),0);
@@ -715,9 +718,121 @@ test('commercial exact lookup returns a successful empty result only when the ex
 
 test('commercial exact lookup distinguishes unavailable schema and database failures from a missing lead',async()=>{
  actor={role:'admin'};
- for(const [error,status,code]of [[{code:'42P01',message:'private missing relation details'},503,'MIGRATION_REQUIRED'],[{code:'PGRST205',message:'private schema cache details'},503,'MIGRATION_REQUIRED'],[{code:'XX000',message:'private database details'},500,'READ_FAILED']]){
+ for(const [error,status,code]of [[{code:'42P01',message:'private missing relation details'},503,'MIGRATION_REQUIRED'],[{code:'PGRST205',message:'private schema cache details'},503,'MIGRATION_REQUIRED'],[{code:'42703',message:'private missing revision column'},503,'MIGRATION_REQUIRED'],[{code:'XX000',message:'private database details'},500,'READ_FAILED']]){
   queryFailure=error;const response=await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=EK-A1B2C3D4'));assert.equal(response.status,status);assert.equal(response.headers.get('cache-control'),'no-store');const body=await response.json();assert.equal(body.code,code);assert.equal(body.lead,undefined);assert.ok(!JSON.stringify(body).includes('private'));
  }
+});
+
+const commercialUpdateFixture=async(extra={})=>{
+ const id=randomUUID(),hash=createHash('sha256').update('commercial-update-private-session').digest('hex');
+ await db.query("insert into commercial_leads(id,reference,session_hash,design,landing_path,utm_content,utm_term) values($1,'EK-A1B2C3D4',$2,'azure','/private-landing','private-content','private-term')",[id,hash]);
+ return {id,requestId:randomUUID(),expectedRevision:0,status:'contacted',revenueBs:200,notes:'Seguimiento ficticio',...extra};
+};
+const commercialPatch=(body)=>commercialAdmin.PATCH(new NextRequest('https://enkarta.test/api/admin/commercial',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}));
+
+test('019 commercial updates authenticate before parsing and deny every non-admin role',async()=>{
+ rpcFailure={code:'XX000',message:'private SQL must not be reached'};
+ for(const value of [null,{role:'host',id:invId},{role:'review',id:invId},{role:'door',id:invId},{role:'partner',id:invId}]){
+  actor=value;const response=await commercialAdmin.PATCH(new NextRequest('https://enkarta.test/api/admin/commercial',{method:'PATCH',body:'not JSON'}));
+  assert.equal(response.status,401);assert.equal(response.headers.get('cache-control'),'no-store');assert.deepEqual(await response.json(),{error:'No autorizado'});
+  assert.equal((await commercialAdmin.GET()).status,401);
+ }
+});
+
+test('019 commercial updates require an idempotency key and strict revision, status, notes and cents',async()=>{
+ const input=await commercialUpdateFixture();actor={role:'admin'};rpcFailure={code:'XX000',message:'invalid input must not reach SQL'};
+ const invalid=[null,[],{}, {...input,id:'bad'}, {...input,requestId:'bad'}, {...input,requestId:undefined}, {...input,expectedRevision:undefined}, {...input,expectedRevision:-1}, {...input,expectedRevision:0.5}, {...input,expectedRevision:'0'}, {...input,status:'sold'}, {...input,notes:'x'.repeat(1001)}, {...input,notes:{}}, {...input,revenueBs:-1}, {...input,revenueBs:1000000.01}, {...input,revenueBs:1.001}, {...input,revenueBs:true}, {...input,revenueBs:{}}];
+ for(const body of invalid){const response=await commercialPatch(body);assert.equal(response.status,400,JSON.stringify(body));assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).code,'INVALID_UPDATE');}
+ const malformed=await commercialAdmin.PATCH(new NextRequest('https://enkarta.test/api/admin/commercial',{method:'PATCH',body:'not JSON'}));assert.equal(malformed.status,400);assert.equal((await malformed.json()).code,'INVALID_UPDATE');
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),0);assert.equal(await scalar('select revision as result from commercial_leads where id=$1',[input.id]),0);
+});
+
+test('019 commercial update atomically saves a canonical whitelist, history and one replayable receipt',async()=>{
+ const input=await commercialUpdateFixture({notes:'  Seguimiento ficticio  '});actor={role:'admin'};
+ let response=await commercialPatch(input);assert.equal(response.status,200,JSON.stringify(await response.clone().json()));assert.equal(response.headers.get('cache-control'),'no-store');const saved=await response.json();
+ assert.equal(saved.outcome,'saved');assert.equal(saved.requestId,input.requestId);assert.equal(saved.lead.revision,1);assert.equal(saved.lead.status,'contacted');assert.equal(saved.lead.notes,'Seguimiento ficticio');assert.equal(saved.lead.revenue_bs,200);assert.equal(saved.lead.design,'Lunaria');
+ assert.deepEqual(Object.keys(saved.lead).sort(),['id','reference','status','package_key','design','event_category','placement','utm_source','utm_medium','utm_campaign','referrer_host','revenue_bs','notes','created_at','updated_at','revision'].sort());
+ for(const privateValue of ['private-session','private-landing','private-content','private-term','session_hash'])assert.ok(!JSON.stringify(saved).includes(privateValue));
+ assert.equal(await scalar('select design as result from commercial_leads where id=$1',[input.id]),'azure');
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),1);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),1);
+ const history=(await db.query('select from_status,to_status,revenue_bs,note from commercial_lead_history')).rows[0];assert.equal(history.from_status,'whatsapp_open');assert.equal(history.to_status,'contacted');assert.equal(Number(history.revenue_bs),200);assert.equal(history.note,'Seguimiento ficticio');
+ response=await commercialPatch(input);assert.equal(response.status,200);const replay=await response.json();assert.equal(replay.outcome,'replayed');assert.deepEqual(replay.lead,saved.lead);
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),1);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),1);
+ const dashboard=await(await commercialAdmin.GET()).json();assert.equal(dashboard.leads[0].revision,1);assert.equal(dashboard.leads[0].notes,'Seguimiento ficticio');
+ const lookup=await(await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=EK-A1B2C3D4'))).json();assert.equal(lookup.lead.revision,1);
+});
+
+test('019 replay preserves the original receipt after later edits and never rewrites the current lead',async()=>{
+ const first=await commercialUpdateFixture();actor={role:'admin'};const firstSaved=await(await commercialPatch(first)).json();
+ const second={...first,requestId:randomUUID(),expectedRevision:1,status:'reserved',revenueBs:400,notes:'Nueva revisión ficticia'};
+ const secondResponse=await commercialPatch(second);assert.equal(secondResponse.status,200);assert.equal((await secondResponse.json()).lead.revision,2);
+ const replay=await commercialPatch(first);assert.equal(replay.status,200);const body=await replay.json();assert.equal(body.outcome,'replayed');assert.deepEqual(body.lead,firstSaved.lead);
+ const current=(await db.query('select status,notes,revision from commercial_leads where id=$1',[first.id])).rows[0];assert.deepEqual(current,{status:'reserved',notes:'Nueva revisión ficticia',revision:2});assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),2);
+});
+
+test('019 unchanged saves are acknowledged once without inventing history or incrementing revision',async()=>{
+ const input=await commercialUpdateFixture({status:'whatsapp_open',revenueBs:null,notes:''});actor={role:'admin'};
+ let response=await commercialPatch(input);assert.equal(response.status,200);let body=await response.json();assert.equal(body.outcome,'unchanged');assert.equal(body.lead.revision,0);
+ response=await commercialPatch(input);assert.equal(response.status,200);body=await response.json();assert.equal(body.outcome,'replayed');assert.equal(body.lead.revision,0);
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),0);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),1);
+});
+
+test('019 competing commercial updates reject stale revisions and expose only the canonical current contact',async()=>{
+ const input=await commercialUpdateFixture();actor={role:'admin'};
+ const [first,second]=await Promise.all([commercialPatch(input),commercialPatch({...input,requestId:randomUUID(),status:'lost',notes:'No debe reemplazar'})]);
+ assert.deepEqual([first.status,second.status].sort(),[200,409]);const rejected=await(first.status===409?first:second).json();assert.equal(rejected.code,'REVISION_CONFLICT');assert.equal(rejected.lead.revision,1);assert.ok(!JSON.stringify(rejected).includes('session_hash'));
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),1);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),1);
+});
+
+test('019 request IDs cannot be reused for changed payloads or another contact',async()=>{
+ const input=await commercialUpdateFixture();actor={role:'admin'};assert.equal((await commercialPatch(input)).status,200);
+ for(const modified of [{...input,notes:'Otros cambios'},{...input,id:randomUUID()},{...input,expectedRevision:1}]){
+  const response=await commercialPatch(modified);assert.equal(response.status,409);assert.equal(response.headers.get('cache-control'),'no-store');const body=await response.json();assert.equal(body.code,'REQUEST_REUSED');assert.equal(body.lead,undefined);
+ }
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),1);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),1);
+});
+
+test('019 missing commercial contacts return 404 without creating a contact, history or receipt',async()=>{
+ const input=await commercialUpdateFixture();actor={role:'admin'};const response=await commercialPatch({...input,id:randomUUID()});assert.equal(response.status,404);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).code,'NOT_FOUND');
+ assert.equal(await scalar('select count(*)::int as result from commercial_leads'),1);assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),0);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),0);
+});
+
+test('019 commercial writes fail closed when the migration is unavailable and do not leak database errors',async()=>{
+ const input=await commercialUpdateFixture();actor={role:'admin'};
+ for(const code of ['42883','PGRST202','42703','42P01']){rpcFailure={code,message:'private schema details'};const response=await commercialPatch(input);assert.equal(response.status,503);assert.equal(response.headers.get('cache-control'),'no-store');const body=await response.json();assert.equal(body.code,'MIGRATION_REQUIRED');assert.match(body.error,/019_commercial_lead_updates\.sql/);assert.ok(!JSON.stringify(body).includes('private'));}
+ rpcFailure={code:'XX000',message:'private failing SQL'};const response=await commercialPatch(input);assert.equal(response.status,500);const body=await response.json();assert.equal(body.code,'WRITE_UNCERTAIN');assert.ok(!JSON.stringify(body).includes('private'));
+ assert.equal(await scalar('select revision as result from commercial_leads where id=$1',[input.id]),0);assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),0);
+});
+
+test('019 ambiguous responses can be retried with the same request without duplicating saved work',async()=>{
+ const input=await commercialUpdateFixture();actor={role:'admin'};rpcObserver=()=>{throw new Error('private simulated transport loss after commit');};
+ const lost=await commercialPatch(input);assert.equal(lost.status,500);assert.equal((await lost.json()).code,'WRITE_UNCERTAIN');assert.equal(await scalar('select revision as result from commercial_leads where id=$1',[input.id]),1);
+ rpcObserver=null;const retry=await commercialPatch(input);assert.equal(retry.status,200);assert.equal((await retry.json()).outcome,'replayed');assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),1);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),1);
+});
+
+test('019 a failed history or receipt insert rolls back the commercial change and revision together',async()=>{
+ const input=await commercialUpdateFixture();actor={role:'admin'};
+ await db.exec("CREATE OR REPLACE FUNCTION public.test_reject_commercial_save() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'private failing test insert'; END; $$;");
+ try{
+  for(const table of ['commercial_lead_history','commercial_lead_update_requests']){
+   await db.exec(`CREATE TRIGGER test_reject_commercial_save BEFORE INSERT ON public.${table} FOR EACH ROW EXECUTE FUNCTION public.test_reject_commercial_save()`);
+   try{const response=await commercialPatch(input);assert.equal(response.status,500);assert.equal((await response.json()).code,'WRITE_UNCERTAIN');assert.equal(await scalar('select revision as result from commercial_leads where id=$1',[input.id]),0);assert.equal(await scalar('select status as result from commercial_leads where id=$1',[input.id]),'whatsapp_open');assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),0);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),0);}
+   finally{await db.exec(`DROP TRIGGER test_reject_commercial_save ON public.${table}`);}
+  }
+ }finally{await db.exec('DROP FUNCTION public.test_reject_commercial_save()');}
+});
+
+test('019 malformed or mismatched RPC receipts cannot produce a success or leak private fields',async()=>{
+ const input=await commercialUpdateFixture();actor={role:'admin'};const raw=(await db.query('select * from commercial_leads where id=$1',[input.id])).rows[0];const lead=wireRow(raw);
+ const receiptLead={...lead,status:input.status,revenue_bs:input.revenueBs,notes:input.notes,revision:1};
+ const receipts=[null,[],{}, {outcome:'saved',requestId:randomUUID(),lead:receiptLead}, {outcome:'saved',requestId:input.requestId,lead:null}, {outcome:'saved',requestId:input.requestId,lead:{...receiptLead,id:randomUUID()}}, {outcome:'saved',requestId:input.requestId,lead:{...receiptLead,revision:undefined}}, {outcome:'saved',requestId:input.requestId,lead:{...receiptLead,revision:-1}}, {outcome:'saved',requestId:input.requestId,lead:{...receiptLead,design:undefined}}, {outcome:'saved',requestId:input.requestId,lead:{...receiptLead,status:'reserved'}}, {outcome:'saved',requestId:input.requestId,lead:{...receiptLead,notes:'otros cambios'}}, {outcome:'saved',requestId:input.requestId,lead:{...receiptLead,revenue_bs:999}}, {outcome:'saved',requestId:input.requestId,lead:{...receiptLead,revision:2}}, {outcome:'unchanged',requestId:input.requestId,lead:receiptLead}, {outcome:'surprise',requestId:input.requestId,lead}, {outcome:'conflict',requestId:input.requestId,lead:{...lead,notes:null}}, {outcome:'conflict',requestId:input.requestId,lead}];
+ for(const receipt of receipts){rpcReplyOverride=receipt;const response=await commercialPatch(input);assert.equal(response.status,500,JSON.stringify(receipt));assert.equal(response.headers.get('cache-control'),'no-store');const body=await response.json();assert.equal(body.code,'WRITE_UNCERTAIN');assert.equal(body.lead,undefined);assert.ok(!JSON.stringify(body).includes('session_hash'));}
+ rpcReplyOverride={outcome:'saved',requestId:input.requestId,lead:receiptLead};const response=await commercialPatch(input);assert.equal(response.status,200);const body=await response.json();assert.equal(body.lead.design,'Lunaria');assert.equal(body.lead.session_hash,undefined);assert.equal(body.lead.landing_path,undefined);
+});
+
+test('019 missing revision columns fail dashboard and exact lookup closed with a migration diagnostic',async()=>{
+ actor={role:'admin'};queryFailure={code:'42703',message:'private missing revision details'};
+ for(const response of [await commercialAdmin.GET(),await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=EK-A1B2C3D4'))]){assert.equal(response.status,503);assert.equal(response.headers.get('cache-control'),'no-store');const body=await response.json();assert.equal(body.code,'MIGRATION_REQUIRED');assert.match(body.error,/019_commercial_lead_updates\.sql/);assert.ok(!JSON.stringify(body).includes('private'));assert.equal(body.leads,undefined);}
 });
 
 test('sales config is admin-only and never cacheable for other roles',async()=>{

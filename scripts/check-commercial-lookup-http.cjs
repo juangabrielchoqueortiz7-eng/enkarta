@@ -114,7 +114,7 @@ async function run() {
   expect(Date.parse(before.created_at) < Date.now() - 180 * 86_400_000, 'The fixture must lie outside the dashboard reporting period.');
   expect((await fixtureHistory()).length === 0, 'The new fictional reference must have no history.');
 
-  const expectedFields = ['id', 'reference', 'status', 'package_key', 'design', 'event_category', 'placement', 'utm_source', 'utm_medium', 'utm_campaign', 'referrer_host', 'revenue_bs', 'notes', 'created_at', 'updated_at'].sort().join(',');
+  const expectedFields = ['id', 'reference', 'status', 'package_key', 'design', 'event_category', 'placement', 'utm_source', 'utm_medium', 'utm_campaign', 'referrer_host', 'revenue_bs', 'notes', 'created_at', 'updated_at', 'revision'].sort().join(',');
   for (const reference of [fixture.reference, '  ' + fixture.reference.toLowerCase() + '  ']) {
     const response = await lookup(reference); privateStatus(response, 200, 'Authenticated exact lookup');
     const body = await response.json();

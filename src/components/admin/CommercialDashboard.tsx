@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { COMMERCIAL_LEAD_STATUSES, leadStatusLabel, type CommercialLeadStatus } from '@/lib/commercial';
 import SalesToolkit from '@/components/admin/SalesToolkit';
+import CommercialLeadEditor from '@/components/admin/CommercialLeadEditor';
 import CommercialReferenceSearch from '@/components/admin/CommercialReferenceSearch';
 import LeadSummary from '@/components/admin/CommercialLeadSummary';
 import type { CommercialLead as Lead } from '@/lib/commercial-lookup';
@@ -16,38 +17,9 @@ type Dashboard = {
   leads: Lead[];
 };
 
-const colors: Record<CommercialLeadStatus, string> = {
-  whatsapp_open: 'border-sky-200 bg-sky-50 text-sky-700', contacted: 'border-violet-200 bg-violet-50 text-violet-700',
-  reserved: 'border-amber-200 bg-amber-50 text-amber-800', won: 'border-emerald-200 bg-emerald-50 text-emerald-700', lost: 'border-gray-200 bg-gray-50 text-gray-500',
-};
-
-function LeadEditor({ lead, onSaved }: { lead: Lead; onSaved: () => void }) {
-  const [status, setStatus] = useState(lead.status);
-  const [revenue, setRevenue] = useState(lead.revenue_bs?.toString() ?? '');
-  const [notes, setNotes] = useState(lead.notes || '');
-  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const dirty = status !== lead.status || revenue !== (lead.revenue_bs?.toString() ?? '') || notes !== (lead.notes || '');
-  const save = async () => {
-    setState('saving');
-    try {
-      const response = await fetch('/api/admin/commercial', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: lead.id, status, revenueBs: revenue, notes }) });
-      if (!response.ok) throw new Error();
-      setState('saved'); onSaved();
-    } catch { setState('error'); }
-  };
-  return <div className="grid gap-2 lg:grid-cols-[150px_110px_minmax(180px,1fr)_82px]">
-    <select aria-label={`Estado de ${lead.reference}`} value={status} onChange={event => { setStatus(event.target.value as CommercialLeadStatus); setState('idle'); }} className={`min-h-10 rounded-xl border px-2 text-xs font-outfit ${colors[status]}`}>
-      {COMMERCIAL_LEAD_STATUSES.map(item => <option key={item} value={item}>{leadStatusLabel(item)}</option>)}
-    </select>
-    <input aria-label={`Venta en bolivianos de ${lead.reference}`} type="number" min={0} step="0.01" value={revenue} onChange={event => { setRevenue(event.target.value); setState('idle'); }} placeholder="Venta Bs" className="min-h-10 rounded-xl border border-gray-200 px-3 text-xs outline-none" />
-    <input aria-label={`Nota de ${lead.reference}`} maxLength={1000} value={notes} onChange={event => { setNotes(event.target.value); setState('idle'); }} placeholder="Nota breve, sin copiar conversaciones ni datos sensibles" className="min-h-10 rounded-xl border border-gray-200 px-3 text-xs outline-none" />
-    <button type="button" onClick={() => void save()} disabled={!dirty || state === 'saving'} className="min-h-10 rounded-xl bg-[#8b7651] px-3 text-xs font-semibold text-white disabled:opacity-35">{state === 'saving' ? '…' : state === 'saved' ? 'Listo' : state === 'error' ? 'Reintentar' : 'Guardar'}</button>
-  </div>;
-}
-
-function LeadCard({ lead, onSaved }: { lead: Lead; onSaved: () => void }) {
+function LeadCard({ lead, onSaved, onActivityChange }: { lead: Lead; onSaved: (lead: Lead) => void; onActivityChange: (id: string, active: boolean) => void }) {
   const source = lead.utm_source || lead.referrer_host || 'Directo';
-  return <article className="min-w-0 p-4 sm:p-5"><div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong translate="no" className="font-mono text-sm text-[#765f39]">{lead.reference}</strong><span className="rounded-full bg-[#f1ece3] px-2 py-1 font-outfit text-[9px] uppercase text-[#75664e]">{lead.package_key === 'general' ? 'Sin paquete' : lead.package_key}</span>{lead.event_category && <span className="rounded-full bg-rose-50 px-2 py-1 font-outfit text-[9px] text-rose-600">{lead.event_category}</span>}{lead.design && <span className="rounded-full bg-gray-50 px-2 py-1 font-outfit text-[9px] text-gray-500">{lead.design}</span>}</div><p className="mt-1 break-words font-outfit text-xs text-gray-600">{source}{lead.utm_campaign ? ` · ${lead.utm_campaign}` : ''} · {new Date(lead.created_at).toLocaleString('es-BO')}</p></div></div><LeadEditor lead={lead} onSaved={onSaved} /></article>;
+  return <article className="min-w-0 p-4 sm:p-5"><div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong translate="no" className="font-mono text-sm text-[#765f39]">{lead.reference}</strong><span className="rounded-full bg-[#f1ece3] px-2 py-1 font-outfit text-[9px] uppercase text-[#75664e]">{lead.package_key === 'general' ? 'Sin paquete' : lead.package_key}</span>{lead.event_category && <span className="rounded-full bg-rose-50 px-2 py-1 font-outfit text-[9px] text-rose-600">{lead.event_category}</span>}{lead.design && <span className="rounded-full bg-gray-50 px-2 py-1 font-outfit text-[9px] text-gray-500">{lead.design}</span>}</div><p className="mt-1 break-words font-outfit text-xs text-gray-600">{source}{lead.utm_campaign ? ` · ${lead.utm_campaign}` : ''} · {new Date(lead.created_at).toLocaleString('es-BO')}</p></div></div><CommercialLeadEditor lead={lead} onSaved={onSaved} onActivityChange={onActivityChange} /></article>;
 }
 
 export default function CommercialDashboard() {
@@ -55,18 +27,51 @@ export default function CommercialDashboard() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | CommercialLeadStatus>('all');
+  const activeIdsRef = useRef(new Set<string>());
+  const [activeIds, setActiveIds] = useState<ReadonlySet<string>>(() => new Set());
+  const loadSequence = useRef(0), activeLoad = useRef<AbortController | null>(null);
+  const handleActivity = useCallback((id: string, active: boolean) => {
+    if (activeIdsRef.current.has(id) === active) return;
+    if (active) activeIdsRef.current.add(id); else activeIdsRef.current.delete(id);
+    setActiveIds(new Set(activeIdsRef.current));
+  }, []);
   const load = useCallback(async () => {
+    const sequence = ++loadSequence.current;
+    activeLoad.current?.abort();
+    const controller = new AbortController(); activeLoad.current = controller;
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/commercial', { cache: 'no-store' });
+      const response = await fetch('/api/admin/commercial', { cache: 'no-store', signal: controller.signal });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.code === 'MIGRATION_REQUIRED' ? 'Ejecuta migrations/012_commercial_funnel.sql en Supabase para activar este panel.' : body.error || 'No se pudo cargar.');
-      setData(body); setError('');
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo cargar.'); }
-    finally { setLoading(false); }
+      if (!response.ok) throw new Error(body.code === 'MIGRATION_REQUIRED' ? 'Comprueba migrations/012_commercial_funnel.sql y migrations/019_commercial_lead_updates.sql en Supabase para activar este panel.' : body.error || 'No se pudo cargar.');
+      if (sequence !== loadSequence.current || controller.signal.aborted) return;
+      setData(current => {
+        const previous = new Map(current?.leads.map(lead => [lead.id, lead]) ?? []);
+        const received = new Set<string>();
+        const leads = (body as Dashboard).leads.map(lead => {
+          received.add(lead.id);
+          const prior = previous.get(lead.id);
+          return prior && prior.revision > lead.revision ? prior : lead;
+        });
+        for (const prior of previous.values()) if (activeIdsRef.current.has(prior.id) && !received.has(prior.id)) leads.push(prior);
+        return { ...body, leads };
+      });
+      setError('');
+    } catch (cause) {
+      if (sequence === loadSequence.current && !controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'No se pudo cargar.');
+    } finally {
+      if (sequence === loadSequence.current) { activeLoad.current = null; setLoading(false); }
+    }
   }, []);
-  useEffect(() => { void load(); }, [load]);
-  const leads = useMemo(() => data?.leads.filter(lead => filter === 'all' || lead.status === filter) ?? [], [data, filter]);
+  const handleSaved = (saved: Lead) => {
+    setData(current => current ? { ...current, leads: current.leads.map(lead => lead.id === saved.id && saved.revision >= lead.revision ? saved : lead) } : current);
+    void load();
+  };
+  useEffect(() => {
+    void load();
+    return () => { loadSequence.current += 1; activeLoad.current?.abort(); activeLoad.current = null; };
+  }, [load]);
+  const visibleCount = useMemo(() => data?.leads.reduce((count, lead) => count + Number(filter === 'all' || lead.status === filter), 0) ?? 0, [data, filter]);
 
   if (loading && !data) return <div className="flex min-h-72 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-enkarta-gold border-t-transparent" /></div>;
   if (error && !data) return <div className="space-y-6"><CommercialReferenceSearch renderLead={lead => <LeadSummary lead={lead} />} /><div className="rounded-2xl border border-amber-200 bg-amber-50 p-6"><h2 className="font-playfair text-2xl text-amber-950">No se pudo cargar el embudo</h2><p role="alert" className="mt-2 font-outfit text-sm text-amber-800">{error}</p><button type="button" onClick={() => void load()} className="mt-4 min-h-11 rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">Volver a comprobar</button></div></div>;
@@ -91,7 +96,9 @@ export default function CommercialDashboard() {
 
     <section className="overflow-hidden rounded-2xl border border-[#e4dfd4] bg-white">
       <div className="flex flex-col gap-3 border-b border-gray-100 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-playfair text-2xl text-gray-800">Contactos de WhatsApp</h3><p className="mt-1 font-outfit text-[11px] text-gray-400">Busca la referencia en la conversación y actualiza su avance.</p></div><select aria-label="Filtrar contactos" value={filter} onChange={event => setFilter(event.target.value as typeof filter)} className="rounded-xl border border-gray-200 px-3 py-2 text-xs"><option value="all">Todos</option>{COMMERCIAL_LEAD_STATUSES.map(status => <option key={status} value={status}>{leadStatusLabel(status)}</option>)}</select></div>
-      {leads.length === 0 ? <p className="p-10 text-center font-outfit text-sm text-gray-400">No hay contactos en este estado.</p> : <div className="divide-y divide-gray-100">{leads.map(lead => <LeadCard key={lead.id} lead={lead} onSaved={() => void load()} />)}</div>}
+      {activeIds.size > 0 && filter !== 'all' && <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 p-4"><p role="status" className="font-outfit text-sm leading-6 text-amber-950">Hay cambios o guardados pendientes. Se conservan aunque este filtro oculte el contacto.</p><button type="button" onClick={() => setFilter('all')} className="min-h-11 rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#765f39]">Ver todos</button></div>}
+      {visibleCount === 0 && <p className="p-10 text-center font-outfit text-sm text-gray-400">No hay contactos en este estado.</p>}
+      <div className="divide-y divide-gray-100">{data.leads.map(lead => <div key={lead.id} hidden={filter !== 'all' && lead.status !== filter}><LeadCard lead={lead} onSaved={handleSaved} onActivityChange={handleActivity} /></div>)}</div>
     </section>
   </div>;
 }

@@ -2,7 +2,7 @@
 
 ## Alcance
 
-Admin → Ventas permite consultar una referencia comercial completa `EK-XXXXXXXX`. La búsqueda exacta usa el índice único existente de `commercial_leads.reference`: encuentra contactos anteriores a los 180 días y fuera del límite del listado del embudo. No requiere una migración nueva.
+Admin → Ventas permite consultar una referencia comercial completa `EK-XXXXXXXX`. La búsqueda exacta usa el índice único existente de `commercial_leads.reference`: encuentra contactos anteriores a los 180 días y fuera del límite del listado del embudo. Su lanzamiento original no requirió una migración nueva. La incorporación posterior del guardado seguro requiere la 019 para leer y validar la revisión; ver `docs/SEGUIMIENTO_COMERCIAL_SEGURO.md`.
 
 La ficha es de **solo lectura** y muestra referencia, estado consultado, diseño público, paquete, fecha y nota. Se puede volver a consultar con el mismo botón. La edición permanece en las filas existentes del listado; no se monta un segundo editor independiente del mismo contacto. Una consulta no confirma mensajes enviados, reservas ni pagos, y no crea eventos de seguimiento.
 
@@ -29,7 +29,7 @@ No cambia el período, los filtros ni los cálculos del embudo. Sus cifras y lis
 
 ## Pendientes independientes
 
-La edición comercial existente necesita una operación transaccional que guarde contacto e historial juntos, control de conflictos entre dispositivos y reconciliación de respuestas de escritura inciertas. Esta mejora de consulta no modifica ni acredita esos comportamientos. También queda separar las métricas agregadas del límite de filas del listado. Son cambios posteriores con regresiones propias; no se presentan como resueltos por añadir un buscador.
+La operación transaccional, el control de conflictos y la recuperación de guardados se implementan en un bloque posterior documentado en `docs/SEGUIMIENTO_COMERCIAL_SEGURO.md`, con migración y aceptación propias. El buscador por sí solo no acredita esos comportamientos. Sigue pendiente separar las métricas agregadas del límite de filas del listado.
 
 BCP sigue bloqueado. No se modificaron diseños, presets ni recursos originales.
 

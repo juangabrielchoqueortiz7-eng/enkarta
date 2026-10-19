@@ -26,6 +26,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [view, setView] = useState<'invitations' | 'confirmations' | 'commercial' | 'partners' | 'launch'>('invitations');
+  const [commercialOpened, setCommercialOpened] = useState(false);
+  useEffect(() => { if (isAuthenticated && view === 'commercial') setCommercialOpened(true); }, [isAuthenticated, view]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [validityFilter, setValidityFilter] = useState('all');
@@ -92,6 +94,7 @@ export default function AdminPage() {
   const handleLogout = async () => {
     await fetch('/api/admin/auth', { method: 'DELETE' });
     setIsAuthenticated(false);
+    setCommercialOpened(false);
     setPassword('');
   };
 
@@ -288,14 +291,14 @@ export default function AdminPage() {
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+        {(commercialOpened || view === 'commercial') && <div hidden={view !== 'commercial'}><CommercialDashboard /></div>}
+
         {view === 'confirmations' ? (
           <>
             <h2 className="font-playfair text-2xl text-gray-900 mb-6">Confirmaciones</h2>
             <ConfirmationsDashboard invitations={invitations} />
           </>
-        ) : view === 'commercial' ? (
-          <CommercialDashboard />
-        ) : view === 'partners' ? (
+        ) : view === 'commercial' ? null : view === 'partners' ? (
           <PartnersDashboard />
         ) : view === 'launch' ? (
           <LaunchDashboard />
