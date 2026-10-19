@@ -44,3 +44,17 @@ node scripts/check-sales-toolkit-http.cjs --production --expect-project eodedock
 La vinculación se comprueba al cargar el cotizador. La revocación de una cookie
 desde otra pestaña no implica un borrado en vivo del texto que ya estaba en memoria.
 BCP continúa bloqueado hasta disponer de documentación e integración oficiales.
+
+El 19 de octubre de 2026 se publicó `6c011cd` en el despliegue
+`dpl_FC41wKFY4Q9o81taU8EdjBgTDZwH`, confirmado `Ready` con el alias de producción.
+Pasaron las 341 pruebas locales, lint, TypeScript, build y
+[CI del cambio](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39269184967).
+La inspección local de 390 y 1440 px no mostró desbordamiento horizontal; se comprobó
+recuperación, aislamiento de sesiones, copia simulada, datos corruptos y fallos de
+conexión, escritura y descarte. La fecha de la fixture completa se recuperó intacta;
+la entrada con el selector de fecha nativo no se certificó mediante automatización.
+Se limpiaron las dos claves de QA y se verificaron los 129 originales publicados por
+tamaño y SHA-256. Las tres comprobaciones HTTP protegieron la configuración, negaron
+el acceso a la página de desarrollo y confirmaron estabilidad del identificador de
+sesión por el acceso administrativo normal. Se retiró la cookie temporal de esa
+verificación, sin crear ni modificar datos SQL.
