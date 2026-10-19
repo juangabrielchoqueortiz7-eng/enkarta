@@ -27,6 +27,6 @@ export default function CommercialLookupWorkbench() {
     <h1 className="text-2xl font-semibold">Búsqueda comercial QA</h1><p>Solo datos ficticios en memoria. Sin consultas reales, mensajes ni pagos.</p>
     <div className="flex flex-wrap items-end gap-4"><label className="grid gap-2">Respuesta QA<select aria-label="Respuesta QA" value={mode} onChange={event => setMode(event.target.value as Mode)} className="min-h-11 rounded-xl border border-gray-300 bg-white px-3 text-base"><option value="ok">Normal</option><option value="offline">Sin conexión</option><option value="incomplete">Incompleta</option><option value="expired">Sesión terminada</option><option value="mismatch">Otra referencia</option><option value="slow">Lenta (1,5 s)</option></select></label><button type="button" className="min-h-11 rounded-xl border border-gray-300 bg-white px-4" onClick={() => { setRequests(0); setMode('ok'); setMount(value => value + 1); }}>Limpiar QA</button><p role="status">Consultas simuladas: {requests}</p></div>
     <p>Referencias ficticias: EK-A1B2C3D4 (Lunaria antigua), EK-1234ABCD (Granate); las demás no existen.</p>
-    <CommercialReferenceSearch key={mount} transport={transport} renderLead={found => <CommercialLeadSummary lead={found} />} />
+    <CommercialReferenceSearch key={mount} transport={transport} renderLead={found => <CommercialLeadSummary lead={found} transport={transport} />} />
   </main>;
 }

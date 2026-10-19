@@ -27,6 +27,7 @@ const receipt = createHash('sha256').update('test-only-receipt').digest('hex');
 let actor = null;
 let rpcFailure = null;
 let queryFailure = null;
+let queryReplyOverride;
 let rpcObserver = null;
 let rpcReplyOverride;
 let queryCalls = [];
@@ -59,16 +60,17 @@ async function rpc(name, params) {
 }
 const queryClient = (table) => {
   queryCalls.push(table);
-  assert.ok(['guests', 'attendees', 'access_log', 'rsvps', 'invitations', 'builder_versions', 'builder_review_notes', 'invitation_validity_events', 'save_date_responses', 'commercial_leads', 'commercial_events'].includes(table));
+  assert.ok(['guests', 'attendees', 'access_log', 'rsvps', 'invitations', 'builder_versions', 'builder_review_notes', 'invitation_validity_events', 'save_date_responses', 'commercial_leads', 'commercial_events', 'commercial_lead_history'].includes(table));
   let columns = '*', filters = [], limit, update, insert, remove, sort = [], historyCursor;
   const query = {
     select(value = '*') { columns = value; return this; },
     eq(column,value) { filters.push([column,value,'=']); return this; },
     gte(column,value) { filters.push([column,value,'>=']); return this; },
+    lte(column,value) { filters.push([column,value,'<=']); return this; },
     ilike(column,value) { filters.push([column,value,'ILIKE']); return this; },
     or(expression) {
-      const match = /^at\.lt\.([^,]+),and\(at\.eq\.([^,]+),id\.lt\.([a-f0-9-]+)\)$/.exec(expression);
-      assert.ok(match); assert.equal(match[1],match[2]); historyCursor={at:match[1],id:match[3]}; return this;
+      const match = /^(at|created_at)\.lt\.([^,]+),and\((at|created_at)\.eq\.([^,]+),id\.lt\.([a-f0-9-]+)\)$/.exec(expression);
+      assert.ok(match); assert.equal(match[1],match[3]); assert.equal(match[2],match[4]); historyCursor={column:match[1],at:match[2],id:match[5]}; return this;
     },
     update(value) { update=value; return this; },
     insert(value) { insert=Array.isArray(value) ? value : [value]; return this; },
@@ -80,12 +82,13 @@ const queryClient = (table) => {
     async then(ok, fail) {
       try {
         if (queryFailure) return ok({data:null,error:queryFailure});
+        if (queryReplyOverride) { const reply=queryReplyOverride(table); if(reply!==undefined)return ok(reply); }
         let values = filters.map(([,value])=>value);
         const conditions=filters.map(([col,,op],i)=>`${col} ${op} $${i+1}`);
-        if(historyCursor){values.push(historyCursor.at,historyCursor.id);const n=values.length;conditions.push(`(at < $${n-1} OR (at = $${n-1} AND id < $${n}))`);}
+        if(historyCursor){values.push(historyCursor.at,historyCursor.id);const n=values.length,column=historyCursor.column;conditions.push(`(${column} < $${n-1} OR (${column} = $${n-1} AND id < $${n}))`);}
         const where = conditions.length ? ' where '+conditions.join(' and ') : '';
         // PostgREST preserves timestamp microseconds; JS Date (PGlite's default) truncates them.
-        const projection=table==='access_log'?columns.replace(/\bat\b/g,`to_char(at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS at`):columns;
+        const projection=table==='access_log'?columns.replace(/\bat\b/g,`to_char(at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS at`):table==='commercial_lead_history'?columns.replace(/\bcreated_at\b/g,`to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at`):columns;
         let sql = `select ${projection} from public.${table}${where}${sort.length ? ' order by '+sort.join(',') : ''}${limit ? ' limit '+limit : ''}`;
         if (update) { const entries=Object.entries(update); sql=`update public.${table} set ${entries.map(([key],i)=>`${key}=$${values.length+i+1}`).join(',')}${where} returning ${columns}`; values.push(...entries.map(([,value])=>value)); }
         if (remove) sql=`delete from public.${table}${where} returning ${columns}`;
@@ -121,6 +124,8 @@ const dashboardRoute = require('../src/app/api/host/dashboard/route.ts');
 const commercialContact = require('../src/app/contacto/whatsapp/route.ts');
 const commercialAdmin = require('../src/app/api/admin/commercial/route.ts');
 const commercialLookup = require('../src/app/api/admin/commercial/lookup/route.ts');
+const commercialHistory = require('../src/app/api/admin/commercial/history/route.ts');
+const { encodeCommercialHistoryCursor } = require('../src/lib/commercial-history.ts');
 const salesConfig = require('../src/app/api/admin/sales-config/route.ts');
 const rosterRoute = require('../src/app/api/host/roster/route.ts');
 const managedRosterRoute = require('../src/app/api/guests/roster/route.ts');
@@ -178,7 +183,7 @@ before(async () => {
   } catch(error) { throw new Error(`Migration: ${error.message} at ${error.position}; ${migration.slice(Math.max(0,Number(error.position)-100),Number(error.position)+100)}`); }
 });
 beforeEach(async () => {
-  actor=null; rpcFailure=null; queryFailure=null; rpcObserver=null; rpcReplyOverride=undefined; queryCalls=[]; rpcCalls=[]; cookieJar.clear();
+  actor=null; rpcFailure=null; queryFailure=null; queryReplyOverride=undefined; rpcObserver=null; rpcReplyOverride=undefined; queryCalls=[]; rpcCalls=[]; cookieJar.clear();
   await db.exec('TRUNCATE invitations,guests,attendees,access_log,rsvps,builder_versions,save_date_responses,commercial_events,commercial_leads CASCADE');
   await db.query("INSERT INTO invitations(id,slug,status,rsvp_deadline) VALUES($1,'test-event','ready',((now() AT TIME ZONE 'America/La_Paz')::date+1)),($2,'other-event','ready',NULL)",[invId,otherId]);
   await db.query("UPDATE invitations SET host_email=id::text||'@test.invalid', host_password_hash=$1, review_email=id::text||'@review.invalid', review_password_hash=$2",[hostHash,reviewHash]);
@@ -819,6 +824,85 @@ const commercialUpdateFixture=async(extra={})=>{
  return {id,requestId:randomUUID(),expectedRevision:0,status:'contacted',revenueBs:200,notes:'Seguimiento ficticio',...extra};
 };
 const commercialPatch=(body)=>commercialAdmin.PATCH(new NextRequest('https://enkarta.test/api/admin/commercial',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}));
+const commercialHistoryGet=(leadId,cursor)=>commercialHistory.GET(req('/api/admin/commercial/history?'+new URLSearchParams({leadId,...(cursor===undefined?{}:{cursor})})));
+const commercialHistoryFixture=async(count=0)=>{
+ const input=await commercialUpdateFixture();
+ for(let n=1;n<=count;n++)await db.query("insert into commercial_lead_history(id,lead_id,from_status,to_status,revenue_bs,note,created_at) values($1,$2,'contacted',$3,$4,$5,$6)",[
+  `91000000-0000-4000-8000-${String(n).padStart(12,'0')}`,input.id,n%3?'contacted':'won',n%3===0?'0.00':n%3===1?null:'200.25','Nota ficticia '+n,n>43?'2001-01-02T12:00:00.123457Z':'2001-01-02T12:00:00.123456Z']);
+ return input;
+};
+
+test('commercial history authenticates before validation or any SQL for every non-admin role',async()=>{
+ queryFailure={code:'XX000',message:'private SQL must not execute'};
+ for(const value of [null,{role:'host',id:invId},{role:'review',id:invId},{role:'door',id:invId},{role:'partner',id:invId}]){
+  actor=value;const response=await commercialHistory.GET(req('/api/admin/commercial/history?leadId=invalid&cursor=invalid'));
+  assert.equal(response.status,401);assert.equal(response.headers.get('cache-control'),'private, no-store');assert.deepEqual(await response.json(),{error:'No autorizado'});
+ }
+ assert.deepEqual(queryCalls,[]);assert.deepEqual(rpcCalls,[]);
+});
+
+test('commercial history reads exactly two bounded queries per page and preserves microsecond keysets across 45 old movements',async()=>{
+ const input=await commercialHistoryFixture(45);actor={role:'admin'};queryCalls=[];
+ const oneResponse=await commercialHistoryGet(input.id);assert.equal(oneResponse.status,200,JSON.stringify(await oneResponse.clone().json()));assert.equal(oneResponse.headers.get('cache-control'),'private, no-store');
+ const one=await oneResponse.json();assert.equal(one.entries.length,20);assert.equal(one.pagination.hasMore,true);assert.equal(one.entries[0].created_at,'2001-01-02T12:00:00.123457Z');assert.equal(one.entries[2].created_at,'2001-01-02T12:00:00.123456Z');
+ await db.query("insert into commercial_lead_history(lead_id,from_status,to_status,note,created_at) values($1,'contacted','reserved','Nuevo fuera del recorrido',$2)",[input.id,new Date(Date.parse(one.asOf)+1000).toISOString()]);
+ const two=await(await commercialHistoryGet(input.id,one.pagination.nextCursor)).json(),three=await(await commercialHistoryGet(input.id,two.pagination.nextCursor)).json();
+ assert.equal(two.entries.length,20);assert.equal(three.entries.length,5);assert.equal(three.pagination.hasMore,false);assert.equal(three.pagination.nextCursor,null);assert.equal(two.asOf,one.asOf);assert.equal(three.asOf,one.asOf);
+ const entries=[...one.entries,...two.entries,...three.entries];assert.equal(new Set(entries.map(row=>row.id)).size,45);assert.equal(entries[0].id,'91000000-0000-4000-8000-000000000045');assert.equal(entries.at(-1).id,'91000000-0000-4000-8000-000000000001');
+ assert.ok(entries.every(row=>row.lead_id===input.id&&!row.note.includes('fuera')));assert.deepEqual(queryCalls,['commercial_leads','commercial_lead_history','commercial_leads','commercial_lead_history','commercial_leads','commercial_lead_history']);assert.deepEqual(rpcCalls,[]);
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),46);assert.equal(await scalar('select revision as result from commercial_leads where id=$1',[input.id]),0);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),0);
+});
+
+test('commercial history includes note-only updates, nullable or zero legacy amounts and only the public audit whitelist',async()=>{
+ const input=await commercialHistoryFixture(3);actor={role:'admin'};const response=await commercialHistoryGet(input.id);assert.equal(response.status,200);const page=await response.json();
+ assert.deepEqual(Object.keys(page).sort(),['asOf','entries','lead','pagination']);assert.deepEqual(page.lead,{id:input.id,reference:'EK-A1B2C3D4'});assert.deepEqual(Object.keys(page.entries[0]).sort(),['created_at','from_status','id','lead_id','note','revenue_bs','to_status']);
+ assert.equal(page.entries[0].revenue_bs,0);assert.equal(page.entries[1].revenue_bs,200.25);assert.equal(page.entries[2].revenue_bs,null);assert.equal(page.entries[2].from_status,page.entries[2].to_status);assert.equal(page.entries[2].note,'Nota ficticia 1');
+ for(const secret of ['session_hash','landing_path','utm_term','password','request_id','commercial-update-private-session'])assert.ok(!JSON.stringify(page).includes(secret));
+});
+
+test('commercial history returns an empty page for an existing contact and 404 for an absent exact UUID',async()=>{
+ const input=await commercialHistoryFixture();actor={role:'admin'};
+ const response=await commercialHistoryGet(input.id);assert.equal(response.status,200);const page=await response.json();assert.deepEqual(page.entries,[]);assert.deepEqual(page.pagination,{size:20,hasMore:false,nextCursor:null});
+ queryCalls=[];const absent=await commercialHistoryGet(randomUUID());assert.equal(absent.status,404);assert.equal((await absent.json()).code,'NOT_FOUND');assert.equal(absent.headers.get('cache-control'),'private, no-store');assert.deepEqual(queryCalls,['commercial_leads']);
+});
+
+test('commercial history rejects extra and duplicated parameters, malformed keys and borrowed or future cursors before SQL',async()=>{
+ actor={role:'admin'};const leadId=randomUUID(),other=randomUUID(),asOf='2026-01-02T12:00:00.123456Z',valid={leadId,asOf,createdAt:asOf,id:randomUUID()},raw=body=>Buffer.from(JSON.stringify(body)).toString('base64url');
+ const cursor=encodeCommercialHistoryCursor(valid);
+ const queries=['','leadId=','leadId='+leadId+'&leadId='+leadId,'leadId='+leadId+'&cursor='+cursor+'&cursor='+cursor,'leadId='+leadId+'&limit=100','leadId='+leadId+'&status=won','leadId='+leadId+'&cursor=',
+ ...['x','%','A'.repeat(769),'abc=','abc,or'].map(value=>'leadId='+leadId+'&cursor='+encodeURIComponent(value)),
+ ...[{v:2,...valid},{v:1,...valid,leadId:other},{v:1,...valid,createdAt:'2026-01-03T12:00:00Z'},{v:1,...valid,asOf:'2099-01-01T00:00:00Z'},{v:1,...valid,id:valid.id+',or(id.gt.0)'},{v:1,...valid,extra:'x'}].map(body=>'leadId='+leadId+'&cursor='+raw(body)),
+ ...['x',leadId.toUpperCase(),leadId+',or(id.gt.0)',' '+leadId,leadId+'%'].map(id=>new URLSearchParams({leadId:id}).toString())];
+ for(const query of queries){const response=await commercialHistory.GET(req('/api/admin/commercial/history?'+query));assert.equal(response.status,400,query);assert.equal(response.headers.get('cache-control'),'private, no-store');assert.equal((await response.json()).code,'INVALID_QUERY');}
+ assert.deepEqual(queryCalls,[]);assert.deepEqual(rpcCalls,[]);
+});
+
+test('commercial history distinguishes missing schema and read failures without exposing database diagnostics',async()=>{
+ const input=await commercialHistoryFixture();actor={role:'admin'};
+ for(const table of ['commercial_leads','commercial_lead_history'])for(const [code,status]of [['42P01',503],['42703',503],['PGRST204',503],['PGRST205',503],['XX000',500]]){
+  queryReplyOverride=name=>name===table?{data:null,error:{code,message:'private database diagnostics'}}:undefined;
+  const response=await commercialHistoryGet(input.id);assert.equal(response.status,status);assert.equal(response.headers.get('cache-control'),'private, no-store');const body=await response.json();assert.equal(body.code,status===503?'MIGRATION_REQUIRED':'READ_FAILED');if(status===503)assert.match(body.error,/012_commercial_funnel\.sql/);assert.ok(!JSON.stringify(body).includes('private'));
+ }
+});
+
+test('commercial history rejects malformed or foreign database pages and normalizes genuine PostgreSQL UTC timestamps',async()=>{
+ const input=await commercialHistoryFixture();actor={role:'admin'};const row={id:randomUUID(),lead_id:input.id,from_status:'contacted',to_status:'contacted',revenue_bs:null,note:'Una nota',created_at:'2001-01-02T12:00:00.123456+00:00'};
+ for(const data of [null,{},[...Array(22)].map((_,n)=>({...row,id:`91000000-0000-4000-8000-${String(n).padStart(12,'0')}`})),[{...row,lead_id:randomUUID()}],[{...row,note:'x'.repeat(1001)}],[{...row,to_status:'invalid'}],[{...row,revenue_bs:-1}],[{...row,created_at:'2001-02-30T00:00:00Z'}],[row,row]]){
+  queryReplyOverride=table=>table==='commercial_lead_history'?{data,error:null}:undefined;
+  const response=await commercialHistoryGet(input.id);assert.equal(response.status,500,JSON.stringify(data));assert.equal((await response.json()).code,'READ_FAILED');
+ }
+ queryReplyOverride=table=>table==='commercial_lead_history'?{data:[{...row,session_hash:'private',request_id:'private'}],error:null}:undefined;
+ const response=await commercialHistoryGet(input.id);assert.equal(response.status,200);const page=await response.json();assert.equal(page.entries[0].created_at,'2001-01-02T12:00:00.123456Z');assert.ok(!JSON.stringify(page).includes('private'));
+});
+
+test('commercial history table remains inaccessible to anonymous and authenticated database roles',async()=>{
+ await commercialHistoryFixture(1);
+ for(const role of ['anon','authenticated']){
+  await db.exec('SET ROLE '+role);
+  try{await assert.rejects(db.query('select id,note from public.commercial_lead_history'),/permission denied/);}finally{await db.exec('RESET ROLE');}
+ }
+ await db.exec('SET ROLE service_role');try{assert.equal(await scalar('select count(*)::int as result from public.commercial_lead_history'),1);}finally{await db.exec('RESET ROLE');}
+});
 
 test('019 commercial updates authenticate before parsing and deny every non-admin role',async()=>{
  rpcFailure={code:'XX000',message:'private SQL must not be reached'};
