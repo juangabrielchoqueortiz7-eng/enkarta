@@ -116,6 +116,7 @@ const doorAuth = require('../src/app/api/door/auth/route.ts');
 const dashboardRoute = require('../src/app/api/host/dashboard/route.ts');
 const commercialContact = require('../src/app/contacto/whatsapp/route.ts');
 const commercialAdmin = require('../src/app/api/admin/commercial/route.ts');
+const salesConfig = require('../src/app/api/admin/sales-config/route.ts');
 const rosterRoute = require('../src/app/api/host/roster/route.ts');
 const managedRosterRoute = require('../src/app/api/guests/roster/route.ts');
 const {readGuestCsvFile}=require('../src/lib/guest-csv-file.ts');
@@ -667,6 +668,21 @@ test('commercial handoff infers original preset names and the legacy carmesi dem
   assert.equal(response.status,302);const message=new URL(response.headers.get('location')).searchParams.get('text');assert.ok(message.includes('diseño '+name));assert.ok(!message.includes('Edición Enkarta'));
  }
  assert.equal(await scalar("select count(*)::int as result from commercial_leads where status<>'whatsapp_open'"),0);
+});
+
+test('sales config is admin-only and never cacheable for other roles',async()=>{
+ for(const value of [null,{role:'host',id:invId},{role:'review',id:invId},{role:'door',id:invId},{role:'partner',id:invId}]){actor=value;const response=await salesConfig.GET();assert.equal(response.status,401);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).draftScope,undefined);}
+});
+test('sales draft binding stays stable for one signed admin session and changes with a renewed session',async()=>{
+ const previous=process.env.ENKARTA_PAYMENT_INSTRUCTIONS;process.env.ENKARTA_PAYMENT_INSTRUCTIONS='QA INSTRUCCIONES SIN PAGO REAL';
+ try{
+  actor=null;const expiry=Math.floor(Date.now()/1000)+3600,cookie=signAdminSession(expiry);cookieJar.set('enkarta-admin',cookie);
+  const response=await salesConfig.GET();assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');const config=await response.json();
+  assert.match(config.draftScope,/^[a-f0-9]{64}$/);assert.equal(config.paymentConfigured,true);assert.equal(config.paymentInstructions,'QA INSTRUCCIONES SIN PAGO REAL');assert.ok(!JSON.stringify(config).includes(cookie));
+  assert.equal((await(await salesConfig.GET()).json()).draftScope,config.draftScope);
+  cookieJar.set('enkarta-admin',signAdminSession(expiry+60));assert.notEqual((await(await salesConfig.GET()).json()).draftScope,config.draftScope);
+  process.env.ENKARTA_PAYMENT_INSTRUCTIONS='';assert.equal((await(await salesConfig.GET()).json()).paymentConfigured,false);
+ }finally{if(previous===undefined)delete process.env.ENKARTA_PAYMENT_INSTRUCTIONS;else process.env.ENKARTA_PAYMENT_INSTRUCTIONS=previous;}
 });
 
 const validityInput = (extra={}) => ({ id:invId, action:'extend', days:30, reason:'Ampliación acordada en prueba', expectedRevision:0, requestId:randomUUID(), ...extra });

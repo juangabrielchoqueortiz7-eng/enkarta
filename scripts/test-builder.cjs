@@ -932,6 +932,52 @@ test('sales playbook produces consistent totals, proposal and stage replies', ()
   assert.equal(SALES_PIPELINE.length, 5);
 });
 
+const salesDraft=require('../src/lib/sales-draft.ts');
+const salesDraftScope='a'.repeat(64),salesDraftNow=1800000000000;
+const salesDraftInput={clientName:'QA Familia Pérez',eventType:'Boda',eventDate:'2027-06-12',design:'Lunaria',packageKey:'premium',extrasLabel:'Entrega express ficticia',extrasBs:270};
+function salesDraftStorage(){const values=new Map();return{values,getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};}
+test('sales draft restores the exact quote and omits bank instructions, credentials and unknown fields',()=>{
+ const storage=salesDraftStorage();assert.equal(salesDraft.saveSalesDraft(storage,salesDraftScope,{...salesDraftInput,paymentInstructions:'BANK-NEVER-CACHE',password:'SECRET-NEVER-CACHE'},salesDraftNow),true);
+ const raw=storage.getItem(salesDraft.salesDraftKey(salesDraftScope));assert.doesNotMatch(raw,/BANK-NEVER-CACHE|SECRET-NEVER-CACHE|paymentInstructions|password/);
+ assert.deepEqual(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow+1),{kind:'ready',input:salesDraftInput});
+ assert.deepEqual(salesQuoteTotals(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow+1).input),{base:930,extras:270,total:1200,reservation:200,balance:1000});
+ assert.equal(salesDraft.clearSalesDraft(storage,salesDraftScope),true);assert.equal(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow+2).kind,'empty');
+});
+test('sales draft rejects foreign sessions, unsupported versions, oversized and malformed records without rewriting them',()=>{
+ const storage=salesDraftStorage(),key=salesDraft.salesDraftKey(salesDraftScope),record={version:1,scope:salesDraftScope,savedAt:salesDraftNow,input:salesDraftInput};
+ for(const raw of ['{broken','x'.repeat(4097),JSON.stringify({...record,version:2}),JSON.stringify({...record,scope:'b'.repeat(64)}),JSON.stringify({...record,savedAt:salesDraftNow+60001}),... [{packageKey:['premium']},{packageKey:'forged'},{clientName:'x'.repeat(141)},{extrasBs:-1},{extrasBs:1e100}].map(patch=>JSON.stringify({...record,input:{...salesDraftInput,...patch}}))]){
+  storage.setItem(key,raw);assert.equal(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow).kind,'invalid');assert.equal(storage.getItem(key),raw);
+ }
+ assert.equal(salesDraft.readSalesDraft(storage,'b'.repeat(64),salesDraftNow).kind,'empty');assert.throws(()=>salesDraft.salesDraftKey('../invalid'));
+});
+test('sales draft expiry and storage failures never claim recovery, saving or removal succeeded',()=>{
+ const storage=salesDraftStorage();salesDraft.saveSalesDraft(storage,salesDraftScope,salesDraftInput,salesDraftNow);
+ assert.equal(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow+salesDraft.SALES_DRAFT_TTL+1).kind,'expired');
+ const blocked={getItem(){throw Error('denied');},setItem(){throw Error('quota');},removeItem(){throw Error('denied');}};
+ assert.equal(salesDraft.readSalesDraft(blocked,salesDraftScope).kind,'unavailable');assert.equal(salesDraft.saveSalesDraft(blocked,salesDraftScope,salesDraftInput),false);assert.equal(salesDraft.clearSalesDraft(blocked,salesDraftScope),false);
+ assert.equal(salesDraft.saveSalesDraft(storage,salesDraftScope,{...salesDraftInput,extrasBs:Infinity}),false);
+});
+test('sales configuration distinguishes missing payment setup from denied, offline and incomplete responses',async()=>{
+ const config={paymentInstructions:'',paymentConfigured:false,salesHours:'Horario QA',draftScope:salesDraftScope};let calls=0;
+ assert.deepEqual(await salesDraft.requestSalesConfig(async(url,options)=>{calls++;assert.equal(url,'/api/admin/sales-config');assert.equal(options.cache,'no-store');return Response.json({...config,secret:'not-returned'});}),config);assert.equal(calls,1);
+ await assert.rejects(salesDraft.requestSalesConfig(async()=>{throw new TypeError('offline');}),/No se pudo conectar/);
+ const canceled=new AbortController();canceled.abort();await assert.rejects(salesDraft.requestSalesConfig(async()=>{throw Error('abort');},canceled.signal),/tardó demasiado/);
+ await assert.rejects(salesDraft.requestSalesConfig(async()=>new Response('{}',{status:401})),/sesión terminó/);
+ for(const response of [new Response('{broken'),Response.json({}),Response.json({...config,paymentConfigured:true}),Response.json({...config,draftScope:[salesDraftScope]})])await assert.rejects(salesDraft.requestSalesConfig(async()=>response));
+});
+test('sales copy waits for clipboard acknowledgement and propagates denial instead of reporting success',async()=>{
+ let writes=0,finish;const waiting=salesDraft.copySalesText('Propuesta ficticia',async value=>{writes++;assert.equal(value,'Propuesta ficticia');await new Promise(resolve=>{finish=resolve;});});let done=false;waiting.then(()=>{done=true;});
+ assert.equal(done,false);finish();await waiting;assert.equal(done,true);assert.equal(writes,1);
+ await assert.rejects(salesDraft.copySalesText('Propuesta ficticia',async()=>{throw Error('clipboard denied');}),/clipboard denied/);
+ await assert.rejects(salesDraft.copySalesText(' ',async()=>{writes++;}));assert.equal(writes,1);
+});
+
+test('sales quote development workbench never renders in production',()=>{
+ const previous=process.env.NODE_ENV;
+ try{process.env.NODE_ENV='production';const page=require('../src/app/dev/services/sales-quote/page.tsx').default;assert.throws(()=>page(),error=>error.digest==='NEXT_HTTP_ERROR_FALLBACK;404');}
+ finally{if(previous===undefined)delete process.env.NODE_ENV;else process.env.NODE_ENV=previous;}
+});
+
 test('validity calendar arithmetic handles leap years, months and years without timezone shifts', () => {
   assert.equal(addDays('2028-01-31', 30), '2028-03-01');
   assert.equal(addDays('2027-01-31', 30), '2027-03-02');
