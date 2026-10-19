@@ -11,7 +11,7 @@ const anchor = '2026-10-19T12:00:00.000000Z';
 function fixtures(): CommercialLead[] {
   return Array.from({ length: 1255 }, (_, index) => ({ id: `30000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, reference: `EK-${(index + 1).toString(16).toUpperCase().padStart(8, '0')}`, status: COMMERCIAL_LEAD_STATUSES[index % 5], package_key: 'premium', design: 'Lunaria', event_category: 'Boda', placement: 'qa-dashboard', utm_source: 'QA ficticio', utm_medium: '', utm_campaign: '', referrer_host: '', revenue_bs: index % 5 === 3 ? 10 : null, notes: '', revision: 0, created_at: `2026-10-18T12:00:00.${String(999999 - index).padStart(6, '0')}Z`, updated_at: '2026-10-19T12:00:00.000000Z' }));
 }
-type Mode = 'ok' | 'offline' | 'truncated' | 'slow' | 'migration';
+type Mode = 'ok' | 'offline' | 'once' | 'truncated' | 'slow' | 'migration';
 const control = 'min-h-11 rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900';
 
 export default function CommercialDashboardWorkbench() {
@@ -21,6 +21,7 @@ export default function CommercialDashboardWorkbench() {
   const transport = useMemo<typeof fetch>(() => async (input, options) => {
     const url = new URL(String(input), 'https://enkarta.invalid');
     if (url.pathname === '/api/admin/sales-config') return Response.json({ paymentInstructions: '', paymentConfigured: false, salesHours: 'QA ficticio', draftScope: 'e'.repeat(64) });
+    if (url.pathname === '/api/admin/commercial/lookup') return Response.json({ lead: server.current.find(row => row.reference === url.searchParams.get('reference')) ?? null });
     if (url.pathname !== '/api/admin/commercial') throw Error('Unexpected fictional route');
     if (options?.method === 'PATCH') {
       const command = parseCommercialUpdate(JSON.parse(String(options.body)));
@@ -33,6 +34,7 @@ export default function CommercialDashboardWorkbench() {
       const result = { lead: { ...lead }, outcome: 'saved', requestId: command.requestId }; receipts.current.set(command.requestId, result); return Response.json(result);
     }
     setAttempts(value => value + 1);
+    if (behavior.current === 'once') { behavior.current = 'ok'; setMode('ok'); throw new TypeError('QA one failed page'); }
     if (behavior.current === 'offline') throw new TypeError('QA offline');
     if (behavior.current === 'migration') return Response.json({ code: 'MIGRATION_REQUIRED' }, { status: 503 });
     if (behavior.current === 'slow') await new Promise(resolve => setTimeout(resolve, 1200));
@@ -46,7 +48,8 @@ export default function CommercialDashboardWorkbench() {
   }, []);
   return <main className="mx-auto min-h-screen max-w-7xl space-y-6 bg-[#faf7f2] p-4 text-gray-900 sm:p-8">
     <h1 className="text-2xl font-semibold">Ventas QA · paginación</h1><p>1.255 contactos y métricas ficticias, solo en memoria. Sin red real, pagos ni mensajes.</p>
-    <div className="flex flex-wrap items-end gap-3"><label className="grid gap-2">Respuesta QA<select aria-label="Respuesta QA" className={control} value={mode} onChange={event => setMode(event.target.value as Mode)}><option value="ok">Normal</option><option value="offline">Sin conexión</option><option value="truncated">Página truncada</option><option value="slow">Lenta</option><option value="migration">SQL pendiente</option></select></label><button type="button" className={control} onClick={() => setVisible(value => !value)}>{visible ? 'Ocultar Ventas QA' : 'Volver a Ventas QA'}</button><button type="button" className={control} onClick={() => { server.current = fixtures(); receipts.current.clear(); setAttempts(0); setMode('ok'); setVisible(true); setMount(value => value + 1); }}>Limpiar QA</button><p role="status">Consultas de página: {attempts}</p></div>
+    <p className="text-sm leading-6">Para revisar la recuperación: elige «Fallar una consulta» y cambia de página o estado. Después pulsa «Reintentar carga solicitada». Para una falla inicial, elige «Sin conexión» y «Reiniciar carga»; la referencia ficticia EK-00000001 y el cotizador siguen disponibles.</p>
+    <div className="flex flex-wrap items-end gap-3"><label className="grid gap-2">Respuesta QA<select aria-label="Respuesta QA" className={control} value={mode} onChange={event => setMode(event.target.value as Mode)}><option value="ok">Normal</option><option value="offline">Sin conexión</option><option value="once">Fallar una consulta</option><option value="truncated">Página truncada</option><option value="slow">Lenta</option><option value="migration">SQL pendiente</option></select></label><button type="button" className={control} onClick={() => setMount(value => value + 1)}>Reiniciar carga</button><button type="button" className={control} onClick={() => setVisible(value => !value)}>{visible ? 'Ocultar Ventas QA' : 'Volver a Ventas QA'}</button><button type="button" className={control} onClick={() => { server.current = fixtures(); receipts.current.clear(); setAttempts(0); setMode('ok'); setVisible(true); setMount(value => value + 1); }}>Limpiar QA</button><p role="status">Consultas de página: {attempts}</p></div>
     <div hidden={!visible}><CommercialDashboard key={mount} transport={transport} /></div>
   </main>;
 }

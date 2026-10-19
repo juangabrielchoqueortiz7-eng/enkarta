@@ -1,0 +1,38 @@
+# Recuperación de cargas en Ventas
+
+## Problemas corregidos
+
+Cuando fallaba «Siguiente», «Anterior» o un cambio de estado, la interfaz mantenía visible la última carga correcta. Sin embargo, «Reintentar página actual» consultaba esa ubicación anterior: perdía el filtro, cursor, corte y posición que realmente habían fallado.
+
+Además, el cotizador no se montaba hasta que respondiera el embudo. Una falla inicial de las métricas lo ocultaba aunque su configuración tuviera una consulta independiente. El buscador aparecía en el error inicial, pero desaparecía al reintentar; ese desmontaje retiraba su referencia, resultado y consulta en curso.
+
+## Comportamiento
+
+- La navegación distingue la página visible, la solicitud en curso y el destino fallido. Los cursores y el recorrido de páginas se copian al iniciar cada solicitud.
+- **Reintentar carga solicitada** conserva exactamente estado, cursor, corte, número de página y recorrido de retorno. No hay reintentos de red automáticos por una falla.
+- Mientras falla o carga otra página, los datos visibles siguen correspondiendo a la última consulta correcta. El mensaje de error identifica el destino solicitado y avisa que los datos son anteriores. El filtro visible solo cambia cuando la consulta se completa.
+- **Actualizar** conserva su función de volver a la primera página del estado visible y tomar un corte nuevo. Si esa actualización falla, el reintento mantiene esa misma intención de actualización.
+- El cotizador y el buscador permanecen en la misma posición del árbol de React desde el inicio. La carga, el error y la recuperación del embudo no desmontan sus estados ni borradores. Cada herramienta conserva su propia consulta, errores y requisitos de conexión/autorización.
+- Se mantienen los editores de contactos pendientes y la advertencia al abandonar. Los borradores de seguimiento siguen viviendo en memoria; este bloque no añade persistencia de notas, historiales ni operaciones inciertas.
+- Cada carga tiene una secuencia. Las respuestas y errores de solicitudes superadas no sustituyen la navegación actual. El límite de 20 segundos aborta la consulta y libera el estado de carga incluso si un transporte personalizado ignora la señal; una respuesta posterior no se acepta.
+- No se modifican rutas de servidor, permisos, RPC, métricas, precios, paquetes, proveedor de pagos ni dependencias. BCP conserva el bloqueo por contrato pendiente. Las invitaciones y sus originales quedan fuera del cambio.
+
+## Regresiones y muestra de desarrollo
+
+- **11 casos de navegación**: inicio sin métricas inventadas, éxito, fallo y reintento de siguiente/anterior/filtro, error inicial, copia de cursores, respuestas fuera de orden, solicitudes duplicadas, actualización/cancelación y GET privado exacto con transporte ficticio, sin reintento implícito.
+- **8 contratos de interfaz y render**: herramientas presentes en el panel inicial y ante error, identidad/posición/clave de React estables, destino fallido y aviso de datos anteriores, botón de reintento explícito, desaparición del error al iniciar otra consulta, escape de texto, semántica accesible y ausencia de consultas durante el render.
+- `/dev/services/commercial-dashboard` añade «Fallar una consulta», «Reiniciar carga» y búsqueda por la referencia ficticia `EK-00000001`. Su transporte utiliza solo los registros sintéticos en memoria. La ruta continúa devolviendo 404 fuera de desarrollo. La muestra está preparada para una aceptación futura; no se presenta como un recorrido manual ejecutado.
+- Las regresiones no certifican medidas visuales en Android, estado real del portapapeles ni un timeout observado durante 20 segundos en un navegador. La aceptación manual permanece aplazada por el usuario.
+
+Evidencia privada de esta entrega: `tmp/sales-dashboard-recovery/`. No se crean contactos, pagos, usuarios ni mensajes en producción durante este bloque.
+
+## Verificación local
+
+- **523 pruebas correctas**: 200 constructor/contratos, 153 servicios, 19 PostgreSQL de guardado, 24 contrato/reducer comercial, 14 PostgreSQL del dashboard, 16 contrato del dashboard, 17 historial, 11 navegación, 8 recuperación/render, 15 dominio del cotizador, 10 render del cotizador, 31 integridad y 5 distribución.
+- Lint y TypeScript correctos. La primera ejecución de `npm run verify` terminó esas pruebas, pero el sandbox impidió crear una carpeta de `.next` durante el build (`EPERM`). Se repitió únicamente `npm run build` con el permiso de ejecución necesario y terminó correctamente; no se presenta la primera ejecución como exitosa. Persisten las advertencias previas de imágenes en las invitaciones originales.
+- Revisión cruzada sin hallazgos bloqueantes. **597/597 archivos protegidos** conservan su SHA-256 y el guard de distribución encuentra los **129 recursos originales** completos. Ninguna prueba requiere un banco, WhatsApp ni datos de producción.
+- Desarrollo en `codex/sales-dashboard-recovery`, sin nueva migración SQL. La aceptación manual y visual permanece aplazada.
+
+## Pendientes separados
+
+El campo de ingresos del seguimiento aún exige punto decimal aunque el teclado móvil puede ofrecer coma. Se registra para el siguiente bloque; no se amplía el contrato del guardado ni se cambia su interpretación dentro de esta recuperación.

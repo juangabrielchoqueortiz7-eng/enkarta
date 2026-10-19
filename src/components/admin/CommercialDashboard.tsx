@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { COMMERCIAL_LEAD_STATUSES, leadStatusLabel } from '@/lib/commercial';
 import SalesToolkit from '@/components/admin/SalesToolkit';
 import CommercialLeadEditor from '@/components/admin/CommercialLeadEditor';
@@ -8,20 +8,40 @@ import CommercialLeadHistory from '@/components/admin/CommercialLeadHistory';
 import CommercialReferenceSearch from '@/components/admin/CommercialReferenceSearch';
 import LeadSummary from '@/components/admin/CommercialLeadSummary';
 import type { CommercialLead as Lead } from '@/lib/commercial-lookup';
-import { decodeCommercialCursor, mergeCommercialPageEditors, requestCommercialDashboard, type CommercialDashboard as Dashboard, type CommercialBreakdown as Breakdown, type CommercialDashboardQuery, type CommercialCursor, type CommercialFilter } from '@/lib/commercial-dashboard';
+import { decodeCommercialCursor, mergeCommercialPageEditors, requestCommercialDashboard, type CommercialBreakdown as Breakdown, type CommercialFilter } from '@/lib/commercial-dashboard';
+import { commercialNavigationReducer, commercialRetryLocation, createCommercialNavigation, initialCommercialLocation, type CommercialNavigationState, type CommercialPageLocation } from '@/lib/commercial-navigation';
 
 function LeadCard({ lead, onSaved, onActivityChange, transport }: { lead: Lead; onSaved: (lead: Lead) => void; onActivityChange: (id: string, active: boolean) => void; transport: typeof fetch }) {
   const source = lead.utm_source || lead.referrer_host || 'Directo';
   return <article className="min-w-0 p-4 sm:p-5"><div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong translate="no" className="font-mono text-sm text-[#765f39]">{lead.reference}</strong><span className="rounded-full bg-[#f1ece3] px-2 py-1 font-outfit text-[9px] uppercase text-[#75664e]">{lead.package_key === 'general' ? 'Sin paquete' : lead.package_key}</span>{lead.event_category && <span className="rounded-full bg-rose-50 px-2 py-1 font-outfit text-[9px] text-rose-600">{lead.event_category}</span>}{lead.design && <span className="rounded-full bg-gray-50 px-2 py-1 font-outfit text-[9px] text-gray-500">{lead.design}</span>}</div><p className="mt-1 break-words font-outfit text-xs text-gray-600">{source}{lead.utm_campaign ? ` · ${lead.utm_campaign}` : ''} · {new Date(lead.created_at).toLocaleString('es-BO')}</p></div></div><CommercialLeadEditor lead={lead} onSaved={onSaved} onActivityChange={onActivityChange} transport={transport} /><div className="mt-4"><CommercialLeadHistory lead={lead} transport={transport} /></div></article>;
 }
 
-type PageLocation = { query: CommercialDashboardQuery; index: number; previous: (CommercialCursor | null)[] };
-const initialLocation = (): PageLocation => ({ query: { status: 'all', cursor: null }, index: 0, previous: [] });
+const locationLabel = (location: CommercialPageLocation) => `la página ${location.index + 1} de «${location.query.status === 'all' ? 'Todos' : leadStatusLabel(location.query.status)}»`;
+
+export function CommercialDashboardFeedback({ navigation, onRetry }: { navigation: CommercialNavigationState; onRetry: () => void }) {
+  if (!navigation.data && navigation.pending) return <div role="status" className="flex min-h-48 items-center justify-center gap-3 font-outfit text-sm text-gray-700"><div aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-2 border-enkarta-gold border-t-transparent motion-reduce:animate-none" />Cargando el embudo de Ventas…</div>;
+  if (!navigation.error) return null;
+  return <section aria-label="Recuperación del embudo" className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
+    {!navigation.data && <h2 className="font-playfair text-2xl text-amber-950">No se pudo cargar el embudo</h2>}
+    <p role="alert" className="font-outfit text-sm leading-6 text-amber-950">No se pudo cargar {locationLabel(navigation.failed ?? navigation.location)}. {navigation.data ? 'Los datos visibles corresponden a la carga anterior.' : 'Puedes seguir usando el cotizador y la búsqueda por referencia.'} {navigation.error}</p>
+    <button type="button" onClick={onRetry} disabled={!!navigation.pending} className="min-h-11 rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-950 hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50">Reintentar carga solicitada</button>
+  </section>;
+}
+
+/** These independent tools keep their position and identity through every dashboard load. */
+export function CommercialSalesWorkspace({ navigation, onRetry, transport, children }: { navigation: CommercialNavigationState; onRetry: () => void; transport: typeof fetch; children?: ReactNode }) {
+  return <div className="space-y-6">
+    <SalesToolkit transport={transport} />
+    <CommercialReferenceSearch transport={transport} renderLead={lead => <LeadSummary lead={lead} transport={transport} />} />
+    <CommercialDashboardFeedback navigation={navigation} onRetry={onRetry} />
+    {children}
+  </div>;
+}
 
 export default function CommercialDashboard({ transport = fetch }: { transport?: typeof fetch }) {
-  const [data, setData] = useState<Dashboard | null>(null), [editors, setEditors] = useState<Lead[]>([]);
-  const [error, setError] = useState(''), [loading, setLoading] = useState(true);
-  const [location, setLocation] = useState<PageLocation>(initialLocation), currentLocation = useRef<PageLocation>(initialLocation());
+  const [navigation, dispatchNavigation] = useReducer(commercialNavigationReducer, undefined, createCommercialNavigation), [editors, setEditors] = useState<Lead[]>([]);
+  const { data, location } = navigation, loading = !!navigation.pending;
+  const currentLocation = useRef<CommercialPageLocation>(initialCommercialLocation());
   const activeIdsRef = useRef(new Set<string>()), [activeIds, setActiveIds] = useState<ReadonlySet<string>>(() => new Set());
   const loadSequence = useRef(0), activeLoad = useRef<AbortController | null>(null);
   const handleActivity = useCallback((id: string, active: boolean) => {
@@ -29,22 +49,26 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
     if (active) activeIdsRef.current.add(id); else activeIdsRef.current.delete(id);
     setActiveIds(new Set(activeIdsRef.current));
   }, []);
-  const load = useCallback(async (target: PageLocation = currentLocation.current) => {
+  const load = useCallback(async (target: CommercialPageLocation = currentLocation.current) => {
     const sequence = ++loadSequence.current;
     activeLoad.current?.abort();
     const controller = new AbortController(); activeLoad.current = controller;
-    const timer = setTimeout(() => controller.abort(), 20000);
-    setLoading(true);
+    const timer = setTimeout(() => {
+      controller.abort();
+      if (sequence === loadSequence.current) dispatchNavigation({ type: 'failed', sequence, message: 'Ventas tardó demasiado en responder. Vuelve a intentarlo.' });
+    }, 20000);
+    dispatchNavigation({ type: 'start', sequence, target });
     try {
       const body = await requestCommercialDashboard(target.query, transport, controller.signal);
       if (sequence !== loadSequence.current || controller.signal.aborted) return;
       setEditors(previous => mergeCommercialPageEditors(previous, body.leads, activeIdsRef.current));
-      currentLocation.current = target; setLocation(target); setData(body); setError('');
+      currentLocation.current = target;
+      dispatchNavigation({ type: 'loaded', sequence, data: body });
     } catch (cause) {
-      if (sequence === loadSequence.current) setError(controller.signal.aborted ? 'Ventas tardó demasiado en responder. Vuelve a intentarlo.' : cause instanceof Error ? cause.message : 'No se pudo cargar Ventas. Revisa tu conexión y vuelve a intentarlo.');
+      if (sequence === loadSequence.current) dispatchNavigation({ type: 'failed', sequence, message: controller.signal.aborted ? 'Ventas tardó demasiado en responder. Vuelve a intentarlo.' : cause instanceof Error ? cause.message : 'No se pudo cargar Ventas. Revisa tu conexión y vuelve a intentarlo.' });
     } finally {
       clearTimeout(timer);
-      if (sequence === loadSequence.current) { activeLoad.current = null; setLoading(false); }
+      if (sequence === loadSequence.current) activeLoad.current = null;
     }
   }, [transport]);
   const refresh = () => void load({ query: { status: currentLocation.current.query.status, cursor: null }, index: 0, previous: [] });
@@ -67,19 +91,13 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
     void load({ query: { status: filter, cursor: location.previous[location.previous.length - 1] }, index: location.index - 1, previous: location.previous.slice(0, -1) });
   };
 
-  if (loading && !data) return <div role="status" className="flex min-h-72 items-center justify-center gap-3 font-outfit text-sm text-gray-700"><div aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-2 border-enkarta-gold border-t-transparent motion-reduce:animate-none" />Cargando Ventas…</div>;
-  if (error && !data) return <div className="space-y-6"><CommercialReferenceSearch transport={transport} renderLead={lead => <LeadSummary lead={lead} transport={transport} />} /><div className="rounded-2xl border border-amber-200 bg-amber-50 p-6"><h2 className="font-playfair text-2xl text-amber-950">No se pudo cargar el embudo</h2><p role="alert" className="mt-2 font-outfit text-sm text-amber-800">{error}</p><button type="button" onClick={() => void load()} className="mt-4 min-h-11 rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">Volver a comprobar</button></div></div>;
-  if (!data) return null;
-
-  const s = data.summary;
-  const cards = [
+  const s = data?.summary;
+  const cards = s ? [
     ['Visitas', s.visits, `${s.designViews} vieron diseños`], ['Intentos de contacto', s.whatsappOpens, `${s.intentRate} por cada 100 visitas`], ['Conversaciones', s.contacts, `${s.conversationRate}% de intentos`],
     ['Reservas', s.reserved, 'Incluye ventas'], ['Ventas', s.sales, `${s.closeRate}% de conversaciones`], ['Ingresos registrados', `${s.revenue.toLocaleString('es-BO')} Bs`, 'Solo ventas marcadas'],
-  ];
-  return <div className="space-y-6">
-    <SalesToolkit transport={transport} />
-    <CommercialReferenceSearch transport={transport} renderLead={lead => <LeadSummary lead={lead} transport={transport} />} />
-    {error && <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4"><p role="alert" className="font-outfit text-sm text-amber-900">No se pudo cargar la página solicitada. Los datos visibles corresponden a la carga anterior. {error}</p><button type="button" onClick={() => void load()} disabled={loading} className="min-h-11 rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm text-amber-950 focus-visible:outline focus-visible:outline-2">Reintentar página actual</button></div>}
+  ] : [];
+  return <CommercialSalesWorkspace navigation={navigation} onRetry={() => void load(commercialRetryLocation(navigation))} transport={transport}>
+    {data && <>
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="font-outfit text-[10px] font-semibold uppercase tracking-[.2em] text-[#a48655]">Últimos {data.periodDays} días</p><h2 className="mt-1 font-playfair text-3xl text-gray-900">Embudo comercial</h2><p className="mt-1 max-w-2xl font-outfit text-xs leading-5 text-gray-500">Relaciona anuncio, diseño, paquete y resultado mediante la referencia que aparece en WhatsApp. Un intento registra la solicitud del enlace; no confirma apertura ni envío. No registra IP, teléfono ni conversación.</p></div><button type="button" onClick={refresh} disabled={loading} className="min-h-11 self-start rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40">Actualizar</button></div>
 
     <section className="grid grid-cols-2 gap-3 lg:grid-cols-6">{cards.map(([label, value, detail]) => <article key={String(label)} className="rounded-2xl border border-[#e4dfd4] bg-white p-4"><p className="font-playfair text-3xl text-[#5d513d]">{value}</p><h3 className="mt-2 font-outfit text-[11px] font-semibold text-gray-700">{label}</h3><p className="mt-1 font-outfit text-[9px] text-gray-400">{detail}</p></article>)}</section>
@@ -93,7 +111,7 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
       <div className="flex flex-col gap-3 border-b border-gray-100 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-playfair text-2xl text-gray-800">Contactos de WhatsApp</h3><p className="mt-1 font-outfit text-[11px] text-gray-400">Ordenados por fecha de creación, del más reciente al más antiguo.</p></div><select aria-label="Filtrar contactos" value={filter} disabled={loading} onChange={event => void load({ query: { status: event.target.value as CommercialFilter, cursor: null }, index: 0, previous: [] })} className="min-h-11 rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"><option value="all">Todos</option>{COMMERCIAL_LEAD_STATUSES.map(status => <option key={status} value={status}>{leadStatusLabel(status)}</option>)}</select></div>
       <div className="space-y-2 border-b border-gray-100 px-4 py-3 font-outfit text-sm text-gray-600 sm:px-5">
         <p>Las métricas incluyen todos los contactos y eventos del período. El filtro cambia solo esta lista.</p>
-        <p role="status">{loading ? 'Cargando contactos…' : data.pagination.total === 0 ? 'No hay contactos en este estado.' : 'Página ' + (location.index + 1) + ' · ' + data.leads.length + ' contactos en esta página · ' + data.pagination.total.toLocaleString('es-BO') + ' en este estado'}</p>
+        <p role="status">{navigation.pending ? `Cargando ${locationLabel(navigation.pending)}…` : data.pagination.total === 0 ? 'No hay contactos en este estado.' : 'Página ' + (location.index + 1) + ' · ' + data.leads.length + ' contactos en esta página · ' + data.pagination.total.toLocaleString('es-BO') + ' en este estado'}</p>
         {activeIds.size > 0 && <p className="text-amber-900">{activeIds.size} contacto(s) con cambios o guardados pendientes. Sus editores se conservan aunque cambies de página o estado.</p>}
       </div>
       <div className="divide-y divide-gray-100">{editors.filter(lead => pageIds.has(lead.id) || activeIds.has(lead.id)).map(lead => <div key={lead.id}>
@@ -106,5 +124,6 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
         <button type="button" onClick={next} disabled={loading || !data.pagination.hasMore} className="min-h-11 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40">Siguiente</button>
       </nav>
     </section>
-  </div>;
+    </>}
+  </CommercialSalesWorkspace>;
 }
