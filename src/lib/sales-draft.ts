@@ -12,7 +12,7 @@ export function salesDraftKey(scope: string) {
   return `enkarta.sales-quote.v1:${scope}`;
 }
 
-function inputValue(value: unknown): SalesDraftInput {
+function inputValue(value: unknown, version: 1 | 2): SalesDraftInput {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Borrador inválido.');
   const source = value as Record<string, unknown>;
   if (typeof source.packageKey !== 'string' || !['plus', 'premium', 'exclusive'].includes(source.packageKey)) throw new Error('Paquete inválido.');
@@ -24,8 +24,14 @@ function inputValue(value: unknown): SalesDraftInput {
     result[field] = text;
   }
   if (source.extrasBs !== undefined) {
-    if (typeof source.extrasBs !== 'number' || source.extrasBs < 0 || !Number.isSafeInteger(Math.round(source.extrasBs * 100))) throw new Error('Importe de borrador inválido.');
-    result.extrasBs = source.extrasBs;
+    const amount = source.extrasBs;
+    if (version === 2 && typeof amount === 'string') {
+      if (amount.length > 24 || /[\u0000-\u001f\u007f]/.test(amount)) throw new Error('Importe de borrador inválido.');
+      result.extrasBs = amount;
+    } else {
+      if (typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0 || !Number.isSafeInteger(Math.round(amount * 100))) throw new Error('Importe de borrador inválido.');
+      result.extrasBs = amount;
+    }
   }
   return result;
 }
@@ -39,16 +45,16 @@ export function readSalesDraft(storage: SalesDraftStorage, scope: string, now = 
     if (!Number.isSafeInteger(now)) return { kind: 'invalid' };
     if (raw.length > 4096) throw new Error('Borrador demasiado grande.');
     const record = JSON.parse(raw);
-    if (!record || record.version !== 1 || record.scope !== scope || !Number.isSafeInteger(record.savedAt) || record.savedAt > now + 60_000) throw new Error('Borrador inválido.');
+    if (!record || ![1, 2].includes(record.version) || record.scope !== scope || !Number.isSafeInteger(record.savedAt) || record.savedAt > now + 60_000) throw new Error('Borrador inválido.');
     if (now - record.savedAt > SALES_DRAFT_TTL) return { kind: 'expired' };
-    return { kind: 'ready', input: inputValue(record.input) };
+    return { kind: 'ready', input: inputValue(record.input, record.version) };
   } catch { return { kind: 'invalid' }; }
 }
 
 export function saveSalesDraft(storage: SalesDraftStorage, scope: string, input: SalesDraftInput, now = Date.now()) {
   try {
     if (!Number.isSafeInteger(now)) return false;
-    const record = JSON.stringify({ version: 1, scope, savedAt: now, input: inputValue(input) });
+    const record = JSON.stringify({ version: 2, scope, savedAt: now, input: inputValue(input, 2) });
     if (record.length > 4096) return false;
     storage.setItem(salesDraftKey(scope), record);
     return true;

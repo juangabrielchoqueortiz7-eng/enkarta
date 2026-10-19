@@ -2,11 +2,12 @@
 
 import { useMemo, useRef, useState } from 'react';
 import SalesToolkit from '@/components/admin/SalesToolkit';
-import { clearSalesDraft, salesDraftKey, saveSalesDraft, type SalesDraftStorage } from '@/lib/sales-draft';
+import { clearSalesDraft, salesDraftKey, saveSalesDraft, type SalesDraftInput, type SalesDraftStorage } from '@/lib/sales-draft';
 
 type StorageMode = 'ok' | 'read' | 'write' | 'remove';
 type ConfigMode = 'ok' | 'unconfigured' | 'offline' | 'incomplete';
-const control = 'min-h-11 rounded-xl border border-gray-300 bg-white px-3 text-base text-gray-900';
+const control = 'min-h-11 rounded-xl border border-gray-300 bg-white px-3 text-base text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-enkarta-sage';
+const fictionalQuote: SalesDraftInput = { clientName: 'QA Familia Pérez', eventType: 'Boda', eventDate: '2027-06-12', design: 'Lunaria', packageKey: 'premium', extrasBs: 270, extrasLabel: 'Entrega express ficticia' };
 
 export default function SalesQuoteWorkbench() {
   const [storageMode, setStorageMode] = useState<StorageMode>('ok'), [configMode, setConfigMode] = useState<ConfigMode>('ok');
@@ -32,7 +33,15 @@ export default function SalesQuoteWorkbench() {
     setCopied(''); setMount(value => value + 1);
   };
   const corrupt = () => { window.sessionStorage.setItem(salesDraftKey(session.repeat(64)), '{QA corrupto'); setMount(value => value + 1); };
-  const seed = () => { saveSalesDraft(storage, session.repeat(64), { clientName: 'QA Familia Pérez', eventType: 'Boda', eventDate: '2027-06-12', design: 'Lunaria', packageKey: 'premium', extrasBs: 270, extrasLabel: 'Entrega express ficticia' }); setMount(value => value + 1); };
+  const seed = (patch: Partial<SalesDraftInput> = {}, legacy = false) => {
+    const scope = session.repeat(64), input = { ...fictionalQuote, ...patch };
+    let saved = false;
+    if (legacy) {
+      try { storage.setItem(salesDraftKey(scope), JSON.stringify({ version: 1, scope, savedAt: Date.now(), input })); saved = true; } catch { saved = false; }
+    } else saved = saveSalesDraft(storage, scope, input);
+    setNotice(saved ? 'Borrador ficticio preparado. Revisa el importe y la fecha antes de copiar.' : 'No se pudo preparar el borrador QA. Habilita el almacenamiento para reintentar.');
+    setCopied(''); setMount(value => value + 1);
+  };
   return <main className="mx-auto max-w-6xl space-y-6 bg-[#faf7f2] p-4 text-gray-900">
     <h1 className="text-2xl font-semibold">Cotizador QA</h1><p>Solo datos ficticios. La copia se simula, no se envían mensajes ni se contacta al banco.</p>
     <div className="flex flex-wrap items-end gap-4">
@@ -42,7 +51,12 @@ export default function SalesQuoteWorkbench() {
       <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={denyCopy} onChange={event => setDenyCopy(event.target.checked)} />Denegar portapapeles</label>
       <button className={control} type="button" onClick={() => setMount(value => value + 1)}>Remontar cotizador</button>
       <button className={control} type="button" onClick={corrupt}>Simular borrador corrupto</button>
-      <button className={control} type="button" onClick={seed}>Preparar borrador QA completo</button>
+      <button className={control} type="button" onClick={() => seed()}>Preparar borrador QA completo</button>
+      <button className={control} type="button" onClick={() => seed({ extrasBs: '270,50' })}>Preparar importe con coma</button>
+      <button className={control} type="button" onClick={() => seed({ extrasBs: '12,' })}>Preparar decimal incompleto</button>
+      <button className={control} type="button" onClick={() => seed({ extrasBs: '1e3' })}>Preparar importe inválido</button>
+      <button className={control} type="button" onClick={() => seed({ eventDate: '2027-02-30' })}>Preparar fecha inválida</button>
+      <button className={control} type="button" onClick={() => seed({ extrasBs: 0.105 }, true)}>Preparar borrador anterior con 0.105</button>
       <button className={control} type="button" onClick={clean}>Limpiar datos QA</button>
     </div>
     <p role="status">{notice}</p>

@@ -983,18 +983,53 @@ const salesDraftScope='a'.repeat(64),salesDraftNow=1800000000000;
 const salesDraftInput={clientName:'QA Familia Pérez',eventType:'Boda',eventDate:'2027-06-12',design:'Lunaria',packageKey:'premium',extrasLabel:'Entrega express ficticia',extrasBs:270};
 function salesDraftStorage(){const values=new Map();return{values,getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};}
 test('sales draft restores the exact quote and omits bank instructions, credentials and unknown fields',()=>{
- const storage=salesDraftStorage();assert.equal(salesDraft.saveSalesDraft(storage,salesDraftScope,{...salesDraftInput,paymentInstructions:'BANK-NEVER-CACHE',password:'SECRET-NEVER-CACHE'},salesDraftNow),true);
- const raw=storage.getItem(salesDraft.salesDraftKey(salesDraftScope));assert.doesNotMatch(raw,/BANK-NEVER-CACHE|SECRET-NEVER-CACHE|paymentInstructions|password/);
+ const storage=salesDraftStorage();assert.equal(salesDraft.saveSalesDraft(storage,salesDraftScope,{...salesDraftInput,paymentInstructions:'BANK-NEVER-CACHE',password:'SECRET-NEVER-CACHE',accessToken:'TOKEN-NEVER-CACHE'},salesDraftNow),true);
+ const raw=storage.getItem(salesDraft.salesDraftKey(salesDraftScope));assert.doesNotMatch(raw,/BANK-NEVER-CACHE|SECRET-NEVER-CACHE|TOKEN-NEVER-CACHE|paymentInstructions|password|accessToken/);assert.equal(JSON.parse(raw).version,2);assert.equal(salesDraft.salesDraftKey(salesDraftScope),`enkarta.sales-quote.v1:${salesDraftScope}`);
  assert.deepEqual(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow+1),{kind:'ready',input:salesDraftInput});
  assert.deepEqual(salesQuoteTotals(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow+1).input),{base:930,extras:270,total:1200,reservation:200,balance:1000});
  assert.equal(salesDraft.clearSalesDraft(storage,salesDraftScope),true);assert.equal(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow+2).kind,'empty');
 });
 test('sales draft rejects foreign sessions, unsupported versions, oversized and malformed records without rewriting them',()=>{
  const storage=salesDraftStorage(),key=salesDraft.salesDraftKey(salesDraftScope),record={version:1,scope:salesDraftScope,savedAt:salesDraftNow,input:salesDraftInput};
- for(const raw of ['{broken','x'.repeat(4097),JSON.stringify({...record,version:2}),JSON.stringify({...record,scope:'b'.repeat(64)}),JSON.stringify({...record,savedAt:salesDraftNow+60001}),... [{packageKey:['premium']},{packageKey:'forged'},{clientName:'x'.repeat(141)},{extrasBs:-1},{extrasBs:1e100}].map(patch=>JSON.stringify({...record,input:{...salesDraftInput,...patch}}))]){
+ for(const raw of ['{broken','x'.repeat(4097),JSON.stringify({...record,version:3}),JSON.stringify({...record,scope:'b'.repeat(64)}),JSON.stringify({...record,savedAt:salesDraftNow+60001}),... [{packageKey:['premium']},{packageKey:'forged'},{clientName:'x'.repeat(141)},{extrasBs:-1},{extrasBs:1e100},{extrasBs:'270.50'}].map(patch=>JSON.stringify({...record,input:{...salesDraftInput,...patch}}))]){
   storage.setItem(key,raw);assert.equal(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow).kind,'invalid');assert.equal(storage.getItem(key),raw);
  }
  assert.equal(salesDraft.readSalesDraft(storage,'b'.repeat(64),salesDraftNow).kind,'empty');assert.throws(()=>salesDraft.salesDraftKey('../invalid'));
+});
+test('sales draft preserves raw version two amounts, editable invalid dates and all other quote fields exactly',()=>{
+ const storage=salesDraftStorage(),key=salesDraft.salesDraftKey(salesDraftScope);
+ for(const extrasBs of ['','270,50','12,','12.','1e3','-1','0.105','  12,50  ','x'.repeat(24)]){
+  const input={...salesDraftInput,eventDate:'2027-02-30',extrasBs};
+  assert.equal(salesDraft.saveSalesDraft(storage,salesDraftScope,input,salesDraftNow),true);
+  const raw=storage.getItem(key);assert.equal(JSON.parse(raw).version,2);
+  assert.deepEqual(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow+1),{kind:'ready',input});assert.equal(storage.getItem(key),raw);
+ }
+ for(const eventDate of ['2027-02-30','2027-1','pending','']){
+  const input={...salesDraftInput,eventDate,extrasBs:'12,'};assert.equal(salesDraft.saveSalesDraft(storage,salesDraftScope,input,salesDraftNow),true);assert.deepEqual(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow),{kind:'ready',input});
+ }
+});
+test('sales draft reads version one and version two numbers without normalization or rewriting legacy data',()=>{
+ const storage=salesDraftStorage(),key=salesDraft.salesDraftKey(salesDraftScope);
+ for(const version of [1,2])for(const extrasBs of [0,0.105,270.5,90071992547409]){
+  const input={...salesDraftInput,extrasBs},raw=JSON.stringify({version,scope:salesDraftScope,savedAt:salesDraftNow,input});storage.setItem(key,raw);
+  assert.deepEqual(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow),{kind:'ready',input});assert.equal(storage.getItem(key),raw);
+ }
+ assert.equal(salesDraft.saveSalesDraft(storage,salesDraftScope,{...salesDraftInput,extrasBs:0.105},salesDraftNow),true);
+ assert.equal(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow).input.extrasBs,0.105);
+});
+test('sales draft version two rejects unsafe text and values without replacing the last recoverable draft',()=>{
+ const storage=salesDraftStorage(),key=salesDraft.salesDraftKey(salesDraftScope);salesDraft.saveSalesDraft(storage,salesDraftScope,salesDraftInput,salesDraftNow);const saved=storage.getItem(key);
+ const patches=[{extrasBs:'x'.repeat(25)},{extrasBs:'12\n'},{extrasBs:'12\u007f'},{extrasBs:null},{extrasBs:[]},{extrasBs:{}},{extrasBs:-1},{extrasBs:Infinity},{extrasBs:NaN},{extrasBs:1e100},{eventDate:'2027-02-300'},{eventDate:'2027\n'},{clientName:'QA\u0000'}];
+ for(const patch of patches){assert.equal(salesDraft.saveSalesDraft(storage,salesDraftScope,{...salesDraftInput,...patch},salesDraftNow),false);assert.equal(storage.getItem(key),saved);}
+ for(const patch of patches.filter(value=>!('extrasBs'in value)||Number.isFinite(value.extrasBs)||typeof value.extrasBs!=='number')){
+  const raw=JSON.stringify({version:2,scope:salesDraftScope,savedAt:salesDraftNow,input:{...salesDraftInput,...patch}});storage.setItem(key,raw);assert.equal(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow).kind,'invalid');assert.equal(storage.getItem(key),raw);
+ }
+});
+test('sales draft version two keeps the same strict session boundary, TTL and allowlist',()=>{
+ const storage=salesDraftStorage(),input={...salesDraftInput,extrasBs:'12,',paymentInstructions:'BANK-SECRET',accessToken:'TOKEN-SECRET',password:'PASSWORD-SECRET'};
+ assert.equal(salesDraft.saveSalesDraft(storage,salesDraftScope,input,salesDraftNow),true);const key=salesDraft.salesDraftKey(salesDraftScope),raw=storage.getItem(key);assert.doesNotMatch(raw,/SECRET|paymentInstructions|accessToken|password/);
+ assert.equal(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow+salesDraft.SALES_DRAFT_TTL).kind,'ready');assert.equal(salesDraft.readSalesDraft(storage,salesDraftScope,salesDraftNow+salesDraft.SALES_DRAFT_TTL+1).kind,'expired');assert.equal(storage.getItem(key),raw);
+ const otherScope='b'.repeat(64);assert.equal(salesDraft.readSalesDraft(storage,otherScope,salesDraftNow).kind,'empty');storage.setItem(salesDraft.salesDraftKey(otherScope),raw);assert.equal(salesDraft.readSalesDraft(storage,otherScope,salesDraftNow).kind,'invalid');
 });
 test('sales draft expiry and storage failures never claim recovery, saving or removal succeeded',()=>{
  const storage=salesDraftStorage();salesDraft.saveSalesDraft(storage,salesDraftScope,salesDraftInput,salesDraftNow);
