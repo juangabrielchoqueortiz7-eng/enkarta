@@ -14,6 +14,8 @@ Atender cada consulta con el mismo alcance, registrar su origen y no pedir una r
 6. **Producción:** marcar el contacto como `reserved`, crear la invitación y ejecutar el control de calidad del paquete.
 7. **Cierre:** después de aprobar, cobrar el saldo, publicar, entregar accesos y marcar `won` con el ingreso real. Si no continúa, marcar `lost` con un motivo breve y no copiar conversaciones.
 
+En **Admin → Ventas → Buscar referencia de WhatsApp**, pegar solo el código `EK-XXXXXXXX` permite consultar también contactos anteriores a los 180 días. La ficha es de solo lectura; la edición del avance sigue en el listado existente de contactos recientes. El buscador no altera las métricas del período. Detalles y límites en `docs/BUSQUEDA_REFERENCIAS_COMERCIALES.md`.
+
 ## Configuración que no debe vivir en el código
 
 - `ENKARTA_PAYMENT_INSTRUCTIONS`: instrucciones breves del medio de pago o QR empresarial. Solo se muestran dentro del panel autenticado.

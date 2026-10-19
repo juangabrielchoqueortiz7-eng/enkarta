@@ -116,6 +116,7 @@ const doorAuth = require('../src/app/api/door/auth/route.ts');
 const dashboardRoute = require('../src/app/api/host/dashboard/route.ts');
 const commercialContact = require('../src/app/contacto/whatsapp/route.ts');
 const commercialAdmin = require('../src/app/api/admin/commercial/route.ts');
+const commercialLookup = require('../src/app/api/admin/commercial/lookup/route.ts');
 const salesConfig = require('../src/app/api/admin/sales-config/route.ts');
 const rosterRoute = require('../src/app/api/host/roster/route.ts');
 const managedRosterRoute = require('../src/app/api/guests/roster/route.ts');
@@ -668,6 +669,55 @@ test('commercial handoff infers original preset names and the legacy carmesi dem
   assert.equal(response.status,302);const message=new URL(response.headers.get('location')).searchParams.get('text');assert.ok(message.includes('diseño '+name));assert.ok(!message.includes('Edición Enkarta'));
  }
  assert.equal(await scalar("select count(*)::int as result from commercial_leads where status<>'whatsapp_open'"),0);
+});
+
+test('commercial exact lookup authenticates before validating references and denies all non-admin roles',async()=>{
+ queryFailure={code:'XX000',message:'private database failure'};
+ for(const value of [null,{role:'host',id:invId},{role:'review',id:invId},{role:'door',id:invId},{role:'partner',id:invId}]){
+  actor=value;const response=await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=bad'));
+  assert.equal(response.status,401);assert.equal(response.headers.get('cache-control'),'no-store');assert.deepEqual(await response.json(),{error:'No autorizado'});
+ }
+});
+
+test('commercial exact lookup finds historical references outside the dashboard period without exposing private attribution',async()=>{
+ const id=randomUUID(),hash=createHash('sha256').update('private lookup session').digest('hex');
+ await db.query("insert into commercial_leads(id,reference,session_hash,package_key,design,notes,landing_path,utm_content,utm_term,created_at,updated_at) values($1,'EK-A1B2C3D4',$2,'premium','azure','Seguimiento ficticio','/private-landing','private-content','private-term',now()-interval '2 years',now()-interval '2 years')",[id,hash]);
+ actor={role:'admin'};
+ const dashboard=await(await commercialAdmin.GET()).json();assert.equal(dashboard.leads.length,0,'The reporting period excludes the old fixture');
+ const response=await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=EK-A1B2C3D4'));assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');
+ const body=await response.json();assert.equal(body.lead.id,id);assert.equal(body.lead.reference,'EK-A1B2C3D4');assert.equal(body.lead.design,'Lunaria');assert.equal(body.lead.notes,'Seguimiento ficticio');
+ assert.deepEqual(Object.keys(body.lead).sort(),['id','reference','status','package_key','design','event_category','placement','utm_source','utm_medium','utm_campaign','referrer_host','revenue_bs','notes','created_at','updated_at'].sort());
+ assert.ok(!JSON.stringify(body).includes(hash));assert.ok(!JSON.stringify(body).includes('private-landing'));assert.ok(!JSON.stringify(body).includes('private-content'));assert.ok(!JSON.stringify(body).includes('private-term'));
+ assert.equal(await scalar('select design as result from commercial_leads where id=$1',[id]),'azure','A lookup cannot rewrite a legacy design');
+ assert.equal(await scalar('select count(*)::int as result from commercial_leads'),1);assert.equal(await scalar('select count(*)::int as result from commercial_events'),0);assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),0);
+});
+
+test('commercial exact lookup normalizes surrounding whitespace and lowercase without broadening equality',async()=>{
+ const hash=createHash('sha256').update('normalization lookup session').digest('hex');
+ await db.query("insert into commercial_leads(reference,session_hash,design) values('EK-A1B2C3D4',$1,'azure'),('EK-A1B2C3D5',$1,'carmesi')",[hash]);
+ actor={role:'admin'};
+ for(const reference of ['ek-a1b2c3d4','  EK-A1B2C3D4  ','\tek-a1b2c3d4\n']){
+  const response=await commercialLookup.GET(req('/api/admin/commercial/lookup?'+new URLSearchParams({reference})));assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).lead.reference,'EK-A1B2C3D4');
+ }
+});
+
+test('commercial exact lookup rejects missing, repeated, partial, wildcard and malformed references before querying',async()=>{
+ actor={role:'admin'};queryFailure={code:'XX000',message:'query must not execute'};
+ for(const query of ['', '?reference=', '?reference=EK-A1B2C3D4&reference=EK-A1B2C3D4','?reference=EK-A1B2C3D4&reference=', ...['EK-A1B2','EK-A1B2C3D4%','EK-A1B2C3D_','%','EK-A1B2C3D4 OR 1=1','EK-G1B2C3D4','EK-A1B2 C3D4','EK-A1B2C3D4\u0000'].map(reference=>'?'+new URLSearchParams({reference}))]){
+  const response=await commercialLookup.GET(req('/api/admin/commercial/lookup'+query));assert.equal(response.status,400,query);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).code,'INVALID_REFERENCE');
+ }
+});
+
+test('commercial exact lookup returns a successful empty result only when the exact reference does not exist',async()=>{
+ const hash=createHash('sha256').update('absent lookup session').digest('hex');await db.query("insert into commercial_leads(reference,session_hash) values('EK-A1B2C3D4',$1)",[hash]);
+ actor={role:'admin'};const response=await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=EK-A1B2C3D5'));assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.deepEqual(await response.json(),{lead:null});
+});
+
+test('commercial exact lookup distinguishes unavailable schema and database failures from a missing lead',async()=>{
+ actor={role:'admin'};
+ for(const [error,status,code]of [[{code:'42P01',message:'private missing relation details'},503,'MIGRATION_REQUIRED'],[{code:'PGRST205',message:'private schema cache details'},503,'MIGRATION_REQUIRED'],[{code:'XX000',message:'private database details'},500,'READ_FAILED']]){
+  queryFailure=error;const response=await commercialLookup.GET(req('/api/admin/commercial/lookup?reference=EK-A1B2C3D4'));assert.equal(response.status,status);assert.equal(response.headers.get('cache-control'),'no-store');const body=await response.json();assert.equal(body.code,code);assert.equal(body.lead,undefined);assert.ok(!JSON.stringify(body).includes('private'));
+ }
 });
 
 test('sales config is admin-only and never cacheable for other roles',async()=>{

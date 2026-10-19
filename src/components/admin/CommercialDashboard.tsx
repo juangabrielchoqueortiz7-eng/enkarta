@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { COMMERCIAL_LEAD_STATUSES, leadStatusLabel, type CommercialLeadStatus } from '@/lib/commercial';
 import SalesToolkit from '@/components/admin/SalesToolkit';
+import CommercialReferenceSearch from '@/components/admin/CommercialReferenceSearch';
+import LeadSummary from '@/components/admin/CommercialLeadSummary';
+import type { CommercialLead as Lead } from '@/lib/commercial-lookup';
 
-type Lead = {
-  id: string; reference: string; status: CommercialLeadStatus; package_key: string; design: string; event_category: string;
-  placement: string; utm_source: string; utm_medium: string; utm_campaign: string; referrer_host: string;
-  revenue_bs: number | null; notes: string; created_at: string; updated_at: string;
-};
 type Breakdown = { label: string; opens: number; contacts: number; sales: number };
 type Dashboard = {
   periodDays: number;
@@ -47,6 +45,11 @@ function LeadEditor({ lead, onSaved }: { lead: Lead; onSaved: () => void }) {
   </div>;
 }
 
+function LeadCard({ lead, onSaved }: { lead: Lead; onSaved: () => void }) {
+  const source = lead.utm_source || lead.referrer_host || 'Directo';
+  return <article className="min-w-0 p-4 sm:p-5"><div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong translate="no" className="font-mono text-sm text-[#765f39]">{lead.reference}</strong><span className="rounded-full bg-[#f1ece3] px-2 py-1 font-outfit text-[9px] uppercase text-[#75664e]">{lead.package_key === 'general' ? 'Sin paquete' : lead.package_key}</span>{lead.event_category && <span className="rounded-full bg-rose-50 px-2 py-1 font-outfit text-[9px] text-rose-600">{lead.event_category}</span>}{lead.design && <span className="rounded-full bg-gray-50 px-2 py-1 font-outfit text-[9px] text-gray-500">{lead.design}</span>}</div><p className="mt-1 break-words font-outfit text-xs text-gray-600">{source}{lead.utm_campaign ? ` · ${lead.utm_campaign}` : ''} · {new Date(lead.created_at).toLocaleString('es-BO')}</p></div></div><LeadEditor lead={lead} onSaved={onSaved} /></article>;
+}
+
 export default function CommercialDashboard() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState('');
@@ -66,7 +69,7 @@ export default function CommercialDashboard() {
   const leads = useMemo(() => data?.leads.filter(lead => filter === 'all' || lead.status === filter) ?? [], [data, filter]);
 
   if (loading && !data) return <div className="flex min-h-72 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-enkarta-gold border-t-transparent" /></div>;
-  if (error && !data) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6"><h2 className="font-playfair text-2xl text-amber-950">Embudo comercial pendiente</h2><p className="mt-2 font-outfit text-sm text-amber-800">{error}</p><button type="button" onClick={() => void load()} className="mt-4 rounded-xl border border-amber-300 bg-white px-4 py-2 text-xs font-semibold text-amber-900">Volver a comprobar</button></div>;
+  if (error && !data) return <div className="space-y-6"><CommercialReferenceSearch renderLead={lead => <LeadSummary lead={lead} />} /><div className="rounded-2xl border border-amber-200 bg-amber-50 p-6"><h2 className="font-playfair text-2xl text-amber-950">No se pudo cargar el embudo</h2><p role="alert" className="mt-2 font-outfit text-sm text-amber-800">{error}</p><button type="button" onClick={() => void load()} className="mt-4 min-h-11 rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">Volver a comprobar</button></div></div>;
   if (!data) return null;
 
   const s = data.summary;
@@ -76,6 +79,8 @@ export default function CommercialDashboard() {
   ];
   return <div className="space-y-6">
     <SalesToolkit />
+    <CommercialReferenceSearch renderLead={lead => <LeadSummary lead={lead} />} />
+    {error && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 font-outfit text-sm text-amber-900">No se pudo actualizar el embudo. Los datos visibles corresponden a la carga anterior. {error}</p>}
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="font-outfit text-[10px] font-semibold uppercase tracking-[.2em] text-[#a48655]">Últimos {data.periodDays} días</p><h2 className="mt-1 font-playfair text-3xl text-gray-900">Embudo comercial</h2><p className="mt-1 max-w-2xl font-outfit text-xs leading-5 text-gray-500">Relaciona anuncio, diseño, paquete y resultado mediante la referencia que aparece en WhatsApp. Un intento registra la solicitud del enlace; no confirma apertura ni envío. No registra IP, teléfono ni conversación.</p></div><button type="button" onClick={() => void load()} className="self-start rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">Actualizar</button></div>
 
     <section className="grid grid-cols-2 gap-3 lg:grid-cols-6">{cards.map(([label, value, detail]) => <article key={String(label)} className="rounded-2xl border border-[#e4dfd4] bg-white p-4"><p className="font-playfair text-3xl text-[#5d513d]">{value}</p><h3 className="mt-2 font-outfit text-[11px] font-semibold text-gray-700">{label}</h3><p className="mt-1 font-outfit text-[9px] text-gray-400">{detail}</p></article>)}</section>
@@ -86,10 +91,7 @@ export default function CommercialDashboard() {
 
     <section className="overflow-hidden rounded-2xl border border-[#e4dfd4] bg-white">
       <div className="flex flex-col gap-3 border-b border-gray-100 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-playfair text-2xl text-gray-800">Contactos de WhatsApp</h3><p className="mt-1 font-outfit text-[11px] text-gray-400">Busca la referencia en la conversación y actualiza su avance.</p></div><select aria-label="Filtrar contactos" value={filter} onChange={event => setFilter(event.target.value as typeof filter)} className="rounded-xl border border-gray-200 px-3 py-2 text-xs"><option value="all">Todos</option>{COMMERCIAL_LEAD_STATUSES.map(status => <option key={status} value={status}>{leadStatusLabel(status)}</option>)}</select></div>
-      {leads.length === 0 ? <p className="p-10 text-center font-outfit text-sm text-gray-400">No hay contactos en este estado.</p> : <div className="divide-y divide-gray-100">{leads.map(lead => {
-        const source = lead.utm_source || lead.referrer_host || 'Directo';
-        return <article key={lead.id} className="p-4 sm:p-5"><div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong className="font-mono text-sm text-[#765f39]">{lead.reference}</strong><span className="rounded-full bg-[#f1ece3] px-2 py-1 font-outfit text-[9px] uppercase text-[#75664e]">{lead.package_key === 'general' ? 'Sin paquete' : lead.package_key}</span>{lead.event_category && <span className="rounded-full bg-rose-50 px-2 py-1 font-outfit text-[9px] text-rose-600">{lead.event_category}</span>}{lead.design && <span className="rounded-full bg-gray-50 px-2 py-1 font-outfit text-[9px] text-gray-500">{lead.design}</span>}</div><p className="mt-1 truncate font-outfit text-[10px] text-gray-400">{source}{lead.utm_campaign ? ` · ${lead.utm_campaign}` : ''} · {new Date(lead.created_at).toLocaleString('es-BO')}</p></div></div><LeadEditor lead={lead} onSaved={() => void load()} /></article>;
-      })}</div>}
+      {leads.length === 0 ? <p className="p-10 text-center font-outfit text-sm text-gray-400">No hay contactos en este estado.</p> : <div className="divide-y divide-gray-100">{leads.map(lead => <LeadCard key={lead.id} lead={lead} onSaved={() => void load()} />)}</div>}
     </section>
   </div>;
 }

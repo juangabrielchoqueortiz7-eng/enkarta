@@ -932,6 +932,43 @@ test('sales playbook produces consistent totals, proposal and stage replies', ()
   assert.equal(SALES_PIPELINE.length, 5);
 });
 
+const commercialLookup=require('../src/lib/commercial-lookup.ts');
+const lookupLead={id:'30000000-0000-4000-8000-000000000001',reference:'EK-A1B2C3D4',status:'contacted',package_key:'premium',design:'Lunaria',event_category:'Boda',placement:'qa-lookup',utm_source:'QA',utm_medium:'',utm_campaign:'',referrer_host:'',revenue_bs:null,notes:'Consulta ficticia',created_at:'2024-01-01T12:00:00Z',updated_at:'2024-01-01T12:00:00Z'};
+test('commercial lookup accepts a complete normalized reference and refuses partial, wildcard and payment codes',()=>{
+ assert.equal(commercialLookup.normalizeCommercialReference('  ek-a1b2c3d4 '),'EK-A1B2C3D4');
+ for(const value of [null,{},['EK-A1B2C3D4'],'EK-A1B2','EK-A1B2C3D45','EK-ABCDEFGH','EK-%','EK-________','ENK-Q6MRGK','Referencia: EK-A1B2C3D4','EK-A1B2\nC3D4'])assert.equal(commercialLookup.normalizeCommercialReference(value),null,String(value));
+});
+test('commercial lookup is an explicit private GET and keeps only validated fields of the requested reference',async()=>{
+ let calls=0;const controller=new AbortController();
+ const lead=await commercialLookup.requestCommercialLead(' ek-a1b2c3d4 ',async(url,options)=>{calls++;assert.equal(url,'/api/admin/commercial/lookup?reference=EK-A1B2C3D4');assert.equal(options.cache,'no-store');assert.equal(options.signal,controller.signal);assert.equal(options.method,undefined);return Response.json({lead:{...lookupLead,revenue_bs:'930.00',session_hash:'NEVER-RETAIN',token:'NEVER-RETAIN'}});},controller.signal);
+ assert.deepEqual(lead,{...lookupLead,revenue_bs:930});assert.equal(calls,1);assert.doesNotMatch(JSON.stringify(lead),/NEVER-RETAIN/);
+ await assert.rejects(commercialLookup.requestCommercialLead('EK-A1',async()=>{calls++;return Response.json({lead:null});}),/referencia completa/);assert.equal(calls,1);
+});
+test('commercial lookup distinguishes a real absence from connection, session and database errors',async()=>{
+ assert.equal(await commercialLookup.requestCommercialLead(lookupLead.reference,async()=>Response.json({lead:null})),null);
+ let calls=0;await assert.rejects(commercialLookup.requestCommercialLead(lookupLead.reference,async()=>{calls++;throw new TypeError('offline');}),/conexión/);assert.equal(calls,1);
+ for(const [status,body,expected]of [[401,{},/sesión/],[503,{code:'MIGRATION_REQUIRED'},/migración 012/],[500,{error:'DATABASE PRIVATE'},/comprobar/]])await assert.rejects(commercialLookup.requestCommercialLead(lookupLead.reference,async()=>Response.json(body,{status})),expected);
+});
+test('commercial lookup rejects truncated, borrowed and malformed results instead of showing another contact',async()=>{
+ for(const value of [null,[],{}, {lead:{}}, {lead:{...lookupLead,reference:'EK-1234ABCD'}},... [{id:'broken'},{status:'delivered'},{notes:null},{design:'x'.repeat(101)},{revenue_bs:-1},{revenue_bs:''},{revenue_bs:{}},{created_at:'not-a-date'},{package_key:'free'}].map(patch=>({lead:{...lookupLead,...patch}}))])await assert.rejects(commercialLookup.requestCommercialLead(lookupLead.reference,async()=>Response.json(value)));
+ await assert.rejects(commercialLookup.requestCommercialLead(lookupLead.reference,async()=>new Response('{broken')),/incompleta/);
+});
+test('commercial search render explains its full-history scope and supplies accessible mobile-sized controls',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),Search=require('../src/components/admin/CommercialReferenceSearch.tsx').default;
+ let calls=0;const html=renderToStaticMarkup(React.createElement(Search,{transport:async()=>{calls++;return Response.json({lead:null});},renderLead:()=>null}));
+ assert.equal(calls,0);assert.match(html,/180 días/);assert.match(html,/filtros del listado/);assert.match(html,/name="commercial-reference"/);assert.match(html,/autoComplete="off"/);assert.match(html,/spellcheck="false"/);assert.match(html,/role="status"/);assert.match(html,/text-base/);assert.match(html,/focus-visible:outline/);assert.match(html,/type="submit"/);
+});
+test('commercial lookup workbench remains development-only',()=>{
+ const source=fs.readFileSync(path.join(root,'src/app/dev/services/commercial-lookup/page.tsx'),'utf8');assert.match(source,/process\.env\.NODE_ENV !== 'development'/);assert.match(source,/notFound\(\)/);
+});
+test('commercial reference result is read-only and cannot create a second editor of the listed contact',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),Summary=require('../src/components/admin/CommercialLeadSummary.tsx').default;
+ const html=renderToStaticMarkup(React.createElement(Summary,{lead:{...lookupLead,notes:'<nota ficticia>'}}));
+ assert.match(html,/Estado consultado/);assert.match(html,/Conversación/);assert.match(html,/Lunaria/);assert.match(html,/solo lectura/);assert.match(html,/&lt;nota ficticia&gt;/);assert.doesNotMatch(html,/<input|<select|<textarea|<form|Guardar/);
+ const dashboard=fs.readFileSync(path.join(root,'src/components/admin/CommercialDashboard.tsx'),'utf8');
+ for(const search of dashboard.matchAll(/<CommercialReferenceSearch[^\n]+/g))assert.match(search[0],/renderLead=\{lead => <LeadSummary lead=\{lead\}/);
+});
+
 const salesDraft=require('../src/lib/sales-draft.ts');
 const salesDraftScope='a'.repeat(64),salesDraftNow=1800000000000;
 const salesDraftInput={clientName:'QA Familia Pérez',eventType:'Boda',eventDate:'2027-06-12',design:'Lunaria',packageKey:'premium',extrasLabel:'Entrega express ficticia',extrasBs:270};
