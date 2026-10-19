@@ -41,7 +41,19 @@ El cliente vuelve a validar identidad y referencia, pertenencia de cada movimien
 - `/dev/services/commercial-history` proporciona 45 registros ficticios por contacto, notas largas/vacías, errores, lentitud y cambio de identidad/revisión. El transporte es exclusivamente de memoria y la ruta responde 404 fuera de desarrollo.
 - La revisión cruzada del código comprobó la cancelación, el descarte de datos al cerrar y la preservación de borradores. No equivale a una aceptación visual en navegador.
 - Verificación completa: **475 pruebas correctas** (196 constructor, 153 servicios, 19 PostgreSQL de guardado, 24 contrato/reducer del editor, 14 PostgreSQL del dashboard, 16 contrato del dashboard, 17 contrato/render del historial, 31 integridad y 5 distribución), lint, TypeScript y build correctos. Persisten las advertencias existentes de imágenes de invitaciones originales. **597/597 archivos protegidos** idénticos por SHA-256.
-- Desarrollo en la rama `codex/commercial-history`, sin fusionar ni desplegar este bloque. La aceptación manual y las pruebas de producción se dejan pendientes conforme al aplazamiento del usuario. No se han creado datos de producción para este bloque.
+- Desarrollo en la rama `codex/commercial-history`, posteriormente fusionada y desplegada a petición del usuario. La aceptación manual sigue aplazada. No se han creado datos de producción para este bloque.
 - Los diseños, presets, recursos originales y el adaptador BCP están fuera de este cambio. BCP continúa desactivado.
 
 Evidencia privada de verificaciones locales: `tmp/commercial-history/` y `tmp/commercial-history-services.log`.
+
+## Despliegue y comprobación de lectura, 19 de octubre de 2026
+
+- Código **`0122623`**, fusionado a `main`. Vercel **`dpl_3JQq2Fkk3XczJ7PiqMM5jhZaJvhq`**, estado Ready y alias [enkarta.vercel.app](https://enkarta.vercel.app). Despliegue inmutable: [enkarta-iivunslwa](https://enkarta-iivunslwa-juangabrielchoqueortiz7-engs-projects.vercel.app).
+- CI del código desplegado: **completed / success**, incluida la verificación completa y la auditoría de dependencias. [Verify application #39316064695](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39316064695).
+- Publicado desde el workspace completo, incluidos los originales que no están en Git. **129/129 recursos publicados** mantienen tamaño y SHA-256; **6/6 rutas** públicas/de acceso respondieron como se esperaba. Comprobación local final: **597/597 archivos protegidos** idénticos.
+- **7 comprobaciones de lectura correctas**: ID aleatorio confirmado inexistente por HEAD exacto, esquema existente de historial consultado con ese alcance vacío, denegación del rol anónimo en la tabla, HTTP 401 privado para visitantes/cookies inválidas, fixture de desarrollo inaccesible, HTTP 400 para parámetros inválidos y HTTP 404 para el contacto inexistente con sesión administrativa válida.
+- No se consultaron fichas ni historiales de clientes reales. Cero registros creados, modificados o eliminados, cero llamadas bancarias y cero mensajes. La cookie temporal del cliente de automatización se retiró al terminar; no se modificó el acceso habitual del usuario.
+- No se ejecutó una aceptación manual ni un recorrido de páginas con registros en producción. Esas comprobaciones siguen pendientes; las lecturas del caso inexistente no se presentan como validación visual o como una prueba de historial poblado en producción.
+- BCP continúa desactivado. No se modificaron invitaciones, presets, recursos ni configuración del proveedor de pagos.
+
+Evidencia privada adicional en `tmp/commercial-history/`: `deployment.log`, `deployment-inspect.log`, `production-readonly.json`, `production-public.json`, `protected-local-final.json`, `ci.json` y `RESULTADO.json`, sin claves, contraseñas ni cookies.
