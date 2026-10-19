@@ -30,8 +30,20 @@ La recuperación conserva cliente, evento, fecha, diseño y descripción. La whi
 - La muestra `/dev/services/sales-quote` añade casos con coma, decimal incompleto, importe inválido, fecha inválida y un borrador anterior con `0.105`. Usa configuración y portapapeles simulados; permanece inaccesible fuera de desarrollo.
 - Verificación completa: **504 pruebas correctas** (200 constructor/contratos, 153 servicios, 19 PostgreSQL de guardado, 24 contrato/reducer comercial, 14 PostgreSQL del dashboard, 16 contrato del dashboard, 17 contrato/render del historial, 15 dominio del cotizador, 10 render del cotizador, 31 integridad y 5 distribución), lint, TypeScript y build correctos. Persisten las advertencias existentes de imágenes de las invitaciones originales.
 - Conservación: **597/597 archivos protegidos** idénticos por SHA-256. Revisión cruzada de dominio e interfaz sin hallazgos bloqueantes. Las pruebas de render no se presentan como aceptación visual en Android.
-- Trabajo en `codex/sales-quote-validation`, sin fusionar ni desplegar este bloque y sin otra migración SQL. La aceptación manual sigue aplazada y no se han creado datos de producción para este bloque.
+- Desarrollo en `codex/sales-quote-validation`, posteriormente fusionado a `main` y desplegado. No requiere otra migración SQL. La aceptación manual sigue aplazada y no se han creado datos de producción para este bloque.
 
 BCP permanece desactivado. No se cambian precios, paquetes, diseños, presets ni recursos originales de las invitaciones.
 
 Evidencia privada: `tmp/sales-quote-validation/verify.log`, `protected-local.json`, `RESULTADO.json` y `tmp/sales-quote-draft-tests.log`.
+
+## Despliegue y comprobaciones de lectura, 19 de octubre de 2026
+
+- Código **`1195225`**, fusionado a `main`. Vercel **`dpl_66psm7k9Fy7B7HdHehB15U6xcAGv`**, estado Ready y alias [enkarta.vercel.app](https://enkarta.vercel.app). Despliegue inmutable: [enkarta-q73p18qxs](https://enkarta-q73p18qxs-juangabrielchoqueortiz7-engs-projects.vercel.app).
+- CI del código desplegado: **completed / success**, incluida `npm run verify` y la auditoría de dependencias de producción. [Verify application #39339665122](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39339665122). El conteo de 504 pruebas procede del informe local completo; los metadatos de CI confirman el resultado de los pasos, sin atribuirles un desglose no consultado.
+- Publicado desde el workspace completo, incluidos los originales que no están en Git. **129/129 recursos publicados** conservan tamaño y SHA-256; **6/6 rutas** públicas/de acceso respondieron como se esperaba. Comprobación local final: **597/597 archivos protegidos** idénticos.
+- **7 comprobaciones correctas**: bloqueo local del proveedor BCP y del adaptador sin contrato, denegación privada HTTP 401 en cinco casos sin sesión administrativa válida, muestra de desarrollo HTTP 404, presencia del nuevo contrato del cotizador en los archivos JavaScript entregados por `/admin`, acceso administrativo normal con cookie segura, contrato acotado de `sales-config` sin caché y borrador ligado a la sesión, y persistencia de la denegación para una petición anónima separada. La comprobación BCP corresponde al código y entorno local; no se afirma haber leído la variable remota del proveedor.
+- Cero consultas a contactos reales, cero registros creados, modificados o eliminados, cero llamadas bancarias y cero mensajes. Las instrucciones de pago y la cookie temporal permanecieron exclusivamente en memoria; no se guardaron sus valores en los informes. La cookie del cliente de automatización se retiró al terminar.
+- La comprobación HTTP acredita publicación y permisos; no ejecuta edición, portapapeles, recuperación de borradores ni adaptación visual en Android. Esas interacciones conservan la cobertura automática local indicada arriba y siguen pendientes de aceptación manual.
+- No se modificaron precios, paquetes, invitaciones, presets, recursos ni configuración del proveedor de pagos. BCP permanece bloqueado hasta disponer de su contrato oficial y validar la integración.
+
+Evidencia privada adicional en `tmp/sales-quote-validation/`: `deployment.log`, `deployment-inspect.log`, `production-public.json`, `production-quote-readonly.json`, `protected-local-final.json` y `ci.json`, sin claves, contraseñas ni cookies.
