@@ -31,7 +31,18 @@ Evidencia privada de esta entrega: `tmp/sales-dashboard-recovery/`. No se crean 
 - **523 pruebas correctas**: 200 constructor/contratos, 153 servicios, 19 PostgreSQL de guardado, 24 contrato/reducer comercial, 14 PostgreSQL del dashboard, 16 contrato del dashboard, 17 historial, 11 navegación, 8 recuperación/render, 15 dominio del cotizador, 10 render del cotizador, 31 integridad y 5 distribución.
 - Lint y TypeScript correctos. La primera ejecución de `npm run verify` terminó esas pruebas, pero el sandbox impidió crear una carpeta de `.next` durante el build (`EPERM`). Se repitió únicamente `npm run build` con el permiso de ejecución necesario y terminó correctamente; no se presenta la primera ejecución como exitosa. Persisten las advertencias previas de imágenes en las invitaciones originales.
 - Revisión cruzada sin hallazgos bloqueantes. **597/597 archivos protegidos** conservan su SHA-256 y el guard de distribución encuentra los **129 recursos originales** completos. Ninguna prueba requiere un banco, WhatsApp ni datos de producción.
-- Desarrollo en `codex/sales-dashboard-recovery`, sin nueva migración SQL. La aceptación manual y visual permanece aplazada.
+- Desarrollo en `codex/sales-dashboard-recovery`, posteriormente fusionado y desplegado desde `main`, sin nueva migración SQL. La aceptación manual y visual permanece aplazada.
+
+## Producción, 19 de octubre de 2026
+
+- Código **`d6f6edc`**. Vercel **`dpl_8uqK27csarPyxEZ22szLRJxm2eek`**, Ready y alias [enkarta.vercel.app](https://enkarta.vercel.app). Despliegue inmutable: [enkarta-j4oxzopcv](https://enkarta-j4oxzopcv-juangabrielchoqueortiz7-engs-projects.vercel.app).
+- CI del código desplegado: **completed / success**, incluidos `npm run verify` y la auditoría de dependencias de producción. [Verify application #39341353006](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39341353006). El conteo de 523 pruebas procede del informe local; se consultó el resultado de los pasos de CI, sin descargar sus logs.
+- **129/129 recursos originales publicados** conservan tamaño y SHA-256. **6/6 rutas** públicas/de acceso respondieron como se esperaba. La muestra `/dev/services/commercial-dashboard` responde **404** en producción. Comprobación local final: **597/597 protegidos** idénticos.
+- **7 comprobaciones correctas** de lectura y contrato: bloqueo BCP local conservado, denegación HTTP 401 sin caché ni instrucciones para visitantes/cookies inválidas, muestra del cotizador HTTP 404, presencia de los textos nuevos de recuperación en los archivos JavaScript entregados por `/admin`, autenticación normal con cookie segura, lectura privada y acotada de configuración con alcance de borrador ligado a la sesión, y denegación de una petición anónima separada. El bloqueo BCP se comprobó en código y entorno local; no se afirma haber leído el valor remoto del proveedor.
+- No se consultaron contactos ni historiales de clientes. Cero registros creados, modificados o eliminados, cero usuarios nuevos, cero llamadas bancarias y cero mensajes. Las instrucciones de pago y la cookie administrativa temporal se mantuvieron en memoria, sin sus valores en los informes; la cookie del cliente de automatización se retiró al terminar.
+- La prueba HTTP verifica publicación y permisos. No reproduce una desconexión dentro del navegador ni acredita la conservación del foco, la búsqueda o el borrador en un Android físico; ese recorrido sigue aplazado. No se han cambiado BCP, estilos globales, invitaciones, presets ni originales.
+
+Evidencia privada adicional en `tmp/sales-dashboard-recovery/`: `verify.log`, `build.log`, `deployment.log`, `deployment-inspect.log`, `production-public.json`, `production-readonly.json`, `production-development-route.json`, `protected-local-final.json`, `ci.json` y `RESULTADO.json`.
 
 ## Pendientes separados
 
