@@ -29,7 +29,7 @@ import { layoutForTemplate } from '@/lib/layout-presets';
 import { themeForTemplate, motionForTemplate, tokensForTemplate } from '@/lib/template-themes';
 import { listUserTemplates, saveUserTemplate, deleteUserTemplate, type UserTemplate } from '@/lib/user-templates';
 import { deleteUserSection, hydrateUserSections, listUserSections, saveUserSection, type UserSection } from '@/lib/user-sections';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ImageUploader from '../ImageUploader';
 import MultiImageUploader from '../MultiImageUploader';
 import ImageStudio from '../ImageStudio';
@@ -285,7 +285,30 @@ function imageMediaLibrary(data: InvitationParsed, cfg: BuilderConfig, blocks: B
   return Array.from(found);
 }
 
-export default function BlockEditorPanel({ data, onChange, selectedId, selectedIds, onSelect, previewMode, previewWidth }: Props) {
+export default function BlockEditorPanel({ data, onChange: notifyChange, selectedId, selectedIds, onSelect, previewMode, previewWidth }: Props) {
+  const mounted = useRef(true);
+  const context = useRef({ id: data.id, template: data.template, designKey: data.config?.designKey, epoch: 0 });
+  if (context.current.id !== data.id || context.current.template !== data.template || context.current.designKey !== data.config?.designKey) {
+    context.current = { id: data.id, template: data.template, designKey: data.config?.designKey, epoch: context.current.epoch + 1 };
+  }
+  const epoch = context.current.epoch;
+  const latest = useRef({ data, notifyChange });
+  latest.current = { data, notifyChange };
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const currentContext = () => mounted.current && context.current.epoch === epoch
+    && latest.current.data.id === data.id && latest.current.data.template === data.template
+    && latest.current.data.config?.designKey === data.config?.designKey;
+  const commit = (patch: Partial<InvitationParsed>, replaceLayout = false) => {
+    if (!currentContext()) return;
+    if (replaceLayout) context.current.epoch += 1;
+    const current = latest.current;
+    latest.current = { ...current, data: { ...current.data, ...patch } };
+    current.notifyChange(patch);
+  };
+  const onChange = (patch: Partial<InvitationParsed>) => commit(patch);
   const cfg: BuilderConfig = data.config ?? {};
   const layout = cfg.layout;
   const blocks = layout?.blocks ?? [];
@@ -317,8 +340,10 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
     listUserTemplates().then(setTemplates);
     hydrateUserSections().then(state => { setUserSections(state.sections); setSectionsCloud(state.cloud); });
   }, []);
-  const applyTemplate = (t: UserTemplate) =>
-    onChange({ config: { ...cfg, layout: t.layout, theme: t.theme ?? cfg.theme, motion: t.motion ?? cfg.motion, tokens: t.tokens ?? cfg.tokens } });
+  const applyTemplate = (t: UserTemplate) => {
+    const current = latest.current.data.config;
+    commit({ config: { ...current, layout: t.layout, theme: t.theme ?? current.theme, motion: t.motion ?? current.motion, tokens: t.tokens ?? current.tokens } }, true);
+  };
   const saveAsTemplate = () => {
     if (!layout) return;
     const name = window.prompt('Nombre de la plantilla:', data.names || 'Mi plantilla');
@@ -345,11 +370,22 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
     </div>
   );
 
-  const setBlocks = (next: Block[]) =>
-    onChange({ config: { ...cfg, layout: { version: LAYOUT_VERSION, basePreset: layout?.basePreset ?? data.template, presetKey: layout?.presetKey ?? data.template, blocks: next } } });
+  const setBlocks = (next: Block[] | ((current: Block[]) => Block[])) => {
+    if (!currentContext()) return;
+    const current = latest.current.data, config = current.config ?? {}, currentLayout = config.layout;
+    const nextBlocks = typeof next === 'function' ? next(currentLayout?.blocks ?? []) : next;
+    onChange({ config: { ...config, layout: { ...currentLayout, version: LAYOUT_VERSION, basePreset: currentLayout?.basePreset ?? current.template, presetKey: currentLayout?.presetKey ?? current.template, blocks: nextBlocks } } });
+  };
 
-  const patchBlock = (id: string, patch: Partial<Block>) =>
-    setBlocks(blocks.map(b => (b.id === id ? { ...b, ...patch } : b)));
+  const patchBlock = (id: string, patch: Partial<Block> | ((block: Block, current: InvitationParsed) => Partial<Block> | null)) => {
+    if (!currentContext()) return;
+    const current = latest.current.data, currentBlocks = current.config.layout?.blocks ?? [];
+    const block = currentBlocks.find(item => item.id === id);
+    if (!block) return;
+    const update = typeof patch === 'function' ? patch(block, current) : patch;
+    if (!update) return;
+    setBlocks(currentBlocks.map(item => item.id === id ? { ...item, ...update } : item));
+  };
   const saveBlocksAsSection = (items: Block[]) => {
     if (!items.length) return;
     const suggested = items.length === 1 ? (BLOCKS[items[0].type]?.label ?? 'Mi sección') : `Composición de ${items.length} bloques`;
@@ -495,7 +531,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
         </div>
         <button
           type="button"
-          onClick={() => onChange({
+          onClick={() => commit({
             config: {
               ...cfg,
               layout: layoutForTemplate(data),
@@ -503,7 +539,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
               motion: cfg.motion ?? { preset: motionForTemplate(data.template) },
               tokens: cfg.tokens ?? tokensForTemplate(data.template),
             },
-          })}
+          }, true)}
           className="w-full py-3 text-sm font-outfit font-medium text-white bg-enkarta-gold rounded-xl hover:bg-enkarta-gold/90 shadow shadow-enkarta-gold/30"
         >
           Convertir a bloques editables
@@ -569,21 +605,26 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
   if (selected && !batchMode) {
     const def = BLOCKS[selected.type];
     const editorProps = resolveBlockEditorProps(selected, data);
-    const galleryImages = (block: Block): string[] => {
-      const images = resolveBlockEditorProps(block, data).images;
+    const galleryImages = (block: Block, current = latest.current.data): string[] => {
+      const images = resolveBlockEditorProps(block, current).images;
       return Array.isArray(images) ? images as string[] : [];
     };
-    const editedProps = (block: Block, key: string, value: any) => ({
-      ...block.props, [key]: value,
-      ...(block.type === 'gallery' && key === 'images' ? { captions: reorderGalleryCaptions(galleryImages(block), Array.isArray(block.props.captions) ? block.props.captions : [], value) } : {}),
-    });
-    const setProp = (key: string, v: any) => patchBlock(selected.id, { ...detachBinding(selected, key), props: editedProps(selected, key, v) });
-    const setProps = (patch: Record<string, unknown>) => patchBlock(selected.id, { props: { ...selected.props, ...patch } });
+    const editedProps = (block: Block, key: string, value: any, current: InvitationParsed) => {
+      const resolved = resolveBlockEditorProps(block, current);
+      return {
+        ...block.props, [key]: value,
+        ...(block.type === 'gallery' && key === 'images' ? { captions: reorderGalleryCaptions(galleryImages(block, current), Array.isArray(resolved.captions) ? resolved.captions : [], value) } : {}),
+      };
+    };
+    const editSelected = (update: (block: Block, current: InvitationParsed) => Partial<Block> | null) =>
+      patchBlock(selected.id, (block, current) => block.type === selected.type ? update(block, current) : null);
+    const setProp = (key: string, v: any) => editSelected((block, current) => ({ ...detachBinding(block, key), props: editedProps(block, key, v, current) }));
+    const setProps = (patch: Record<string, unknown>) => editSelected(block => ({ props: { ...block.props, ...patch } }));
     const setIcon = (key: string, v: string, colors?: any, speed?: number) =>
-      patchBlock(selected.id, { ...detachBinding(selected, key), props: { ...selected.props, [key]: v, [`${key}Colors`]: colors, [`${key}Speed`]: speed } });
-    const setStyle = (patch: Record<string, any>) => patchBlock(selected.id, { style: { ...(selected.style ?? {}), ...patch } });
-    const setAnim = (patch: Record<string, any>) => patchBlock(selected.id, { animation: { ...(selected.animation ?? {}), ...patch } });
-    const setVisibility = (patch: NonNullable<Block['visibility']>) => patchBlock(selected.id, { visibility: { ...(selected.visibility ?? {}), ...patch } });
+      editSelected(block => ({ ...detachBinding(block, key), props: { ...block.props, [key]: v, [`${key}Colors`]: colors, [`${key}Speed`]: speed } }));
+    const setStyle = (patch: Record<string, any>) => editSelected(block => ({ style: { ...(block.style ?? {}), ...patch } }));
+    const setAnim = (patch: Record<string, any>) => editSelected(block => ({ animation: { ...(block.animation ?? {}), ...patch } }));
+    const setVisibility = (patch: NonNullable<Block['visibility']>) => editSelected(block => ({ visibility: { ...(block.visibility ?? {}), ...patch } }));
     const setBinding = (key: string, path: string) => {
       const bindings = { ...(selected.bindings ?? {}) };
       if (path) bindings[key] = path;
@@ -663,19 +704,28 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
     };
     // Hijos (columnas)
     const kids = selected.children ?? [];
-    const setKids = (next: Block[]) => patchBlock(selected.id, { children: next });
-    const setKidProp = (i: number, key: string, val: any) => setKids(kids.map((c, j) => {
-      if (j !== i) return c;
-      const detached = detachBinding(c, key);
-      return { ...c, ...detached, props: editedProps(c, key, val) };
-    }));
-    const setKidIcon = (i: number, key: string, val: string, colors?: any, speed?: number) => setKids(kids.map((c, j) => {
-      if (j !== i) return c;
-      const detached = detachBinding(c, key);
-      return { ...c, ...detached, props: { ...c.props, [key]: val, [`${key}Colors`]: colors, [`${key}Speed`]: speed } };
-    }));
-    const setKidLayout = (i: number, patch: Partial<BlockLayout>) => setKids(kids.map((c, j) => (j === i ? { ...c, layout: { ...(c.layout ?? {}), ...patch } } : c)));
-    const moveKid = (i: number, dir: number) => { const n = [...kids]; const j = i + dir; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; setKids(n); };
+    const setKids = (next: Block[] | ((current: Block[]) => Block[])) => editSelected(block => ({ children: typeof next === 'function' ? next(block.children ?? []) : next }));
+    const patchKid = (i: number, update: (child: Block, current: InvitationParsed) => Partial<Block>) => {
+      const target = kids[i];
+      if (!target) return;
+      editSelected((block, current) => {
+        if (!block.children?.some(child => child.id === target.id && child.type === target.type)) return null;
+        return { children: block.children.map(child => child.id === target.id ? { ...child, ...update(child, current) } : child) };
+      });
+    };
+    const setKidProp = (i: number, key: string, val: any) => patchKid(i, (child, current) => ({ ...detachBinding(child, key), props: editedProps(child, key, val, current) }));
+    const setKidIcon = (i: number, key: string, val: string, colors?: any, speed?: number) => patchKid(i, child => ({ ...detachBinding(child, key), props: { ...child.props, [key]: val, [`${key}Colors`]: colors, [`${key}Speed`]: speed } }));
+    const setKidLayout = (i: number, patch: Partial<BlockLayout>) => patchKid(i, child => ({ layout: { ...(child.layout ?? {}), ...patch } }));
+    const moveKid = (i: number, dir: number) => {
+      const target = kids[i];
+      if (!target) return;
+      setKids(current => {
+        const from = current.findIndex(child => child.id === target.id), to = from + dir;
+        if (from < 0 || to < 0 || to >= current.length) return current;
+        const next = [...current]; [next[from], next[to]] = [next[to], next[from]];
+        return next;
+      });
+    };
     const isOverlay = (selected.props.mode ?? 'columns') === 'overlay';
     const resolvedX = viewportMode === 'auto' ? 0 : currentViewport.x ?? lay.x ?? 0;
     const resolvedY = viewportMode === 'auto' ? 0 : currentViewport.y ?? lay.y ?? 0;
@@ -913,7 +963,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
                     <div className="flex items-center gap-1.5 text-gray-400">
                       <button type="button" disabled={i === 0} onClick={() => moveKid(i, -1)} className="hover:text-gray-700 disabled:opacity-30">↑</button>
                       <button type="button" disabled={i === kids.length - 1} onClick={() => moveKid(i, 1)} className="hover:text-gray-700 disabled:opacity-30">↓</button>
-                      <button type="button" onClick={() => setKids(kids.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600">✕</button>
+                      <button type="button" onClick={() => setKids(current => current.filter(child => child.id !== c.id))} className="text-red-400 hover:text-red-600">✕</button>
                     </div>
                   </div>
                   {cdef?.fields.map(f => (
@@ -947,7 +997,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
             })}
             <div className="grid grid-cols-3 gap-2">
               {CHILD_PALETTE.map(type => (
-                <button key={type} type="button" onClick={() => setKids([...kids, createBlock(type)])} className="flex flex-col items-center gap-1 p-2 rounded-xl border border-gray-100 bg-white hover:border-enkarta-gold/40 hover:bg-enkarta-gold/5">
+                <button key={type} type="button" onClick={() => setKids(current => [...current, createBlock(type)])} className="flex flex-col items-center gap-1 p-2 rounded-xl border border-gray-100 bg-white hover:border-enkarta-gold/40 hover:bg-enkarta-gold/5">
                   <BlockGlyph type={type} size="sm" />
                   <span className="text-[10px] font-outfit text-gray-500 text-center leading-tight">{BLOCKS[type].label}</span>
                 </button>
@@ -1253,7 +1303,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
       {libraryView === 'layers' ? <>
       <div className="flex items-center justify-between">
         <div><h4 className={editorSectionTitleCls}>Orden de la invitación</h4><p className="mt-1 text-[11px] text-[#938a80] font-outfit">Arrastra las secciones para cambiar el recorrido.</p></div>
-        {batchMode ? <button type="button" disabled={!selectedBlocks.length} onClick={() => setBatchMode(false)} className="rounded-lg bg-violet-600 px-2.5 py-1.5 text-[10px] font-outfit font-medium text-white disabled:opacity-40">Editar selección ({selectedBlocks.length})</button> : <button type="button" onClick={() => { if (confirm('¿Descartar los bloques y volver a la plantilla original?')) onChange({ config: { ...cfg, layout: undefined } }); }} className="text-xs text-gray-400 hover:text-red-500 font-outfit">Quitar bloques</button>}
+        {batchMode ? <button type="button" disabled={!selectedBlocks.length} onClick={() => setBatchMode(false)} className="rounded-lg bg-violet-600 px-2.5 py-1.5 text-[10px] font-outfit font-medium text-white disabled:opacity-40">Editar selección ({selectedBlocks.length})</button> : <button type="button" onClick={() => { if (confirm('¿Descartar los bloques y volver a la plantilla original?')) commit({ config: { ...latest.current.data.config, layout: undefined } }, true); }} className="text-xs text-gray-400 hover:text-red-500 font-outfit">Quitar bloques</button>}
       </div>
       {batchMode && <p className="-mt-2 rounded-xl bg-violet-50 px-3 py-2 text-xs text-violet-600 font-outfit">Marca todas las capas que quieres organizar juntas.</p>}
 
