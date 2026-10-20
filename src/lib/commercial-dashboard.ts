@@ -14,11 +14,27 @@ export type CommercialDashboard = {
   pagination: { size: 25; total: number; hasMore: boolean; nextCursor: string | null };
 };
 
-/** Replace a page while keeping pending editors mounted and newer revisions intact. */
-export function mergeCommercialPageEditors(previous: CommercialLead[], incoming: CommercialLead[], active: ReadonlySet<string>): CommercialLead[] {
+/** Replace a page while keeping pending or explicitly opened editors mounted. */
+export function mergeCommercialPageEditors(previous: CommercialLead[], incoming: CommercialLead[], active: ReadonlySet<string>, openedId: string | null = null): CommercialLead[] {
   const prior = new Map(previous.map(lead => [lead.id, lead])), received = new Set(incoming.map(lead => lead.id));
   const rows = incoming.map(lead => { const old = prior.get(lead.id); return old && old.revision > lead.revision ? old : lead; });
-  for (const old of previous) if (active.has(old.id) && !received.has(old.id)) rows.push(old);
+  for (const old of previous) if ((active.has(old.id) || old.id === openedId) && !received.has(old.id)) rows.push(old);
+  return rows;
+}
+
+/** An exact lookup may open a historical contact without changing the reporting period. */
+export function openCommercialLeadEditor(previous: CommercialLead[], incoming: unknown, retained: ReadonlySet<string>): CommercialLead[] {
+  const lead = parseCommercialLead(incoming);
+  if (!lead) return previous;
+  const old = previous.filter(row => row.id === lead.id).reduce<CommercialLead | null>((latest, row) => !latest || row.revision > latest.revision ? row : latest, null);
+  const opened = old && old.revision >= lead.revision ? old : lead;
+  const rows: CommercialLead[] = [], included = new Set<string>();
+  for (const row of previous) {
+    if (included.has(row.id) || (!retained.has(row.id) && row.id !== lead.id)) continue;
+    rows.push(row.id === lead.id ? opened : row);
+    included.add(row.id);
+  }
+  if (!included.has(lead.id)) rows.push(opened);
   return rows;
 }
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);

@@ -790,6 +790,36 @@ test('commercial exact lookup finds historical references outside the dashboard 
  assert.equal(await scalar('select count(*)::int as result from commercial_leads'),1);assert.equal(await scalar('select count(*)::int as result from commercial_events'),0);assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),0);
 });
 
+test('historical commercial follow-up saves and replays by exact reference without moving the contact into current dashboard metrics',async()=>{
+ const id=randomUUID(),reference='EK-'+randomUUID().replaceAll('-','').slice(0,8).toUpperCase(),hash=createHash('sha256').update('historical-follow-up-'+id).digest('hex');
+ const createdAt='2001-01-02T12:00:00.000Z',notes='QA seguimiento histórico ficticio';
+ await db.query("insert into commercial_leads(id,reference,session_hash,design,created_at,updated_at) values($1,$2,$3,'azure',$4,$4)",[id,reference,hash,createdAt]);
+ actor={role:'admin'};
+ const beforeResponse=await commercialGet();assert.equal(beforeResponse.status,200);const before=await beforeResponse.json();
+ assert.equal(before.periodDays,180);assert.deepEqual(before.leads,[]);assert.equal(before.pagination.total,0);
+ assert.equal(before.summary.whatsappOpens,0);assert.equal(before.summary.sales,0);assert.equal(before.summary.revenue,0);
+ const lookup=()=>commercialLookup.GET(req('/api/admin/commercial/lookup?'+new URLSearchParams({reference})));
+ const initialResponse=await lookup();assert.equal(initialResponse.status,200);const initial=(await initialResponse.json()).lead;
+ assert.equal(initial.id,id);assert.equal(initial.revision,0);assert.equal(Date.parse(initial.created_at),Date.parse(createdAt));assert.equal(initial.design,'Lunaria');
+ const {prepareCommercialDraftUpdate}=require('../src/lib/commercial-update.ts');
+ const command=prepareCommercialDraftUpdate(initial,{status:'won',revenue:'930,50',notes},randomUUID());
+ assert.ok(command);assert.equal(command.expectedRevision,0);assert.equal(command.revenueBs,930.5);
+ const saveResponse=await commercialPatch(command);assert.equal(saveResponse.status,200,await saveResponse.clone().text());const saved=await saveResponse.json();
+ assert.equal(saved.outcome,'saved');assert.equal(saved.lead.revision,1);assert.equal(Date.parse(saved.lead.created_at),Date.parse(createdAt));assert.ok(Date.parse(saved.lead.updated_at)>Date.parse(createdAt));
+ const replayResponse=await commercialPatch(command);assert.equal(replayResponse.status,200);const replay=await replayResponse.json();
+ assert.equal(replay.outcome,'replayed');assert.deepEqual(replay.lead,saved.lead);
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_history where lead_id=$1',[id]),1);
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),1);
+ const currentResponse=await lookup();assert.equal(currentResponse.status,200);const current=(await currentResponse.json()).lead;
+ assert.equal(current.id,id);assert.equal(current.reference,reference);assert.equal(current.revision,1);assert.equal(current.status,'won');assert.equal(current.revenue_bs,930.5);assert.equal(current.notes,notes);
+ const historyResponse=await commercialHistoryGet(id);assert.equal(historyResponse.status,200);assert.equal(historyResponse.headers.get('cache-control'),'private, no-store');const history=await historyResponse.json();
+ assert.equal(history.lead.reference,reference);assert.equal(history.entries.length,1);assert.equal(history.entries[0].from_status,'whatsapp_open');assert.equal(history.entries[0].to_status,'won');assert.equal(history.entries[0].revenue_bs,930.5);assert.equal(history.entries[0].note,notes);
+ const afterResponse=await commercialGet();assert.equal(afterResponse.status,200);const after=await afterResponse.json();
+ assert.equal(after.periodDays,180);assert.deepEqual(after.leads,[]);assert.equal(after.pagination.total,0);assert.deepEqual(after.summary,before.summary);
+ assert.equal(after.summary.whatsappOpens,0);assert.equal(after.summary.sales,0);assert.equal(after.summary.revenue,0);
+ assert.equal(await scalar('select count(*)::int as result from commercial_events'),0);assert.equal(await scalar('select design as result from commercial_leads where id=$1',[id]),'azure');
+});
+
 test('commercial exact lookup normalizes surrounding whitespace and lowercase without broadening equality',async()=>{
  const hash=createHash('sha256').update('normalization lookup session').digest('hex');
  await db.query("insert into commercial_leads(reference,session_hash,design) values('EK-A1B2C3D4',$1,'azure'),('EK-A1B2C3D5',$1,'carmesi')",[hash]);

@@ -1,9 +1,11 @@
+'use client';
+
 import { leadStatusLabel } from '@/lib/commercial';
 import type { CommercialLead } from '@/lib/commercial-lookup';
 import CommercialLeadHistory from '@/components/admin/CommercialLeadHistory';
 
 /** Read-only snapshot: the existing roster remains the single editing surface. */
-export default function CommercialLeadSummary({ lead, transport }: { lead: CommercialLead; transport?: typeof fetch }) {
+export default function CommercialLeadSummary({ lead, transport, onOpen }: { lead: CommercialLead; transport?: typeof fetch; onOpen?: () => void }) {
   return <article className="space-y-3 break-words p-4 font-outfit text-sm text-gray-700 sm:p-5">
     <h4 className="font-mono font-semibold text-[#765f39]" translate="no">{lead.reference}</h4>
     <dl className="grid min-w-0 gap-4 sm:grid-cols-3">
@@ -13,6 +15,7 @@ export default function CommercialLeadSummary({ lead, transport }: { lead: Comme
     </dl>
     {lead.notes && <p className="whitespace-pre-wrap">{lead.notes}</p>}
     <p className="text-gray-600">Consulta de solo lectura. Usa «Buscar referencia» para volver a comprobar el estado.</p>
+    {onOpen && <div className="space-y-2"><button type="button" onClick={onOpen} className="min-h-11 rounded-xl bg-[#765f39] px-5 py-2 text-sm font-semibold text-white hover:bg-[#5d4a2c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#765f39]">Abrir seguimiento</button><p className="text-gray-600">Abre su ficha para actualizar el estado, las notas o el importe, aunque sea anterior a los últimos 180 días.</p></div>}
     <CommercialLeadHistory lead={lead} transport={transport} />
   </article>;
 }

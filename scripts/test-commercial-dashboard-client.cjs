@@ -67,3 +67,59 @@ test('page refresh never rolls back a saved revision or mounts a duplicate edito
  const merged=c.mergeCommercialPageEditors([saved],[incoming],new Set([saved.id]));assert.deepEqual(merged,[saved]);
  const newer={...old,revision:4,notes:'QA otra pantalla'};assert.deepEqual(c.mergeCommercialPageEditors(merged,[newer],new Set([saved.id])),[newer]);
 });
+test('an exact lookup can open a contact from 2001 without admitting it into reporting pages',()=>{
+ const historic={...page().leads[0],created_at:'2001-01-01T12:00:00Z',updated_at:'2001-01-01T12:00:00Z'};
+ const opened=c.openCommercialLeadEditor([],historic,new Set());assert.equal(opened.length,1);assert.deepEqual(opened[0],historic);
+ const report=page();report.leads[0]=historic;assert.equal(c.parseCommercialDashboard(report),null);
+});
+test('an explicitly opened clean contact survives page changes and empty filtered pages',()=>{
+ const first=page().leads,opened=first[0],second=first.slice(20);
+ const merged=c.mergeCommercialPageEditors(first,second,new Set(),opened.id);assert.equal(merged.length,6);assert.strictEqual(merged[5],opened);
+ const empty=c.mergeCommercialPageEditors(merged,[],new Set(),opened.id);assert.deepEqual(empty,[opened]);
+ const released=c.mergeCommercialPageEditors(empty,[],new Set());assert.deepEqual(released,[]);
+});
+test('opening an already visible contact reuses its one editor and keeps page order',()=>{
+ const prior=page().leads,opened=c.openCommercialLeadEditor(prior,prior[7],new Set(prior.map(row=>row.id)));
+ assert.equal(opened.length,25);assert.deepEqual(opened.map(row=>row.id),prior.map(row=>row.id));assert.strictEqual(opened[7],prior[7]);
+ const merged=c.mergeCommercialPageEditors(opened,prior,new Set(),prior[7].id);assert.equal(merged.length,25);assert.equal(merged.filter(row=>row.id===prior[7].id).length,1);
+});
+test('opening another reference retains pending and visible editors while dropping a clean old selection',()=>{
+ const [visible,pending,clean,next]=page().leads;
+ const prior=[visible,pending,clean],retained=new Set([visible.id,pending.id]);
+ const opened=c.openCommercialLeadEditor(prior,next,retained);
+ assert.deepEqual(opened,[visible,pending,next]);assert.strictEqual(opened[0],visible);assert.strictEqual(opened[1],pending);assert.equal(opened.some(row=>row.id===clean.id),false);
+});
+test('an older or equal lookup never rolls back or replaces an existing editor revision',()=>{
+ const source=page().leads[0],latest={...source,revision:4,notes:'QA versión actual'};
+ for(const revision of [0,3,4]){
+  const opened=c.openCommercialLeadEditor([latest],{...source,revision,notes:'QA consulta previa'},new Set());
+  assert.deepEqual(opened,[latest]);assert.strictEqual(opened[0],latest);
+ }
+});
+test('a newer lookup updates one editor without changing unrelated retained contacts',()=>{
+ const [old,other]=page().leads,next={...old,revision:5,notes:'QA versión nueva'};
+ const opened=c.openCommercialLeadEditor([other,old],next,new Set([other.id]));
+ assert.deepEqual(opened,[other,next]);assert.strictEqual(opened[0],other);
+ assert.equal(opened.filter(row=>row.id===old.id).length,1);
+});
+test('new lookup data is whitelisted before it enters editable state',()=>{
+ const source=page().leads[0],incoming={...source,password:'QA_PRIVATE_PASSWORD',session_hash:'QA_PRIVATE_SESSION',payload:{token:'QA_PRIVATE_TOKEN'}};
+ const opened=c.openCommercialLeadEditor([],incoming,new Set());
+ assert.deepEqual(opened,[source]);assert.notStrictEqual(opened[0],incoming);assert.doesNotMatch(JSON.stringify(opened),/QA_PRIVATE/);
+ assert.equal(incoming.password,'QA_PRIVATE_PASSWORD');
+});
+test('malformed lookup data cannot prune or alter existing editors',()=>{
+ const prior=page().leads;
+ for(const incoming of [null,[],{}, {...prior[0],id:'bad'},{...prior[0],reference:'EK-INVALID'},{...prior[0],revision:-1},{...prior[0],status:'paid'},{...prior[0],notes:undefined}])assert.strictEqual(c.openCommercialLeadEditor(prior,incoming,new Set()),prior);
+});
+test('opening and retaining contacts does not mutate input arrays, contacts or retained IDs',()=>{
+ const [old,other,next]=page().leads.map(Object.freeze),prior=Object.freeze([old,other]),retained=new Set([other.id]);
+ const snapshot=JSON.stringify(prior),opened=c.openCommercialLeadEditor(prior,next,retained);
+ assert.deepEqual(opened,[other,next]);assert.equal(JSON.stringify(prior),snapshot);assert.deepEqual([...retained],[other.id]);
+ const merged=c.mergeCommercialPageEditors(Object.freeze(opened),Object.freeze([other]),new Set(),next.id);assert.deepEqual(merged,[other,next]);assert.equal(JSON.stringify(prior),snapshot);
+});
+test('reopening the same reference cannot accumulate duplicate editors',()=>{
+ const [lead,other]=page().leads,retained=new Set([other.id]);
+ let opened=[other];for(let revision=0;revision<4;revision++)opened=c.openCommercialLeadEditor(opened,{...lead,revision},retained);
+ assert.equal(opened.length,2);assert.equal(opened.filter(row=>row.id===lead.id).length,1);assert.equal(opened[1].revision,3);assert.strictEqual(opened[0],other);
+});

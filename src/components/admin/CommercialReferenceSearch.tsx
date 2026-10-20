@@ -1,16 +1,27 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { normalizeCommercialReference, requestCommercialLead, type CommercialLead } from '@/lib/commercial-lookup';
+import { normalizeCommercialReference, parseCommercialLead, requestCommercialLead, type CommercialLead } from '@/lib/commercial-lookup';
 
 const control = 'min-h-11 rounded-xl border border-gray-300 bg-white px-3 text-base text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#765f39]';
 type Result = { reference: string; lead: CommercialLead | null };
 
-export default function CommercialReferenceSearch({ transport = fetch, renderLead }: { transport?: typeof fetch; renderLead: (lead: CommercialLead) => ReactNode }) {
+/** A saved revision may refresh the current snapshot, but never resurrect a cleared search. */
+export function updateCommercialSearchResult(result: Result | null, incoming?: CommercialLead | null): Result | null {
+  const lead = parseCommercialLead(incoming);
+  if (!result?.lead || !lead || result.lead.id !== lead.id || result.reference !== lead.reference || lead.revision <= result.lead.revision) return result;
+  return { reference: result.reference, lead };
+}
+
+export default function CommercialReferenceSearch({ transport = fetch, renderLead, latestLead }: { transport?: typeof fetch; renderLead: (lead: CommercialLead) => ReactNode; latestLead?: CommercialLead | null }) {
   const id = useId(), input = useRef<HTMLInputElement>(null), active = useRef<AbortController | null>(null), generation = useRef(0);
   const [reference, setReference] = useState(''), [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false), [error, setError] = useState('');
   useEffect(() => () => { generation.current += 1; active.current?.abort(); }, []);
+  const shownResult = updateCommercialSearchResult(result, latestLead);
+  useEffect(() => {
+    setResult(previous => updateCommercialSearchResult(previous, latestLead));
+  }, [latestLead, result?.lead?.id, result?.lead?.revision]);
 
   const search = async (value: string) => {
     const normalized = normalizeCommercialReference(value);
@@ -45,6 +56,6 @@ export default function CommercialReferenceSearch({ transport = fetch, renderLea
       {error && <p id={`${id}-error`} role="alert" className="mt-3 font-outfit text-sm leading-6 text-red-800">{error}</p>}
       <p role="status" className="mt-3 font-outfit text-sm text-gray-600">{loading ? 'Comprobando la referencia…' : result ? result.lead ? `Contacto encontrado: ${result.reference}.` : `No se encontró ${result.reference}. Revisa los 8 caracteres del mensaje o limpia la búsqueda.` : 'La búsqueda no registra mensajes, reservas ni pagos.'}</p>
     </div>
-    {result?.lead && <div className="min-w-0 border-t border-gray-100">{renderLead(result.lead)}</div>}
+    {shownResult?.lead && <div className="min-w-0 border-t border-gray-100">{renderLead(shownResult.lead)}</div>}
   </section>;
 }
