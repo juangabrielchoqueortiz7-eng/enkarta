@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { InvitationParsed } from '@/lib/types';
 import type { BuilderIssue, BuilderValidation } from '@/lib/builder-validation';
 import { collectPublicationResources, publicationMetrics, resourceBudgetBytes } from '@/lib/publication-audit';
+import { requestPublicationAudit, type RemoteAudit } from '@/lib/publication-audit-client';
 
 interface Props {
   data: InvitationParsed;
@@ -11,24 +12,9 @@ interface Props {
   onOpenBlock?: (blockId: string) => void;
 }
 
-interface RemoteResult {
-  url: string;
-  kind: string;
-  label: string;
-  blockId?: string;
-  ok: boolean;
-  status?: number;
-  bytes?: number;
-  durationMs?: number;
-  error?: string;
-}
-
-interface RemoteAudit {
-  results: RemoteResult[];
-  summary: { checked: number; available: number; unknownSize: number; failed: number; totalBytes: number; averageResponseMs: number; slow: number; heavy: number };
-}
-
 type AuditCategory = 'todos' | 'contenido' | 'diseño' | 'accesibilidad' | 'publicación' | 'rendimiento';
+type AuditContext = { key: string };
+type AuditAttempt = { context: AuditContext; controller: AbortController };
 
 const CATEGORY_LABEL: Record<AuditCategory, string> = {
   todos: 'Todos', contenido: 'Contenido', diseño: 'Diseño', accesibilidad: 'Accesibilidad', publicación: 'Publicación', rendimiento: 'Rendimiento',
@@ -38,19 +24,29 @@ const formatBytes = (bytes: number) => bytes >= 1_048_576 ? `${(bytes / 1_048_57
 
 export default function PublicationAuditPanel({ data, validation, onOpenBlock }: Props) {
   const [category, setCategory] = useState<AuditCategory>('todos');
-  const [remoteResult, setRemoteResult] = useState<{ signature: string; audit: RemoteAudit } | null>(null);
+  const [remoteResult, setRemoteResult] = useState<{ context: AuditContext; audit: RemoteAudit } | null>(null);
   const [showCaptures, setShowCaptures] = useState(false);
-  const requestRef = useRef<AbortController | null>(null);
-  const [resourceState, setResourceState] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+  const requestRef = useRef<AuditAttempt | null>(null), mounted = useRef(true);
+  const [requestState, setRequestState] = useState<{ context: AuditContext; phase: 'idle' | 'running' | 'done' | 'error'; message?: string } | null>(null);
   const resources = useMemo(() => collectPublicationResources(data), [data]);
   const metrics = useMemo(() => publicationMetrics(data), [data]);
-  const signature = JSON.stringify(resources);
-  const remote = remoteResult?.signature === signature ? remoteResult.audit : null;
+  const signature = JSON.stringify([data.id, resources]);
+  const contextRef = useRef<AuditContext>({ key: signature });
+  if (contextRef.current.key !== signature) contextRef.current = { key: signature };
+  const context = contextRef.current;
+  const resourceState = requestState?.context === context ? requestState.phase : 'idle';
+  const remote = remoteResult?.context === context ? remoteResult.audit : null;
 
   useEffect(() => {
-    setResourceState('idle');
-    return () => requestRef.current?.abort();
-  }, [signature]);
+    mounted.current = true;
+    setRequestState({ context, phase: 'idle' });
+    return () => {
+      mounted.current = false;
+      if (requestRef.current?.context === context) {
+        requestRef.current.controller.abort(); requestRef.current = null;
+      }
+    };
+  }, [context]);
 
   const remoteIssues = useMemo<BuilderIssue[]>(() => {
     if (!remote) return [];
@@ -72,19 +68,23 @@ export default function PublicationAuditPanel({ data, validation, onOpenBlock }:
   const reviewTitle = errorCount ? 'Necesita una última revisión' : incompleteResourceCheck ? 'Falta comprobar recursos' : warningCount ? 'Revisa los avisos pendientes' : 'Sin problemas detectados';
 
   const runResources = async () => {
-    requestRef.current?.abort();
-    const controller = new AbortController();
-    requestRef.current = controller;
-    setResourceState('running');
+    if (!mounted.current || contextRef.current !== context || !resources.length || requestRef.current?.context === context) return;
+    requestRef.current?.controller.abort();
+    const attempt: AuditAttempt = { context, controller: new AbortController() };
+    requestRef.current = attempt;
+    const current = () => mounted.current && contextRef.current === context && requestRef.current === attempt && !attempt.controller.signal.aborted;
+    setRemoteResult(null);
+    setRequestState({ context, phase: 'running' });
     try {
-      const response = await fetch('/api/admin/publication-audit', { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invitationId: data.id, resources }) });
-      if (!response.ok) throw new Error('audit-failed');
-      const audit = await response.json() as RemoteAudit;
-      if (controller.signal.aborted) return;
-      setRemoteResult({ signature, audit });
-      setResourceState('done');
-    } catch {
-      if (!controller.signal.aborted) setResourceState('error');
+      const audit = await requestPublicationAudit(data.id, resources, attempt.controller.signal);
+      if (!current()) return;
+      setRemoteResult({ context, audit });
+      setRequestState({ context, phase: 'done' });
+    } catch (failure) {
+      if (current()) setRequestState({ context, phase: 'error', message: failure instanceof Error ? failure.message : 'No pudimos verificar los recursos. Repite el análisis.' });
+    } finally {
+      if (requestRef.current === attempt) requestRef.current = null;
+      attempt.controller.abort();
     }
   };
 
@@ -121,12 +121,13 @@ export default function PublicationAuditPanel({ data, validation, onOpenBlock }:
         {visibleIssues.map((issue, index) => <article key={`${issue.title}-${issue.blockId || index}`} className={`rounded-2xl border p-3 ${issue.severity === 'error' ? 'border-red-100 bg-red-50/70' : 'border-amber-100 bg-amber-50/60'}`}><div className="flex items-start gap-2.5"><span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${issue.severity === 'error' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>{issue.severity === 'error' ? '!' : '△'}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className={`text-xs font-semibold font-outfit ${issue.severity === 'error' ? 'text-red-800' : 'text-amber-800'}`}>{issue.title}</p><span className="ml-auto rounded-full bg-white/70 px-2 py-0.5 text-[8px] uppercase text-gray-400 font-outfit">{issue.category ?? 'contenido'}</span></div><p className={`mt-1 text-[11px] leading-relaxed font-outfit ${issue.severity === 'error' ? 'text-red-600' : 'text-amber-700'}`}>{issue.detail}</p>{issue.blockId && <button type="button" onClick={() => onOpenBlock?.(issue.blockId!)} className="mt-2 rounded-lg bg-white px-2 py-1 text-[9px] font-semibold text-violet-600 shadow-sm font-outfit">Abrir bloque →</button>}</div></div></article>)}
       </div>
 
-      <div className="rounded-2xl border border-gray-100 bg-[#faf9f7] p-3">
-        <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold text-gray-700 font-outfit">Recursos y enlaces reales</p><p className="mt-0.5 text-[10px] text-gray-400 font-outfit">Comprueba respuesta, peso y velocidad de hasta 24 recursos.</p></div><button type="button" onClick={() => void runResources()} disabled={resourceState === 'running' || !resources.length} className="shrink-0 rounded-xl bg-gray-900 px-3 py-2 text-[10px] font-semibold text-white disabled:opacity-40 font-outfit">{resourceState === 'running' ? 'Analizando…' : remote ? 'Repetir prueba' : `Analizar ${resources.length}`}</button></div>
-        {resourceState === 'error' && <p className="mt-2 rounded-lg bg-red-50 p-2 text-[10px] text-red-600 font-outfit">No se pudo ejecutar la prueba. Revisa la sesión o la conexión.</p>}
-        {!remote && resourceState !== 'running' && <p className="mt-2 text-[10px] text-amber-700 font-outfit">Los recursos actuales aún no están verificados. Repite la prueba después de cambiar fotos o enlaces.</p>}
-        {remote && <p className="mt-2 text-[10px] leading-relaxed text-gray-500 font-outfit">Verificados {remote.summary.checked} de {remote.summary.available ?? resources.length}. {remote.summary.unknownSize ?? 0} sin peso conocido. El peso corresponde a archivos originales, no al tiempo de carga de la página.</p>}
-        {remote && <div className="mt-3 grid grid-cols-4 gap-1.5 text-center"><div className="rounded-lg bg-white p-2"><p className="text-xs font-semibold text-gray-700 font-outfit">{remote.summary.checked}</p><p className="text-[7px] uppercase text-gray-400">Revisados</p></div><div className="rounded-lg bg-white p-2"><p className={`text-xs font-semibold font-outfit ${remote.summary.failed ? 'text-red-600' : 'text-emerald-600'}`}>{remote.summary.failed}</p><p className="text-[7px] uppercase text-gray-400">Fallidos</p></div><div className="rounded-lg bg-white p-2"><p className="text-xs font-semibold text-gray-700 font-outfit">{formatBytes(remote.summary.totalBytes)}</p><p className="text-[7px] uppercase text-gray-400">Peso conocido</p></div><div className="rounded-lg bg-white p-2"><p className="text-xs font-semibold text-gray-700 font-outfit">{remote.summary.averageResponseMs} ms</p><p className="text-[7px] uppercase text-gray-400">Respuesta</p></div></div>}
+      <div className="rounded-2xl border border-gray-100 bg-[#faf9f7] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0 flex-1 basis-48"><p className="text-sm font-semibold text-gray-800 font-outfit">Recursos y enlaces reales</p><p className="mt-1 text-sm leading-relaxed text-gray-600 font-outfit">Comprueba respuesta, peso y velocidad de hasta 24 recursos.</p></div><button type="button" onClick={() => void runResources()} disabled={resourceState === 'running' || !resources.length} aria-busy={resourceState === 'running' || undefined} className="min-h-11 shrink-0 rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 disabled:opacity-40 font-outfit">{resourceState === 'running' ? 'Analizando…' : resourceState === 'error' ? 'Reintentar análisis' : remote ? 'Repetir prueba' : `Analizar ${Math.min(resources.length, 24)}`}</button></div>
+        {resourceState === 'running' && <p role="status" className="mt-3 text-sm leading-relaxed text-gray-700 font-outfit">Comprobando los recursos de esta invitación. Puede tardar hasta 25 segundos.</p>}
+        {resourceState === 'error' && <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm leading-relaxed text-red-800 font-outfit">{requestState?.message}</p>}
+        {!remote && resourceState !== 'running' && <p className="mt-3 text-sm leading-relaxed text-amber-900 font-outfit">{resources.length ? 'Los recursos actuales aún no están verificados. Repite la prueba después de cambiar fotos o enlaces.' : 'Añade una foto, música o un enlace para analizar sus recursos.'}</p>}
+        {remote && <p role="status" className="mt-3 text-sm leading-relaxed text-gray-700 font-outfit">Verificados {remote.summary.checked} de {remote.summary.available}. {remote.summary.available > 24 && 'Esta prueba comprueba únicamente los primeros 24 recursos. '}{remote.summary.unknownSize} sin peso conocido. El peso corresponde a archivos originales, no al tiempo de carga de la página.</p>}
+        {remote && <dl className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-2 font-outfit"><div className="rounded-lg bg-white p-3"><dt className="text-xs text-gray-600">Revisados</dt><dd className="mt-1 text-base font-semibold tabular-nums text-gray-800">{remote.summary.checked}</dd></div><div className="rounded-lg bg-white p-3"><dt className="text-xs text-gray-600">Fallidos</dt><dd className={`mt-1 text-base font-semibold tabular-nums ${remote.summary.failed ? 'text-red-700' : 'text-emerald-800'}`}>{remote.summary.failed}</dd></div><div className="rounded-lg bg-white p-3"><dt className="text-xs text-gray-600">Peso conocido</dt><dd className="mt-1 text-base font-semibold tabular-nums text-gray-800">{formatBytes(remote.summary.totalBytes)}</dd></div><div className="rounded-lg bg-white p-3"><dt className="text-xs text-gray-600">Respuesta</dt><dd className="mt-1 text-base font-semibold tabular-nums text-gray-800">{remote.summary.averageResponseMs} ms</dd></div></dl>}
       </div>
 
       <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-3">
