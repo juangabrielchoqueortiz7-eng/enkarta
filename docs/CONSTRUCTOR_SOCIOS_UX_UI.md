@@ -41,6 +41,7 @@ La vista privada conserva su enlace con `?preview=1` y explicita una relación s
 | Una invitación despublicada o vencida se presentaba visualmente como un borrador. | Los distintivos reflejan por separado `draft` → Borrador, `ready` → Publicada, `disabled` → Despublicada y `expired` → Vencida. No se cambian los permisos ni las condiciones del botón Publicar. |
 | Un nombre largo sin espacios desbordaba la tarjeta: 823 px de contenido dentro de una tarjeta de 343 px en el caso de prueba. | El título admite corte de palabras y sus contenedores pueden reducirse dentro de la cuadrícula. Se conservan el nombre completo y los enlaces de la invitación. |
 | Editar, publicar, ver y eliminar competían visualmente; los controles eran pequeños y repetían nombres sin contexto accesible. | Editar mantiene la prioridad principal; Eliminar queda separado. Los controles tienen áreas táctiles de al menos 44 px, foco visible y nombres accesibles que identifican la invitación correspondiente. |
+| Las secciones de Socios dependían de una franja horizontal en pantallas pequeñas. | Las tres secciones permanecen visibles en una cuadrícula móvil y conservan la navegación flexible de escritorio, la URL y la sección activa. |
 | La primera carga sólo ofrecía una línea de texto y el vacío necesitaba una jerarquía más clara. | Se añade un skeleton decorativo con estado de carga anunciado y movimiento condicionado a la preferencia del sistema. El vacío explica el siguiente paso y conserva su acción de elegir diseño. Una lectura fallida no se convierte en una falsa lista vacía. |
 | Mi cuenta usaba campos de 13 px, sin semántica uniforme de teclado y autocompletado. | Los campos pasan a 16 px y conservan sus etiquetas envolventes. Se añaden nombres, tipos y autocompletado apropiados; WhatsApp usa `tel`. El correo de Google continúa siendo de sólo lectura. |
 | El checkout manual mezclaba etiquetas pequeñas, campos compactos y controles con foco poco visible. | Se armonizan etiquetas, campos de 16 px, controles de selección, referencia y acciones con el resto de Socios. Se conserva la distinción entre preparar una referencia, enviar un comprobante y obtener la aprobación manual. |
@@ -98,13 +99,24 @@ Evidencia: `tmp/portal-ux/final-invariants.json`, `tmp/portal-ux/protected.json`
 
 ## Resultados de publicación y cierre
 
-Pendiente de incorporar tras completar la verificación integral y el despliegue. Los resultados anteriores acreditan la suite nueva, la comparación de fuentes, la inspección local y la conservación local de recursos; no constituyen todavía una confirmación del nuevo despliegue.
+Despliegue completado el 20 de octubre de 2026. La revisión de aplicación publicada es `9133516efcb95762bafdcfefe2d217039182e0a6`, integrada en `main`. Esta sección documenta resultados posteriores al despliegue; su actualización sólo modifica documentación.
 
 | Comprobación | Resultado |
 | --- | --- |
-| Verificación integral: lint, TypeScript, suites y build | `npm run verify`: salida 0; 1.345 pruebas en 45 archivos, sin fallos; lint, TypeScript y build correctos; 65 páginas generadas |
-| Commit y CI de la revisión publicada | Pendiente de registrar |
-| Despliegue de producción y cotejo de fuentes | Pendiente de registrar |
-| Verificación HTTP de permisos y recursos en producción | Pendiente de registrar |
-| Datos ficticios y limpieza final, si se utilizaron | Pendiente de registrar |
-| Aceptación manual en dispositivos físicos | Aplazada por solicitud del usuario |
+| Verificación integral local | `npm run verify`: salida 0; 1.345 pruebas en 45 archivos, sin fallos; lint, TypeScript y build correctos; 65 páginas generadas |
+| CI del mismo commit | [Run 39492813487](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39492813487): verificación y auditoría de dependencias de producción aprobadas |
+| Producción | `dpl_DQKT1MjsZppvyKsWN4wRkemW5mvw`, estado Ready y alias [enkarta.vercel.app](https://enkarta.vercel.app) |
+| Cotejo del código desplegado | Los identificadores del archivo de entrada de ambos componentes y de `src/lib/payments/bcp.ts` coinciden exactamente con los bytes verificados localmente |
+| HTTP de permisos | 13 grupos aprobados; 75 solicitudes rechazadas con 401, incluidas 63 de escritura, sin sesión, con sesiones inválidas y con sesión de administrador que no puede suplantar a un socio |
+| Lecturas privadas | Entrada de Socios protegida, historial de un UUID ficticio inexistente vacío y sin caché compartida; configuración privada sin registrar sus valores |
+| Auditoría y subida vacías | Auditoría sin recursos devuelve resultados vacíos; subida autenticada sin archivo se rechaza antes del almacenamiento; no se prueban subidas exitosas |
+| Recursos públicos | 129 de 129 originales coinciden en bytes y SHA-256; 6 rutas devuelven el estado esperado; 597 archivos protegidos locales intactos |
+| Datos ficticios y limpieza | 0 invitaciones, usuarios Auth, pagos, archivos o filas de prueba persistidos; UUID ausente comprobado antes y después; sesión temporal de administrador cerrada y descartada |
+| BCP y comunicaciones | BCP bloqueado; 0 llamadas bancarias, 0 mensajes enviados y ninguna modificación de proveedores, credenciales o variables de producción |
+| Aceptación manual | Aplazada por solicitud del usuario |
+
+La comprobación HTTP utiliza exclusivamente un UUID ficticio inexistente, cookies inválidas, una imagen sintética en solicitudes sin sesión válida y cuerpos vacíos en dos comprobaciones autenticadas. No crea datos que requieran borrado posterior ni consulta filas de clientes. El cierre de la sesión temporal se valida en el bloque final de limpieza.
+
+La verificación de producción acredita disponibilidad, denegaciones de permisos, cabeceras privadas, originales públicos y coincidencia de las fuentes de entrada del despliegue. **No sustituye una aceptación visual autenticada de Socios en un dispositivo físico**, no prueba un cobro real y no certifica la apariencia de todos los diseños públicos.
+
+Evidencia local privada del cierre: `tmp/portal-ux/RESULTADO.json`, `production-http.json`, `production-public.json`, `deployment-final.json`, `deployment-files.json`, `ci.json` y `verify.log`. Esos archivos no se distribuyen en el sitio ni incluyen claves o cookies de acceso.
