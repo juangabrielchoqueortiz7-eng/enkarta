@@ -36,6 +36,7 @@ import ImageStudio from '../ImageStudio';
 import IconPicker from '../IconPicker';
 import { attachDefaultBindings, detachBinding, resolveBlockEditorProps } from '@/lib/block-bindings';
 import { captionsForImages, reorderGalleryCaptions } from '@/lib/gallery';
+import { BuilderListState, type BuilderListAction, type BuilderListIdentity, type BuilderListItem, type BuilderListRow } from '@/lib/builder-list-state';
 import { DIVIDER_VARIANTS, dividerVariant } from '@/components/invitations/dividers';
 import { BlockGlyph, EyeGlyph, LockGlyph, blockVisual, editorCardCls, editorSectionTitleCls } from '../editor-ui';
 import SectionPresetCard, { SectionPreview } from '../SectionPresetCard';
@@ -209,23 +210,18 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
 }
 
 // Editor de una lista de objetos (ej: pasos del itinerario).
-function ListEditor({ items: sourceItems, images, itemFields, onChange, ownerId, eventType }: {
-  items: any[]; images?: string[]; itemFields: FieldDef[]; onChange: (v: any[]) => void; ownerId?: string; eventType?: any;
+function ListEditor({ rows, images, itemFields, onAction, ownerId, eventType, destinationKey }: {
+  rows: BuilderListRow[]; images?: string[]; itemFields: FieldDef[]; onAction: (action: BuilderListAction) => void; ownerId?: string; eventType?: any; destinationKey: string;
 }) {
-  const items = images ? captionsForImages(images, sourceItems) : sourceItems;
-  const setItem = (i: number, patch: Record<string, any>) => {
-    const next = items.map((it, j) => (j === i ? { ...it, ...patch } : it));
-    onChange(next);
-  };
   return (
     <div className="space-y-2">
-      {items.map((it, i) => (
-        <div key={i} className="p-3 rounded-xl border border-gray-100 bg-gray-50 space-y-2">
+      {rows.map(({ item: it, key }, i) => (
+        <div key={key} className="p-3 rounded-xl border border-gray-100 bg-gray-50 space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-xs font-outfit text-gray-400">#{i + 1}</span>
             {!images && <div className="flex gap-2">
-              {([-1, 1] as const).map(direction => <button key={direction} type="button" aria-label={direction < 0 ? 'Subir elemento' : 'Bajar elemento'} disabled={i + direction < 0 || i + direction >= items.length} onClick={() => { const next = [...items]; [next[i], next[i + direction]] = [next[i + direction], next[i]]; onChange(next); }} className="text-gray-500 disabled:opacity-25">{direction < 0 ? '↑' : '↓'}</button>)}
-              <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} className="text-xs text-red-400 hover:text-red-600 font-outfit">Eliminar</button>
+              {([-1, 1] as const).map(direction => <button key={direction} type="button" aria-label={direction < 0 ? 'Subir elemento' : 'Bajar elemento'} disabled={i + direction < 0 || i + direction >= rows.length} onClick={() => onAction({ type: 'move', key, direction })} className="text-gray-500 disabled:opacity-25">{direction < 0 ? '↑' : '↓'}</button>)}
+              <button type="button" onClick={() => onAction({ type: 'remove', key })} className="text-xs text-red-400 hover:text-red-600 font-outfit">Eliminar</button>
             </div>}
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -233,16 +229,17 @@ function ListEditor({ items: sourceItems, images, itemFields, onChange, ownerId,
           {itemFields.map(f => (
             <Labeled key={f.key} label={f.label}>
               <FieldControl
-                field={f} value={it[f.key]} set={v => setItem(i, { [f.key]: v })}
-                setIcon={(v, c, s) => setItem(i, { [f.key]: v, [`${f.key}Colors`]: c, [`${f.key}Speed`]: s })}
-                colors={it[`${f.key}Colors`]} speed={it[`${f.key}Speed`]}
+                field={f} value={it[f.key]} set={v => onAction({ type: 'patch', key, patch: { [f.key]: v } })}
+                destinationKey={`${destinationKey}:${key}:${f.key}`}
+                setIcon={(v, c, s) => onAction({ type: 'patch', key, patch: { [f.key]: v, [`${f.key}Colors`]: c, [`${f.key}Speed`]: s } })}
+                colors={it[`${f.key}Colors`]} speed={typeof it[`${f.key}Speed`] === 'number' ? it[`${f.key}Speed`] as number : undefined}
                 ownerId={ownerId} eventType={eventType}
               />
             </Labeled>
           ))}
         </div>
       ))}
-      {!images && <button type="button" onClick={() => onChange([...items, {}])} className="w-full py-2 text-xs font-outfit text-enkarta-gold border border-dashed border-enkarta-gold/40 rounded-xl hover:bg-enkarta-gold/5">
+      {!images && <button type="button" onClick={() => onAction({ type: 'add' })} className="w-full py-2 text-xs font-outfit text-enkarta-gold border border-dashed border-enkarta-gold/40 rounded-xl hover:bg-enkarta-gold/5">
         + Añadir elemento
       </button>}
       {images?.length === 0 && <p className="text-xs text-gray-500">Sube fotos para añadir sus títulos y descripciones.</p>}
@@ -287,8 +284,11 @@ function imageMediaLibrary(data: InvitationParsed, cfg: BuilderConfig, blocks: B
 
 export default function BlockEditorPanel({ data, onChange: notifyChange, selectedId, selectedIds, onSelect, previewMode, previewWidth }: Props) {
   const mounted = useRef(true);
+  const lists = useRef<BuilderListState | null>(null);
+  if (!lists.current) lists.current = new BuilderListState();
   const context = useRef({ id: data.id, template: data.template, designKey: data.config?.designKey, epoch: 0 });
   if (context.current.id !== data.id || context.current.template !== data.template || context.current.designKey !== data.config?.designKey) {
+    lists.current.clear();
     context.current = { id: data.id, template: data.template, designKey: data.config?.designKey, epoch: context.current.epoch + 1 };
   }
   const epoch = context.current.epoch;
@@ -296,14 +296,14 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
   latest.current = { data, notifyChange };
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; };
+    return () => { mounted.current = false; lists.current?.clear(); };
   }, []);
   const currentContext = () => mounted.current && context.current.epoch === epoch
     && latest.current.data.id === data.id && latest.current.data.template === data.template
     && latest.current.data.config?.designKey === data.config?.designKey;
   const commit = (patch: Partial<InvitationParsed>, replaceLayout = false) => {
     if (!currentContext()) return;
-    if (replaceLayout) context.current.epoch += 1;
+    if (replaceLayout) { context.current.epoch += 1; lists.current?.clear(); }
     const current = latest.current;
     latest.current = { ...current, data: { ...current.data, ...patch } };
     current.notifyChange(patch);
@@ -625,6 +625,35 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
     const setStyle = (patch: Record<string, any>) => editSelected(block => ({ style: { ...(block.style ?? {}), ...patch } }));
     const setAnim = (patch: Record<string, any>) => editSelected(block => ({ animation: { ...(block.animation ?? {}), ...patch } }));
     const setVisibility = (patch: NonNullable<Block['visibility']>) => editSelected(block => ({ visibility: { ...(block.visibility ?? {}), ...patch } }));
+    const listControls = (target: Block, field: FieldDef, child = false) => {
+      const scope = JSON.stringify([epoch, selected.id, child ? target.id : null, field.key]);
+      const readList = (block: Block, current: InvitationParsed) => {
+        const props = resolveBlockEditorProps(block, current);
+        const source = (Array.isArray(props[field.key]) ? props[field.key] : []) as BuilderListItem[];
+        const images = block.type === 'gallery' && field.key === 'captions' ? galleryImages(block, current) : undefined;
+        let identity: BuilderListIdentity | undefined;
+        // These two views recreate their row objects. Ordinary editable lists
+        // deliberately require the original object identity after external changes.
+        if (images) identity = item => typeof item.image === 'string' ? item.image : undefined;
+        else if (block.bindings?.[field.key] === 'content.editorialDetails') identity = item => JSON.stringify(item);
+        const items = images ? lists.current!.derived(scope, source, images, () => captionsForImages(images, source) as BuilderListItem[]) : source;
+        return { items, images, identity };
+      };
+      const initial = readList(target, data);
+      const rows = lists.current!.rows(scope, initial.items, initial.identity);
+      const onAction = (action: BuilderListAction) => editSelected((block, current) => {
+        const destination = child ? block.children?.find(item => item.id === target.id && item.type === target.type) : block;
+        if (!destination) return null;
+        const live = readList(destination, current);
+        if (live.images && action.type !== 'patch') return null;
+        const next = lists.current!.change(scope, live.items, action, live.identity);
+        if (!next) return null;
+        if (live.images) lists.current!.adoptDerived(scope, next, live.images);
+        const patch = { ...detachBinding(destination, field.key), props: editedProps(destination, field.key, next, current) };
+        return child ? { children: block.children!.map(item => item.id === target.id ? { ...item, ...patch } : item) } : patch;
+      });
+      return { rows, images: initial.images, itemFields: field.itemFields ?? [], onAction, ownerId: data.id, eventType: data.type, destinationKey: scope };
+    };
     const setBinding = (key: string, path: string) => {
       const bindings = { ...(selected.bindings ?? {}) };
       if (path) bindings[key] = path;
@@ -805,7 +834,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
           {def?.fields.filter(f => selected.type !== 'image' || !['url', 'focal'].includes(f.key)).map(f => (
             f.kind === 'list' ? (
               <Labeled key={f.key} label={f.label}>
-                <ListEditor items={Array.isArray(editorProps[f.key]) ? (editorProps[f.key] as any[]) : []} images={selected.type === 'gallery' && f.key === 'captions' ? galleryImages(selected) : undefined} itemFields={f.itemFields ?? []} onChange={v => setProp(f.key, v)} ownerId={data.id} eventType={data.type} />
+                <ListEditor {...listControls(selected, f)} />
               </Labeled>
             ) : (
               <div key={f.key} className="space-y-1.5">
@@ -969,7 +998,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
                   {cdef?.fields.map(f => (
                     f.kind === 'list' ? (
                       <Labeled key={f.key} label={f.label}>
-                        <ListEditor items={Array.isArray(childProps[f.key]) ? (childProps[f.key] as any[]) : []} images={c.type === 'gallery' && f.key === 'captions' ? galleryImages(c) : undefined} itemFields={f.itemFields ?? []} onChange={v => setKidProp(i, f.key, v)} ownerId={data.id} eventType={data.type} />
+                        <ListEditor {...listControls(c, f, true)} />
                       </Labeled>
                     ) : (
                       <Labeled key={f.key} label={f.label}>
