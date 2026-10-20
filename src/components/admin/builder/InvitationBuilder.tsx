@@ -27,7 +27,7 @@ import { publicationSummaryText, summarizeBuilderChanges } from '@/lib/builder-w
 type Tab = 'content' | 'blocks' | 'elements' | 'style' | 'decor' | 'motion' | 'media' | 'guests' | 'versions' | 'quality' | 'export' | 'config';
 
 const tabIcon = (d: string) => (
-  <svg className="w-[18px] h-[18px] mx-auto" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
+  <svg aria-hidden="true" className="w-[18px] h-[18px] mx-auto" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" d={d} />
   </svg>
 );
@@ -73,9 +73,9 @@ const VIEWPORT_PRESETS = [
 ];
 
 const SAVE_STATE_META = {
-  clean: { label: 'Sin cambios', dot: 'bg-gray-300', cls: 'bg-gray-50 text-gray-500' },
+  clean: { label: 'Sin cambios', dot: 'bg-gray-500', cls: 'bg-gray-100 text-gray-700' },
   dirty: { label: 'Cambios sin guardar', dot: 'bg-violet-500', cls: 'bg-violet-50 text-violet-700' },
-  saving: { label: 'Guardando…', dot: 'bg-amber-400 animate-pulse', cls: 'bg-amber-50 text-amber-700' },
+  saving: { label: 'Guardando…', dot: 'bg-amber-600 motion-safe:animate-pulse', cls: 'bg-amber-50 text-amber-800' },
   saved: { label: 'Guardado', dot: 'bg-emerald-500', cls: 'bg-emerald-50 text-emerald-700' },
   offline: { label: 'Sin conexión · pendiente', dot: 'bg-orange-500', cls: 'bg-orange-50 text-orange-700' },
   error: { label: 'Error al guardar · reintentar', dot: 'bg-red-500', cls: 'bg-red-50 text-red-700' },
@@ -121,6 +121,10 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const [contractNotice, setContractNotice] = useState('');
   const [publicationNotice, setPublicationNotice] = useState('');
   const [publishOpen, setPublishOpen] = useState(false);
+  const publishDialog = useRef<HTMLDivElement | null>(null);
+  const publishReturnFocus = useRef<HTMLElement | null>(null);
+  const publishDialogBusy = useRef(saving);
+  publishDialogBusy.current = saving;
   const [publishLabel, setPublishLabel] = useState('');
   const [publishSummary, setPublishSummary] = useState('');
   const [publishError, setPublishError] = useState('');
@@ -143,6 +147,43 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     no_kids: data.no_kids || !previewGuest.allowKids,
     config: { ...data.config, activeGuest: previewGuest },
   } : data, [data, previewGuest]);
+
+  useEffect(() => {
+    if (!publishOpen || !publishDialog.current) return;
+    const dialog = publishDialog.current;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    publishReturnFocus.current = previousFocus;
+    const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector)).filter(element => !element.hidden && element.getAttribute('aria-hidden') !== 'true');
+    (dialog.querySelector<HTMLElement>('[data-publish-autofocus]') ?? dialog).focus({ preventScroll: true });
+    const keepFocus = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (!publishDialogBusy.current) setPublishOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const controls = focusable(), first = controls[0], last = controls[controls.length - 1];
+      const active = document.activeElement;
+      if (!first) { event.preventDefault(); dialog.focus({ preventScroll: true }); }
+      else if (event.shiftKey && (active === first || !controls.includes(active as HTMLElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (active === last || !dialog.contains(active))) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', keepFocus);
+    return () => {
+      document.removeEventListener('keydown', keepFocus);
+      if (previousFocus?.isConnected && !publishDialogBusy.current) {
+        previousFocus.focus({ preventScroll: true });
+        publishReturnFocus.current = null;
+      }
+    };
+  }, [publishOpen]);
+
+  useEffect(() => {
+    if (publishOpen || saving || !publishReturnFocus.current) return;
+    if (publishReturnFocus.current.isConnected) publishReturnFocus.current.focus({ preventScroll: true });
+    publishReturnFocus.current = null;
+  }, [publishOpen, saving]);
 
   const chooseViewport = useCallback((width: number, device: 'mobile' | 'desktop') => {
     setPreviewWidth(width);
@@ -439,6 +480,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
+      if (publishDialog.current?.contains(el)) return;
       if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)) return;
       const mod = e.ctrlKey || e.metaKey;
       if (!mod) return;
@@ -768,50 +810,59 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   return (
     <div className="flex flex-col h-[100dvh] bg-gray-50">
 
+      <a href="#builder-workspace" className="sr-only rounded-lg bg-[#2C2519] font-outfit text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[400] focus:min-h-11 focus:px-4 focus:py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#514735]">Ir al área de edición</a>
+
       {/* ── Header ── */}
-      <header className="bg-white border-b border-gray-200 z-40 flex-shrink-0">
-        <div className="flex items-center justify-between h-14 px-4 gap-3">
+      <header className="z-40 flex-shrink-0 border-b border-[#e7e1d9] bg-white font-outfit">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 px-3 py-3 sm:px-4">
 
           {/* Izquierda */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:flex-1">
             <a href={backHref} title="Volver al panel"
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all flex-shrink-0">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              aria-label="Volver al panel"
+              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-[#514735] transition-colors hover:bg-[#f7f3ed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2">
+              <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </a>
             <div className="w-px h-6 bg-gray-200 flex-shrink-0" />
             <div className="min-w-0">
-              <h1 className="font-playfair text-base text-enkarta-dark leading-tight truncate">
+              <h1 title={data.names || 'Nueva invitación'} className="truncate font-outfit text-base font-semibold leading-tight text-enkarta-dark">
                 {data.names || 'Nueva invitación'}
               </h1>
-              <p className="text-[11px] text-gray-400 font-outfit truncate">{publicTemplateName(data.template, data.config?.designKey ?? data.config?.layout?.presetKey)} · {data.type}</p>
+              <p className="mt-1 truncate text-sm leading-5 text-[#6f665a]">{publicTemplateName(data.template, data.config?.designKey ?? data.config?.layout?.presetKey)} · {data.type}</p>
             </div>
           </div>
 
           {/* Centro: vista + historial */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden items-center gap-3 md:flex">
             <div className="flex items-center gap-0.5 bg-gray-100 rounded-xl p-1">
               <button
                 onClick={() => chooseViewport(390, 'mobile')}
                 title="Vista móvil"
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-outfit transition-all ${previewMode === 'mobile' && !compareMode ? 'bg-white shadow-sm text-gray-800 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+                type="button"
+                aria-pressed={previewMode === 'mobile' && !compareMode}
+                className={`flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 ${previewMode === 'mobile' && !compareMode ? 'bg-white font-semibold text-gray-800 shadow-sm' : 'text-gray-600 hover:bg-white/70 hover:text-gray-800'}`}
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
+                <svg aria-hidden="true" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
                 Móvil
               </button>
               <button
                 onClick={() => chooseViewport(1024, 'desktop')}
                 title="Vista escritorio"
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-outfit transition-all ${previewMode === 'desktop' && !compareMode ? 'bg-white shadow-sm text-gray-800 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+                type="button"
+                aria-pressed={previewMode === 'desktop' && !compareMode}
+                className={`flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 ${previewMode === 'desktop' && !compareMode ? 'bg-white font-semibold text-gray-800 shadow-sm' : 'text-gray-600 hover:bg-white/70 hover:text-gray-800'}`}
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" /></svg>
+                <svg aria-hidden="true" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" /></svg>
                 Desktop
               </button>
               <button
                 onClick={() => setCompareMode(true)}
                 title="Comparar móvil y escritorio"
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-outfit transition-all ${compareMode ? 'bg-white shadow-sm text-gray-800 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+                type="button"
+                aria-pressed={compareMode}
+                className={`flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 ${compareMode ? 'bg-white font-semibold text-gray-800 shadow-sm' : 'text-gray-600 hover:bg-white/70 hover:text-gray-800'}`}
               >
                 ◫ Comparar
               </button>
@@ -822,67 +873,51 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
                 onClick={undo}
                 disabled={!canUndo}
                 title="Deshacer (Ctrl+Z)"
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                type="button"
+                aria-label="Deshacer (Ctrl+Z)"
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-700 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h11a4 4 0 010 8h-1M3 10l4-4M3 10l4 4" /></svg>
+                <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h11a4 4 0 010 8h-1M3 10l4-4M3 10l4 4" /></svg>
               </button>
               <button
                 onClick={redo}
                 disabled={!canRedo}
                 title="Rehacer (Ctrl+Shift+Z)"
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                type="button"
+                aria-label="Rehacer (Ctrl+Shift+Z)"
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-700 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10H10a4 4 0 000 8h1M21 10l-4-4M21 10l-4 4" /></svg>
+                <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10H10a4 4 0 000 8h1M21 10l-4-4M21 10l-4 4" /></svg>
               </button>
             </div>
           </div>
 
           {/* Derecha: acciones */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
             {previewGuest && (
-              <button type="button" onClick={() => setPreviewGuest(null)} title="Salir de la simulación" className="hidden lg:inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-outfit text-cyan-700">
-                ◎ Vista: {previewGuest.name} ×
+              <button type="button" onClick={() => setPreviewGuest(null)} title="Salir de la simulación" className="hidden min-h-11 max-w-56 items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm text-cyan-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 lg:inline-flex">
+                <span className="truncate">◎ Vista: {previewGuest.name} ×</span>
               </button>
             )}
-            <span className={`hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-outfit ${
-              validation.errors.length
-                ? 'bg-red-50 text-red-600'
-                : validation.warnings.length
-                  ? 'bg-amber-50 text-amber-600'
-                  : 'bg-emerald-50 text-emerald-600'
-            }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${
-                validation.errors.length
-                  ? 'bg-red-500'
-                  : validation.warnings.length
-                    ? 'bg-amber-500'
-                    : 'bg-emerald-500'
-              }`} />
-              {validation.errors.length
-                ? `${validation.errors.length} error(es)`
-                : validation.warnings.length
-                  ? `${validation.warnings.length} advertencia(s)`
-                  : 'Lista para publicar'}
-            </span>
-            <button type="button" onClick={() => (saveState === 'error' || saveState === 'offline') && void silentSave()} title={savedAt ? `Último guardado ${savedAt.toLocaleTimeString('es-ES')}` : SAVE_STATE_META[saveState].label} className={`hidden lg:inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] transition-colors font-outfit ${SAVE_STATE_META[saveState].cls}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${SAVE_STATE_META[saveState].dot}`} />
-              {SAVE_STATE_META[saveState].label}
-            </button>
             <button
               onClick={handleDuplicate}
               disabled={fixtureMode}
               title="Duplicar invitación"
-              className="hidden sm:flex w-9 h-9 items-center justify-center text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-gray-700 transition-all"
+              type="button"
+              aria-label="Duplicar invitación"
+              className="hidden h-11 w-11 items-center justify-center rounded-xl border border-gray-300 text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 sm:flex"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7V5a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2" /></svg>
+              <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7V5a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2" /></svg>
             </button>
             <a
               href={`/i/${data.slug}?preview=1`}
               target="_blank"
+              rel="noopener noreferrer"
               title="Abrir vista privada del borrador"
-              className="hidden sm:flex w-9 h-9 items-center justify-center text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-gray-700 transition-all"
+              aria-label="Abrir vista privada del borrador"
+              className="hidden h-11 w-11 items-center justify-center rounded-xl border border-gray-300 text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 sm:flex"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
@@ -890,19 +925,42 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             <button
               onClick={() => handleSave()}
               disabled={saving}
-              className="px-4 py-2 text-xs font-outfit font-medium text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50"
+              type="button"
+              aria-busy={saving}
+              className="min-h-11 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {saving ? '…' : 'Guardar'}
+              {saving ? 'Guardando…' : 'Guardar'}
             </button>
             <button
               onClick={openPublish}
               disabled={saving || fixtureMode}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-outfit font-semibold text-white rounded-xl transition-all duration-300 hover:-translate-y-px disabled:opacity-50"
-              style={{ background: 'linear-gradient(90deg, #B8975A, #cda964)', boxShadow: '0 4px 14px rgba(184,151,90,0.35)' }}
+              type="button"
+              className="flex min-h-11 items-center gap-1.5 rounded-xl bg-[#514735] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#3f382b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              <svg aria-hidden="true" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               Publicar
             </button>
+          </div>
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 border-t border-[#eee8df] pt-2">
+            <span className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium leading-5 ${
+              validation.errors.length ? 'bg-red-50 text-red-800' : validation.warnings.length ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'
+            }`}>
+              <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${validation.errors.length ? 'bg-red-600' : validation.warnings.length ? 'bg-amber-600' : 'bg-emerald-600'}`} />
+              {validation.errors.length ? `${validation.errors.length} error(es)` : validation.warnings.length ? `${validation.warnings.length} advertencia(s)` : 'Lista para publicar'}
+            </span>
+            <div role="status" aria-live="polite" aria-atomic="true" className="min-w-0">
+              {(saveState === 'error' || saveState === 'offline') ? (
+                <button type="button" onClick={() => void silentSave()} title={savedAt ? `Último guardado ${savedAt.toLocaleTimeString('es-ES')}` : SAVE_STATE_META[saveState].label} className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium leading-5 underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 ${SAVE_STATE_META[saveState].cls}`}>
+                  <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${SAVE_STATE_META[saveState].dot}`} />
+                  {SAVE_STATE_META[saveState].label}
+                </button>
+              ) : (
+                <span title={savedAt ? `Último guardado ${savedAt.toLocaleTimeString('es-ES')}` : SAVE_STATE_META[saveState].label} className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium leading-5 ${SAVE_STATE_META[saveState].cls}`}>
+                  <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${SAVE_STATE_META[saveState].dot}`} />
+                  {SAVE_STATE_META[saveState].label}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -912,43 +970,44 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
         const url = URL.createObjectURL(new Blob([JSON.stringify(dataRef.current, null, 2)], { type: 'application/json' }));
         const link = document.createElement('a'); link.href = url; link.download = `${data.slug}-respaldo.json`; link.click(); URL.revokeObjectURL(url);
       }}>Descargar respaldo de mis cambios</button></div>}
-      <div className="flex shrink-0 items-center gap-2 overflow-x-auto [scrollbar-width:none] border-b border-[#e7e1d9] bg-white px-3 py-2 font-outfit" aria-label="Pasos de personalización">
-        {([['content', '1. Datos'], ['media', '2. Fotos y música'], ['style', '3. Estilo'], ['versions', '4. Revisar']] as [Tab, string][]).map(([tab, label]) => <button key={tab} type="button" onClick={() => { setActiveTab(tab); setMobileWorkspace('edit'); }} aria-pressed={activeTab === tab} className={`min-h-11 shrink-0 rounded-xl px-3 text-xs ${activeTab === tab ? 'bg-[#514735] text-white' : 'bg-[#f7f3ed] text-[#514735]'}`}>{label}</button>)}
-        <button type="button" onClick={() => setAdvancedTools(value => !value)} aria-pressed={advancedTools} className="min-h-11 shrink-0 rounded-xl border px-3 text-xs text-[#514735]">{advancedTools ? 'Ocultar herramientas avanzadas' : 'Más herramientas'}</button>
-        <button type="button" onClick={() => setMobileWorkspace(value => value === 'edit' ? 'preview' : 'edit')} className="order-first min-h-11 shrink-0 rounded-xl border px-3 text-xs lg:hidden">{mobileWorkspace === 'edit' ? 'Ver invitación' : 'Volver a editar'}</button>
-      </div>
+      <nav className="flex shrink-0 items-center gap-2 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#8f8272_transparent] border-b border-[#e7e1d9] bg-white px-3 py-2 font-outfit" aria-label="Pasos de personalización">
+        {([['content', '1. Datos'], ['media', '2. Fotos y música'], ['style', '3. Estilo'], ['versions', '4. Revisar']] as [Tab, string][]).map(([tab, label]) => <button key={tab} type="button" onClick={() => { setActiveTab(tab); setMobileWorkspace('edit'); }} aria-pressed={activeTab === tab} title={TAB_DESCRIPTIONS[tab]} className={`min-h-11 shrink-0 rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 ${activeTab === tab ? 'bg-[#514735] text-white' : 'bg-[#f7f3ed] text-[#514735] hover:bg-[#ece4d8]'}`}>{label}</button>)}
+        <button type="button" onClick={() => setAdvancedTools(value => !value)} aria-pressed={advancedTools} aria-expanded={advancedTools} aria-controls="builder-tools" className="min-h-11 shrink-0 rounded-xl border border-[#c6b9a8] px-3 text-sm font-medium text-[#514735] transition-colors hover:bg-[#f7f3ed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2">{advancedTools ? 'Ocultar herramientas avanzadas' : 'Más herramientas'}</button>
+        <button type="button" onClick={() => setMobileWorkspace(value => value === 'edit' ? 'preview' : 'edit')} aria-pressed={mobileWorkspace === 'preview'} aria-controls={mobileWorkspace === 'edit' ? 'builder-preview' : 'builder-editor'} className="order-first min-h-11 shrink-0 rounded-xl border border-[#c6b9a8] px-3 text-sm font-semibold text-[#514735] transition-colors hover:bg-[#f7f3ed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 lg:hidden">{mobileWorkspace === 'edit' ? 'Ver invitación' : 'Volver a editar'}</button>
+      </nav>
 
       {/* ── Body ── */}
-      <div className="flex flex-1 overflow-hidden">
+      <main id="builder-workspace" tabIndex={-1} aria-label="Área de edición y vista previa" className="flex min-h-0 flex-1 overflow-hidden">
 
         {/* Panel izquierdo: navegación clara + inspector */}
-        <div className={`${mobileWorkspace === 'edit' ? 'flex' : 'hidden'} w-full flex-shrink-0 border-r border-[#e7e1d9] bg-white lg:flex lg:w-[430px] xl:w-[500px] 2xl:w-[540px]`}>
-          <nav className="flex w-[76px] flex-shrink-0 flex-col gap-1 overflow-y-auto border-r border-[#e8e1d6] bg-[linear-gradient(180deg,#faf7f2_0%,#f5efe7_100%)] px-1.5 py-2" aria-label="Herramientas del constructor">
+        <div id="builder-editor" className={`${mobileWorkspace === 'edit' ? 'flex' : 'hidden'} w-full flex-shrink-0 border-r border-[#e7e1d9] bg-white lg:flex lg:w-[430px] xl:w-[500px] 2xl:w-[540px]`}>
+          <nav id="builder-tools" className="flex w-[88px] flex-shrink-0 flex-col gap-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#8f8272_transparent] border-r border-[#e8e1d6] bg-[#faf7f2] px-1.5 py-2" aria-label="Herramientas del constructor">
             {TABS.filter(tab => advancedTools || ['content', 'media', 'style', 'versions', 'guests', 'config'].includes(tab.id) || tab.id === activeTab).map(tab => {
               const active = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setActiveTab(tab.id)}
                   title={`${tab.label}: ${TAB_DESCRIPTIONS[tab.id]}`}
-                  className={`relative flex min-h-[54px] flex-shrink-0 flex-col items-center justify-center rounded-xl px-1 py-1.5 text-center transition-all duration-200 ${active ? 'bg-white text-enkarta-gold shadow-sm ring-1 ring-black/5' : 'text-gray-400 hover:bg-white/60 hover:text-gray-600'}`}
+                  aria-pressed={active}
+                  className={`relative flex min-h-[64px] flex-shrink-0 flex-col items-center justify-center rounded-xl px-1 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset ${active ? 'bg-[#514735] text-white focus-visible:ring-[#D4C5B9]' : 'text-[#62594d] hover:bg-[#ece4d8] hover:text-[#302a23] focus-visible:ring-[#514735]'}`}
                 >
-                  {tab.icon}
-                  <span className={`mt-1 block text-[9px] font-outfit leading-none ${active ? 'font-semibold' : ''}`}>{tab.label}</span>
-                  {active && <span className="absolute -right-1.5 h-7 w-[3px] rounded-l-full bg-enkarta-gold" />}
+                  <span aria-hidden="true">{tab.icon}</span>
+                  <span className={`mt-1.5 block font-outfit text-xs leading-4 ${active ? 'font-semibold' : 'font-medium'}`}>{tab.label}</span>
                 </button>
               );
             })}
           </nav>
 
           <div className="flex min-w-0 flex-1 flex-col">
-            <div className="flex-shrink-0 border-b border-[#eee8df] bg-[linear-gradient(135deg,#fff_0%,#fbf8f3_100%)] px-5 py-3.5">
-              <p className="font-playfair text-[17px] text-[#302a23]">{TABS.find(tab => tab.id === activeTab)?.label}</p>
-              <p className="mt-0.5 text-[11px] font-outfit leading-relaxed text-[#93897d]">{TAB_DESCRIPTIONS[activeTab]}</p>
+            <div className="flex-shrink-0 border-b border-[#eee8df] bg-[#fbf8f3] px-4 py-4 sm:px-5">
+              <h2 className="font-outfit text-base font-semibold text-[#302a23]">{TABS.find(tab => tab.id === activeTab)?.label}</h2>
+              <p className="mt-1 font-outfit text-sm leading-5 text-[#6f665a]">{TAB_DESCRIPTIONS[activeTab]}</p>
             </div>
 
             {/* Contenido del panel (scrollable) */}
-            <div className="flex-1 overflow-y-auto overscroll-contain">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {activeTab === 'content' && <ContentPanel data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
               {activeTab === 'blocks'  && <BlockEditorPanel data={data} onChange={handleChange} selectedId={selectedBlockId} selectedIds={selectedBlockIds} onSelect={selectBlock} previewMode={previewMode} previewWidth={previewWidth} editingRevision={blockMediaRevision} />}
               {activeTab === 'elements' && <ElementsPanel data={data} onChange={handleChange} selectedId={selectedBlockId} onSelect={id => selectBlock(id)} />}
@@ -976,17 +1035,17 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
         </div>
 
         {/* Panel derecho: preview en tiempo real */}
-        <div className={`${mobileWorkspace === 'preview' ? 'flex' : 'hidden'} min-w-0 flex-1 flex-col overflow-hidden lg:flex`}>
-          <div className="flex h-11 flex-shrink-0 items-center justify-between gap-3 border-b border-[#ded8d0] bg-white/95 px-3 shadow-sm">
-            <div className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
+        <div id="builder-preview" className={`${mobileWorkspace === 'preview' ? 'flex' : 'hidden'} min-w-0 flex-1 flex-col overflow-hidden lg:flex`}>
+          <div className="flex min-h-14 flex-shrink-0 items-center justify-between gap-2 border-b border-[#ded8d0] bg-white px-3 py-2">
+            <div className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#8f8272_transparent] py-1">
               {VIEWPORT_PRESETS.map(preset => (
-                <button key={preset.width} type="button" onClick={() => chooseViewport(preset.width, preset.device)} title={`${preset.label} · ${preset.width}px`} className={`flex h-8 flex-none items-center gap-1.5 rounded-lg px-2.5 text-[9px] font-medium transition-all font-outfit ${!compareMode && previewWidth === preset.width ? 'bg-[#3f382f] text-white shadow-sm' : 'text-[#756d64] hover:bg-[#f4f0ea]'}`}>
-                  <span className={`rounded-[2px] border border-current ${preset.width <= 390 ? 'h-3.5 w-2' : preset.width === 768 ? 'h-3 w-3.5' : 'h-2.5 w-4'}`} />
+                <button key={preset.width} type="button" onClick={() => chooseViewport(preset.width, preset.device)} title={`${preset.label} · ${preset.width}px`} aria-label={`${preset.label} · ${preset.width}px`} aria-pressed={!compareMode && previewWidth === preset.width} className={`flex min-h-11 flex-none items-center gap-1.5 rounded-lg px-3 text-sm font-medium tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset font-outfit ${!compareMode && previewWidth === preset.width ? 'bg-[#3f382f] text-white focus-visible:ring-[#D4C5B9]' : 'text-[#62594d] hover:bg-[#f4f0ea] focus-visible:ring-[#514735]'}`}>
+                  <span aria-hidden="true" className={`rounded-[2px] border border-current ${preset.width <= 390 ? 'h-3.5 w-2' : preset.width === 768 ? 'h-3 w-3.5' : 'h-2.5 w-4'}`} />
                   <span className="hidden 2xl:inline">{preset.label}</span><span>{preset.width}</span>
                 </button>
               ))}
             </div>
-            <button type="button" onClick={() => setCompareMode(value => !value)} className={`h-8 flex-none rounded-lg px-3 text-[9px] font-semibold transition-all font-outfit ${compareMode ? 'bg-enkarta-gold text-white shadow-sm' : 'border border-[#ded8d0] bg-white text-[#6f675e] hover:bg-[#f6f2ec]'}`}>◫ {compareMode ? 'Comparando' : 'Comparar'}</button>
+            <button type="button" onClick={() => setCompareMode(value => !value)} aria-pressed={compareMode} className={`min-h-11 flex-none rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 font-outfit ${compareMode ? 'bg-[#514735] text-white' : 'border border-[#c6b9a8] bg-white text-[#514735] hover:bg-[#f6f2ec]'}`}>◫ {compareMode ? 'Comparando' : 'Comparar'}</button>
           </div>
           <div className="min-h-0 flex-1 overflow-hidden">
             {compareMode ? (
@@ -1014,33 +1073,33 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
           </div>
         </div>
 
-      </div>
+      </main>
 
       {publishOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#1f1a24]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="publish-title">
-          <div className="max-h-[calc(100vh-2rem)] w-full max-w-[600px] overflow-y-auto rounded-[28px] border border-white/70 bg-[#fcfbf8] shadow-[0_30px_100px_rgba(20,15,25,.35)]">
+        <div ref={publishDialog} tabIndex={-1} className="fixed inset-0 z-[300] flex items-center justify-center bg-[#1f1a24]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="publish-title" aria-describedby="publish-description" aria-busy={saving}>
+          <div className="max-h-[calc(100vh-2rem)] w-full max-w-[600px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#8f8272_transparent] rounded-[28px] border border-white/70 bg-[#fcfbf8] shadow-[0_30px_100px_rgba(20,15,25,.35)]">
             <div className="bg-[linear-gradient(135deg,#2c273d_0%,#69547e_100%)] px-6 py-5 text-white">
-              <div className="flex items-start gap-4"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/12 text-xl">{publishMode === 'schedule' ? '◷' : '✓'}</span><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55 font-outfit">Centro de publicación</p><h2 id="publish-title" className="mt-1 font-playfair text-2xl">{publishMode === 'schedule' ? 'Programar con seguridad' : 'Publicar con control'}</h2><p className="mt-1 text-xs leading-relaxed text-white/65 font-outfit">El borrador seguirá editable y esta copia será inmutable. Puedes volver a una publicación anterior cuando quieras.</p></div></div>
+              <div className="flex items-start gap-4"><span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/12 text-xl">{publishMode === 'schedule' ? '◷' : '✓'}</span><div className="min-w-0"><p className="text-xs font-semibold text-white/90 font-outfit">Centro de publicación</p><h2 id="publish-title" tabIndex={-1} data-publish-autofocus className="mt-1 font-playfair text-2xl focus:outline-none">{publishMode === 'schedule' ? 'Programar con seguridad' : 'Publicar con control'}</h2><p id="publish-description" className="mt-2 text-sm leading-6 text-white/90 font-outfit">El borrador seguirá editable y esta copia será inmutable. Puedes volver a una publicación anterior cuando quieras.</p></div></div>
             </div>
             <div className="space-y-4 p-6">
               <div className="grid grid-cols-2 gap-2 rounded-2xl bg-[#f0ece6] p-1.5">
-                <button type="button" onClick={() => { setPublishMode('now'); setPublishError(''); }} className={`rounded-xl px-3 py-2.5 text-xs font-semibold transition font-outfit ${publishMode === 'now' ? 'bg-white text-[#382f42] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Publicar ahora</button>
-                <button type="button" onClick={() => { setPublishMode('schedule'); setPublishError(''); }} className={`rounded-xl px-3 py-2.5 text-xs font-semibold transition font-outfit ${publishMode === 'schedule' ? 'bg-white text-[#382f42] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Programar fecha</button>
+                <button type="button" onClick={() => { setPublishMode('now'); setPublishError(''); }} aria-pressed={publishMode === 'now'} className={`min-h-11 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6a527f] focus-visible:ring-offset-2 font-outfit ${publishMode === 'now' ? 'bg-white text-[#382f42] shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>Publicar ahora</button>
+                <button type="button" onClick={() => { setPublishMode('schedule'); setPublishError(''); }} aria-pressed={publishMode === 'schedule'} className={`min-h-11 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6a527f] focus-visible:ring-offset-2 font-outfit ${publishMode === 'schedule' ? 'bg-white text-[#382f42] shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>Programar fecha</button>
               </div>
-              {publishMode === 'schedule' && <label className="block rounded-2xl border border-violet-100 bg-violet-50/60 p-3"><span className="mb-1.5 block text-[11px] font-semibold text-violet-800 font-outfit">Fecha y hora de publicación</span><input type="datetime-local" value={publishAt} min={localDateTimeInput(new Date(Date.now() + 60_000))} onChange={event => setPublishAt(event.target.value)} className="w-full rounded-xl border border-violet-100 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-violet-400 font-outfit" /><span className="mt-1.5 block text-[10px] leading-relaxed text-violet-600 font-outfit">Usaremos la zona horaria de este dispositivo. Si ya existe una versión pública, seguirá visible hasta ese momento.</span></label>}
-              {scheduledVersion && <div className="flex gap-3 rounded-2xl border border-sky-100 bg-sky-50 p-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-sky-600 shadow-sm">◷</span><div><p className="text-xs font-semibold text-sky-900 font-outfit">Ya existe una publicación programada</p><p className="mt-0.5 text-[10px] leading-relaxed text-sky-700 font-outfit">{scheduledVersion.publishAt ? new Date(scheduledVersion.publishAt).toLocaleString('es-BO') : 'Fecha pendiente'} · Puedes gestionarla en Historial. Una nueva programación no elimina la anterior.</p></div></div>}
-              <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-xl border border-violet-100 bg-violet-50 p-2.5 text-center"><p className="text-[9px] uppercase tracking-wider text-violet-500 font-outfit">Borrador</p><p className="mt-1 text-xs font-semibold text-violet-800 font-outfit">Se conserva</p></div>
-                <div className="rounded-xl border border-cyan-100 bg-cyan-50 p-2.5 text-center"><p className="text-[9px] uppercase tracking-wider text-cyan-600 font-outfit">Preview</p><p className="mt-1 text-xs font-semibold text-cyan-800 font-outfit">Privado</p></div>
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-2.5 text-center"><p className="text-[9px] uppercase tracking-wider text-emerald-600 font-outfit">Público</p><p className="mt-1 text-xs font-semibold text-emerald-800 font-outfit">{publishMode === 'schedule' ? 'En la fecha elegida' : 'Nueva versión'}</p></div>
+              {publishMode === 'schedule' && <label className="block rounded-2xl border border-violet-100 bg-violet-50/60 p-3"><span className="mb-1.5 block text-sm font-semibold text-violet-900 font-outfit">Fecha y hora de publicación</span><input name="publication-at" autoComplete="off" type="datetime-local" value={publishAt} min={localDateTimeInput(new Date(Date.now() + 60_000))} onChange={event => setPublishAt(event.target.value)} aria-describedby="publish-schedule-help" className="min-h-11 w-full min-w-0 rounded-xl border border-violet-300 bg-white px-3 py-2.5 text-base text-gray-800 outline-none focus:border-violet-700 focus:ring-2 focus:ring-violet-200 font-outfit" /><span id="publish-schedule-help" className="mt-2 block text-sm leading-5 text-violet-800 font-outfit">Usaremos la zona horaria de este dispositivo. Si ya existe una versión pública, seguirá visible hasta ese momento.</span></label>}
+              {scheduledVersion && <div className="flex gap-3 rounded-2xl border border-sky-100 bg-sky-50 p-3"><span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-sky-700 shadow-sm">◷</span><div className="min-w-0"><p className="text-sm font-semibold text-sky-900 font-outfit">Ya existe una publicación programada</p><p className="mt-1 text-sm leading-5 text-sky-800 font-outfit">{scheduledVersion.publishAt ? new Date(scheduledVersion.publishAt).toLocaleString('es-BO') : 'Fecha pendiente'} · Puedes gestionarla en Historial. Una nueva programación no elimina la anterior.</p></div></div>}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="rounded-xl border border-violet-100 bg-violet-50 p-2.5 text-center"><p className="text-xs font-medium text-violet-800 font-outfit">Borrador</p><p className="mt-1 text-sm font-semibold text-violet-900 font-outfit">Se conserva</p></div>
+                <div className="rounded-xl border border-cyan-100 bg-cyan-50 p-2.5 text-center"><p className="text-xs font-medium text-cyan-800 font-outfit">Preview</p><p className="mt-1 text-sm font-semibold text-cyan-900 font-outfit">Privado</p></div>
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-2.5 text-center"><p className="text-xs font-medium text-emerald-800 font-outfit">Público</p><p className="mt-1 text-sm font-semibold text-emerald-900 font-outfit">{publishMode === 'schedule' ? 'En la fecha elegida' : 'Nueva versión'}</p></div>
               </div>
-              <label className="block"><span className="mb-1.5 block text-[11px] font-medium text-gray-600 font-outfit">Nombre de la versión</span><input value={publishLabel} onChange={event => setPublishLabel(event.target.value)} maxLength={120} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-violet-400 font-outfit" /></label>
-              <label className="block"><span className="mb-1.5 block text-[11px] font-medium text-gray-600 font-outfit">Resumen que quedará en el historial</span><textarea value={publishSummary} onChange={event => setPublishSummary(event.target.value)} rows={3} maxLength={600} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm leading-relaxed outline-none focus:border-violet-400 font-outfit" /></label>
-              <div className="rounded-2xl border border-gray-100 bg-white p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 font-outfit">Cambios detectados</p><ul className="mt-2 space-y-1">{publicationChanges.map(change => <li key={change} className="flex gap-2 text-xs text-gray-600 font-outfit"><span className="text-emerald-500">●</span>{change}</li>)}</ul></div>
-              {!!validation.errors.length && <div className="rounded-xl border border-red-100 bg-red-50 p-3"><p className="text-xs font-semibold text-red-700 font-outfit">No se puede publicar todavía</p>{validation.errors.map(issue => <p key={issue.title} className="mt-1 text-[11px] text-red-600 font-outfit">• {issue.title}</p>)}</div>}
-              {!!validation.warnings.length && !validation.errors.length && <div className="rounded-xl border border-amber-100 bg-amber-50 p-3"><p className="text-xs font-semibold text-amber-700 font-outfit">Revisa estas advertencias</p>{validation.warnings.map(issue => <p key={issue.title} className="mt-1 text-[11px] text-amber-700 font-outfit">• {issue.title}</p>)}</div>}
+              <label className="block"><span className="mb-1.5 block text-sm font-medium text-gray-700 font-outfit">Nombre de la versión</span><input name="publication-label" autoComplete="off" value={publishLabel} onChange={event => setPublishLabel(event.target.value)} maxLength={120} className="min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 outline-none focus:border-violet-700 focus:ring-2 focus:ring-violet-200 font-outfit" /></label>
+              <label className="block"><span className="mb-1.5 block text-sm font-medium text-gray-700 font-outfit">Resumen que quedará en el historial</span><textarea name="publication-summary" autoComplete="off" value={publishSummary} onChange={event => setPublishSummary(event.target.value)} rows={3} maxLength={600} className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base leading-6 text-gray-800 outline-none focus:border-violet-700 focus:ring-2 focus:ring-violet-200 font-outfit" /></label>
+              <div className="rounded-2xl border border-gray-100 bg-white p-3"><p className="text-sm font-semibold text-gray-700 font-outfit">Cambios detectados</p><ul className="mt-2 space-y-1.5">{publicationChanges.map(change => <li key={change} className="flex gap-2 text-sm leading-5 text-gray-700 font-outfit"><span aria-hidden="true" className="text-emerald-700">●</span>{change}</li>)}</ul></div>
+              {!!validation.errors.length && <div className="rounded-xl border border-red-100 bg-red-50 p-3"><p className="text-sm font-semibold text-red-800 font-outfit">No se puede publicar todavía</p>{validation.errors.map(issue => <p key={issue.title} className="mt-1 text-sm leading-5 text-red-800 font-outfit">• {issue.title}</p>)}</div>}
+              {!!validation.warnings.length && !validation.errors.length && <div className="rounded-xl border border-amber-100 bg-amber-50 p-3"><p className="text-sm font-semibold text-amber-800 font-outfit">Revisa estas advertencias</p>{validation.warnings.map(issue => <p key={issue.title} className="mt-1 text-sm leading-5 text-amber-800 font-outfit">• {issue.title}</p>)}</div>}
               {publishError && <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-800 font-outfit"><p>{publishError}</p>{backHref === '/socios/panel' && <a href="/socios/panel?tab=suscripcion" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center underline underline-offset-4">Revisar suscripción y pagos en otra pestaña</a>}</div>}
-              <div className="flex gap-2 pt-1"><button type="button" onClick={() => setPublishOpen(false)} disabled={saving} className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm text-gray-600 disabled:opacity-50 font-outfit">Seguir editando</button><button type="button" onClick={confirmPublish} disabled={saving || !!validation.errors.length || !publishLabel.trim()} className="flex-[1.35] rounded-xl bg-[linear-gradient(90deg,#8b6cad,#6a527f)] py-2.5 text-sm font-semibold text-white shadow-lg disabled:opacity-40 font-outfit">{saving ? (publishMode === 'schedule' ? 'Programando…' : 'Publicando…') : (publishMode === 'schedule' ? 'Programar publicación' : 'Publicar esta versión')}</button></div>
+              <div className="flex flex-col gap-2 pt-1 sm:flex-row"><button type="button" onClick={() => setPublishOpen(false)} disabled={saving} className="min-h-11 flex-1 rounded-xl border border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6a527f] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-outfit">Seguir editando</button><button type="button" onClick={confirmPublish} disabled={saving || !!validation.errors.length || !publishLabel.trim()} aria-busy={saving} className="min-h-11 flex-[1.35] rounded-xl bg-[linear-gradient(90deg,#75548f,#6a527f)] px-3 py-2.5 text-sm font-semibold text-white shadow-lg transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6a527f] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 font-outfit">{saving ? (publishMode === 'schedule' ? 'Programando…' : 'Publicando…') : (publishMode === 'schedule' ? 'Programar publicación' : 'Publicar esta versión')}</button></div>
             </div>
           </div>
         </div>
