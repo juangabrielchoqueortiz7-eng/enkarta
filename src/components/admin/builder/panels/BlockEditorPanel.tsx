@@ -131,13 +131,14 @@ function VisualLayoutSelect({ kind, value, options, set }: { kind: 'itinerary' |
 }
 
 // Renderiza un campo según su tipo (texto, color, imagen, icono, lista…).
-function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, eventType, accent, visualSelect }: {
+function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, eventType, accent, visualSelect, destinationKey }: {
   field: FieldDef; value: any; set: (v: any) => void;
   setIcon?: (v: string, colors?: any, speed?: number) => void;
   colors?: any; speed?: number; ownerId?: string; eventType?: any;
   /** Color con el que se dibujan las miniaturas de separador (el de la invitación). */
   accent?: string;
   visualSelect?: 'itinerary' | 'gallery';
+  destinationKey?: string;
 }) {
   switch (field.kind) {
     case 'textarea':
@@ -160,7 +161,7 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
     case 'video':
       return <ImageUploader value={value} onChange={set} folder="videos" ownerId={ownerId} kind="video" aspect={field.previewAspect ?? 'wide'} hint={field.hint ?? 'Recomendado: MP4 H.264 o WebM, 3–12 s y menos de 6 MB.'} />;
     case 'images':
-      return <MultiImageUploader values={Array.isArray(value) ? value : []} onChange={set} ownerId={ownerId} />;
+      return <MultiImageUploader values={Array.isArray(value) ? value : []} onChange={set} ownerId={ownerId} destinationKey={destinationKey} />;
     case 'icon':
       return <IconPicker value={value} colors={colors} speed={speed} defaultIcon="rings" onChange={(v, c, s) => setIcon?.(v, c, s)} ownerId={ownerId} eventType={eventType} />;
     case 'divider': {
@@ -761,6 +762,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
               <Labeled label={f.label}>
                 <FieldControl
                   field={f} value={editorProps[f.key]} set={v => setProp(f.key, v)}
+                  destinationKey={`${selected.id}:${f.key}`}
                   setIcon={(v, c, s) => setIcon(f.key, v, c, s)}
                   colors={selected.props[`${f.key}Colors`]} speed={selected.props[`${f.key}Speed`] as number | undefined}
                   ownerId={data.id} eventType={data.type} accent={cfg.theme?.primary}
@@ -923,6 +925,7 @@ export default function BlockEditorPanel({ data, onChange, selectedId, selectedI
                       <Labeled key={f.key} label={f.label}>
                         <FieldControl
                           field={f} value={childProps[f.key]} set={v => setKidProp(i, f.key, v)}
+                          destinationKey={`${selected.id}:${c.id}:${f.key}`}
                           setIcon={(v, col, sp) => setKidIcon(i, f.key, v, col, sp)}
                           colors={c.props[`${f.key}Colors`]} speed={c.props[`${f.key}Speed`] as number | undefined}
                           ownerId={data.id} eventType={data.type}
