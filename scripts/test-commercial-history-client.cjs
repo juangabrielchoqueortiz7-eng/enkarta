@@ -56,7 +56,7 @@ test('the next history page must keep the cutoff and stay strictly behind its cu
 });
 test('history transport sends one private read with the abort signal and no note in its URL',async()=>{
  let calls=0;const signal=new AbortController().signal,encoded=h.encodeCommercialHistoryCursor(cursor);
- const p=await h.requestCommercialHistory(lead,encoded,async(url,options)=>{calls++;const u=new URL(url,'https://test.invalid');assert.equal(u.pathname,'/api/admin/commercial/history');assert.equal(u.searchParams.get('leadId'),lead.id);assert.equal(u.searchParams.get('cursor'),encoded);assert.equal(u.searchParams.size,2);assert.equal(options.cache,'no-store');assert.equal(options.signal,signal);assert.equal(options.method,undefined);return response(page());},signal);
+ const p=await h.requestCommercialHistory(lead,encoded,async(url,options)=>{calls++;const u=new URL(url,'https://test.invalid');assert.equal(u.pathname,'/api/admin/commercial/history');assert.equal(u.searchParams.get('leadId'),lead.id);assert.equal(u.searchParams.get('cursor'),encoded);assert.equal(u.searchParams.size,2);assert.equal(options.cache,'no-store');assert.ok(options.signal instanceof AbortSignal);assert.notEqual(options.signal,signal);assert.equal(options.signal.aborted,false);assert.equal(options.method,undefined);return response(page());},signal);
  assert.equal(calls,1);assert.equal(p.entries.length,20);
 });
 test('invalid local identity or another contact cursor never reaches the transport',async()=>{

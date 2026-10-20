@@ -1,9 +1,11 @@
 import { COMMERCIAL_LEAD_STATUSES, type CommercialLeadStatus } from './commercial';
 import { normalizeCommercialReference } from './commercial-lookup';
+import { runSalesRead } from './sales-read';
 
 export type CommercialHistoryEntry = { id: string; lead_id: string; from_status: CommercialLeadStatus; to_status: CommercialLeadStatus; revenue_bs: number | null; note: string; created_at: string };
 export type CommercialHistoryCursor = { leadId: string; asOf: string; createdAt: string; id: string };
 export type CommercialHistoryPage = { lead: { id: string; reference: string }; asOf: string; entries: CommercialHistoryEntry[]; pagination: { size: 20; hasMore: boolean; nextCursor: string | null } };
+export const COMMERCIAL_HISTORY_TIMEOUT_MS = 20_000;
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const uuid = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
 
@@ -77,15 +79,21 @@ export async function requestCommercialHistory(lead: { id: string; reference: st
   const params = new URLSearchParams({ leadId: lead.id });
   if (cursor !== null) params.set('cursor', cursor);
   if (!parseCommercialHistoryQuery(params) || normalizeCommercialReference(lead.reference) !== lead.reference) throw new Error('No se pudo identificar el contacto para consultar su historial.');
-  let response: Response;
-  try { response = await transport(`/api/admin/commercial/history?${params}`, { cache: 'no-store', signal }); }
-  catch { throw new Error('No se pudo cargar el historial. Revisa tu conexión y vuelve a intentarlo.'); }
-  if (response.status === 401) throw new Error('Tu sesión de administración terminó. Vuelve a ingresar para consultar el historial.');
-  if (response.status === 404) throw new Error('El contacto ya no está disponible. Actualiza Ventas antes de continuar.');
-  let body: unknown;
-  try { body = await response.json(); } catch { throw new Error('El historial llegó incompleto. Vuelve a intentarlo.'); }
-  if (!response.ok) throw new Error(record(body) && body.code === 'MIGRATION_REQUIRED' ? 'El historial comercial requiere la migración 012. Consulta con administración.' : 'No se pudo cargar el historial. Vuelve a intentarlo.');
-  const page = parseCommercialHistoryPage(body, lead, cursor);
-  if (!page) throw new Error('El historial llegó incompleto o corresponde a otro contacto. Vuelve a intentarlo.');
-  return page;
+  const cancelMessage = 'La consulta del historial se interrumpió. Vuelve a intentarlo.';
+  return runSalesRead(async childSignal => {
+    const active = () => { if (childSignal.aborted) throw new Error(cancelMessage); };
+    let response: Response;
+    try { response = await transport(`/api/admin/commercial/history?${params}`, { cache: 'no-store', signal: childSignal }); }
+    catch { throw new Error('No se pudo cargar el historial. Revisa tu conexión y vuelve a intentarlo.'); }
+    active();
+    if (response.status === 401) throw new Error('Tu sesión de administración terminó. Vuelve a ingresar para consultar el historial.');
+    if (response.status === 404) throw new Error('El contacto ya no está disponible. Actualiza Ventas antes de continuar.');
+    let body: unknown;
+    try { body = await response.json(); } catch { throw new Error('El historial llegó incompleto. Vuelve a intentarlo.'); }
+    active();
+    if (!response.ok) throw new Error(record(body) && body.code === 'MIGRATION_REQUIRED' ? 'El historial comercial requiere la migración 012. Consulta con administración.' : 'No se pudo cargar el historial. Vuelve a intentarlo.');
+    const page = parseCommercialHistoryPage(body, lead, cursor);
+    if (!page) throw new Error('El historial llegó incompleto o corresponde a otro contacto. Vuelve a intentarlo.');
+    active(); return page;
+  }, { signal, timeoutMs: COMMERCIAL_HISTORY_TIMEOUT_MS, timeoutMessage: 'El historial tardó demasiado en responder. Vuelve a intentarlo.', cancelMessage });
 }

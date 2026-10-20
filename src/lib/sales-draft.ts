@@ -1,9 +1,11 @@
 import { isSalesCommercialReference, type SalesQuoteInput } from './sales-playbook';
+import { runSalesRead } from './sales-read';
 
 export type SalesDraftInput = Omit<SalesQuoteInput, 'paymentInstructions'>;
 export type SalesDraftStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 export type SalesConfig = { paymentInstructions: string; paymentConfigured: boolean; salesHours: string; draftScope: string };
 export const SALES_DRAFT_TTL = 24 * 60 * 60 * 1000;
+export const SALES_CONFIG_TIMEOUT_MS = 12_000;
 export const EMPTY_SALES_DRAFT: SalesDraftInput = { packageKey: 'premium', eventType: 'Boda', extrasBs: 0 };
 const fields = ['clientName', 'eventType', 'eventDate', 'design', 'extrasLabel'] as const;
 
@@ -70,14 +72,20 @@ export function clearSalesDraft(storage: SalesDraftStorage, scope: string) {
 }
 
 export async function requestSalesConfig(transport: typeof fetch = fetch, signal?: AbortSignal): Promise<SalesConfig> {
-  let response: Response;
-  try { response = await transport('/api/admin/sales-config', { cache: 'no-store', signal }); }
-  catch { throw new Error(signal?.aborted ? 'La comprobación tardó demasiado. Inténtalo de nuevo.' : 'No se pudo conectar para comprobar la configuración. Inténtalo de nuevo.'); }
-  if (!response.ok) throw new Error(response.status === 401 ? 'Tu sesión terminó. Vuelve a ingresar al panel.' : 'No se pudo comprobar la configuración. Inténtalo de nuevo.');
-  let value;
-  try { value = await response.json(); } catch { throw new Error('La configuración llegó incompleta. Inténtalo de nuevo.'); }
-  if (!value || typeof value.paymentInstructions !== 'string' || value.paymentInstructions.length > 900 || typeof value.salesHours !== 'string' || value.salesHours.length > 120 || typeof value.paymentConfigured !== 'boolean' || value.paymentConfigured !== Boolean(value.paymentInstructions) || typeof value.draftScope !== 'string' || !/^[a-f0-9]{64}$/.test(value.draftScope)) throw new Error('La configuración llegó incompleta. Inténtalo de nuevo.');
-  return { paymentInstructions: value.paymentInstructions, paymentConfigured: value.paymentConfigured, salesHours: value.salesHours, draftScope: value.draftScope };
+  const cancelMessage = 'La comprobación de la configuración se interrumpió. Inténtalo de nuevo.';
+  return runSalesRead(async childSignal => {
+    const active = () => { if (childSignal.aborted) throw new Error(cancelMessage); };
+    let response: Response;
+    try { response = await transport('/api/admin/sales-config', { cache: 'no-store', signal: childSignal }); }
+    catch { throw new Error('No se pudo conectar para comprobar la configuración. Inténtalo de nuevo.'); }
+    active();
+    if (!response.ok) throw new Error(response.status === 401 ? 'Tu sesión terminó. Vuelve a ingresar al panel.' : 'No se pudo comprobar la configuración. Inténtalo de nuevo.');
+    let value;
+    try { value = await response.json(); } catch { throw new Error('La configuración llegó incompleta. Inténtalo de nuevo.'); }
+    active();
+    if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.paymentInstructions !== 'string' || value.paymentInstructions.length > 900 || typeof value.salesHours !== 'string' || value.salesHours.length > 120 || typeof value.paymentConfigured !== 'boolean' || value.paymentConfigured !== Boolean(value.paymentInstructions) || typeof value.draftScope !== 'string' || value.draftScope.length !== 64 || !/^[a-f0-9]{64}$/.test(value.draftScope)) throw new Error('La configuración llegó incompleta. Inténtalo de nuevo.');
+    active(); return { paymentInstructions: value.paymentInstructions, paymentConfigured: value.paymentConfigured, salesHours: value.salesHours, draftScope: value.draftScope };
+  }, { signal, timeoutMs: SALES_CONFIG_TIMEOUT_MS, timeoutMessage: 'La comprobación de la configuración tardó demasiado. Inténtalo de nuevo.', cancelMessage });
 }
 
 export async function copySalesText(value: string, writeText: (text: string) => Promise<void>) {

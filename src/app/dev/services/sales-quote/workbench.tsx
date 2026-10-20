@@ -5,7 +5,7 @@ import SalesToolkit from '@/components/admin/SalesToolkit';
 import { clearSalesDraft, salesDraftKey, saveSalesDraft, type SalesDraftInput, type SalesDraftStorage } from '@/lib/sales-draft';
 
 type StorageMode = 'ok' | 'read' | 'write' | 'remove';
-type ConfigMode = 'ok' | 'unconfigured' | 'offline' | 'incomplete';
+type ConfigMode = 'ok' | 'unconfigured' | 'offline' | 'incomplete' | 'hang-fetch' | 'hang-body';
 const control = 'min-h-11 rounded-xl border border-gray-300 bg-white px-3 text-base text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-enkarta-sage';
 const fictionalQuote: SalesDraftInput = { clientName: 'QA Familia Pérez', eventType: 'Boda', eventDate: '2027-06-12', design: 'Lunaria', packageKey: 'premium', extrasBs: 270, extrasLabel: 'Entrega express ficticia' };
 
@@ -22,6 +22,8 @@ export default function SalesQuoteWorkbench() {
   }), []);
   const transport = useMemo<typeof fetch>(() => async url => {
     if (url !== '/api/admin/sales-config') throw Error('Unexpected QA route');
+    if (configMode === 'hang-fetch') return new Promise<Response>(() => {});
+    if (configMode === 'hang-body') return { ok: true, status: 200, json: () => new Promise(() => {}) } as Response;
     if (configMode === 'offline') throw new TypeError('QA sin conexión');
     if (configMode === 'incomplete') return Response.json({});
     return Response.json({ paymentInstructions: configMode === 'ok' ? 'INSTRUCCIONES FICTICIAS. SIN PAGO REAL.' : '', paymentConfigured: configMode === 'ok', salesHours: 'Horario ficticio', draftScope: session.repeat(64) });
@@ -46,7 +48,7 @@ export default function SalesQuoteWorkbench() {
     <h1 className="text-2xl font-semibold">Cotizador QA</h1><p>Solo datos ficticios. La copia se simula, no se envían mensajes ni se contacta al banco.</p>
     <div className="flex flex-wrap items-end gap-4">
       <label>Almacenamiento<select aria-label="Modo de almacenamiento QA" className={control} value={storageMode} onChange={event => setStorageMode(event.target.value as StorageMode)}><option value="ok">Normal</option><option value="read">Lectura bloqueada</option><option value="write">Escritura bloqueada</option><option value="remove">Borrado bloqueado</option></select></label>
-      <label>Configuración<select aria-label="Configuración QA" className={control} value={configMode} onChange={event => setConfigMode(event.target.value as ConfigMode)}><option value="ok">Configurada</option><option value="unconfigured">Sin medio de pago</option><option value="offline">Sin conexión</option><option value="incomplete">Respuesta incompleta</option></select></label>
+      <label>Configuración<select aria-label="Configuración QA" className={control} value={configMode} onChange={event => setConfigMode(event.target.value as ConfigMode)}><option value="ok">Configurada</option><option value="unconfigured">Sin medio de pago</option><option value="offline">Sin conexión</option><option value="incomplete">Respuesta incompleta</option><option value="hang-fetch">Transporte sin respuesta</option><option value="hang-body">Cuerpo sin respuesta</option></select></label>
       <label>Sesión<select aria-label="Sesión QA" className={control} value={session} onChange={event => setSession(event.target.value)}><option value="a">Sesión A</option><option value="b">Sesión B</option></select></label>
       <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={denyCopy} onChange={event => setDenyCopy(event.target.checked)} />Denegar portapapeles</label>
       <button className={control} type="button" onClick={() => setMount(value => value + 1)}>Remontar cotizador</button>

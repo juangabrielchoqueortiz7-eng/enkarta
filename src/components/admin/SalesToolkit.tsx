@@ -10,11 +10,12 @@ import { prepareSalesContactDraft, type SalesQuoteContact } from '@/lib/sales-co
 export function SalesCopyButton({ value, label, disabled = false, writeText }: { value: string; label: string; disabled?: boolean; writeText?: (text: string) => Promise<void> }) {
   const [state, setState] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle');
   const pending = useRef(false), alive = useRef(true), latest = useRef(value);
+  const available = useRef(!disabled); available.current = !disabled;
   latest.current = value;
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => { if (!pending.current) setState('idle'); }, [value]);
   const copy = async () => {
-    if (pending.current || disabled) return;
+    if (pending.current || disabled || !available.current || latest.current !== value || !alive.current) return;
     pending.current = true; setState('copying');
     try {
       await copySalesText(value, writeText ?? (text => navigator.clipboard.writeText(text)));
@@ -74,16 +75,22 @@ export default function SalesToolkit({ transport = fetch, storage: storageOverri
   }, [storageOverride]);
   const bodyId = useId(), proposalId = useId();
   const [show, setShow] = useState(false);
+  const configLifetime = useRef({ attempt, transport, onScopeReady, epoch: 0 });
+  if (configLifetime.current.attempt !== attempt || configLifetime.current.transport !== transport || configLifetime.current.onScopeReady !== onScopeReady) configLifetime.current = { attempt, transport, onScopeReady, epoch: configLifetime.current.epoch + 1 };
+  const configEpoch = configLifetime.current.epoch;
+  const [configViewEpoch, setConfigViewEpoch] = useState(configEpoch), [readyConfigEpoch, setReadyConfigEpoch] = useState<number | null>(null);
+  const visibleConfigState = configViewEpoch === configEpoch ? configState : 'loading';
   useEffect(() => {
     let active = true;
-    const request = new AbortController(), timeout = window.setTimeout(() => request.abort(), 12000);
+    const request = new AbortController();
+    setConfigViewEpoch(configEpoch);
     setConfigState('loading');
     onScopeReady?.(null);
     void requestSalesConfig(transport, request.signal).then(value => {
-      if (active) { setConfig(value); setConfigState('ready'); setConfigError(''); onScopeReady?.(value.draftScope); }
-    }).catch(cause => { if (active) { setConfigState('error'); setConfigError(cause instanceof Error ? cause.message : 'No se pudo comprobar la configuración. Inténtalo de nuevo.'); } }).finally(() => window.clearTimeout(timeout));
-    return () => { active = false; request.abort(); window.clearTimeout(timeout); onScopeReady?.(null); };
-  }, [attempt, transport, onScopeReady]);
+      if (active && configLifetime.current.epoch === configEpoch) { setConfig(value); setReadyConfigEpoch(configEpoch); setConfigState('ready'); setConfigError(''); onScopeReady?.(value.draftScope); }
+    }).catch(cause => { if (active && configLifetime.current.epoch === configEpoch) { setConfigState('error'); setConfigError(cause instanceof Error ? cause.message : 'No se pudo comprobar la configuración. Inténtalo de nuevo.'); } });
+    return () => { active = false; request.abort(); onScopeReady?.(null); };
+  }, [attempt, transport, onScopeReady, configEpoch]);
   const scope = config?.draftScope;
   useEffect(() => {
     if (!scope) return;
@@ -95,7 +102,7 @@ export default function SalesToolkit({ transport = fetch, storage: storageOverri
     setDraftState(result.kind === 'ready' ? 'recovered' : persistAllowed.current ? 'empty' : 'memory');
     setReadyScope(scope);
   }, [scope, storage]);
-  const booting = !scope || readyScope !== scope || configState !== 'ready';
+  const booting = !scope || readyScope !== scope || visibleConfigState !== 'ready' || readyConfigEpoch !== configEpoch;
   useEffect(() => {
     if (!contactRequest || handledContact.current === contactRequest.sequence) return;
     setShow(true);
@@ -114,22 +121,24 @@ export default function SalesToolkit({ transport = fetch, storage: storageOverri
     const target = hasPendingContact ? contactFocus.current : contactNotice ? quoteHeading.current : null;
     target?.focus({ preventScroll: true }); target?.scrollIntoView({ block: 'start', behavior: 'auto' });
   }, [hasPendingContact, contactNotice, contactFocusSequence]);
-  const current = useMemo(() => ({ ...input, paymentInstructions: config?.paymentInstructions || '' }), [input, config?.paymentInstructions]);
+  const current = useMemo(() => ({ ...input, paymentInstructions: !booting ? config?.paymentInstructions || '' : '' }), [input, config?.paymentInstructions, booting]);
   const validation = useMemo(() => validateSalesQuote(current), [current]);
   const totals = validation.totals, invalid = Object.keys(validation.errors).length > 0;
   const fieldError = (field: SalesQuoteField) => validation.errors[field] && <span id={`${proposalId}-${field}-error`} role="alert" className="mt-2 block font-outfit text-sm font-normal normal-case leading-6 tracking-normal text-red-800">{validation.errors[field]}</span>;
   const fieldProps = (field: SalesQuoteField) => ({ 'aria-invalid': !!validation.errors[field], 'aria-describedby': validation.errors[field] ? `${proposalId}-${field}-error` : undefined });
   const set = <K extends keyof SalesDraftInput>(key: K, value: SalesDraftInput[K]) => {
+    if (booting || pendingContact || configLifetime.current.epoch !== configEpoch) return;
     const next = { ...input, [key]: value }; setInput(next); setChanged(true); setConfirmDiscard(false);
     if (scope && persistAllowed.current) setDraftState(saveSalesDraft(storage, scope, next) ? 'saved' : 'error');
   };
   const discard = () => {
+    if (booting || pendingContact || configLifetime.current.epoch !== configEpoch) return;
     if (!scope || !clearSalesDraft(storage, scope)) { setDraftState('error'); return; }
     setInput(EMPTY_SALES_DRAFT); setChanged(false); setConfirmDiscard(false); setDraftState('empty'); persistAllowed.current = true;
     setContactNotice('');
   };
   const applyContact = () => {
-    if (!pendingContact || booting || !scope || !pendingContact.packageKey) return;
+    if (!pendingContact || booting || !scope || !pendingContact.packageKey || configLifetime.current.epoch !== configEpoch) return;
     const next = prepareSalesContactDraft(pendingContact.contact, pendingContact.packageKey);
     if (!next) return;
     setInput(next); setChanged(true); setConfirmDiscard(false); persistAllowed.current = true;
@@ -146,8 +155,8 @@ export default function SalesToolkit({ transport = fetch, storage: storageOverri
       <span className="mt-1 rounded-full bg-[#f3eee6] px-3 py-1.5 font-outfit text-[10px] font-semibold text-[#765f3b]">{show ? 'Cerrar' : 'Abrir herramientas'}</span>
     </button>
     {show && <div id={bodyId} className="border-t border-[#eee8df] p-5 sm:p-7">
-      {configState === 'loading' && <p role="status" className="mb-5 text-sm text-[#675d50]">Comprobando configuración y borrador…</p>}
-      {configState === 'error' && <div role="alert" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p>{configError}</p><button type="button" onClick={() => setAttempt(value => value + 1)} className="mt-3 min-h-11 rounded-xl border border-amber-300 bg-white px-4 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">Reintentar configuración</button></div>}
+      {visibleConfigState === 'loading' && <p role="status" className="mb-5 text-sm text-[#675d50]">Comprobando configuración y borrador…</p>}
+      {visibleConfigState === 'error' && <div role="alert" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p>{configError}</p><button type="button" onClick={() => { if (configLifetime.current.epoch === configEpoch) setAttempt(value => value + 1); }} className="mt-3 min-h-11 rounded-xl border border-amber-300 bg-white px-4 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">Reintentar configuración</button></div>}
       {pendingContact && <div ref={contactFocus} tabIndex={-1} role="group" aria-label={`Revisar cotización para ${pendingContact.contact.reference}`} className="scroll-mt-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#765f39]"><SalesContactImport contact={pendingContact.contact} packageKey={pendingContact.packageKey} replacing={changed} disabled={booting} onPackage={value => setPendingContact(previous => previous ? { ...previous, packageKey: value } : null)} onApply={applyContact} onCancel={() => { setPendingContact(null); setContactNotice('Conservamos el borrador anterior sin cambios.'); }} /></div>}
       {contactNotice && <p role="status" className="mb-5 font-outfit text-sm leading-6 text-gray-700">{contactNotice}</p>}
       {input.commercialReference && <div className="mb-5 space-y-1 font-outfit text-sm leading-6 text-gray-700"><p>Referencia comercial: <strong translate="no" className="font-mono">{input.commercialReference}</strong></p><p>Identifica el contacto; no es una referencia de pago. Se incluirá en la cotización copiada.</p>{fieldError('commercialReference')}</div>}
@@ -168,7 +177,7 @@ export default function SalesToolkit({ transport = fetch, storage: storageOverri
           <div className="mt-5 grid grid-cols-3 gap-2 text-center">
             {([['Total', totals?.total], ['Reserva', totals?.reservation], ['Saldo', totals?.balance]] as const).map(([label, value]) => <div key={label} className="min-w-0 rounded-2xl bg-[#f6f2eb] p-3"><p className="break-words font-playfair text-xl text-[#5d513d] [overflow-wrap:anywhere]">{value === undefined ? 'Por corregir' : `${value.toLocaleString('es-BO', { maximumFractionDigits: 2 })} Bs`}</p><p className="mt-1 font-outfit text-sm text-gray-600">{label}</p></div>)}
           </div>
-          {configState === 'ready' && config && <div className={`mt-4 rounded-2xl border p-4 ${config.paymentConfigured ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}><p className={`font-outfit text-sm font-semibold ${config.paymentConfigured ? 'text-emerald-800' : 'text-amber-900'}`}>{config.paymentConfigured ? 'Instrucciones de pago configuradas' : 'Medio de pago por confirmar'}</p><p className={`mt-1 font-outfit text-sm leading-6 ${config.paymentConfigured ? 'text-emerald-700' : 'text-amber-800'}`}>{config.paymentConfigured ? 'Se incluirán en la propuesta. Esto no confirma un pago ni habilita BCP.' : 'Completa las instrucciones con el equipo antes de enviar una propuesta definitiva.'} · Horario: {config.salesHours}</p>{fieldError('paymentInstructions')}</div>}
+          {!booting && config && <div className={`mt-4 rounded-2xl border p-4 ${config.paymentConfigured ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}><p className={`font-outfit text-sm font-semibold ${config.paymentConfigured ? 'text-emerald-800' : 'text-amber-900'}`}>{config.paymentConfigured ? 'Instrucciones de pago configuradas' : 'Medio de pago por confirmar'}</p><p className={`mt-1 font-outfit text-sm leading-6 ${config.paymentConfigured ? 'text-emerald-700' : 'text-amber-800'}`}>{config.paymentConfigured ? 'Se incluirán en la propuesta. Esto no confirma un pago ni habilita BCP.' : 'Completa las instrucciones con el equipo antes de enviar una propuesta definitiva.'} · Horario: {config.salesHours}</p>{fieldError('paymentInstructions')}</div>}
         </div>
         <SalesQuoteReview input={current} disabled={quoteBlocked} writeText={writeText} />
       </div>

@@ -1042,7 +1042,7 @@ test('sales configuration distinguishes missing payment setup from denied, offli
  const config={paymentInstructions:'',paymentConfigured:false,salesHours:'Horario QA',draftScope:salesDraftScope};let calls=0;
  assert.deepEqual(await salesDraft.requestSalesConfig(async(url,options)=>{calls++;assert.equal(url,'/api/admin/sales-config');assert.equal(options.cache,'no-store');return Response.json({...config,secret:'not-returned'});}),config);assert.equal(calls,1);
  await assert.rejects(salesDraft.requestSalesConfig(async()=>{throw new TypeError('offline');}),/No se pudo conectar/);
- const canceled=new AbortController();canceled.abort();await assert.rejects(salesDraft.requestSalesConfig(async()=>{throw Error('abort');},canceled.signal),/tardó demasiado/);
+ const canceled=new AbortController();canceled.abort();let canceledCalls=0;await assert.rejects(salesDraft.requestSalesConfig(async()=>{canceledCalls++;throw Error('abort');},canceled.signal),/se interrumpió/);assert.equal(canceledCalls,0);
  await assert.rejects(salesDraft.requestSalesConfig(async()=>new Response('{}',{status:401})),/sesión terminó/);
  for(const response of [new Response('{broken'),Response.json({}),Response.json({...config,paymentConfigured:true}),Response.json({...config,draftScope:[salesDraftScope]})])await assert.rejects(salesDraft.requestSalesConfig(async()=>response));
 });

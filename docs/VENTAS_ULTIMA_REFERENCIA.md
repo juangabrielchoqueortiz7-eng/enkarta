@@ -28,7 +28,7 @@ La búsqueda del componente tiene un plazo común de **20.000 ms**, incluido el 
 
 Limpiar, editar el código, iniciar otra búsqueda, cambiar la sesión o desmontar la pantalla invalida el resultado anterior. Una respuesta o rechazo tardíos no muestran una ficha ni guardan otra referencia. La función de consulta comprueba también la cancelación antes de empezar y después del transporte y del JSON; no empieza a leer el cuerpo de una respuesta que llega cuando su consulta ya fue abortada.
 
-El plazo depende de los temporizadores del navegador. Las pruebas con reloj simulado no certifican 20 segundos de tiempo físico en una pestaña suspendida o un Android real. El cambio no modifica el plazo del historial ni el de la configuración del cotizador.
+El plazo depende de los temporizadores del navegador. Las pruebas con reloj simulado no certifican 20 segundos de tiempo físico en una pestaña suspendida o un Android real. Este bloque no modificó el historial ni la configuración del cotizador; su mejora posterior se documenta en [Cargas con límite de espera](VENTAS_CARGAS_CON_LIMITE.md).
 
 ## Integración y verificación
 

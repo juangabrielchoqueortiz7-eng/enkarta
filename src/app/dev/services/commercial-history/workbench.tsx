@@ -7,7 +7,7 @@ import type { CommercialLead } from '@/lib/commercial-lookup';
 import type { CommercialHistoryPage } from '@/lib/commercial-history';
 
 type Lead = Pick<CommercialLead, 'id' | 'reference' | 'revision'>;
-type Mode = 'ok' | 'offline' | 'truncated' | 'slow' | 'migration';
+type Mode = 'ok' | 'offline' | 'truncated' | 'slow' | 'migration' | 'hang-fetch' | 'hang-body';
 type Entry = CommercialHistoryPage['entries'][number];
 const leads: Lead[] = [
   { id: '91000000-0000-4000-8000-000000000001', reference: 'EK-A1B2C3D4', revision: 45 },
@@ -48,6 +48,8 @@ function Fixture() {
     if (url.pathname !== '/api/admin/commercial/history' || (init?.method && init.method !== 'GET')) throw new Error('La muestra solo admite consultas de historial en memoria.');
     if (init?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     const responseMode = modeRef.current;
+    if (responseMode === 'hang-fetch') return new Promise<Response>(() => {});
+    if (responseMode === 'hang-body') return { ok: true, status: 200, json: () => new Promise(() => {}) } as Response;
     if (responseMode === 'offline') throw new TypeError('QA sin conexión');
     if (responseMode === 'slow') await waitForSlowMode(init?.signal);
     if (responseMode === 'migration') return Response.json({ code: 'MIGRATION_REQUIRED' }, { status: 503 });
@@ -74,7 +76,7 @@ function Fixture() {
   };
   return <>
     <div className="flex flex-wrap gap-3">
-      <label className="flex flex-col gap-2 font-outfit text-sm text-gray-800">Respuesta simulada<select className={control} value={mode} onChange={event => setMode(event.target.value as Mode)}><option value="ok">Correcta</option><option value="offline">Sin conexión</option><option value="truncated">Respuesta incompleta</option><option value="slow">Lenta (1,5 segundos)</option><option value="migration">Migración pendiente</option></select></label>
+      <label className="flex flex-col gap-2 font-outfit text-sm text-gray-800">Respuesta simulada<select className={control} value={mode} onChange={event => setMode(event.target.value as Mode)}><option value="ok">Correcta</option><option value="offline">Sin conexión</option><option value="truncated">Respuesta incompleta</option><option value="slow">Lenta (1,5 segundos)</option><option value="migration">Migración pendiente</option><option value="hang-fetch">Transporte sin respuesta</option><option value="hang-body">Cuerpo sin respuesta</option></select></label>
       <button type="button" className={`${control} self-end`} onClick={revise}>Simular nueva revisión</button>
       <button type="button" className={`${control} self-end`} onClick={() => { setSelected(value => value === 0 ? 1 : 0); setRevision(45); }}>Cambiar contacto ficticio</button>
     </div>
@@ -88,6 +90,7 @@ export default function Workbench() {
   return <main className="mx-auto max-w-4xl space-y-6 bg-[#faf7f2] p-4 text-gray-900 sm:p-8">
     <h1 className="font-playfair text-3xl">Muestra local del historial comercial</h1>
     <p className="max-w-2xl font-outfit text-base leading-7 text-gray-700">Datos ficticios en memoria: 45 registros por contacto para recorrer páginas de 20, 20 y 5. Esta muestra no consulta Supabase, no guarda cambios y no realiza pagos ni envíos.</p>
+    <p className="max-w-2xl font-outfit text-sm leading-6 text-gray-700">Para comprobar la recuperación de una espera, elige transporte o cuerpo sin respuesta y abre el historial. Tras el aviso, vuelve a «Correcta» y pulsa «Reintentar consulta». En una página anterior, el reintento conserva el mismo cursor y las notas visibles hasta completar la consulta.</p>
     <button type="button" className={control} onClick={() => setRun(value => value + 1)}>Limpiar QA y reiniciar muestra</button>
     <Fixture key={run} />
   </main>;
