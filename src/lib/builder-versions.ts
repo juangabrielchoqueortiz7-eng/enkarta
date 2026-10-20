@@ -228,10 +228,17 @@ export async function hydrateBuilderState(invitationId: string): Promise<{ versi
   const localVersions = listBuilderVersions(invitationId);
   const localNotes = listReviewNotes(invitationId);
   if (typeof window === 'undefined') return { versions: localVersions.filter(version => version.source !== 'publish'), notes: localNotes, cloud: false };
+  const startedWith = JSON.stringify({ versions: localVersions, notes: localNotes });
+  const current = () => ({ versions: listBuilderVersions(invitationId), notes: listReviewNotes(invitationId) });
   try {
     const response = await fetch(`${API}?invitationId=${encodeURIComponent(invitationId)}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('cloud-unavailable');
     const payload = await response.json() as { versions?: BuilderVersion[]; notes?: ReviewNote[] };
+    // A publication, note edit or deletion can finish while this read is pending.
+    // Keep that newer mirror; an old response must neither replace it nor migrate
+    // the local records captured before the user's intervening operation.
+    const latest = current();
+    if (JSON.stringify(latest) !== startedWith) return { ...latest, cloud: false };
     const versions = retainVersions(mergeById(localVersions.filter(version => version.source !== 'publish'), Array.isArray(payload.versions) ? payload.versions : []));
     const notes = mergeById(localNotes, Array.isArray(payload.notes) ? payload.notes : []).sort((a, b) => b.createdAt - a.createdAt);
     replaceInvitationItems(VERSION_KEY, invitationId, versions);
@@ -239,6 +246,6 @@ export async function hydrateBuilderState(invitationId: string): Promise<{ versi
     if (localVersions.length || localNotes.length) queueCloud({ invitationId, versions: localVersions.filter(version => version.source !== 'publish'), notes: localNotes });
     return { versions, notes, cloud: true };
   } catch {
-    return { versions: localVersions, notes: localNotes, cloud: false };
+    return { ...current(), cloud: false };
   }
 }

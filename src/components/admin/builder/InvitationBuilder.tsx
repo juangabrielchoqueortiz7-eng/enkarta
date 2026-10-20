@@ -86,6 +86,16 @@ function localDateTimeInput(date: Date) {
   return local.toISOString().slice(0, 16);
 }
 
+type PublicationChange = 'publish' | 'schedule' | 'unpublish';
+/** Public state follows the acknowledged operation, while the working content remains independent. */
+function withPublicationState(current: InvitationParsed, snapshot: InvitationParsed, change: PublicationChange): InvitationParsed {
+  const workflow = snapshot.config?.workflow ?? {};
+  const publication = change === 'schedule' ? { scheduledAt: workflow.scheduledAt, scheduledVersionId: workflow.scheduledVersionId }
+    : change === 'unpublish' ? { unpublishedAt: workflow.unpublishedAt }
+      : { lastPublishedAt: workflow.lastPublishedAt, lastPublishedSummary: workflow.lastPublishedSummary, lastPublishedVersionId: workflow.lastPublishedVersionId, unpublishedAt: undefined };
+  return { ...current, status: snapshot.status, config: { ...(current.config ?? {}), workflow: { ...(current.config?.workflow ?? {}), ...publication } } };
+}
+
 interface Props {
   initialData: InvitationParsed;
   /** A dónde vuelve la flecha del encabezado: el equipo al admin, el socio a su panel. */
@@ -109,6 +119,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const [advancedTools, setAdvancedTools] = useState(false);
   const [mobileWorkspace, setMobileWorkspace] = useState<'edit' | 'preview'>('edit');
   const [contractNotice, setContractNotice] = useState('');
+  const [publicationNotice, setPublicationNotice] = useState('');
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishLabel, setPublishLabel] = useState('');
   const [publishSummary, setPublishSummary] = useState('');
@@ -147,8 +158,9 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   useEffect(() => {
     if (fixtureMode) return;
     let active = true;
+    const generation = hydrationEpoch.current;
     hydrateBuilderState(initialData.id).then(state => {
-      if (!active) return;
+      if (!active || hydrationEpoch.current !== generation) return;
       setPublishedVersion(activePublishedVersion(state.versions));
       setScheduledVersion(nextScheduledVersion(state.versions));
     });
@@ -168,6 +180,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const dataRef = useRef<InvitationParsed>(initialData);
   const draftRevision = useRef(initialData.draft_revision ?? 0);
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const editSequence = useRef(0), publicationEpoch = useRef(0), hydrationEpoch = useRef(0), publicOperation = useRef(false), failedSaveAt = useRef<number | null>(null);
   useEffect(() => {
     const protect = (event: BeforeUnloadEvent) => { if (hasChanges.current) { event.preventDefault(); event.returnValue = ''; } };
     window.addEventListener('beforeunload', protect);
@@ -228,6 +241,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
       future.current = [];
     }
     lastCommit.current = now;
+    editSequence.current += 1;
     dataRef.current = committed;
     setData(committed);
     hasChanges.current = true;
@@ -295,6 +309,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     const prev = past.current[past.current.length - 1];
     past.current = past.current.slice(0, -1);
     future.current = [dataRef.current, ...future.current];
+    editSequence.current += 1;
     dataRef.current = prev;
     setData(prev);
     hasChanges.current = true;
@@ -307,6 +322,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     const next = future.current[0];
     future.current = future.current.slice(1);
     past.current = [...past.current, dataRef.current];
+    editSequence.current += 1;
     dataRef.current = next;
     setData(next);
     hasChanges.current = true;
@@ -460,11 +476,16 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     setData(dataRef.current);
   }, []);
 
-  const storeDraft = useCallback(async (snapshot: InvitationParsed) => {
+  const storeDraft = useCallback(async (snapshot: InvitationParsed, options?: { requireCurrent?: number; pauseCurrent?: boolean }) => {
     if (fixtureMode) return dataRef.current === snapshot;
+    const editedAt = editSequence.current, epoch = publicationEpoch.current;
     const save = saveQueue.current.catch(() => {}).then(async () => {
+    if (publicationEpoch.current !== epoch || (options?.requireCurrent !== undefined && editSequence.current !== options.requireCurrent)) return false;
+    // Pausing changes public state only; use the latest working content when its queued PUT starts.
+    const attempted = options?.pauseCurrent ? withPublicationState(dataRef.current, snapshot, 'unpublish') : snapshot;
+    const attemptedAt = options?.pauseCurrent ? editSequence.current : editedAt;
     const response = await fetch('/api/admin/invitations', {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payloadFrom(snapshot), expectedDraftRevision: draftRevision.current }),
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payloadFrom(attempted), expectedDraftRevision: draftRevision.current }),
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
@@ -473,13 +494,15 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     }
     const stored = await response.json();
     setSaveError('');
+    failedSaveAt.current = null;
     draftRevision.current = stored.draft_revision ?? draftRevision.current;
-    const unchanged = dataRef.current === snapshot;
+    const unchanged = editSequence.current === attemptedAt && publicationEpoch.current === epoch;
     syncValidity(stored);
     return unchanged;
     });
     saveQueue.current = save;
     return save.catch(error => {
+      failedSaveAt.current = editSequence.current;
       setSaveError(error instanceof TypeError ? 'Sin conexión. Conservamos los cambios en esta pestaña; puedes descargar un respaldo.' : error instanceof Error ? error.message : 'No se pudo guardar el borrador.');
       throw error;
     });
@@ -487,21 +510,24 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   // Autoguardado silencioso con estado explícito y recuperación al reconectar.
   const silentSave = useCallback(async () => {
+    if (publicOperation.current) return;
     if (typeof navigator !== 'undefined' && !navigator.onLine) { setSaveState('offline'); return; }
     setSaveState('saving');
     try {
-      if (!await storeDraft(dataRef.current)) { setSaveState('dirty'); return; }
-      setSavedAt(new Date()); hasChanges.current = false; setSaveState('saved');
-      if (!fixtureMode) saveBuilderVersion(dataRef.current, 'Autoguardado', 'save');
-    } catch { setSaveState(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error'); }
+      const snapshot = dataRef.current;
+      if (!await storeDraft(snapshot)) { if (!publicOperation.current) setSaveState('dirty'); return; }
+      setSavedAt(new Date()); hasChanges.current = false;
+      if (!publicOperation.current) setSaveState('saved');
+      if (!fixtureMode) saveBuilderVersion(snapshot, 'Autoguardado', 'save');
+    } catch { if (!publicOperation.current) setSaveState(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error'); }
   }, [storeDraft, fixtureMode]);
 
   // Dispara el autoguardado 2.5s después del último cambio.
   useEffect(() => {
-    if (!hasChanges.current) return;
+    if (!hasChanges.current || publicOperation.current || failedSaveAt.current === editSequence.current) return;
     const id = setTimeout(() => { silentSave(); }, 2500);
     return () => clearTimeout(id);
-  }, [data, silentSave]);
+  }, [data, silentSave, saving]);
 
   useEffect(() => {
     const retry = () => { if (hasChanges.current) void silentSave(); };
@@ -510,17 +536,21 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, [silentSave]);
 
   const handleSave = async () => {
+    if (publicOperation.current) return;
     setSaving(true);
     setSaveState('saving');
     try {
-      if (!await storeDraft(dataRef.current)) { setSaveState('dirty'); return; }
-      setSavedAt(new Date()); hasChanges.current = false; setSaveState('saved');
-      if (!fixtureMode) saveBuilderVersion(dataRef.current, 'Guardado manual', 'save');
+      const snapshot = dataRef.current;
+      if (!await storeDraft(snapshot)) { if (!publicOperation.current) setSaveState('dirty'); return; }
+      setSavedAt(new Date()); hasChanges.current = false; if (!publicOperation.current) setSaveState('saved');
+      if (!fixtureMode) saveBuilderVersion(snapshot, 'Guardado manual', 'save');
     } catch (error) {
-      setSaveState(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error');
-      alert(error instanceof Error ? error.message : 'Error de conexión');
+      if (!publicOperation.current) {
+        setSaveState(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error');
+        alert(error instanceof Error ? error.message : 'Error de conexión');
+      }
     } finally {
-      setSaving(false);
+      if (!publicOperation.current) setSaving(false);
     }
   };
 
@@ -547,36 +577,57 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     setHistTick(value => value + 1);
   };
 
+  const retainLaterEdits = (snapshot: InvitationParsed, editedAt: number, change: PublicationChange, message: string) => {
+    publicationEpoch.current += 1;
+    if (editSequence.current === editedAt) { applySnapshot(snapshot); return false; }
+    // Undo and redo may change content, but must not restore an obsolete public status.
+    past.current = past.current.map(item => withPublicationState(item, snapshot, change));
+    future.current = future.current.map(item => withPublicationState(item, snapshot, change));
+    dataRef.current = withPublicationState(dataRef.current, snapshot, change); setData(dataRef.current);
+    hasChanges.current = true; setSaveState(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'dirty');
+    setPublicationNotice(message); return true;
+  };
+  const markLaterEdits = (message: string) => {
+    hasChanges.current = true; setSaveState(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'dirty'); setPublicationNotice(message);
+  };
+
   const confirmPublish = async () => {
-    if (validation.errors.length || saving) return;
+    if (validation.errors.length || saving || publicOperation.current) return;
     const scheduledAt = publishMode === 'schedule' ? new Date(publishAt) : null;
     if (publishMode === 'schedule' && (!publishAt || !scheduledAt || Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() <= Date.now() + 60_000)) {
       setPublishError('Elige una fecha y hora futura, con al menos un minuto de margen.');
       return;
     }
-    setSaving(true); setPublishError(''); setSaveState('saving');
+    const editedAt = editSequence.current, working = dataRef.current;
+    hydrationEpoch.current += 1; publicOperation.current = true; setSaving(true); setPublishError(''); setPublicationNotice(''); setSaveState('saving');
     try {
+      await saveQueue.current;
       const now = new Date().toISOString();
       const isSchedule = publishMode === 'schedule';
       const nextStatus = 'ready';
-      const workflow = dataRef.current.config?.workflow ?? {};
+      const workflow = working.config?.workflow ?? {};
       const snapshot: InvitationParsed = {
-        ...dataRef.current,
+        ...working,
         status: nextStatus,
-        config: { ...(dataRef.current.config ?? {}), workflow: isSchedule
+        config: { ...(working.config ?? {}), workflow: isSchedule
           ? { ...workflow, reviewStatus: 'approved', reviewUpdatedAt: now, scheduledAt: scheduledAt!.toISOString() }
           : { ...workflow, reviewStatus: 'approved', reviewUpdatedAt: now, lastPublishedAt: now, lastPublishedSummary: publishSummary.trim(), unpublishedAt: undefined } },
       };
       // Persist the event date/package before publishing; SQL computes the current term.
-      await storeDraft({ ...snapshot, status: dataRef.current.status });
+      await storeDraft({ ...snapshot, status: working.status });
       const result = await persistBuilderVersion(snapshot, publishLabel, 'publish', publishSummary, 'admin', isSchedule ? 'schedule' : 'publish', { publicationState: isSchedule ? 'scheduled' : 'published', publishAt: isSchedule ? scheduledAt!.toISOString() : now });
       const finalSnapshot = { ...snapshot, config: { ...snapshot.config, workflow: { ...(snapshot.config.workflow ?? {}), ...(isSchedule ? { scheduledVersionId: result.version.id } : { lastPublishedVersionId: result.version.id }) } } };
-      applySnapshot(finalSnapshot);
+      const notice = isSchedule ? 'La publicación quedó programada. Tus cambios posteriores siguen en el borrador y no forman parte de esa versión.' : 'La invitación quedó publicada. Tus cambios posteriores siguen en el borrador, sin publicar.';
+      const retained = retainLaterEdits(finalSnapshot, editedAt, isSchedule ? 'schedule' : 'publish', notice);
       if (isSchedule) setScheduledVersion({ ...result.version, data: finalSnapshot });
       else setPublishedVersion({ ...result.version, data: finalSnapshot });
       setPublishOpen(false);
       try {
-        await storeDraft(finalSnapshot);
+        if (!retained) {
+          setSaveState('saving');
+          if (!await storeDraft(dataRef.current, { requireCurrent: editedAt })) markLaterEdits(notice);
+          else { setSavedAt(new Date()); hasChanges.current = false; setSaveState('saved'); }
+        }
       } catch {
         // La copia pública ya existe; solo queda pendiente sincronizar el borrador de trabajo.
         hasChanges.current = true;
@@ -584,51 +635,65 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
         alert(`${isSchedule ? 'La programación quedó guardada' : 'La invitación quedó publicada'}, pero el borrador no terminó de sincronizar. Pulsa “Guardar” para reintentarlo.`);
       }
     } catch (error) {
+      failedSaveAt.current = editSequence.current;
       setPublishError(error instanceof Error ? error.message : 'No se pudo publicar');
       setSaveState('error');
     }
-    setSaving(false);
+    publicOperation.current = false; setSaving(false);
   };
 
   const unpublishInvitation = async () => {
+    if (publicOperation.current) return;
     if (!window.confirm('¿Despublicar esta invitación? El enlace mostrará una pausa temporal y todas las versiones quedarán conservadas.')) return;
-    setSaving(true); setSaveState('saving');
+    const editedAt = editSequence.current, working = dataRef.current;
+    hydrationEpoch.current += 1; publicOperation.current = true; setSaving(true); setPublicationNotice(''); setSaveState('saving');
     try {
-      await persistBuilderVersion(dataRef.current, 'Antes de despublicar', 'manual', 'Respaldo previo a pausar el enlace', 'admin');
+      await saveQueue.current;
+      await persistBuilderVersion(working, 'Antes de despublicar', 'manual', 'Respaldo previo a pausar el enlace', 'admin');
       const now = new Date().toISOString();
-      const snapshot: InvitationParsed = { ...dataRef.current, status: 'disabled', config: { ...(dataRef.current.config ?? {}), workflow: { ...(dataRef.current.config?.workflow ?? {}), unpublishedAt: now } } };
-      await storeDraft(snapshot);
-      applySnapshot(snapshot);
+      const snapshot: InvitationParsed = { ...working, status: 'disabled', config: { ...(working.config ?? {}), workflow: { ...(working.config?.workflow ?? {}), unpublishedAt: now } } };
+      await storeDraft(snapshot, { pauseCurrent: true });
+      retainLaterEdits(snapshot, editedAt, 'unpublish', 'El enlace quedó pausado. Tus cambios posteriores siguen en el borrador.');
     } catch (error) {
+      failedSaveAt.current = editSequence.current;
       setSaveState('error');
       alert(error instanceof Error ? error.message : 'No se pudo despublicar la invitación');
     }
-    setSaving(false);
+    publicOperation.current = false; setSaving(false);
   };
 
   const rollbackPublication = async (version: BuilderVersion) => {
-    setSaving(true); setSaveState('saving');
+    if (publicOperation.current) return;
+    const editedAt = editSequence.current, working = dataRef.current;
+    hydrationEpoch.current += 1; publicOperation.current = true; setSaving(true); setPublicationNotice(''); setSaveState('saving');
     try {
-      await persistBuilderVersion(dataRef.current, 'Antes del rollback', 'restore', `Respaldo previo a volver a ${version.label}`, 'admin');
+      await saveQueue.current;
+      await persistBuilderVersion(working, 'Antes del rollback', 'restore', `Respaldo previo a volver a ${version.label}`, 'admin');
       const summary = `Rollback inmediato a “${version.label}”`;
       const now = new Date().toISOString();
       const snapshot: InvitationParsed = { ...version.data, id: data.id, slug: data.slug, status: 'ready', config: { ...(version.data.config ?? {}), workflow: { ...(version.data.config?.workflow ?? {}), reviewStatus: 'approved', reviewUpdatedAt: now, lastPublishedAt: now, lastPublishedSummary: summary } } };
       const result = await persistBuilderVersion(snapshot, `Rollback · ${version.label}`, 'publish', summary, 'admin', 'publish');
       const finalSnapshot = { ...snapshot, config: { ...snapshot.config, workflow: { ...(snapshot.config.workflow ?? {}), lastPublishedVersionId: result.version.id } } };
-      applySnapshot(finalSnapshot);
+      const notice = 'La versión elegida quedó publicada. Tus cambios posteriores siguen en el borrador, sin publicar.';
+      const retained = retainLaterEdits(finalSnapshot, editedAt, 'publish', notice);
       setPublishedVersion({ ...result.version, data: finalSnapshot });
       try {
-        await storeDraft(finalSnapshot);
+        if (!retained) {
+          setSaveState('saving');
+          if (!await storeDraft(dataRef.current, { requireCurrent: editedAt })) markLaterEdits(notice);
+          else { setSavedAt(new Date()); hasChanges.current = false; setSaveState('saved'); }
+        }
       } catch {
         hasChanges.current = true;
         setSaveState('error');
         alert('El rollback quedó publicado, pero el borrador no terminó de sincronizar. Pulsa “Guardar” para reintentarlo.');
       }
     } catch (error) {
+      failedSaveAt.current = editSequence.current;
       setSaveState('error');
       alert(error instanceof Error ? error.message : 'No se pudo completar el rollback');
     }
-    setSaving(false);
+    publicOperation.current = false; setSaving(false);
   };
 
   const handleDuplicate = async () => {
@@ -835,6 +900,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
         </div>
       </header>
       {contractNotice && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 font-outfit"><span>{contractNotice}</span><button type="button" onClick={() => setActiveTab('config')} className="font-semibold underline">Ver paquete y adicionales</button></div>}
+      {publicationNotice && <p role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 font-outfit">{publicationNotice}</p>}
       {saveError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"><span>{saveError}</span><button type="button" className="min-h-11 underline" onClick={() => {
         const url = URL.createObjectURL(new Blob([JSON.stringify(dataRef.current, null, 2)], { type: 'application/json' }));
         const link = document.createElement('a'); link.href = url; link.download = `${data.slug}-respaldo.json`; link.click(); URL.revokeObjectURL(url);
