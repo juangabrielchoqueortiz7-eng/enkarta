@@ -48,3 +48,19 @@ La auditoría independiente añadió ocho reproducciones en memoria correctas; n
 - **28/28 pruebas offline** de los helpers privados de permisos, atestación y cierre de sesión pasan. No se suman a las pruebas de la aplicación ni realizan red. Evidencia: `smoke-helper-tests.log`.
 
 Permanecen los avisos anteriores de imágenes. No se modifican dependencias ni migraciones.
+
+## Producción, 20 de octubre de 2026
+
+Código integrado en `main`: `b4f7f9b0b94b01fb49d48fe619fc212e15952c31`. Vercel terminó el despliegue `dpl_A1Z7gwaYmW9J1znneRCwwXV8tcuD` en estado **READY**, destino **production**, con alias [enkarta.vercel.app](https://enkarta.vercel.app). URL inmutable: [enkarta-mytqa0l4z](https://enkarta-mytqa0l4z-juangabrielchoqueortiz7-engs-projects.vercel.app). Se desplegó el workspace completo para conservar los originales archivados fuera de Git.
+
+El workflow [39479647205](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39479647205) del mismo SHA completó correctamente `verify` y `audit` (`npm audit --omit=dev --audit-level=high`).
+
+- El inventario remoto acredita por UID de contenido **18 fuentes exactas**: los 15 archivos de implementación afectados, `IconPicker`, `ImageUploader` y `BuilderListState`. La lista está en `sources.json` y los hashes en `production-http.json`. Esto comprueba las entradas del despliegue Ready; no afirma ejecutar la carrera en un navegador de producción.
+- **11 grupos HTTP correctos**, con **58 denegaciones exactas 401**, incluidas **46 solicitudes de escritura**. Sesiones ausentes o inválidas y una sesión de administrador no pueden suplantar una sesión de Socios. Los archivos ficticios sólo se enviaron sin sesión válida y se rechazaron antes de almacenamiento. El administrador sólo envió un formulario sin archivo ni propietario, rechazado con el 400 esperado.
+- La configuración administrativa y el historial conservan `no-store`; el historial también conserva `Vary: Cookie`. Un UUID ficticio se comprobó mediante conteo HEAD exacto antes y después, sin leer filas de clientes ni crear invitaciones.
+- **6/6 rutas públicas correctas**, **129/129 originales distribuidos** con sus hashes intactos y **597/597 archivos protegidos locales** sin cambios.
+- **Cero** usuarios Auth, invitaciones, archivos, pagos o fixtures persistentes creados; **cero** operaciones bancarias y mensajes. La cookie temporal de administrador se cerró y descartó. No quedaron registros de prueba que eliminar.
+
+BCP mantiene su bloqueo en el código desplegado y no se modificaron proveedor ni credenciales. El smoke HTTP no inspeccionó variables remotas del proveedor ni llamó endpoints bancarios. Las regresiones locales cubren las carreras con componentes reales y transporte controlado; no se realizó una subida autenticada de Socios en producción. La aceptación manual permanece aplazada.
+
+La comprobación final conjunta terminó correctamente. Evidencia privada en `tmp/builder-section-icons/`: `ci.json`, `deployment-final.json`, `deployment-files.json`, `production-http.json`, `production-public.json`, `protected.json` y `RESULTADO.json`. No se necesita SQL adicional.
