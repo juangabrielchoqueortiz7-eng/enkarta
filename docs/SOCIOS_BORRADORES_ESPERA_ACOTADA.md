@@ -47,3 +47,19 @@ La revisión independiente repitió **26/26 nuevas y 9/9 originales**, sin bloqu
 - **28/28 pruebas offline** de los helpers privados de permisos, atestación y cierre de sesión correctas. Incluyen el nuevo POST de creación denegado con plantilla ficticia en seis contextos y sus conteos exactos; no realizan red ni se suman a las pruebas de la aplicación. Evidencia: `smoke-helper-tests.log`.
 
 Permanecen los avisos anteriores de imágenes. No se cambian dependencias, migraciones ni variables de pago.
+
+## Producción, 20 de octubre de 2026
+
+Código integrado en `main`: `a3c1f2778cefdf1b7200eef31170d58d651c9079`. Vercel terminó el despliegue `dpl_AzBYc3kM3J2U4KQzAVwemGK4ZYmk` en estado **READY**, destino **production**, con alias [enkarta.vercel.app](https://enkarta.vercel.app). URL inmutable: [enkarta-gp88783po](https://enkarta-gp88783po-juangabrielchoqueortiz7-engs-projects.vercel.app). Se desplegó el workspace completo para conservar los originales archivados fuera de Git.
+
+El workflow [39484859521](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39484859521) del mismo SHA completó correctamente `verify` y `audit` (`npm audit --omit=dev --audit-level=high`).
+
+- El inventario remoto acredita por UID de contenido las **tres fuentes exactas** del Picker, la ruta `api/partner/invitations/route.ts` y el helper `partner-checkout.ts`. Los hashes constan en `production-http.json`; acreditan las entradas del despliegue Ready, sin afirmar ejecución de un POST autenticado en un navegador.
+- **11 grupos HTTP correctos**, con **70 denegaciones exactas 401**, incluidas **58 solicitudes de escritura**. La matriz añade el POST de creación con plantilla ficticia en seis contextos: sin sesión, cuatro cookies inválidas y una sesión válida de administrador. Todos se rechazaron, conservando las comprobaciones anteriores de perfil, publicación, pagos y subidas. La sesión administrativa no suplanta una de Socios.
+- Las lecturas administrativas siguen siendo privadas y `no-store`; el historial conserva `Vary: Cookie`. Un UUID ficticio se comprobó mediante conteo HEAD exacto antes y después, sin leer filas de clientes ni crear invitaciones. El único upload autenticado fue un formulario sin archivo ni propietario, rechazado antes del almacenamiento.
+- **6/6 rutas públicas correctas**, **129/129 originales distribuidos** con hashes intactos y **597/597 archivos protegidos locales** sin cambios.
+- **Cero** usuarios Auth, invitaciones, perfiles, archivos, pagos o fixtures persistentes creados o modificados; **cero** operaciones bancarias y mensajes. Se cerró y descartó la cookie temporal de administrador. No quedaron registros de prueba que eliminar.
+
+BCP mantiene su bloqueo en el código y no se modificaron proveedor ni credenciales. El smoke HTTP no inspeccionó variables remotas del proveedor ni llamó endpoints bancarios. La validación positiva de creación, espera agotada y carreras fue local con componentes reales y transporte controlado; en producción se comprobaron fuentes, permisos y recursos. La aceptación manual autenticada permanece aplazada.
+
+La comprobación final conjunta terminó correctamente. Evidencia privada en `tmp/partner-draft-timeout/`: `ci.json`, `deployment-final.json`, `deployment-files.json`, `production-http.json`, `production-public.json`, `protected.json` y `RESULTADO.json`. No se necesita SQL adicional.
