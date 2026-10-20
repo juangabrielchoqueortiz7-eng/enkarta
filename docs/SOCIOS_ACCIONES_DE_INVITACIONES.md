@@ -48,6 +48,20 @@ La suite nueva se incorpora a `npm run verify`. Las pruebas de hooks y reloj fic
 
 Evidencia privada en `tmp/partner-invitation-actions/`: `verify.log`, `helper-tests.log`, `checkout-compatibility.log`, `ui-tests.log` y `protected.json`. Los comandos de producción requieren un despliegue Ready explícito, un SHA exacto y sus metadatos de fuente; no se deduce un resultado de producción a partir de estas pruebas locales.
 
+## Producción verificada, 20 de octubre de 2026
+
+- Código **`aa455ca8c0e3235022c317ae590ea0bc17b08e94`**, integrado en `main`. [CI del commit exacto](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39427442874): `completed/success`, con `npm run verify` y auditoría de dependencias aprobados.
+- Vercel **`dpl_8z2BzfkkpFBuRfHrHbSTnmnoDmdW`**, `READY`, destino producción y alias [enkarta.vercel.app](https://enkarta.vercel.app). Despliegue inmutable: [enkarta-ois946okz](https://enkarta-ois946okz-juangabrielchoqueortiz7-engs-projects.vercel.app). Se desplegó el workspace completo para conservar los originales ignorados por Git.
+- Los identificadores de contenido de `PartnerDashboard.tsx` y `partner-checkout.ts` coinciden con los dos archivos de entrada del despliegue Ready. Esto comprueba la fuente subida, sin afirmar que se ejecutaron sus temporizadores desde un navegador real.
+- **9 grupos HTTP correctos**, con **48 denegaciones exactas**, incluidas **36 solicitudes de escritura**. Se comprobaron cuenta, pagos y GET/PATCH/DELETE de invitaciones, incluidos publicar y despublicar, en seis contextos: sin sesión, cookies inválidas de admin/anfitrión/revisión/recepción y cookie administrativa válida sin sesión de Socios. Ninguno puede hacerse pasar por un socio. El panel conserva su entrada normal de autenticación.
+- La configuración administrativa conserva `no-store` y su vinculación a la sesión. El historial privado del constructor conserva `no-store` y `Vary: Cookie`, con respuesta vacía para un UUID ficticio cuya ausencia se comprobó mediante conteos exactos antes y después. No se leyeron filas de clientes.
+- **129/129 recursos originales públicos** conservan tamaño y SHA-256 y las **6/6 rutas** públicas, de acceso y de desarrollo comprobadas responden como corresponde. Los **597/597 archivos protegidos** de la verificación local siguen idénticos.
+- La cookie administrativa temporal, conservada sólo en memoria, quedó cerrada. **Cero registros de negocio, usuarios Auth, pagos, fixtures, llamadas bancarias o mensajes creados**. No hay datos ficticios que retirar de Supabase.
+
+BCP sigue bloqueado por el contrato existente: no se cambiaron proveedor ni credenciales, no se consultaron variables remotas de pago ni endpoints bancarios. No se necesita otra migración SQL. La aceptación manual permanece aplazada; dobles acciones, tiempos de espera y carreras se verificaron con pruebas automáticas locales. Las comprobaciones HTTP no se presentan como una aceptación autenticada de publicación con Google ni como una revisión visual de Android/Safari.
+
+Evidencia privada adicional en `tmp/partner-invitation-actions/`: `deployment.log`, `deployment-final.json`, `deployment-files.json`, `ci.json`, `production-http.json`, `production-public.json` y `RESULTADO.json`. La aceptación y limpieza anteriores de Ventas y el borrador del cotizador del navegador permanecen intactos.
+
 ## Hallazgo independiente pendiente
 
 Durante el descubrimiento se reprodujo otra pérdida de cambios en medios del constructor: iniciar una subida de audio, editar el título de una foto y resolver el upload puede restaurar el título anterior. El callback de subida conserva una configuración antigua. Este hallazgo necesita una corrección y pruebas propias de `MediaPanel` e `ImageUploader`; no se presenta como resuelto por este bloque de acciones del listado.
