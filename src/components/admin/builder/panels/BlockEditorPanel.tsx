@@ -832,6 +832,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
           {selected.type === 'image' && (
             <ImageStudio
               value={String(editorProps.url || '')}
+              destinationKey={mediaDestination(selected, 'url')}
               settings={editorProps}
               onImageChange={url => setProp('url', url)}
               onSettingsChange={setProps}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ImageUploader from './ImageUploader';
 import {
   imageAspect,
@@ -20,6 +20,8 @@ interface Props {
   onImageChange: (url: string) => void;
   onSettingsChange: (patch: Record<string, unknown>) => void;
   ownerId?: string;
+  /** Media field/context when the inspector reuses this studio instance. */
+  destinationKey?: string;
   usedMedia?: string[];
   accent?: string;
 }
@@ -93,8 +95,26 @@ function Slider({ label, value, display, min, max, step = 1, onChange }: {
   );
 }
 
-export default function ImageStudio({ value, settings, onImageChange, onSettingsChange, ownerId, usedMedia = [], accent = '#b99350' }: Props) {
+export default function ImageStudio({ value, settings, onImageChange, onSettingsChange, ownerId, destinationKey = '', usedMedia = [], accent = '#b99350' }: Props) {
   const [tab, setTab] = useState<StudioTab>('crop');
+  const mounted = useRef(true);
+  const imageRevision = useRef(0);
+  const context = useRef({ ownerId, destinationKey, epoch: 0 });
+  if (context.current.ownerId !== ownerId || context.current.destinationKey !== destinationKey) {
+    context.current = { ownerId, destinationKey, epoch: context.current.epoch + 1 };
+    imageRevision.current += 1;
+  }
+  const epoch = context.current.epoch;
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const chooseLibraryImage = (url: string) => {
+    if (!mounted.current || context.current.epoch !== epoch) return;
+    // A manual selection wins even if the pending upload settles before render.
+    imageRevision.current += 1;
+    onImageChange(url);
+  };
   const dragging = useRef(false);
   const focal = focalPoint(settings.focal);
   const mask = imageMask(settings.mask);
@@ -177,7 +197,7 @@ export default function ImageStudio({ value, settings, onImageChange, onSettings
         </div>
       </div>
 
-      <ImageUploader value={value} onChange={onImageChange} folder="blocks" ownerId={ownerId} aspect="landscape" compact hint="Al reemplazarla se conservan el recorte, la forma y los filtros." />
+      <ImageUploader value={value} onChange={onImageChange} fieldRevision={imageRevision} folder="blocks" ownerId={ownerId} aspect="landscape" compact hint="Al reemplazarla se conservan el recorte, la forma y los filtros." />
 
       {media.length > 0 && (
         <details className="group rounded-2xl border border-[#e8e1d8] bg-white p-3">
@@ -187,7 +207,7 @@ export default function ImageStudio({ value, settings, onImageChange, onSettings
           </summary>
           <div className="mt-3 grid grid-cols-4 gap-2 border-t border-[#eee8e0] pt-3">
             {media.map((url, index) => (
-              <button key={url} type="button" onClick={() => onImageChange(url)} className="group/media relative aspect-square overflow-hidden rounded-xl border border-[#e8e1d8] bg-[#f2eee8] transition-all hover:border-enkarta-gold hover:ring-2 hover:ring-enkarta-gold/10" title="Usar esta foto conservando los ajustes" aria-label={`Usar foto ${index + 1} de la biblioteca`}>
+              <button key={url} type="button" onClick={() => chooseLibraryImage(url)} className="group/media relative aspect-square overflow-hidden rounded-xl border border-[#e8e1d8] bg-[#f2eee8] transition-all hover:border-enkarta-gold hover:ring-2 hover:ring-enkarta-gold/10" title="Usar esta foto conservando los ajustes" aria-label={`Usar foto ${index + 1} de la biblioteca`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={url} alt="" className="h-full w-full object-cover transition-transform group-hover/media:scale-105" />
               </button>
