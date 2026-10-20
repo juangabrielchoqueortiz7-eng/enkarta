@@ -15,14 +15,14 @@ interface Props {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <label className="block text-xs font-outfit text-gray-500 mb-1">{label}</label>
+    <label className="block min-w-0">
+      <span className="mb-1.5 block font-outfit text-sm font-medium leading-5 text-[#514735]">{label}</span>
       {children}
-    </div>
+    </label>
   );
 }
 
-const inputCls = "min-w-0 w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit";
+const inputCls = "min-h-11 min-w-0 w-full max-w-full rounded-xl border border-[#8f8272] bg-white px-3 py-2 font-outfit text-base leading-6 text-[#302a23] caret-[#514735] placeholder:text-[#746a5b] outline-none focus:border-[#514735] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#514735]";
 const textareaCls = `${inputCls} resize-none`;
 
 export default function ContentPanel({ data, onChange, editingRevision, draftSource }: Props) {
@@ -31,75 +31,85 @@ export default function ContentPanel({ data, onChange, editingRevision, draftSou
   const steps = itinerary();
 
   return (
-    <div className="space-y-5 p-4">
+    <div className="min-w-0 space-y-6 p-4">
 
       {/* Nombres */}
       <div className="space-y-3">
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Protagonistas</h4>
+        <h3 className="font-outfit text-sm font-semibold leading-5 text-[#302a23]">Protagonistas</h3>
         <Field label="Nombres (ej: Ana & Carlos)">
-          <input className={inputCls} value={data.names ?? ''} onChange={e => draft.patch({ names: e.target.value })} placeholder="Ana & Carlos" />
+          <input type="text" name="invitation-names" autoComplete="off" className={inputCls} value={data.names ?? ''} onChange={e => draft.patch({ names: e.target.value })} placeholder="Ana & Carlos" />
         </Field>
         <Field label="Mensaje personalizado">
-          <textarea className={textareaCls} rows={3} value={data.message ?? ''} onChange={e => draft.patch({ message: e.target.value })} placeholder="Casarse es de locos, pero nos queremos con locura..." />
+          <textarea name="invitation-message" autoComplete="off" className={textareaCls} rows={3} value={data.message ?? ''} onChange={e => draft.patch({ message: e.target.value })} placeholder="Casarse es de locos, pero nos queremos con locura..." />
         </Field>
       </div>
 
       {/* Fecha y hora */}
       <div className="space-y-3 pt-3 border-t border-gray-100">
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Fecha y Lugares</h4>
+        <h3 className="font-outfit text-sm font-semibold leading-5 text-[#302a23]">Fecha y Lugares</h3>
         <Field label="Fecha del evento">
-          <input type="date" className={inputCls} value={data.event_date ?? ''} onChange={e => draft.patch({ event_date: e.target.value })} />
+          <input type="date" name="event-date" autoComplete="off" className={inputCls} value={data.event_date ?? ''} onChange={e => draft.patch({ event_date: e.target.value })} />
         </Field>
 
         <div className="grid grid-cols-1 gap-3 min-[1200px]:grid-cols-2">
-          <div className="space-y-3 p-3 bg-gray-50 rounded-xl">
-            <p className="text-xs font-outfit font-medium text-gray-600">⛪ Ceremonia</p>
+          <fieldset className="min-w-0 space-y-3 rounded-xl bg-gray-50 p-3">
+            <legend className="px-1 font-outfit text-sm font-semibold leading-5 text-[#514735]"><span aria-hidden="true">⛪</span> Ceremonia</legend>
             <Field label="Hora">
-              <input type="time" className={inputCls} value={data.ceremony_time ?? ''} onChange={e => draft.patch({ ceremony_time: e.target.value })} />
+              <input type="time" name="ceremony-time" autoComplete="off" className={inputCls} value={data.ceremony_time ?? ''} onChange={e => draft.patch({ ceremony_time: e.target.value })} />
             </Field>
             <Field label="Lugar">
-              <input className={inputCls} value={data.ceremony_place ?? ''} onChange={e => draft.patch({ ceremony_place: e.target.value })} placeholder="Iglesia San José" />
+              <input type="text" name="ceremony-place" autoComplete="off" className={inputCls} value={data.ceremony_place ?? ''} onChange={e => draft.patch({ ceremony_place: e.target.value })} placeholder="Iglesia San José" />
             </Field>
             <Field label="Dirección / Link Maps">
-              <input className={inputCls} value={data.ceremony_address ?? ''} onChange={e => draft.patch({ ceremony_address: e.target.value })} placeholder="Av. Principal #123" />
+              <input type="text" name="ceremony-address" autoComplete="off" className={inputCls} value={data.ceremony_address ?? ''} onChange={e => draft.patch({ ceremony_address: e.target.value })} placeholder="Av. Principal #123" />
             </Field>
-          </div>
-          <div className="space-y-3 p-3 bg-gray-50 rounded-xl">
-            <p className="text-xs font-outfit font-medium text-gray-600">🎉 Recepción</p>
+          </fieldset>
+          <fieldset className="min-w-0 space-y-3 rounded-xl bg-gray-50 p-3">
+            <legend className="px-1 font-outfit text-sm font-semibold leading-5 text-[#514735]"><span aria-hidden="true">🎉</span> Recepción</legend>
             <Field label="Hora">
-              <input type="time" className={inputCls} value={data.reception_time ?? ''} onChange={e => draft.patch({ reception_time: e.target.value })} />
+              <input type="time" name="reception-time" autoComplete="off" className={inputCls} value={data.reception_time ?? ''} onChange={e => draft.patch({ reception_time: e.target.value })} />
             </Field>
             <Field label="Lugar">
-              <input className={inputCls} value={data.reception_place ?? ''} onChange={e => draft.patch({ reception_place: e.target.value })} placeholder="Salón Los Jardines" />
+              <input type="text" name="reception-place" autoComplete="off" className={inputCls} value={data.reception_place ?? ''} onChange={e => draft.patch({ reception_place: e.target.value })} placeholder="Salón Los Jardines" />
             </Field>
             <Field label="Dirección / Link Maps">
-              <input className={inputCls} value={data.reception_address ?? ''} onChange={e => draft.patch({ reception_address: e.target.value })} placeholder="Calle Flores #456" />
+              <input type="text" name="reception-address" autoComplete="off" className={inputCls} value={data.reception_address ?? ''} onChange={e => draft.patch({ reception_address: e.target.value })} placeholder="Calle Flores #456" />
             </Field>
-          </div>
+          </fieldset>
         </div>
       </div>
 
       {/* Itinerario */}
       <div className="space-y-3 pt-3 border-t border-gray-100">
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Itinerario</h4>
+        <h3 className="font-outfit text-sm font-semibold leading-5 text-[#302a23]">Itinerario</h3>
         <div className="space-y-2">
-          {steps.rows.map(({ item, key }) => (
-            <div key={key} className="rounded-xl border border-gray-200 p-2 space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  value={item.time}
-                  onChange={e => steps.patch(key, { time: e.target.value })}
-                  className="w-20 px-2 py-1.5 text-xs rounded-lg border border-gray-200 focus:border-enkarta-gold outline-none font-outfit"
-                  placeholder="16:00"
-                />
-                <input
-                  value={item.label}
-                  onChange={e => steps.patch(key, { label: e.target.value })}
-                  className="min-w-0 flex-1 px-2 py-1.5 text-xs rounded-lg border border-gray-200 focus:border-enkarta-gold outline-none font-outfit"
-                  placeholder="Ceremonia"
-                />
+          {steps.rows.map(({ item, key }, index) => (
+            <div key={key} className="min-w-0 space-y-3 rounded-xl border border-gray-200 p-3">
+              <div className="grid min-w-0 grid-cols-1 gap-3">
+                <Field label={`Hora del paso ${index + 1}`}>
+                  <input
+                    type="text"
+                    name={`itinerary-time-${index + 1}`}
+                    autoComplete="off"
+                    value={item.time}
+                    onChange={e => steps.patch(key, { time: e.target.value })}
+                    className={inputCls}
+                    placeholder="16:00"
+                  />
+                </Field>
+                <Field label={`Nombre del paso ${index + 1}`}>
+                  <input
+                    type="text"
+                    name={`itinerary-label-${index + 1}`}
+                    autoComplete="off"
+                    value={item.label}
+                    onChange={e => steps.patch(key, { label: e.target.value })}
+                    className={inputCls}
+                    placeholder="Ceremonia"
+                  />
+                </Field>
                 {data.itinerary.length > 1 && (
-                  <button type="button" onClick={() => steps.remove(key)} className="text-red-300 hover:text-red-500 text-sm px-1">✕</button>
+                  <button type="button" onClick={() => steps.remove(key)} aria-label={`Eliminar paso ${index + 1}`} className="flex h-11 w-11 items-center justify-center justify-self-end rounded-xl text-sm text-red-700 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"><span aria-hidden="true">✕</span></button>
                 )}
               </div>
               <IconPicker
@@ -119,28 +129,30 @@ export default function ContentPanel({ data, onChange, editingRevision, draftSou
         <button
           type="button"
           onClick={() => steps.add({ time: '', label: '', icon: '' })}
-          className="text-xs text-enkarta-gold hover:underline font-outfit"
+          className="min-h-11 rounded-lg px-2 font-outfit text-sm font-semibold text-[#514735] underline-offset-4 transition-colors hover:bg-[#f7f3ed] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#514735]"
         >+ Agregar paso</button>
       </div>
 
       {/* Invitado */}
       <div className="space-y-3 pt-3 border-t border-gray-100">
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Invitado</h4>
-        <div className="grid grid-cols-2 gap-3">
+        <h3 className="font-outfit text-sm font-semibold leading-5 text-[#302a23]">Invitado</h3>
+        <div className="grid grid-cols-1 gap-3 min-[1200px]:grid-cols-2">
           <Field label="Nombre del invitado">
-            <input className={inputCls} value={data.guest_name ?? ''} onChange={e => draft.patch({ guest_name: e.target.value })} placeholder="Juan García" />
+            <input type="text" name="guest-name" autoComplete="off" className={inputCls} value={data.guest_name ?? ''} onChange={e => draft.patch({ guest_name: e.target.value })} placeholder="Juan García" />
           </Field>
           <Field label="Pases">
-            <input type="number" min={1} max={20} className={inputCls} value={data.guest_passes} onChange={e => draft.patch({ guest_passes: parseInt(e.target.value) || 1 })} />
+            <input type="number" name="guest-passes" inputMode="numeric" autoComplete="off" min={1} max={20} className={inputCls} value={data.guest_passes} onChange={e => draft.patch({ guest_passes: parseInt(e.target.value) || 1 })} />
           </Field>
         </div>
       </div>
 
       {/* Familia */}
       <div className="space-y-3 pt-3 border-t border-gray-100">
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Familia / Padres</h4>
+        <h3 className="font-outfit text-sm font-semibold leading-5 text-[#302a23]">Familia / Padres</h3>
         <Field label="Padres del novio (uno por línea)">
           <textarea
+            name="parents-groom"
+            autoComplete="off"
             className={textareaCls}
             rows={2}
             value={data.parents_groom.join('\n')}
@@ -150,6 +162,8 @@ export default function ContentPanel({ data, onChange, editingRevision, draftSou
         </Field>
         <Field label="Padres de la novia (uno por línea)">
           <textarea
+            name="parents-bride"
+            autoComplete="off"
             className={textareaCls}
             rows={2}
             value={data.parents_bride.join('\n')}
@@ -161,25 +175,25 @@ export default function ContentPanel({ data, onChange, editingRevision, draftSou
 
       {/* Detalles */}
       <div className="space-y-3 pt-3 border-t border-gray-100">
-        <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Detalles</h4>
+        <h3 className="font-outfit text-sm font-semibold leading-5 text-[#302a23]">Detalles</h3>
         <Field label="Dress code (Hombres | Mujeres)">
-          <input className={inputCls} value={data.dress_code ?? ''} onChange={e => draft.patch({ dress_code: e.target.value })} placeholder="Traje | Vestido largo" />
+          <input type="text" name="dress-code" autoComplete="off" className={inputCls} value={data.dress_code ?? ''} onChange={e => draft.patch({ dress_code: e.target.value })} placeholder="Traje | Vestido largo" />
         </Field>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={data.no_kids} onChange={e => draft.patch({ no_kids: e.target.checked })} className="w-4 h-4 rounded text-enkarta-gold" />
-          <span className="text-sm font-outfit text-gray-600">Sin niños</span>
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg py-2">
+          <input type="checkbox" name="no-kids" checked={data.no_kids} onChange={e => draft.patch({ no_kids: e.target.checked })} className="h-5 w-5 shrink-0 rounded accent-[#514735] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#514735]" />
+          <span className="font-outfit text-sm leading-5 text-[#514735]">Sin niños</span>
         </label>
         <Field label="Mensaje de regalos">
-          <textarea className={textareaCls} rows={2} value={data.gift_message ?? ''} onChange={e => draft.patch({ gift_message: e.target.value })} placeholder="Tu presencia es el mejor regalo..." />
+          <textarea name="gift-message" autoComplete="off" className={textareaCls} rows={2} value={data.gift_message ?? ''} onChange={e => draft.patch({ gift_message: e.target.value })} placeholder="Tu presencia es el mejor regalo..." />
         </Field>
         <Field label="Cuenta bancaria (Banco — Nro | CCI)">
-          <input className={inputCls} value={data.bank_account ?? ''} onChange={e => draft.patch({ bank_account: e.target.value })} placeholder="BCP — 191-123456 | CCI: 00219..." />
+          <input type="text" name="gift-bank-account" autoComplete="off" className={inputCls} value={data.bank_account ?? ''} onChange={e => draft.patch({ bank_account: e.target.value })} placeholder="BCP — 191-123456 | CCI: 00219..." />
         </Field>
         <Field label="WhatsApp de confirmación">
-          <input className={inputCls} value={data.phone_whatsapp ?? ''} onChange={e => draft.patch({ phone_whatsapp: e.target.value })} placeholder="+51 999 999 999" />
+          <input type="tel" name="rsvp-whatsapp" autoComplete="tel" className={inputCls} value={data.phone_whatsapp ?? ''} onChange={e => draft.patch({ phone_whatsapp: e.target.value })} placeholder="+51 999 999 999" />
         </Field>
         <Field label="Link de galería de fotos">
-          <input className={inputCls} value={data.gallery_url ?? ''} onChange={e => draft.patch({ gallery_url: e.target.value })} placeholder="https://photos.google.com/..." />
+          <input type="url" name="gallery-url" autoComplete="off" className={inputCls} value={data.gallery_url ?? ''} onChange={e => draft.patch({ gallery_url: e.target.value })} placeholder="https://photos.google.com/..." />
         </Field>
       </div>
 

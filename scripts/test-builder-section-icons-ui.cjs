@@ -62,7 +62,7 @@ const text = value => typeof value === 'string' || typeof value === 'number' ? S
   : Array.isArray(value) ? value.map(text).join(' ') : React.isValidElement(value) ? text(value.props.children) : '';
 const find = (tree, predicate, index = 0) => { const found = nodes(tree, predicate)[index]; assert.ok(found, 'Expected real section/content control'); return found; };
 const button = (tree, label) => find(tree, node => node.type === 'button' && text(node).trim() === label);
-const itineraryCards = runner => nodes(runner.current(), node => node.type === 'div' && node.props.className === 'rounded-xl border border-gray-200 p-2 space-y-2');
+const itineraryCards = runner => nodes(runner.current(), node => node.type === 'div' && /list-row-\d+/.test(String(node.key)) && nodes(node, field => field.type === 'input' && field.props.placeholder === '16:00').length === 1 && nodes(node, field => field.type === 'input' && field.props.placeholder === 'Ceremonia').length === 1);
 const rowInput = (runner, index, placeholder) => find(itineraryCards(runner)[index], node => node.type === 'input' && node.props.placeholder === placeholder);
 const removeRow = (runner, index) => button(itineraryCards(runner)[index], '✕').props.onClick;
 const labelControl = (runner, label, type) => {
