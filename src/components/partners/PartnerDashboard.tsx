@@ -61,6 +61,41 @@ const PAYMENT_TONE: Record<PartnerPayment['status'], string> = {
 const dateLabel = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
 
+function validProfile(value: unknown): value is PartnerAccount['profile'] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const profile = value as Record<string, unknown>;
+  return ['email', 'name', 'avatar', 'brand', 'phone', 'city'].every(key => typeof profile[key] === 'string')
+    && ['active', 'suspended'].includes(String(profile.status)) && typeof profile.memberSince === 'string' && Number.isFinite(Date.parse(profile.memberSince));
+}
+
+// Only a complete account response can resolve an uncertain payment operation.
+// A successful HTTP response with missing or malformed payment data is insufficient.
+function checkedAccount(value: PartnerAccount): PartnerAccount {
+  const fail = () => { throw new Error('No pudimos verificar tu cuenta. Pulsa «Actualizar estado» antes de continuar.'); };
+  const record = (item: unknown): item is Record<string, unknown> => !!item && typeof item === 'object' && !Array.isArray(item);
+  const count = (item: unknown) => Number.isSafeInteger(item) && Number(item) >= 0;
+  const date = (item: unknown) => typeof item === 'string' && Number.isFinite(Date.parse(item));
+  if (!record(value)) return fail();
+  const { profile, subscription, quota, billing, payments } = value;
+  if (!validProfile(profile)) return fail();
+  if (!record(subscription) || !PARTNER_PLAN_ORDER.includes(subscription.plan) || !['none', 'pending', 'active', 'canceled'].includes(subscription.status)
+    || !['active', 'inGrace', 'renewalDue'].every(key => typeof subscription[key] === 'boolean')
+    || !Number.isFinite(subscription.daysLeft) || typeof subscription.label !== 'string'
+    || !['active', 'warning', 'pending', 'inactive'].includes(subscription.tone)
+    || (subscription.periodEnd !== null && !date(subscription.periodEnd))) return fail();
+  if (!record(quota) || !count(quota.limit) || !count(quota.used) || !count(value.totalInvitations)
+    || typeof quota.unlimited !== 'boolean' || typeof quota.reached !== 'boolean'
+    || (quota.unlimited ? quota.remaining !== null : !count(quota.remaining))) return fail();
+  if (!record(billing) || ![billing.instructions, billing.qrUrl, billing.whatsapp].every(item => typeof item === 'string') || typeof billing.configured !== 'boolean'
+    || (billing.provider !== undefined && !['manual', 'bcp'].includes(billing.provider))
+    || (billing.ready !== undefined && typeof billing.ready !== 'boolean') || (billing.message !== undefined && typeof billing.message !== 'string')) return fail();
+  if (!Array.isArray(payments) || payments.length > 24 || !payments.every(payment => validCheckoutPayment(payment)
+    && typeof payment.review_note === 'string' && date(payment.created_at) && (payment.period_end === null || date(payment.period_end))
+    && (payment.receiptUrl === undefined || typeof payment.receiptUrl === 'string'))
+    || new Set(payments.map(payment => payment.id)).size !== payments.length || payments.filter(payment => payment.status === 'pending').length > 1) return fail();
+  return value;
+}
+
 export default function PartnerDashboard({ initialAccount, initialTab = 'invitaciones', selectedPlan }: { initialAccount: PartnerAccount; initialTab?: Tab; selectedPlan?: PartnerPlanKey }) {
   const router = useRouter();
   const [account, setAccount] = useState(initialAccount);
@@ -70,17 +105,63 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
   const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [paymentNeedsRefresh, setPaymentNeedsRefresh] = useState(false);
+  const mounted = useRef(true);
+  const accountSequence = useRef(0);
+  const accountRead = useRef<AbortController | null>(null);
+  const paymentOperation = useRef(false);
+
+  const invalidateAccountRead = useCallback(() => {
+    accountSequence.current += 1;
+    accountRead.current?.abort(); accountRead.current = null;
+  }, []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; invalidateAccountRead(); };
+  }, [invalidateAccountRead]);
 
   const say = useCallback((tone: 'ok' | 'error', text: string) => {
+    if (!mounted.current) return;
     setNotice({ tone, text });
-    window.setTimeout(() => setNotice(current => (current?.text === text ? null : current)), 6000);
+    window.setTimeout(() => { if (mounted.current) setNotice(current => (current?.text === text ? null : current)); }, 6000);
   }, []);
 
-  const loadAccount = useCallback(async () => {
-    const value = await partnerRequest<PartnerAccount>('/api/partner/account');
-    if (!value.profile || !value.subscription || !Array.isArray(value.payments)) throw new Error('No pudimos verificar tu cuenta. Actualiza los datos.');
-    setAccount(value);
+  const loadAccount = useCallback(async (signal?: AbortSignal): Promise<PartnerAccount> => {
+    invalidateAccountRead();
+    const serial = accountSequence.current, controller = new AbortController();
+    accountRead.current = controller;
+    const cancel = () => controller.abort();
+    if (signal?.aborted || !mounted.current) controller.abort();
+    signal?.addEventListener('abort', cancel, { once: true });
+    try {
+      const value = checkedAccount(await partnerRequest<PartnerAccount>('/api/partner/account', { signal: controller.signal }));
+      if (!mounted.current || controller.signal.aborted || serial !== accountSequence.current) throw new Error('Esta consulta fue reemplazada. Vuelve a consultar el estado.');
+      setAccount(value);
+      return value;
+    } finally {
+      signal?.removeEventListener('abort', cancel);
+      if (accountRead.current === controller) accountRead.current = null;
+    }
+  }, [invalidateAccountRead]);
+
+  const setPaymentOperation = useCallback((active: boolean) => {
+    paymentOperation.current = active;
+    if (active) invalidateAccountRead();
+  }, [invalidateAccountRead]);
+  const setPaymentVerification = useCallback((required: boolean) => {
+    if (mounted.current) setPaymentNeedsRefresh(required);
   }, []);
+  const acceptPayment = useCallback((payment: PartnerPayment) => {
+    if (!mounted.current) return;
+    invalidateAccountRead();
+    setAccount(current => ({ ...current, payments: [payment, ...current.payments.filter(item => item.id !== payment.id)] }));
+  }, [invalidateAccountRead]);
+  const acceptProfile = useCallback((updated: PartnerAccount) => {
+    if (!mounted.current || !validProfile(updated?.profile)) return false;
+    invalidateAccountRead();
+    setAccount(current => ({ ...current, profile: updated.profile }));
+    return true;
+  }, [invalidateAccountRead]);
 
   const loadInvitations = useCallback(async () => {
     try {
@@ -93,7 +174,13 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
   useEffect(() => { void loadInvitations(); }, [loadInvitations]);
   useEffect(() => {
     if (!account.payments.some(payment => payment.status === 'pending')) return;
-    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void loadAccount().catch(() => say('error', 'No pudimos actualizar el pago. Conservamos el último estado consultado. Pulsa «Actualizar estado».')); }, 15000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== 'visible' || paymentOperation.current || accountRead.current || !mounted.current) return;
+      const serial = accountSequence.current + 1;
+      void loadAccount().catch(() => {
+        if (mounted.current && accountSequence.current === serial) say('error', 'No pudimos actualizar el pago. Conservamos el último estado consultado. Pulsa «Actualizar estado».');
+      });
+    }, 15000);
     return () => window.clearInterval(timer);
   }, [account.payments, loadAccount, say]);
 
@@ -217,10 +304,13 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
               onRefresh={loadAccount}
               onNotice={say}
               selectedPlan={selectedPlan}
-              onPayment={payment => setAccount(current => ({ ...current, payments: [payment, ...current.payments.filter(item => item.id !== payment.id)] }))}
+              onPayment={acceptPayment}
+              onOperationChange={setPaymentOperation}
+              verificationRequired={paymentNeedsRefresh}
+              onVerificationChange={setPaymentVerification}
             />
           )}
-          {tab === 'cuenta' && <AccountTab account={account} onSaved={setAccount} onNotice={say} />}
+          {tab === 'cuenta' && <AccountTab account={account} onSaved={acceptProfile} onNotice={say} />}
         </div>
       </main>
     </div>
@@ -366,13 +456,16 @@ function InvitationsTab({ invitations, failed, busy, copied, quota, onCreate, on
 
 // ── Suscripción y pagos ──────────────────────────────────────────────────────
 
-export function SubscriptionTab({ account, pending, onRefresh, onNotice, selectedPlan, onPayment }: {
+export function SubscriptionTab({ account, pending, onRefresh, onNotice, selectedPlan, onPayment, onOperationChange, verificationRequired = false, onVerificationChange }: {
   account: PartnerAccount;
   pending: PartnerPayment | null;
-  onRefresh: () => Promise<void>;
+  onRefresh: (signal?: AbortSignal) => Promise<PartnerAccount>;
   onNotice: (tone: 'ok' | 'error', text: string) => void;
   selectedPlan?: PartnerPlanKey;
   onPayment: (payment: PartnerPayment) => void;
+  onOperationChange?: (active: boolean) => void;
+  verificationRequired?: boolean;
+  onVerificationChange?: (required: boolean) => void;
 }) {
   const [plan, setPlan] = useState<PartnerPlanKey>(pending?.plan_key ?? selectedPlan ?? account.subscription.plan);
   const [months, setMonths] = useState<number>(pending?.months ?? 1);
@@ -383,9 +476,14 @@ export function SubscriptionTab({ account, pending, onRefresh, onNotice, selecte
   const [uploading, setUploading] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [needsRefresh, setNeedsRefresh] = useState(false);
+  const [needsRefresh, setNeedsRefresh] = useState(verificationRequired);
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   const operation = useRef(false);
+  const mounted = useRef(true);
+  const sequence = useRef(0);
+  const active = useRef<AbortController | null>(null);
+  const mustRefresh = useRef(verificationRequired);
+  if (verificationRequired) mustRefresh.current = true;
   const fileInput = useRef<HTMLInputElement>(null);
 
   const total = cyclePrice(plan, months);
@@ -393,43 +491,73 @@ export function SubscriptionTab({ account, pending, onRefresh, onNotice, selecte
   const quoteMatches = checkoutQuoteMatches(pending, plan, months, method, total);
   const busy = saving || uploading || canceling || refreshing;
   const blockedProvider = account.billing.provider === 'bcp' && !account.billing.ready;
-  const announce = (tone: 'ok' | 'error', text: string) => { setMessage({ tone, text }); onNotice(tone, text); };
-  const refreshAfterSave = async (success: string) => {
-    try { await onRefresh(); announce('ok', success); }
-    catch { setNeedsRefresh(true); announce('error', `${success} No pudimos actualizar tu cuenta; pulsa «Actualizar estado» antes de repetir.`); }
+  const view = { plan, months, method, pending, blockedProvider };
+  const currentView = useRef(view);
+  currentView.current = view;
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false; sequence.current += 1;
+      active.current?.abort(); active.current = null; operation.current = false;
+      onOperationChange?.(false);
+    };
+  }, [onOperationChange]);
+  const available = () => mounted.current && currentView.current === view && !operation.current;
+  const requireRefresh = (required: boolean) => { mustRefresh.current = required; setNeedsRefresh(required); onVerificationChange?.(required); };
+  const announce = (tone: 'ok' | 'error', text: string) => { if (mounted.current) { setMessage({ tone, text }); onNotice(tone, text); } };
+  const begin = () => {
+    if (!available()) return null;
+    operation.current = true;
+    const attempt = { serial: ++sequence.current, controller: new AbortController() };
+    active.current = attempt.controller; onOperationChange?.(true);
+    return attempt;
+  };
+  const current = (attempt: { serial: number; controller: AbortController }) => mounted.current && sequence.current === attempt.serial && !attempt.controller.signal.aborted;
+  const finish = (attempt: { serial: number; controller: AbortController }) => {
+    if (!current(attempt)) return;
+    active.current = null; operation.current = false;
+    setSaving(false); setUploading(false); setCanceling(false); setRefreshing(false);
+    onOperationChange?.(false);
+  };
+  const refreshAfterSave = async (success: string, attempt: { serial: number; controller: AbortController }) => {
+    try { checkedAccount(await onRefresh(attempt.controller.signal)); if (current(attempt)) { requireRefresh(false); announce('ok', success); } }
+    catch { if (current(attempt)) { requireRefresh(true); announce('error', `${success} No pudimos actualizar tu cuenta; pulsa «Actualizar estado» antes de repetir.`); } }
   };
   const refresh = async () => {
-    if (operation.current) return;
-    operation.current = true; setRefreshing(true);
-    try { await onRefresh(); setNeedsRefresh(false); announce('ok', 'Estado consultado. Revisa la referencia y tu suscripción.'); }
-    catch (failure) { announce('error', failure instanceof Error ? failure.message : 'No se pudo consultar el estado.'); }
-    finally { operation.current = false; setRefreshing(false); }
+    const attempt = begin(); if (!attempt) return;
+    setRefreshing(true);
+    try {
+      checkedAccount(await onRefresh(attempt.controller.signal));
+      if (current(attempt)) { requireRefresh(false); announce('ok', 'Estado consultado. Revisa la referencia y tu suscripción.'); }
+    } catch (failure) { if (current(attempt)) announce('error', failure instanceof Error ? failure.message : 'No se pudo consultar el estado.'); }
+    finally { finish(attempt); }
   };
 
   const createIntent = async () => {
-    if (operation.current || receiptSent || blockedProvider || needsRefresh) return;
-    operation.current = true;
+    if (!available() || receiptSent || blockedProvider || mustRefresh.current) return;
+    const attempt = begin(); if (!attempt) return;
+    requireRefresh(true);
     setSaving(true);
     try {
       const result = await partnerRequest<{ payment: PartnerPayment }>('/api/partner/payments', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, months, method }),
+        body: JSON.stringify({ plan, months, method }), signal: attempt.controller.signal,
       });
+      if (!current(attempt)) return;
       if (!validCheckoutPayment(result.payment, pending?.id) || !checkoutQuoteMatches(result.payment, plan, months, method, total)) throw new Error('No pudimos verificar la referencia. Actualiza el estado antes de continuar.');
       onPayment(result.payment);
       setFile(null); setNote(''); if (fileInput.current) fileInput.current.value = '';
-      await refreshAfterSave(`Referencia ${result.payment.reference} preparada. Esto no confirma un pago ni activa la suscripción. Revisa los datos de cobro antes de pagar.`);
-    } catch (failure) { setNeedsRefresh(true); announce('error', failure instanceof Error ? failure.message : 'No se pudo preparar la referencia.'); }
-    finally {
-      operation.current = false; setSaving(false);
-    }
+      await refreshAfterSave(`Referencia ${result.payment.reference} preparada. Esto no confirma un pago ni activa la suscripción. Revisa los datos de cobro antes de pagar.`, attempt);
+    } catch (failure) { if (current(attempt)) { requireRefresh(true); announce('error', failure instanceof Error ? failure.message : 'No se pudo preparar la referencia.'); } }
+    finally { finish(attempt); }
   };
 
   const sendReceipt = async () => {
-    if (operation.current || !pending || !quoteMatches || blockedProvider || needsRefresh) return;
+    if (!available() || !pending || !quoteMatches || blockedProvider || mustRefresh.current) return;
     if (!file && !note.trim()) { announce('error', 'Adjunta la captura o escribe el número de transacción.'); return; }
     if (file && (!['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'].includes(file.type) || !file.size || file.size > 6 * 1024 * 1024)) { announce('error', 'Usa JPG, PNG, WebP, HEIC o PDF con contenido y hasta 6 MB.'); return; }
-    operation.current = true;
+    const attempt = begin(); if (!attempt) return;
+    requireRefresh(true);
     setUploading(true);
     try {
       const form = new FormData();
@@ -437,29 +565,31 @@ export function SubscriptionTab({ account, pending, onRefresh, onNotice, selecte
       form.append('paymentId', pending.id);
       if (file) form.append('file', file);
       if (note.trim()) form.append('note', note.trim());
-      const result = await partnerRequest<{ payment: PartnerPayment }>('/api/partner/payments/receipt', { method: 'POST', body: form });
+      const result = await partnerRequest<{ payment: PartnerPayment }>('/api/partner/payments/receipt', { method: 'POST', body: form, signal: attempt.controller.signal });
+      if (!current(attempt)) return;
       if (!validCheckoutPayment(result.payment, pending.id) || result.payment.status !== 'pending' || !paymentUnderReview(result.payment)) throw new Error('No pudimos verificar la recepción del comprobante. Actualiza el estado antes de repetir.');
       onPayment(result.payment);
       setFile(null);
       setNote('');
       if (fileInput.current) fileInput.current.value = '';
-      await refreshAfterSave('Comprobante recibido para revisión manual. La suscripción se activará únicamente cuando el equipo apruebe el pago.');
-    } catch (failure) { setNeedsRefresh(true); announce('error', failure instanceof Error ? failure.message : 'No se pudo comprobar el comprobante.'); }
-    finally {
-      operation.current = false; setUploading(false);
-    }
+      await refreshAfterSave('Comprobante recibido para revisión manual. La suscripción se activará únicamente cuando el equipo apruebe el pago.', attempt);
+    } catch (failure) { if (current(attempt)) { requireRefresh(true); announce('error', failure instanceof Error ? failure.message : 'No se pudo comprobar el comprobante.'); } }
+    finally { finish(attempt); }
   };
 
   const cancelIntent = async () => {
-    if (operation.current || !pending || needsRefresh || !window.confirm(`¿Retirar la solicitud ${pending.reference}? Esto no devuelve dinero ni cancela una transferencia bancaria. Si ya pagaste, coordina con el equipo antes de retirarla.`)) return;
-    operation.current = true; setCanceling(true);
+    if (!available() || !pending || blockedProvider || mustRefresh.current || !window.confirm(`¿Retirar la solicitud ${pending.reference}? Esto no devuelve dinero ni cancela una transferencia bancaria. Si ya pagaste, coordina con el equipo antes de retirarla.`)) return;
+    const attempt = begin(); if (!attempt) return;
+    requireRefresh(true);
+    setCanceling(true);
     try {
-      const result = await partnerRequest<{ success: boolean }>(`/api/partner/payments?id=${pending.id}`, { method: 'DELETE' });
+      const result = await partnerRequest<{ success: boolean }>(`/api/partner/payments?id=${pending.id}`, { method: 'DELETE', signal: attempt.controller.signal });
+      if (!current(attempt)) return;
       if (result.success !== true) throw new Error('No pudimos comprobar la cancelación. Actualiza el estado.');
       onPayment({ ...pending, status: 'canceled' }); setNote(''); setFile(null);
-      await refreshAfterSave('Solicitud retirada. No se realizó un reembolso ni una operación bancaria.');
-    } catch (failure) { setNeedsRefresh(true); announce('error', failure instanceof Error ? failure.message : 'No se pudo retirar la solicitud.'); }
-    finally { operation.current = false; setCanceling(false); }
+      await refreshAfterSave('Solicitud retirada. No se realizó un reembolso ni una operación bancaria.', attempt);
+    } catch (failure) { if (current(attempt)) { requireRefresh(true); announce('error', failure instanceof Error ? failure.message : 'No se pudo retirar la solicitud.'); } }
+    finally { finish(attempt); }
   };
 
   // Keep the history's minimum table width inside its own scroll region,
@@ -475,6 +605,7 @@ export function SubscriptionTab({ account, pending, onRefresh, onNotice, selecte
         </p>
         <button type="button" disabled={busy} onClick={() => void refresh()} className="mt-3 min-h-11 font-outfit text-sm text-[#514735] underline underline-offset-4 disabled:opacity-50">{refreshing ? 'Consultando…' : 'Actualizar estado'}</button>
         {message && <p role={message.tone === 'error' ? 'alert' : 'status'} className={`mt-3 rounded-xl p-3 font-outfit text-sm ${message.tone === 'error' ? 'bg-amber-50 text-amber-950' : 'bg-emerald-50 text-emerald-900'}`}>{message.text}</p>}
+        {needsRefresh && !busy && !message && <p role="alert" className="mt-3 rounded-xl bg-amber-50 p-3 font-outfit text-sm text-amber-950">Hay una operación por comprobar. Pulsa «Actualizar estado» antes de repetir. Cambiar de pestaña no cancela una operación recibida por el servidor.</p>}
         {receiptSent && <p role="status" className="mt-4 rounded-xl bg-sky-50 p-3 font-outfit text-sm text-sky-900">Comprobante en revisión. Se conservan plan, periodo, importe y referencia. Puedes actualizar la evidencia o consultar al equipo; no prepares otra transferencia.</p>}
 
         <div className="mt-7 grid gap-3 sm:grid-cols-3">
@@ -587,7 +718,7 @@ export function SubscriptionTab({ account, pending, onRefresh, onNotice, selecte
                 >
                   {uploading ? 'Enviando…' : receiptSent ? 'Reemplazar comprobante' : 'Enviar comprobante'}
                 </button>
-                <button type="button" disabled={busy || needsRefresh} onClick={() => void cancelIntent()} className="min-h-11 font-outfit text-[12px] text-sky-900 underline-offset-4 hover:underline disabled:opacity-50">
+                <button type="button" disabled={busy || needsRefresh || blockedProvider} onClick={() => void cancelIntent()} className="min-h-11 font-outfit text-[12px] text-sky-900 underline-offset-4 hover:underline disabled:opacity-50">
                   {canceling ? 'Retirando…' : 'Retirar solicitud'}
                 </button>
               </div>
@@ -680,7 +811,7 @@ function PaymentHistory({ payments }: { payments: PartnerPayment[] }) {
 
 function AccountTab({ account, onSaved, onNotice }: {
   account: PartnerAccount;
-  onSaved: (account: PartnerAccount) => void;
+  onSaved: (account: PartnerAccount) => boolean;
   onNotice: (tone: 'ok' | 'error', text: string) => void;
 }) {
   const [brand, setBrand] = useState(account.profile.brand);
@@ -697,8 +828,8 @@ function AccountTab({ account, onSaved, onNotice }: {
       });
       const result = await res.json();
       if (!res.ok) { onNotice('error', result.error || 'No se pudo guardar'); return; }
-      onSaved({ ...account, ...result });
-      onNotice('ok', 'Datos guardados.');
+      if (onSaved(result)) onNotice('ok', 'Datos guardados.');
+      else onNotice('error', 'La respuesta del perfil llegó incompleta. Conservamos los últimos datos verificados.');
     } finally {
       setSaving(false);
     }

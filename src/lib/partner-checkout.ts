@@ -24,15 +24,52 @@ export function checkoutQuoteMatches(payment: CheckoutPayment | null, plan: Part
   return !!payment && payment.status === 'pending' && payment.plan_key === plan && payment.months === months && payment.method === method && Number(payment.amount_bs) === total;
 }
 
-/** Keep network failures and malformed replies out of the success path. Never retries writes. */
+export const PARTNER_REQUEST_TIMEOUT_MS = 25_000;
+const TIMEOUT_MESSAGE = 'No pudimos comprobar el resultado en 25 segundos. Pulsa «Actualizar estado» antes de repetir. La operación puede haberse recibido en el servidor.';
+const CANCEL_MESSAGE = 'Se interrumpió la espera y no pudimos comprobar el resultado. Pulsa «Actualizar estado» antes de repetir. La operación puede haberse recibido en el servidor.';
+
+/** Bound the complete attempt, including its body. Never retries or assumes an aborted write rolled back. */
 export async function partnerRequest<T>(url: string, options?: RequestInit, transport: typeof fetch = fetch): Promise<T> {
-  let response: Response;
-  try { response = await transport(url, { cache: 'no-store', ...options }); }
-  catch { throw new Error('No pudimos comprobar el resultado por un problema de conexión. Actualiza los datos antes de repetir la operación.'); }
-  let value;
-  try { value = await response.json(); }
-  catch { throw new Error('La respuesta llegó incompleta. Actualiza los datos para comprobar el resultado antes de repetir.'); }
-  if (!response.ok) throw new Error(typeof value?.error === 'string' ? value.error : 'No se pudo completar la operación. Actualiza los datos y vuelve a revisar.');
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('No pudimos verificar la respuesta. Actualiza los datos antes de continuar.');
-  return value as T;
+  const signal = options?.signal;
+  if (signal?.aborted) throw new Error(CANCEL_MESSAGE);
+  const controller = new AbortController(), started = Date.now();
+  let settled = false, listening = false, stopped: Error | null = null;
+  let rejectStop!: (reason: Error) => void;
+  const interrupted = new Promise<never>((_resolve, reject) => { rejectStop = reject; });
+  const cleanup = () => {
+    clearTimeout(timer);
+    if (listening) { signal?.removeEventListener('abort', cancelled); listening = false; }
+  };
+  const stop = (message: string) => {
+    if (settled) return;
+    settled = true; stopped = new Error(message); cleanup();
+    // Settle our deadline first so a synchronous abort rejection cannot replace its reason.
+    rejectStop(stopped); controller.abort();
+  };
+  const cancelled = () => stop(CANCEL_MESSAGE);
+  const timer = setTimeout(() => stop(TIMEOUT_MESSAGE), PARTNER_REQUEST_TIMEOUT_MS);
+  if (signal) { signal.addEventListener('abort', cancelled, { once: true }); listening = true; }
+  const assertCurrent = () => {
+    if (!stopped && signal?.aborted) stop(CANCEL_MESSAGE);
+    if (!stopped && Date.now() - started >= PARTNER_REQUEST_TIMEOUT_MS) stop(TIMEOUT_MESSAGE);
+    if (stopped) throw stopped;
+  };
+  const attempt = async (): Promise<T> => {
+    assertCurrent();
+    let response: Response;
+    try { response = await transport(url, { cache: 'no-store', ...options, signal: controller.signal }); }
+    catch { assertCurrent(); throw new Error('No pudimos comprobar el resultado por un problema de conexión. Actualiza los datos antes de repetir la operación.'); }
+    assertCurrent();
+    let value;
+    try { value = await response.json(); }
+    catch { assertCurrent(); throw new Error('La respuesta llegó incompleta. Actualiza los datos para comprobar el resultado antes de repetir.'); }
+    assertCurrent();
+    if (!response.ok) throw new Error(typeof value?.error === 'string' ? value.error : 'No se pudo completar la operación. Actualiza los datos y vuelve a revisar.');
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('No pudimos verificar la respuesta. Actualiza los datos antes de continuar.');
+    assertCurrent();
+    return value as T;
+  };
+  const completed = attempt().then(value => { assertCurrent(); return value; }, error => { assertCurrent(); throw error; });
+  try { return await Promise.race([interrupted, completed]); }
+  finally { settled = true; cleanup(); }
 }
