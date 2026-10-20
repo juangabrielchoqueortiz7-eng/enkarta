@@ -57,10 +57,10 @@ export function CommercialDashboardFeedback({ navigation, onRetry }: { navigatio
 }
 
 /** These independent tools keep their position and identity through every dashboard load. */
-export function CommercialSalesWorkspace({ navigation, onRetry, transport, children, onOpenLead, latestLead, onQuoteLead, quoteRequest, onRecoveryScope }: { navigation: CommercialNavigationState; onRetry: () => void; transport: typeof fetch; children?: ReactNode; onOpenLead?: (lead: Lead) => void; latestLead?: Lead | null; onQuoteLead?: (lead: Lead) => void; quoteRequest?: { sequence: number; contact: SalesQuoteContact } | null; onRecoveryScope?: (scope: string | null) => void }) {
+export function CommercialSalesWorkspace({ navigation, onRetry, transport, children, onOpenLead, latestLead, onQuoteLead, quoteRequest, onRecoveryScope, recoveryScope }: { navigation: CommercialNavigationState; onRetry: () => void; transport: typeof fetch; children?: ReactNode; onOpenLead?: (lead: Lead) => void; latestLead?: Lead | null; onQuoteLead?: (lead: Lead) => void; quoteRequest?: { sequence: number; contact: SalesQuoteContact } | null; onRecoveryScope?: (scope: string | null) => void; recoveryScope?: string | null }) {
   return <div className="space-y-6">
     <SalesToolkit transport={transport} contactRequest={quoteRequest} onScopeReady={onRecoveryScope} />
-    <CommercialReferenceSearch transport={transport} latestLead={latestLead} renderLead={lead => <LeadSummary lead={lead} transport={transport} onOpen={onOpenLead ? () => onOpenLead(lead) : undefined} onQuote={onQuoteLead && salesQuoteContact(lead) ? () => onQuoteLead(lead) : undefined} />} />
+    <CommercialReferenceSearch transport={transport} latestLead={latestLead} recoveryScope={recoveryScope} renderLead={lead => <LeadSummary lead={lead} transport={transport} onOpen={onOpenLead ? () => onOpenLead(lead) : undefined} onQuote={onQuoteLead && salesQuoteContact(lead) ? () => onQuoteLead(lead) : undefined} />} />
     <CommercialDashboardFeedback navigation={navigation} onRetry={onRetry} />
     {children}
   </div>;
@@ -193,7 +193,7 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
     ['Reservas', s.reserved, 'Incluye ventas'], ['Ventas', s.sales, `${s.closeRate}% de conversaciones`], ['Ingresos registrados', `${s.revenue.toLocaleString('es-BO')} Bs`, 'Solo ventas marcadas'],
   ] : [];
   const latestSaved = lastSaved ? editors.reduce((latest, lead) => lead.id === latest.id && lead.revision > latest.revision ? lead : latest, lastSaved) : null;
-  return <CommercialSalesWorkspace navigation={navigation} onRetry={() => void load(commercialRetryLocation(navigation))} transport={transport} onOpenLead={openLead} latestLead={latestSaved} onQuoteLead={quoteLead} quoteRequest={quoteRequest} onRecoveryScope={setRecoveryScope}>
+  return <CommercialSalesWorkspace navigation={navigation} onRetry={() => void load(commercialRetryLocation(navigation))} transport={transport} onOpenLead={openLead} latestLead={latestSaved} onQuoteLead={quoteLead} quoteRequest={quoteRequest} onRecoveryScope={setRecoveryScope} recoveryScope={recoveryScope}>
     <CommercialPendingRecovery manager={pendingRecovery} />
     <CommercialDraftRecovery manager={draftRecovery} pendingIds={pendingGate.current.ids} />
     {data && <>

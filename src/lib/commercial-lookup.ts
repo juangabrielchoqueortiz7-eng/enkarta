@@ -32,15 +32,18 @@ export function parseCommercialLead(value: unknown, reference?: string): Commerc
 export async function requestCommercialLead(reference: string, transport: typeof fetch = fetch, signal?: AbortSignal): Promise<CommercialLead | null> {
   const normalized = normalizeCommercialReference(reference);
   if (!normalized) throw new Error('Escribe la referencia completa: EK- y los 8 caracteres del mensaje de WhatsApp.');
+  if (signal?.aborted) throw new Error('La búsqueda se interrumpió. Vuelve a intentarlo.');
   let response: Response;
   try {
     response = await transport(`/api/admin/commercial/lookup?reference=${encodeURIComponent(normalized)}`, { cache: 'no-store', signal });
   } catch {
     throw new Error('No se pudo comprobar la referencia. Revisa tu conexión y vuelve a buscar.');
   }
+  if (signal?.aborted) throw new Error('La búsqueda se interrumpió. Vuelve a intentarlo.');
   if (response.status === 401) throw new Error('Tu sesión de administración terminó. Vuelve a ingresar para buscar.');
   let body: Record<string, unknown>;
   try { body = await response.json(); } catch { throw new Error('La respuesta llegó incompleta. Vuelve a buscar la referencia.'); }
+  if (signal?.aborted) throw new Error('La búsqueda se interrumpió. Vuelve a intentarlo.');
   if (!response.ok) throw new Error(body?.code === 'MIGRATION_REQUIRED' ? 'La búsqueda comercial aún no está disponible. Comprueba las migraciones 012 y 019 con administración.' : 'No se pudo comprobar la referencia. Vuelve a intentarlo.');
   if (!body || typeof body !== 'object' || Array.isArray(body) || !Object.prototype.hasOwnProperty.call(body, 'lead')) throw new Error('La respuesta llegó incompleta. Vuelve a buscar la referencia.');
   if (body.lead === null) return null;

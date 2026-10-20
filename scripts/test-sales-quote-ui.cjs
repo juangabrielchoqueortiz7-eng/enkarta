@@ -187,7 +187,7 @@ test('QA cleanup removes only its quotation draft and remounts the restored fict
   assert.deepEqual(removed,[qaKey]);assert.equal(values.has(qaKey),false);assert.equal(values.get(otherKey),'Other isolated session draft');
   assert.notEqual(nodesWhere(runner.tree(),node=>node.type===Dashboard)[0].key,previousKey);assert.equal(nodesWhere(runner.tree(),node=>node.type==='select'&&node.props['aria-label']==='Respuesta QA')[0].props.value,'ok');
   assert.ok(button('Ocultar Ventas QA'));assert.equal(nodesWhere(runner.tree(),node=>node.type==='div'&&node.props.hidden===false).length,1);
-  assert.ok(nodesWhere(runner.tree(),node=>node.type==='p'&&typeof node.props.children==='string'&&node.props.children.includes('Cambios, recibos y borrador ficticios retirados.')).length);
+  assert.ok(nodesWhere(runner.tree(),node=>node.type==='p'&&typeof node.props.children==='string'&&node.props.children.includes('Cambios, recibos, borradores y última consulta ficticios retirados.')).length);
  });
 });
 
