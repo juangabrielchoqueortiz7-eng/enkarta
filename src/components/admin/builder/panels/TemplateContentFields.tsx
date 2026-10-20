@@ -157,11 +157,7 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
   }
 
   if (t === 'obsidiana') {
-    const sponsors = data.sponsors ?? [];
-    const setSponsor = (i: number, patch: { role?: string; names?: string }) => {
-      const next = sponsors.map((s, j) => (j === i ? { ...s, ...patch } : s));
-      draft.patch({ sponsors: next });
-    };
+    const sponsors = draft.list<InvitationParsed['sponsors'][number]>('template:sponsors', current => current.sponsors ?? [], (_current, next) => ({ sponsors: next }));
     return (
       <Wrapper title="Textos de la colección Nocturna">
         <Field label="Lugar / fecha en portada">
@@ -195,19 +191,19 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
         <fieldset className="min-w-0 space-y-3">
           <legend className="mb-2 font-outfit text-sm font-medium leading-5 text-[#514735]">Padrinos (rol + nombres)</legend>
           <div className="space-y-2">
-            {sponsors.map((s, i) => (
-              <div key={i} className="min-w-0 space-y-3 rounded-xl border border-gray-200 p-3">
+            {sponsors.rows.map(({ item: s, key }, i) => (
+              <div key={key} className="min-w-0 space-y-3 rounded-xl border border-gray-200 p-3">
                 <Field label={`Rol de padrinos ${i + 1}`}>
-                  <input type="text" name={`template-sponsor-role-${i + 1}`} autoComplete="off" className={inputCls} value={s.role} onChange={e => setSponsor(i, { role: e.target.value })} placeholder="Padrinos de Civil" />
+                  <input type="text" name={`template-sponsor-role-${i + 1}`} autoComplete="off" className={inputCls} value={s.role} onChange={e => sponsors.patch(key, { role: e.target.value })} placeholder="Padrinos de Civil" />
                 </Field>
                 <Field label={`Nombres de padrinos ${i + 1}`}>
-                  <textarea name={`template-sponsor-names-${i + 1}`} autoComplete="off" className={textareaCls} rows={2} value={s.names} onChange={e => setSponsor(i, { names: e.target.value })} placeholder={'Nombre 1\nNombre 2'} />
+                  <textarea name={`template-sponsor-names-${i + 1}`} autoComplete="off" className={textareaCls} rows={2} value={s.names} onChange={e => sponsors.patch(key, { names: e.target.value })} placeholder={'Nombre 1\nNombre 2'} />
                 </Field>
-                <div className="flex justify-end"><button type="button" onClick={() => draft.patch({ sponsors: sponsors.filter((_, j) => j !== i) })} aria-label={`Eliminar padrinos ${i + 1}`} className={removeCls}><span aria-hidden="true">✕</span></button></div>
+                <div className="flex justify-end"><button type="button" onClick={() => sponsors.remove(key)} aria-label={`Eliminar padrinos ${i + 1}`} className={removeCls}><span aria-hidden="true">✕</span></button></div>
               </div>
             ))}
           </div>
-          <button type="button" onClick={() => draft.patch({ sponsors: [...sponsors, { role: '', names: '' }] })} className={addCls}>+ Agregar padrinos</button>
+          <button type="button" onClick={() => sponsors.add({ role: '', names: '' })} className={addCls}>+ Agregar padrinos</button>
         </fieldset>
 
         <Field label="Mensaje de la galería">
@@ -224,9 +220,7 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
   }
 
   if (t === 'dolcevita' || t === 'carmesi_v2' || t === 'napoly' || t === 'euforia' || t === 'rosegold' || t === 'allegria') {
-    const sponsors = data.sponsors ?? [];
-    const setSponsor = (i: number, patch: { role?: string; names?: string }) =>
-      draft.patch({ sponsors: sponsors.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
+    const sponsors = draft.list<InvitationParsed['sponsors'][number]>('template:sponsors', current => current.sponsors ?? [], (_current, next) => ({ sponsors: next }));
     return (
       <Wrapper title="Textos de la colección">
         <Field label="Ciudad (marco de fecha)">
@@ -243,19 +237,19 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
         <fieldset className="min-w-0 space-y-3">
           <legend className="mb-2 font-outfit text-sm font-medium leading-5 text-[#514735]">Padrinos (rol + nombres)</legend>
           <div className="space-y-2">
-            {sponsors.map((s, i) => (
-              <div key={i} className="min-w-0 space-y-3 rounded-xl border border-gray-200 p-3">
+            {sponsors.rows.map(({ item: s, key }, i) => (
+              <div key={key} className="min-w-0 space-y-3 rounded-xl border border-gray-200 p-3">
                 <Field label={`Rol de padrinos ${i + 1}`}>
-                  <input type="text" name={`template-sponsor-role-${i + 1}`} autoComplete="off" className={inputCls} value={s.role} onChange={e => setSponsor(i, { role: e.target.value })} placeholder="Padrinos" />
+                  <input type="text" name={`template-sponsor-role-${i + 1}`} autoComplete="off" className={inputCls} value={s.role} onChange={e => sponsors.patch(key, { role: e.target.value })} placeholder="Padrinos" />
                 </Field>
                 <Field label={`Nombres de padrinos ${i + 1}`}>
-                  <textarea name={`template-sponsor-names-${i + 1}`} autoComplete="off" className={textareaCls} rows={2} value={s.names} onChange={e => setSponsor(i, { names: e.target.value })} placeholder={'Nombre 1\nNombre 2'} />
+                  <textarea name={`template-sponsor-names-${i + 1}`} autoComplete="off" className={textareaCls} rows={2} value={s.names} onChange={e => sponsors.patch(key, { names: e.target.value })} placeholder={'Nombre 1\nNombre 2'} />
                 </Field>
-                <div className="flex justify-end"><button type="button" onClick={() => draft.patch({ sponsors: sponsors.filter((_, j) => j !== i) })} aria-label={`Eliminar padrinos ${i + 1}`} className={removeCls}><span aria-hidden="true">✕</span></button></div>
+                <div className="flex justify-end"><button type="button" onClick={() => sponsors.remove(key)} aria-label={`Eliminar padrinos ${i + 1}`} className={removeCls}><span aria-hidden="true">✕</span></button></div>
               </div>
             ))}
           </div>
-          <button type="button" onClick={() => draft.patch({ sponsors: [...sponsors, { role: 'Padrinos', names: '' }] })} className={addCls}>+ Agregar padrinos</button>
+          <button type="button" onClick={() => sponsors.add({ role: 'Padrinos', names: '' })} className={addCls}>+ Agregar padrinos</button>
         </fieldset>
 
         <Field label="Mensaje de regalos">
@@ -295,9 +289,7 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
   }
 
   if (t === 'grazia') {
-    const accts = cfg.giftAccounts ?? [];
-    const setAcct = (i: number, patch: { name?: string; account?: string }) =>
-      setCfg({ giftAccounts: accts.map((a, j) => (j === i ? { ...a, ...patch } : a)) });
+    const accts = draft.list<NonNullable<BuilderConfig['giftAccounts']>[number]>('template:giftAccounts', current => current.config?.giftAccounts ?? [], (current, next) => ({ config: { ...(current.config ?? {}), giftAccounts: next } }));
     return (
       <Wrapper title="Textos de la colección Seda">
         <div className="grid min-w-0 grid-cols-1 gap-3 min-[1200px]:grid-cols-2">
@@ -336,19 +328,19 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
         <fieldset className="min-w-0 space-y-3">
           <legend className="mb-2 font-outfit text-sm font-medium leading-5 text-[#514735]">Cuentas bancarias (nombre + cuenta)</legend>
           <div className="space-y-2">
-            {accts.map((a, i) => (
-              <div key={i} className="min-w-0 space-y-3 rounded-xl border border-gray-200 p-3">
+            {accts.rows.map(({ item: a, key }, i) => (
+              <div key={key} className="min-w-0 space-y-3 rounded-xl border border-gray-200 p-3">
                 <Field label={`Titular de la cuenta ${i + 1}`}>
-                  <input type="text" name={`template-account-owner-${i + 1}`} autoComplete="off" className={inputCls} value={a.name} onChange={e => setAcct(i, { name: e.target.value })} placeholder="Lorenzo Bianchi" />
+                  <input type="text" name={`template-account-owner-${i + 1}`} autoComplete="off" className={inputCls} value={a.name} onChange={e => accts.patch(key, { name: e.target.value })} placeholder="Lorenzo Bianchi" />
                 </Field>
                 <Field label={`Datos de la cuenta ${i + 1}`}>
-                  <input type="text" name={`template-account-data-${i + 1}`} autoComplete="off" className={inputCls} value={a.account} onChange={e => setAcct(i, { account: e.target.value })} placeholder="CTA. 1234567" />
+                  <input type="text" name={`template-account-data-${i + 1}`} autoComplete="off" className={inputCls} value={a.account} onChange={e => accts.patch(key, { account: e.target.value })} placeholder="CTA. 1234567" />
                 </Field>
-                <div className="flex justify-end"><button type="button" onClick={() => setCfg({ giftAccounts: accts.filter((_, j) => j !== i) })} aria-label={`Eliminar cuenta ${i + 1}`} className={removeCls}><span aria-hidden="true">✕</span></button></div>
+                <div className="flex justify-end"><button type="button" onClick={() => accts.remove(key)} aria-label={`Eliminar cuenta ${i + 1}`} className={removeCls}><span aria-hidden="true">✕</span></button></div>
               </div>
             ))}
           </div>
-          <button type="button" onClick={() => setCfg({ giftAccounts: [...accts, { name: '', account: '' }] })} className={addCls}>+ Agregar cuenta</button>
+          <button type="button" onClick={() => accts.add({ name: '', account: '' })} className={addCls}>+ Agregar cuenta</button>
         </fieldset>
 
         <Field label="URL imagen QR de regalo">
