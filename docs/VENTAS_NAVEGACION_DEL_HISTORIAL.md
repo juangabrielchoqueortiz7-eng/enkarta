@@ -45,6 +45,26 @@ Estas comprobaciones no certifican disposición ni interacción física en Andro
 - A continuación se preparó, con autorización del usuario, un conjunto manual independiente: **27 contactos, 27 eventos de visita y 45 movimientos** de un único contacto ficticio. Todos los contactos parten en «No concretó», los movimientos mantienen ese estado y el importe sin registrar. No se crearon usuarios, reservas, ventas ni ingresos, ni se enviaron mensajes o peticiones bancarias.
 - El manifiesto se persistió antes de cada inserción. El helper comprueba identificadores, referencias, hashes, placement y campaña; sólo lee páginas del filtro tras verificar que contiene exclusivamente los 27 QA. Las métricas ajenas se leen por agregado sin recuperar sus fichas.
 - Aceptación HTTP con ese conjunto: listado **25 + 2**, métricas iguales entre páginas, historial **20 + 20 + 5**, retorno **3→2→1** con corte e identificadores exactamente iguales. Los clientes temporales de las comprobaciones cerraron su sesión.
-- **La aceptación humana está preparada y pendiente de respuesta del usuario. La limpieza del conjunto manual aún no se ha ejecutado:** se conserva para la prueba en Android. Al completarla o aplazarla debe ejecutarse `node tmp/sales-history-navigation/manage.cjs cleanup --production`, verificando cero contactos, eventos, historiales y recibos de ese alcance. No se debe reutilizar ni borrar el manifiesto antes de esa comprobación.
+- El conjunto se conservó para la aceptación humana y posteriormente se eliminó con el manifiesto original. **Aceptación Android/Chrome aprobada y limpieza verificada**, según el cierre registrado a continuación. El manifiesto se conserva como evidencia y no debe reutilizarse para insertar otro conjunto.
 
 Evidencia privada: `verify.log`, `deployment.log`, `deployment-inspect.log`, `production-readonly.json`, `production-public.json`, `protected-local-final.json`, `ci.json`, `RESULTADO.json` y `acceptance-scope.json` dentro de `tmp/sales-history-navigation/`. El manifiesto incluye referencias ficticias y propiedad del conjunto; no contiene claves, contraseñas ni cookies. Las cifras globales pueden cambiar por actividad real y no deben confundirse con errores de paginación.
+
+## Cierre de aceptación Android/Chrome, 19 de octubre de 2026
+
+El usuario confirmó siete comprobaciones en su dispositivo:
+
+1. Tarjetas, filtro, referencias y presentación completos, sin desplazamiento horizontal.
+2. Listado de 25 y 2 contactos, regreso a primera página y métricas conservadas.
+3. Historial `1→2→3→2→1`, registros 20/20/5 y corte «Hasta» invariable al navegar.
+4. Actualizar desde página 2 devuelve a la primera; ocultar/reabrir muestra una sola sección con los primeros 20 registros.
+5. Nota ficticia conservada localmente y recuperada explícitamente tras recargar la misma pestaña, sin guardar todavía.
+6. Guardado explícito confirmado, nota conservada tras recargar y nuevo movimiento visible en el historial; el borrador sin enviar ya no aparece.
+7. Preparar cotización desde la ficha desplaza a la revisión; cancelar conserva el borrador anterior y sus valores. No se confirmó una importación, ni se copió o envió una propuesta.
+
+Las lecturas de la ficha ficticia verificaron antes de guardar: revisión 45, 45 movimientos, cero recibos y nota original intacta. Después: revisión 46, 46 movimientos y **un único recibo y movimiento con la nota nueva**; el estado siguió «No concretó» y el ingreso permaneció sin registrar. La nota introducida incluía un espacio adicional respecto del texto sugerido; se conservó sin normalizar y coincidió exactamente con el movimiento. No hubo duplicación de guardado.
+
+La limpieza usó identificadores y marcas de propiedad del manifiesto. Retiró los 27 contactos, 27 eventos y los hijos del contacto editado, incluido el movimiento y recibo generados durante la aceptación. Se verificó **cero contactos, eventos, movimientos, identificadores de historial sembrado y recibos** del alcance. No se alteró el almacenamiento de cotizaciones del navegador ni el borrador previo del usuario. Para retirar de pantalla una ficha fijada que ya fue eliminada, se requiere recargar la página completa.
+
+**Resultado: aceptación Android/Chrome aprobada y sin datos QA persistentes.** Cero usuarios creados, mensajes enviados y llamadas bancarias. BCP y los diseños y recursos originales permanecen intactos. El alcance no incluye iPhone/Safari, operaciones bancarias reales ni envío efectivo de WhatsApp.
+
+Evidencia privada adicional: `ACEPTACION_FINAL.json`, `manual-note-before-save.json`, `manual-note-after-save.json` y cierre del manifiesto `acceptance-scope.json`. Las comprobaciones finales sólo leyeron la ficha y los hijos ficticios identificados; no recuperaron fichas de clientes.
