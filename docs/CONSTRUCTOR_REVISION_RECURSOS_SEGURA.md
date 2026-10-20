@@ -52,8 +52,27 @@ El fixture elimina el import remoto de fuentes y declara Arial como respaldo. Pe
 
 El detector mecánico de Impeccable se ejecutó una vez sobre el panel final y devolvió `[]`. Esto complementa la inspección, sin certificar todo el editor. Evidencia: `design-detector.json`.
 
+El cálculo WCAG de nueve pares de colores del bloque, usando la paleta real de Tailwind y las superficies declaradas, supera 4,5:1 en todos los casos; el mínimo calculado es 6,47:1. Excluye controles desactivados y otras secciones. Es una comprobación de sus colores, sin certificar accesibilidad de toda la aplicación. Evidencia: `contrast.json`.
+
 - `npm run verify`: **1.311 pruebas correctas en 44 suites**, incluidas las 30 nuevas; lint, TypeScript y build de producción finalizados con código 0. Evidencia: `verify.log`.
 - **597/597 archivos protegidos** conservan sus hashes y los **129 originales de distribución** están completos, incluidos los recursos archivados fuera de Git.
 - **34/34 pruebas offline** de los helpers privados de atestación, permisos y limpieza de sesión correctas. No se suman a las pruebas de la aplicación ni realizan red.
 
 Se conservan los avisos de imágenes anteriores y no se cambian dependencias ni migraciones.
+
+## Producción, 20 de octubre de 2026
+
+Código integrado en `main`: `1f41f38d474e0d74bae8657429ba427d00089bae`. Vercel terminó el despliegue `dpl_9T7WwRaaDETf1CDiaCVDbbvynDNn` en estado **READY**, destino **production**, con alias [enkarta.vercel.app](https://enkarta.vercel.app). URL inmutable: [enkarta-bfkftubgb](https://enkarta-bfkftubgb-juangabrielchoqueortiz7-engs-projects.vercel.app). Se desplegó el workspace completo para conservar los originales archivados fuera de Git.
+
+El workflow [39488150788](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39488150788) del mismo SHA completó correctamente `verify` y `audit` (`npm audit --omit=dev --audit-level=high`).
+
+- El inventario remoto acredita por UID de contenido las **tres fuentes exactas** de `PublicationAuditPanel.tsx`, `publication-audit-client.ts` y la ruta `api/admin/publication-audit/route.ts`. Acredita entradas del despliegue Ready, sin afirmar ejecución de las carreras o temporizadores en un navegador de producción.
+- **13 grupos HTTP correctos**, con **75 denegaciones exactas 401**, incluidas **63 solicitudes de escritura rechazadas**. Se conservaron las comprobaciones anteriores de cuenta, borradores, publicación, pagos y subidas. Se añadieron cinco POST de diagnóstico vacío sin sesión o con cookies inválidas de administrador, anfitrión, revisión y puerta; todos se rechazaron antes de analizar recursos.
+- Una cookie administrativa válida realizó **un análisis con lista vacía**: `results: []` y los ocho contadores a cero. No se enviaron URLs ni se ejecutaron sondas de recursos. Esta respuesta positiva comprueba el contrato del diagnóstico; no acredita un análisis de recursos completo desde el editor autenticado.
+- La configuración administrativa y el historial privado mantienen sus políticas de privacidad, con `Vary: Cookie` en el historial. Un UUID ficticio se comprobó mediante conteos HEAD exactos antes y después, sin leer filas de clientes. El único upload autenticado fue un formulario sin archivo ni propietario, rechazado antes del almacenamiento.
+- **6/6 rutas públicas correctas**, **129/129 originales distribuidos** con tamaño y hashes intactos y **597/597 archivos protegidos locales** sin cambios.
+- **Cero** usuarios Auth, invitaciones, perfiles, archivos, pagos o fixtures persistentes creados o modificados; **cero** operaciones bancarias y mensajes. Se cerró y descartó la cookie temporal administrativa. No quedaron registros de prueba que retirar. También se detuvieron el servidor de fixture y su pestaña temporal.
+
+BCP conserva su bloqueo y no se modificaron proveedor ni credenciales. El smoke no inspeccionó variables remotas del proveedor ni llamó endpoints bancarios. La aceptación manual permanece aplazada; tampoco se afirma una revisión tipográfica exacta o una aceptación de Android/Safari por las capturas del fixture.
+
+La comprobación final conjunta terminó correctamente. Evidencia privada en `tmp/builder-resource-audit/`: `ci.json`, `deployment-final.json`, `deployment-files.json`, `production-http.json`, `production-public.json`, `protected.json` y `RESULTADO.json`. No se necesita SQL adicional.
