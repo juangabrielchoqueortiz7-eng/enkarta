@@ -38,6 +38,20 @@ function Field({ label, hint, hintId, children }: { label: string; hint?: string
   );
 }
 
+function lodgingDescriptionChange(draft: LegacyDraft) {
+  const initialSource = draft.get().config?.lodging;
+  const hotels = () => draft.list<NonNullable<BuilderConfig['lodging']>[number]>('template:lodging', current => current.config?.lodging ?? [], (current, next) => ({ config: { ...(current.config ?? {}), lodging: next } }));
+  let targetKey = hotels().rows[0]?.key;
+  return (description: string) => {
+    if (!draft.isCurrent()) return;
+    const current = hotels();
+    if (targetKey) { current.patch(targetKey, { desc: description }); return; }
+    if (draft.get().config?.lodging !== initialSource || current.rows.length) return;
+    current.add({ name: '', image: '', desc: description });
+    targetKey = hotels().rows[0]?.key;
+  };
+}
+
 /** Editor de campos "ricos" específico de cada plantilla premium (guardados en config). */
 export default function TemplateContentFields({ data, onChange, draft: inherited }: Props) {
   const draft = useLegacyDraft(data, onChange, inherited);
@@ -221,6 +235,7 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
 
   if (t === 'dolcevita' || t === 'carmesi_v2' || t === 'napoly' || t === 'euforia' || t === 'rosegold' || t === 'allegria') {
     const sponsors = draft.list<InvitationParsed['sponsors'][number]>('template:sponsors', current => current.sponsors ?? [], (_current, next) => ({ sponsors: next }));
+    const setLodgingDescription = lodgingDescriptionChange(draft);
     return (
       <Wrapper title="Textos de la colección">
         <Field label="Ciudad (marco de fecha)">
@@ -270,7 +285,7 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
           <input type="url" name="template-gift-qr-url" autoComplete="off" className={inputCls} value={cfg.giftQrUrl ?? ''} onChange={e => setCfg({ giftQrUrl: e.target.value })} placeholder="https://...qr.png" />
         </Field>
         <Field label="Hospedaje — descripción" hint="La imagen y el nombre del hotel van en Medios / Config." hintId="oliva-lodging-description-hint">
-          <textarea name="template-lodging-description" autoComplete="off" aria-describedby="oliva-lodging-description-hint" className={textareaCls} rows={2} value={cfg.lodging?.[0]?.desc ?? ''} onChange={e => { const l = cfg.lodging?.[0] ?? { name: '', image: '' }; setCfg({ lodging: [{ ...l, desc: e.target.value }] }); }} placeholder="El Paraíso Hotel está en..." />
+          <textarea name="template-lodging-description" autoComplete="off" aria-describedby="oliva-lodging-description-hint" className={textareaCls} rows={2} value={cfg.lodging?.[0]?.desc ?? ''} onChange={e => setLodgingDescription(e.target.value)} placeholder="El Paraíso Hotel está en..." />
         </Field>
         <Field label="Hospedaje — contacto">
           <input type="text" name="template-lodging-contact" autoComplete="off" className={inputCls} value={cfg.lodgingContact ?? ''} onChange={e => setCfg({ lodgingContact: e.target.value })} placeholder="Jazmin Smith" />
@@ -290,6 +305,7 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
 
   if (t === 'grazia') {
     const accts = draft.list<NonNullable<BuilderConfig['giftAccounts']>[number]>('template:giftAccounts', current => current.config?.giftAccounts ?? [], (current, next) => ({ config: { ...(current.config ?? {}), giftAccounts: next } }));
+    const setLodgingDescription = lodgingDescriptionChange(draft);
     return (
       <Wrapper title="Textos de la colección Seda">
         <div className="grid min-w-0 grid-cols-1 gap-3 min-[1200px]:grid-cols-2">
@@ -355,7 +371,7 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
           </Field>
         </div>
         <Field label="Hospedaje — descripción">
-          <textarea name="template-lodging-description" autoComplete="off" className={textareaCls} rows={2} value={cfg.lodging?.[0]?.desc ?? ''} onChange={e => { const l = cfg.lodging?.[0] ?? { name: '', image: '' }; setCfg({ lodging: [{ ...l, desc: e.target.value }] }); }} placeholder="El Paraíso Hotel está en..." />
+          <textarea name="template-lodging-description" autoComplete="off" className={textareaCls} rows={2} value={cfg.lodging?.[0]?.desc ?? ''} onChange={e => setLodgingDescription(e.target.value)} placeholder="El Paraíso Hotel está en..." />
         </Field>
         <Field label="Mensaje de la galería">
           <textarea name="template-gallery-message" autoComplete="off" className={textareaCls} rows={2} value={cfg.galleryMessage ?? ''} onChange={e => setCfg({ galleryMessage: e.target.value })} placeholder="Te invitamos a compartir los momentos..." />
