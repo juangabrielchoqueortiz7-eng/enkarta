@@ -6,8 +6,18 @@ import { collectionCatalog } from '@/lib/collection-catalog';
 import type { StarterDesignKey } from '@/lib/enkarta-collections';
 import { PARTNER_PLANS, draftCap, type PartnerPlanKey } from '@/lib/partner-plans';
 import { isUuid } from '@/lib/rsvp-contract';
+import { PARTNER_REQUEST_TIMEOUT_MS, partnerRequest } from '@/lib/partner-checkout';
 
 const DESIGNS = collectionCatalog();
+const REJECTION_MESSAGE = 'No se pudo crear el borrador. Revisa la selección antes de intentarlo de nuevo.';
+const UNCERTAIN_MESSAGE = 'No pudimos comprobar si se creó el borrador. Revisa «Mis invitaciones» antes de intentar crear otro.';
+interface CreationAttempt {
+  template: StarterDesignKey;
+  phase: 'pending' | 'opening' | 'uncertain';
+  controller: AbortController;
+  startedAt: number;
+  rejection?: { message: string };
+}
 
 /**
  * Catálogo de arranque para el socio. No pide paquete: el nivel de servicios
@@ -17,41 +27,71 @@ export default function PartnerDesignPicker({ plan, canPublish, selectedDesign, 
   const router = useRouter();
   const [creation, setCreation] = useState<{ template: StarterDesignKey; phase: 'pending' | 'opening' | 'uncertain'; id?: string } | null>(null);
   const [error, setError] = useState('');
-  const operation = useRef(false), mounted = useRef(true);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const operation = useRef<CreationAttempt | null>(null), mounted = useRef(true);
+  const capacity = useRef({ plan, totalInvitations });
+  capacity.current = { plan, totalInvitations };
+  useEffect(() => {
+    mounted.current = true;
+    // React 18 may replay effects without rendering again. An interrupted POST
+    // cannot resume or be assumed rolled back when that setup runs again.
+    const pending = operation.current;
+    if (pending?.phase === 'pending' && pending.controller.signal.aborted) {
+      if (pending.rejection) {
+        operation.current = null; setCreation(null); setError(pending.rejection.message);
+      } else {
+        pending.phase = 'uncertain'; setCreation({ template: pending.template, phase: 'uncertain' }); setError(UNCERTAIN_MESSAGE);
+      }
+    }
+    return () => { mounted.current = false; operation.current?.controller.abort(); };
+  }, []);
   const chosen = DESIGNS.find(design => design.key === selectedDesign);
   const designs = chosen ? [chosen, ...DESIGNS.filter(design => design.key !== chosen.key)] : DESIGNS;
   const atCapacity = totalInvitations >= draftCap(plan);
 
   const createFrom = async (template: StarterDesignKey) => {
-    if (!mounted.current || operation.current || atCapacity) return;
-    operation.current = true;
+    if (!mounted.current || operation.current || capacity.current.totalInvitations >= draftCap(capacity.current.plan)) return;
+    const attempt: CreationAttempt = { template, phase: 'pending', controller: new AbortController(), startedAt: Date.now() };
+    operation.current = attempt;
+    const current = () => mounted.current && operation.current === attempt && !attempt.controller.signal.aborted;
     setCreation({ template, phase: 'pending' });
     setError('');
     try {
-      const res = await fetch('/api/partner/invitations', {
+      const result = await partnerRequest<{ id: string }>('/api/partner/invitations', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template }),
+        body: JSON.stringify({ template }), signal: attempt.controller.signal,
+      }, async (url, options) => {
+        const response = await fetch(url, options);
+        if (!options?.signal?.aborted && current() && Date.now() - attempt.startedAt < PARTNER_REQUEST_TIMEOUT_MS
+          && !response.ok && response.status >= 400 && response.status < 500) {
+          // A received 4xx is definitive in this route, even if its explanatory
+          // body is unreadable. Its JSON still shares the original deadline.
+          attempt.rejection = { message: REJECTION_MESSAGE };
+          const body = await response.json().catch(() => null);
+          if (!options?.signal?.aborted && current() && Date.now() - attempt.startedAt < PARTNER_REQUEST_TIMEOUT_MS
+            && typeof body?.error === 'string') attempt.rejection.message = body.error;
+          return Response.json(body ?? null, { status: response.status });
+        }
+        return response;
       });
-      if (!mounted.current) return;
-      if (!res.ok && res.status >= 400 && res.status < 500) {
-        const result = await res.json().catch(() => null);
-        if (!mounted.current) return;
-        setError(typeof result?.error === 'string' ? result.error : 'No se pudo crear el borrador. Revisa la selección antes de intentarlo de nuevo.');
-        setCreation(null); operation.current = false;
-        return;
-      }
-      if (!res.ok) throw new Error('Unconfirmed creation');
-      const result = await res.json();
-      if (!mounted.current) return;
+      if (!current()) return;
       if (!isUuid(result?.id)) throw new Error('Unverified invitation');
+      attempt.phase = 'opening';
       setCreation({ template, phase: 'opening', id: result.id });
       try { router.push(`/socios/constructor/${result.id}`); }
       catch { setError('El borrador se creó, pero no pudimos abrir el constructor. Usa «Abrir el borrador» para continuar.'); }
-    } catch {
-      if (!mounted.current) return;
+    } catch (failure) {
+      if (!current()) return;
+      if (attempt.rejection) {
+        operation.current = null; setCreation(null); setError(attempt.rejection.message);
+        return;
+      }
+      attempt.phase = 'uncertain';
       setCreation({ template, phase: 'uncertain' });
-      setError('No pudimos comprobar si se creó el borrador. Revisa «Mis invitaciones» antes de intentar crear otro.');
+      setError(failure instanceof Error && failure.message.includes('25 segundos')
+        ? 'No pudimos comprobar si se creó el borrador en 25 segundos. Revisa «Mis invitaciones» antes de intentar crear otro.'
+        : UNCERTAIN_MESSAGE);
+    } finally {
+      attempt.controller.abort();
     }
   };
 
