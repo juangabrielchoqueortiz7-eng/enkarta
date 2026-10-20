@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import CommercialLeadHistory from '@/components/admin/CommercialLeadHistory';
 import { COMMERCIAL_LEAD_STATUSES } from '@/lib/commercial';
 import type { CommercialLead } from '@/lib/commercial-lookup';
-import type { CommercialHistoryPage } from '@/lib/commercial-history';
+import { parseCommercialHistoryQuery, type CommercialHistoryPage } from '@/lib/commercial-history';
 
 type Lead = Pick<CommercialLead, 'id' | 'reference' | 'revision'>;
 type Mode = 'ok' | 'offline' | 'truncated' | 'slow' | 'migration' | 'hang-fetch' | 'hang-body';
@@ -53,15 +53,12 @@ function Fixture() {
     if (responseMode === 'offline') throw new TypeError('QA sin conexión');
     if (responseMode === 'slow') await waitForSlowMode(init?.signal);
     if (responseMode === 'migration') return Response.json({ code: 'MIGRATION_REQUIRED' }, { status: 503 });
-    const lead = leads.find(item => item.id === url.searchParams.get('leadId'));
+    const query = parseCommercialHistoryQuery(url.searchParams);
+    if (!query) return Response.json({ code: 'INVALID_QUERY' }, { status: 400 });
+    const lead = leads.find(item => item.id === query.leadId);
     if (!lead) return Response.json({ code: 'NOT_FOUND' }, { status: 404 });
-    let cursor: { v: number; leadId: string; asOf: string; createdAt: string; id: string } | null = null;
-    try {
-      const token = url.searchParams.get('cursor');
-      if (token) cursor = JSON.parse(atob(token.replace(/-/g, '+').replace(/_/g, '/')));
-    } catch { return Response.json({ code: 'INVALID_QUERY' }, { status: 400 }); }
-    if (cursor && (cursor.v !== 1 || cursor.leadId !== lead.id)) return Response.json({ code: 'INVALID_QUERY' }, { status: 400 });
-    const asOf = cursor?.asOf ?? iso(new Date());
+    const cursor = query.cursor;
+    const asOf = cursor?.asOf ?? query.asOf ?? iso(new Date());
     const matches = (rows.current?.[lead.id] ?? []).filter(entry => entry.created_at <= asOf && (!cursor || entry.created_at < cursor.createdAt || (entry.created_at === cursor.createdAt && entry.id < cursor.id)));
     const entries = matches.slice(0, 20), hasMore = matches.length > 20, last = entries[entries.length - 1];
     const nextCursor = hasMore ? btoa(JSON.stringify({ v: 1, leadId: lead.id, asOf, createdAt: last.created_at, id: last.id })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') : null;

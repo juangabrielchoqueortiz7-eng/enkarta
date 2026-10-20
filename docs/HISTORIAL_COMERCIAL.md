@@ -9,7 +9,7 @@ No necesita una migración nueva: la tabla, los permisos de servidor, el índice
 ## Interfaz
 
 - El historial empieza cerrado. Solo consulta al abrirlo; no se descargan los historiales de todos los contactos al cargar Ventas.
-- Muestra 20 registros, ordenados del más reciente al más antiguo. **Ver 20 anteriores** reemplaza la página; **Volver al más reciente** inicia una consulta nueva. No acumula filas sin límite en el navegador.
+- Muestra 20 registros, ordenados del más reciente al más antiguo. **Anterior** y **Siguiente** conservan el corte de la consulta y muestran el número de página. **Actualizar historial** inicia una consulta nueva en la página 1. No acumula registros en el navegador; conserva únicamente los destinos de navegación. Detalles y evidencia actualizados en [VENTAS_NAVEGACION_DEL_HISTORIAL.md](VENTAS_NAVEGACION_DEL_HISTORIAL.md).
 - Cada registro contiene fecha, estados anterior y registrado, ingreso registrado y nota guardada. Si el estado es el mismo, muestra **Seguimiento actualizado**: 019 registra también cambios exclusivos de nota o importe.
 - Los valores son snapshots posteriores al guardado. La tabla no contiene actor, revisión ni valor anterior de nota/ingreso; la interfaz no atribuye autoría ni inventa diferencias.
 - El texto **Sin registrar** distingue un ingreso nulo de **0,00 Bs**. Un ingreso registrado no acredita un cobro; el historial tampoco confirma mensajes enviados.

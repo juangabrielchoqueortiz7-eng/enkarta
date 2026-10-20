@@ -25,9 +25,27 @@ test('invalid, future, overlong and extra-field history cursors are rejected',()
 });
 test('query validation requires one lead ID and rejects mismatched or ambiguous pages',()=>{
  const encoded=h.encodeCommercialHistoryCursor(cursor);
- assert.deepEqual(h.parseCommercialHistoryQuery(new URLSearchParams({leadId:lead.id})),{leadId:lead.id,cursor:null});
- assert.deepEqual(h.parseCommercialHistoryQuery(new URLSearchParams({leadId:lead.id,cursor:encoded})),{leadId:lead.id,cursor});
+ assert.deepEqual(h.parseCommercialHistoryQuery(new URLSearchParams({leadId:lead.id})),{leadId:lead.id,cursor:null,asOf:null});
+ assert.deepEqual(h.parseCommercialHistoryQuery(new URLSearchParams({leadId:lead.id,cursor:encoded})),{leadId:lead.id,cursor,asOf:null});
  for(const q of ['',`leadId=${lead.id}&leadId=${lead.id}`,`leadId=${lead.id}&cursor=x&cursor=y`,`leadId=${other.id}&cursor=${encoded}`,`leadId=${lead.id}&cursor=`,`leadId=${lead.id}&limit=1000`,`leadId=${lead.id}&reference=${lead.reference}`,'leadId=bad,or(id.gt.0)'])assert.equal(h.parseCommercialHistoryQuery(new URLSearchParams(q)),null);
+});
+
+test('an explicit first-page cutoff keeps microseconds, accepts UTC equivalents and allows old contacts',()=>{
+ for(const raw of [anchor,anchor.replace('Z','+00:00')])assert.deepEqual(h.parseCommercialHistoryQuery(new URLSearchParams({leadId:lead.id,asOf:raw})),{leadId:lead.id,cursor:null,asOf:anchor});
+ assert.deepEqual(h.parseCommercialHistoryQuery(new URLSearchParams({leadId:lead.id,asOf:'2001-01-01T00:00:00Z'})),{leadId:lead.id,cursor:null,asOf:'2001-01-01T00:00:00.000000Z'});
+});
+
+test('cutoff queries reject duplicates, cursor combinations, malformed dates and controls before reading',()=>{
+ const encoded=h.encodeCommercialHistoryCursor(cursor),queries=[new URLSearchParams({leadId:lead.id,cursor:encoded,asOf:anchor}),new URLSearchParams([['leadId',lead.id],['asOf',anchor],['asOf',anchor]])];
+ for(const asOf of ['',anchor+'\n',anchor+' ',anchor.slice(0,-1)+'7Z','2024-02-31T12:00:00Z','2024-01-01','2024-01-01T12:00:00+04:00','2099-01-01T00:00:00Z','x,or(id.gt.0)'])queries.push(new URLSearchParams({leadId:lead.id,asOf}));
+ for(const query of queries)assert.equal(h.parseCommercialHistoryQuery(query),null,query.toString());
+});
+
+test('explicit cutoff queries use the same one-minute future tolerance as history cursors',t=>{
+ const now=Date.now();t.mock.method(Date,'now',()=>now);
+ const accepted=new Date(now+60000).toISOString(),future=new Date(now+60001).toISOString();
+ assert.equal(h.parseCommercialHistoryQuery(new URLSearchParams({leadId:lead.id,asOf:accepted})).asOf,h.commercialHistoryTimestamp(accepted));
+ assert.equal(h.parseCommercialHistoryQuery(new URLSearchParams({leadId:lead.id,asOf:future})),null);
 });
 test('old history, same-state note changes, zero and null revenue retain their meaning',()=>{
  const p=page();p.entries[2].revenue_bs='999999999.99';const parsed=h.parseCommercialHistoryPage(p,lead);
@@ -54,10 +72,40 @@ test('the next history page must keep the cutoff and stay strictly behind its cu
  assert.equal(h.parseCommercialHistoryPage(p,lead,h.encodeCommercialHistoryCursor({...cursor,id:p.entries[5].id,createdAt:time})),null);
  assert.equal(h.parseCommercialHistoryPage(p,lead,h.encodeCommercialHistoryCursor({...cursor,asOf:'2025-01-03T00:00:00.000000Z'})),null);
 });
+
+test('a first-page response must match its requested cutoff even when the page is empty or short',()=>{
+ const p=page();p.entries=p.entries.slice(0,2);p.pagination={size:20,hasMore:false,nextCursor:null};
+ assert.ok(h.parseCommercialHistoryPage(p,lead,null,anchor));assert.ok(h.parseCommercialHistoryPage(p,lead,null,anchor.replace('Z','+00:00')));
+ for(const expected of ['2025-01-02T12:00:00.123457Z','2025-01-01T12:00:00.123456Z','',anchor+'\n',{},[]])assert.equal(h.parseCommercialHistoryPage(p,lead,null,expected),null);
+ p.entries=[];assert.ok(h.parseCommercialHistoryPage(p,lead,null,anchor));assert.equal(h.parseCommercialHistoryPage({...p,asOf:'2025-01-02T12:00:00.123457Z'},lead,null,anchor),null);
+});
+
+test('an inclusive first page accepts the maximum UUID exactly at its cutoff without a sentinel',()=>{
+ const p=page(),first={...p.entries[0],id:'ffffffff-ffff-ffff-ffff-ffffffffffff',created_at:anchor};p.entries=[first,...p.entries.slice(0,19)];
+ const last=p.entries.at(-1);p.pagination.nextCursor=h.encodeCommercialHistoryCursor({leadId:lead.id,asOf:anchor,createdAt:last.created_at,id:last.id});
+ const parsed=h.parseCommercialHistoryPage(p,lead,null,anchor);assert.ok(parsed);assert.equal(parsed.entries[0].id,first.id);assert.equal(parsed.entries[0].created_at,anchor);
+});
 test('history transport sends one private read with the abort signal and no note in its URL',async()=>{
  let calls=0;const signal=new AbortController().signal,encoded=h.encodeCommercialHistoryCursor(cursor);
  const p=await h.requestCommercialHistory(lead,encoded,async(url,options)=>{calls++;const u=new URL(url,'https://test.invalid');assert.equal(u.pathname,'/api/admin/commercial/history');assert.equal(u.searchParams.get('leadId'),lead.id);assert.equal(u.searchParams.get('cursor'),encoded);assert.equal(u.searchParams.size,2);assert.equal(options.cache,'no-store');assert.ok(options.signal instanceof AbortSignal);assert.notEqual(options.signal,signal);assert.equal(options.signal.aborted,false);assert.equal(options.method,undefined);return response(page());},signal);
  assert.equal(calls,1);assert.equal(p.entries.length,20);
+});
+
+test('returning to the first page sends the normalized cutoff without a cursor or editing data',async()=>{
+ let calls=0;const signal=new AbortController().signal,source=page();source.entries=source.entries.slice(0,2);source.pagination={size:20,hasMore:false,nextCursor:null};
+ const result=await h.requestCommercialHistory(lead,null,async(url,options)=>{calls++;const u=new URL(url,'https://test.invalid');assert.deepEqual([...u.searchParams], [['leadId',lead.id],['asOf',anchor]]);assert.equal(options.cache,'no-store');assert.equal(options.method,undefined);assert.equal(options.body,undefined);assert.ok(options.signal instanceof AbortSignal);assert.notEqual(options.signal,signal);return response(source);},signal,anchor.replace('Z','+00:00'));
+ assert.equal(result.asOf,anchor);assert.equal(calls,1);
+});
+
+test('invalid or combined local cutoffs reject before transport and never coerce objects into timestamps',async()=>{
+ let calls=0;const transport=async()=>{calls++;return response(page());},encoded=h.encodeCommercialHistoryCursor(cursor);
+ for(const asOf of ['',anchor+'\n','2099-01-01T00:00:00Z',[],{toString:()=>anchor},1])await assert.rejects(h.requestCommercialHistory(lead,null,transport,undefined,asOf),/identificar el contacto/);
+ await assert.rejects(h.requestCommercialHistory(lead,encoded,transport,undefined,anchor),/identificar el contacto/);assert.equal(calls,0);
+});
+
+test('a successful first-page HTTP response cannot substitute a cutoff differing by one microsecond',async()=>{
+ const p=page();p.entries=p.entries.slice(0,2);p.pagination={size:20,hasMore:false,nextCursor:null};p.asOf='2025-01-02T12:00:00.123457Z';let calls=0;
+ await assert.rejects(h.requestCommercialHistory(lead,null,async()=>{calls++;return response(p);},undefined,anchor),/incompleto/);assert.equal(calls,1);
 });
 test('invalid local identity or another contact cursor never reaches the transport',async()=>{
  let calls=0;const transport=async()=>{calls++;return response(page());};

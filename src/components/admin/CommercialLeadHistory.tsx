@@ -8,7 +8,10 @@ import { requestCommercialHistory, type CommercialHistoryPage } from '@/lib/comm
 const button = 'min-h-11 rounded-xl border border-gray-300 bg-white px-4 py-2 font-outfit text-sm font-semibold text-gray-800 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#765f39] disabled:opacity-50';
 
 type Props = { lead: Pick<CommercialLead, 'id' | 'reference' | 'revision'>; transport?: typeof fetch };
-type LoadedPage = { identity: string; epoch: number; page: CommercialHistoryPage };
+type Destination = { cursor: string | null; asOf: string | null };
+type HistoryLocation = Destination & { index: number; previous: Destination[] };
+type LoadedPage = { identity: string; epoch: number; page: CommercialHistoryPage; location: HistoryLocation };
+const firstLocation = (): HistoryLocation => ({ cursor: null, asOf: null, index: 0, previous: [] });
 
 /** History is loaded only while this disclosure is open; closing discards its data. */
 export default function CommercialLeadHistory({ lead, transport = fetch }: Props) {
@@ -19,20 +22,21 @@ export default function CommercialLeadHistory({ lead, transport = fetch }: Props
   if (lifetime.current.identity !== identity || lifetime.current.transport !== transport || lifetime.current.open !== open) lifetime.current = { identity, transport, open, epoch: lifetime.current.epoch + 1 };
   const epoch = lifetime.current.epoch;
   const [viewEpoch, setViewEpoch] = useState(epoch), busy = viewEpoch === epoch && loading, shownError = viewEpoch === epoch ? error : '';
-  const active = useRef<AbortController | null>(null), sequence = useRef(0), attemptedCursor = useRef<string | null>(null);
+  const active = useRef<AbortController | null>(null), sequence = useRef(0), attemptedLocation = useRef<HistoryLocation>(firstLocation());
   const page = loaded?.identity === identity && loaded.epoch === epoch ? loaded.page : null;
+  const location = page ? loaded!.location : null, viewSequence = sequence.current;
 
   const cancel = useCallback(() => { sequence.current += 1; active.current?.abort(); active.current = null; }, []);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; cancel(); }; }, [cancel]);
-  const load = useCallback(async (cursor: string | null) => {
-    if (!mounted.current || lifetime.current.epoch !== epoch || !open) return;
+  const load = useCallback(async (target: HistoryLocation) => {
+    if (!mounted.current || lifetime.current.epoch !== epoch || !open || active.current) return;
     cancel();
     const request = sequence.current, controller = new AbortController(); active.current = controller;
-    attemptedCursor.current = cursor;
+    attemptedLocation.current = target;
     setViewEpoch(epoch); setLoading(true); setError('');
     try {
-      const result = await requestCommercialHistory({ id: lead.id, reference: lead.reference }, cursor, transport, controller.signal);
-      if (mounted.current && lifetime.current.epoch === epoch && request === sequence.current && !controller.signal.aborted) setLoaded({ identity, epoch, page: result });
+      const result = await requestCommercialHistory({ id: lead.id, reference: lead.reference }, target.cursor, transport, controller.signal, target.cursor === null ? target.asOf : null);
+      if (mounted.current && lifetime.current.epoch === epoch && request === sequence.current && !controller.signal.aborted) setLoaded({ identity, epoch, page: result, location: { ...target, asOf: result.asOf } });
     } catch (cause) {
       if (mounted.current && lifetime.current.epoch === epoch && request === sequence.current) setError(cause instanceof Error ? cause.message : 'No se pudo cargar el historial. Vuelve a intentarlo.');
     } finally {
@@ -41,15 +45,19 @@ export default function CommercialLeadHistory({ lead, transport = fetch }: Props
   }, [cancel, epoch, identity, lead.id, lead.reference, open, transport]);
 
   useEffect(() => {
-    setViewEpoch(epoch); setLoaded(null); setError(''); attemptedCursor.current = null;
-    if (open) void load(null);
+    setViewEpoch(epoch); setLoaded(null); setError(''); attemptedLocation.current = firstLocation();
+    if (open) void load(firstLocation());
     return cancel;
   }, [open, load, cancel, epoch]);
 
   const toggle = () => {
     if (!mounted.current || lifetime.current.epoch !== epoch) return;
     if (!open) { setOpen(true); return; }
-    cancel(); setOpen(false); setLoaded(null); setError(''); setLoading(false); attemptedCursor.current = null;
+    cancel(); setOpen(false); setLoaded(null); setError(''); setLoading(false); attemptedLocation.current = firstLocation();
+  };
+  const navigate = (target: HistoryLocation) => {
+    if (sequence.current !== viewSequence || busy || active.current) return;
+    void load(target);
   };
   return <section className="mt-4 min-w-0 border-t border-gray-200 pt-4">
     <button type="button" aria-label={`${open ? 'Ocultar' : 'Ver'} historial de ${lead.reference}`} aria-expanded={open} aria-controls={`${id}-panel`} className={button} onClick={toggle}>{open ? 'Ocultar historial' : 'Ver historial'}</button>
@@ -62,10 +70,10 @@ export default function CommercialLeadHistory({ lead, transport = fetch }: Props
         {busy && <p role="status" className="font-outfit text-sm text-gray-700">Cargando historial…</p>}
         {shownError && <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p role="alert" className="font-outfit text-sm leading-6 text-amber-950">{page ? 'No se pudo actualizar el historial. Los registros visibles corresponden a la consulta anterior. ' : ''}{shownError}</p>
-          <button type="button" disabled={busy} className={button} onClick={() => void load(attemptedCursor.current)}>Reintentar consulta</button>
+          <button type="button" disabled={busy} className={button} onClick={() => navigate(attemptedLocation.current)}>Reintentar consulta</button>
         </div>}
         {page && <>
-          <p role="status" className="font-outfit text-sm leading-6 text-gray-600">Hasta {new Date(page.asOf).toLocaleString('es-BO')}. {page.entries.length} registro(s) en esta página, del más reciente al más antiguo.</p>
+          <p role="status" className="font-outfit text-sm leading-6 text-gray-600">Página {(location?.index ?? 0) + 1} · Hasta {new Date(page.asOf).toLocaleString('es-BO')}. {page.entries.length} registro(s) en esta página, del más reciente al más antiguo.</p>
           {page.entries.length === 0 ? <p role="status" className="font-outfit text-sm leading-6 text-gray-700">Aún no hay cambios registrados.</p> : <ol className="min-w-0 divide-y divide-gray-200">
             {page.entries.map(entry => <li key={entry.id} className="min-w-0 space-y-3 py-4 first:pt-0">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -81,9 +89,11 @@ export default function CommercialLeadHistory({ lead, transport = fetch }: Props
             </li>)}
           </ol>}
           <nav aria-label={`Páginas del historial de ${lead.reference}`} className="flex flex-wrap gap-3 border-t border-gray-200 pt-4">
-            <button type="button" disabled={busy} className={button} onClick={() => void load(null)}>Volver al más reciente</button>
-            <button type="button" disabled={busy || !page.pagination.hasMore} className={button} onClick={() => { if (page.pagination.nextCursor) void load(page.pagination.nextCursor); }}>Ver 20 anteriores</button>
+            <button type="button" disabled={busy || !location?.previous.length} className={button} onClick={() => { if (location?.previous.length) navigate({ ...location.previous[location.previous.length - 1], index: location.index - 1, previous: location.previous.slice(0, -1) }); }}>Anterior</button>
+            <button type="button" disabled={busy || !page.pagination.hasMore} className={button} onClick={() => { if (location && page.pagination.nextCursor) navigate({ cursor: page.pagination.nextCursor, asOf: page.asOf, index: location.index + 1, previous: [...location.previous, { cursor: location.cursor, asOf: page.asOf }] }); }}>Siguiente</button>
+            <button type="button" disabled={busy} className={button} onClick={() => navigate(firstLocation())}>Actualizar historial</button>
           </nav>
+          <p className="max-w-2xl font-outfit text-xs leading-5 text-gray-600">Anterior y Siguiente conservan el corte de esta consulta. Actualizar historial vuelve a la página 1 e incluye los cambios más recientes.</p>
         </>}
       </>}
     </div>

@@ -76,8 +76,8 @@ test('the twenty-second history deadline covers an ignored-abort JSON body witho
 test('history continuation timeout preserves the visible page and retry repeats the exact failed cursor',async t=>{
  t.mock.timers.enable({apis:['setTimeout']});const pending=deferred(),calls=[],first=historyPage(),second=historyPage(identity,'SECOND',true);
  await withHooks(History,{lead:identity,transport:async(url)=>{calls.push(url);return calls.length===1?Response.json(first):calls.length===2?pending.promise:Response.json(second);}},async runner=>{
-  await openHistory(runner);assert.match(textIn(runner),/QA_FIRST_0/);buttonIn(runner,'Ver 20 anteriores').props.onClick();await runner.flush();const failed=new URL(calls[1],'https://qa.invalid');assert.equal(failed.searchParams.get('cursor'),first.pagination.nextCursor);
-  t.mock.timers.tick(20000);await runner.flush();assert.match(textIn(runner),/QA_FIRST_0/);assert.match(textIn(runner),/consulta anterior/);buttonIn(runner,'Reintentar consulta').props.onClick();await runner.flush();assert.equal(calls[2],calls[1]);assert.equal(calls.length,3);assert.match(textIn(runner),/QA_SECOND_0/);assert.doesNotMatch(textIn(runner),/QA_FIRST_0/);assert.equal(buttonIn(runner,'Ver 20 anteriores').props.disabled,true);
+  await openHistory(runner);assert.match(textIn(runner),/QA_FIRST_0/);buttonIn(runner,'Siguiente').props.onClick();await runner.flush();const failed=new URL(calls[1],'https://qa.invalid');assert.equal(failed.searchParams.get('cursor'),first.pagination.nextCursor);
+  t.mock.timers.tick(20000);await runner.flush();assert.match(textIn(runner),/QA_FIRST_0/);assert.match(textIn(runner),/consulta anterior/);buttonIn(runner,'Reintentar consulta').props.onClick();await runner.flush();assert.equal(calls[2],calls[1]);assert.equal(calls.length,3);assert.match(textIn(runner),/QA_SECOND_0/);assert.doesNotMatch(textIn(runner),/QA_FIRST_0/);assert.equal(buttonIn(runner,'Siguiente').props.disabled,true);
   pending.resolve(Response.json(historyPage(identity,'LATE_PAGE',true)));await runner.flush();assert.doesNotMatch(textIn(runner),/QA_LATE_PAGE/);assert.equal(calls.length,3);
  });
 });
@@ -99,20 +99,20 @@ test('unmount cancels history without late notes, late errors or a second read',
 test('changing contact or revision rejects history callbacks captured from an older identity',async()=>{
  for(const replacement of [other,{...identity,revision:3}]){
   const calls=[];await withHooks(History,{lead:identity,transport:async(url)=>{calls.push(url);const leadId=new URL(url,'https://qa.invalid').searchParams.get('leadId');return Response.json(historyPage(leadId===other.id?other:identity));}},async runner=>{
-   await openHistory(runner);const oldMore=buttonIn(runner,'Ver 20 anteriores').props.onClick;await runner.update({lead:replacement});const previous=calls.length;oldMore();await runner.flush();assert.equal(calls.length,previous);assert.doesNotMatch(textIn(runner),/otro contacto/);
+   await openHistory(runner);const oldMore=buttonIn(runner,'Siguiente').props.onClick;await runner.update({lead:replacement});const previous=calls.length;oldMore();await runner.flush();assert.equal(calls.length,previous);assert.doesNotMatch(textIn(runner),/otro contacto/);
   });
  }
 });
 
 test('a closed history cannot be reopened by stale pagination callbacks from its previous disclosure',async()=>{
  const calls=[];await withHooks(History,{lead:identity,transport:async url=>{calls.push(url);return Response.json(historyPage());}},async runner=>{
-  await openHistory(runner);const oldMore=buttonIn(runner,'Ver 20 anteriores').props.onClick;buttonIn(runner,'Ocultar historial').props.onClick();await runner.flush();oldMore();await runner.flush();assert.equal(calls.length,1);assert.ok(buttonIn(runner,'Ver historial'));assert.doesNotMatch(textIn(runner),/QA_FIRST/);
+  await openHistory(runner);const oldMore=buttonIn(runner,'Siguiente').props.onClick;buttonIn(runner,'Ocultar historial').props.onClick();await runner.flush();oldMore();await runner.flush();assert.equal(calls.length,1);assert.ok(buttonIn(runner,'Ver historial'));assert.doesNotMatch(textIn(runner),/QA_FIRST/);
  });
 });
 
 test('returning to the same history identity does not reactivate an older lifetime handler',async()=>{
  const calls=[];await withHooks(History,{lead:identity,transport:async url=>{calls.push(url);const leadId=new URL(url,'https://qa.invalid').searchParams.get('leadId');return Response.json(historyPage(leadId===other.id?other:identity));}},async runner=>{
-  await openHistory(runner);const oldMore=buttonIn(runner,'Ver 20 anteriores').props.onClick;await runner.update({lead:other});await runner.update({lead:identity});const count=calls.length;oldMore();await runner.flush();assert.equal(calls.length,count);
+  await openHistory(runner);const oldMore=buttonIn(runner,'Siguiente').props.onClick;await runner.update({lead:other});await runner.update({lead:identity});const count=calls.length;oldMore();await runner.flush();assert.equal(calls.length,count);
  });
 });
 

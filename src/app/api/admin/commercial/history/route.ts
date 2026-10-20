@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const { data: lead, error: leadError } = await supabaseAdmin.from('commercial_leads').select('id,reference').eq('id', query.leadId).maybeSingle();
     if (leadError) return readFailure(leadError);
     if (!lead) return privateResponse({ error: 'Contacto no encontrado', code: 'NOT_FOUND' }, 404);
-    const asOf = query.cursor?.asOf ?? commercialHistoryTimestamp(new Date().toISOString())!;
+    const asOf = query.cursor?.asOf ?? query.asOf ?? commercialHistoryTimestamp(new Date().toISOString())!;
     let history = supabaseAdmin.from('commercial_lead_history').select('id,lead_id,from_status,to_status,revenue_bs,note,created_at').eq('lead_id', query.leadId).lte('created_at', asOf);
     if (query.cursor) history = history.or(`created_at.lt.${query.cursor.createdAt},and(created_at.eq.${query.cursor.createdAt},id.lt.${query.cursor.id})`);
     const { data: rows, error } = await history.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(21);
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     if (!Array.isArray(rows) || rows.length > 21) return readFailure(null);
     const entries = rows.slice(0, 20), last = entries[entries.length - 1], hasMore = rows.length > 20;
     const nextCursor = hasMore ? encodeCommercialHistoryCursor({ leadId: query.leadId, asOf, createdAt: commercialHistoryTimestamp(last?.created_at)!, id: last?.id }) : null;
-    const page = parseCommercialHistoryPage({ lead, asOf, entries, pagination: { size: 20, hasMore, nextCursor } }, { id: query.leadId, reference: lead.reference }, query.cursor ? encodeCommercialHistoryCursor(query.cursor) : null);
+    const page = parseCommercialHistoryPage({ lead, asOf, entries, pagination: { size: 20, hasMore, nextCursor } }, { id: query.leadId, reference: lead.reference }, query.cursor ? encodeCommercialHistoryCursor(query.cursor) : null, asOf);
     return page ? privateResponse(page) : readFailure(null);
   } catch { return readFailure(null); }
 }

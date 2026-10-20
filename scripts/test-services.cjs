@@ -854,7 +854,7 @@ const commercialUpdateFixture=async(extra={})=>{
  return {id,requestId:randomUUID(),expectedRevision:0,status:'contacted',revenueBs:200,notes:'Seguimiento ficticio',...extra};
 };
 const commercialPatch=(body)=>commercialAdmin.PATCH(new NextRequest('https://enkarta.test/api/admin/commercial',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}));
-const commercialHistoryGet=(leadId,cursor)=>commercialHistory.GET(req('/api/admin/commercial/history?'+new URLSearchParams({leadId,...(cursor===undefined?{}:{cursor})})));
+const commercialHistoryGet=(leadId,cursor,asOf)=>commercialHistory.GET(req('/api/admin/commercial/history?'+new URLSearchParams({leadId,...(cursor===undefined?{}:{cursor}),...(asOf===undefined?{}:{asOf})})));
 const commercialHistoryFixture=async(count=0)=>{
  const input=await commercialUpdateFixture();
  for(let n=1;n<=count;n++)await db.query("insert into commercial_lead_history(id,lead_id,from_status,to_status,revenue_bs,note,created_at) values($1,$2,'contacted',$3,$4,$5,$6)",[
@@ -883,6 +883,19 @@ test('commercial history reads exactly two bounded queries per page and preserve
  assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),46);assert.equal(await scalar('select revision as result from commercial_leads where id=$1',[input.id]),0);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),0);
 });
 
+test('commercial history returns through pages 1-2-3-2-1 at the same cutoff including a maximum UUID exactly on the boundary',async()=>{
+ const input=await commercialHistoryFixture(45),anchor='2001-01-02T12:00:00.123458Z',maximum='ffffffff-ffff-ffff-ffff-ffffffffffff';actor={role:'admin'};
+ await db.query("insert into commercial_lead_history(id,lead_id,from_status,to_status,revenue_bs,note,created_at) values($1,$2,'contacted','contacted',null,'Nota ficticia exactamente en el corte',$3)",[maximum,input.id,anchor]);
+ const oneResponse=await commercialHistoryGet(input.id,undefined,anchor.replace('Z','+00:00'));assert.equal(oneResponse.status,200);assert.equal(oneResponse.headers.get('cache-control'),'private, no-store');const one=await oneResponse.json();assert.equal(one.asOf,anchor);assert.equal(one.entries.length,20);assert.equal(one.entries[0].id,maximum);assert.equal(one.entries[0].created_at,anchor);
+ await db.query("insert into commercial_lead_history(lead_id,from_status,to_status,note,created_at) values($1,'contacted','reserved','Nueva nota ficticia fuera del corte','2001-01-02T12:00:00.123459Z')",[input.id]);
+ const twoResponse=await commercialHistoryGet(input.id,one.pagination.nextCursor),two=await twoResponse.json();assert.equal(twoResponse.status,200);
+ const threeResponse=await commercialHistoryGet(input.id,two.pagination.nextCursor),three=await threeResponse.json();assert.equal(threeResponse.status,200);assert.equal(two.entries.length,20);assert.equal(three.entries.length,6);assert.equal(three.pagination.hasMore,false);
+ const backTwoResponse=await commercialHistoryGet(input.id,one.pagination.nextCursor),backTwo=await backTwoResponse.json(),backOneResponse=await commercialHistoryGet(input.id,undefined,one.asOf),backOne=await backOneResponse.json();assert.equal(backTwoResponse.status,200);assert.equal(backOneResponse.status,200);
+ assert.deepEqual(backTwo,two);assert.deepEqual(backOne,one);for(const value of [one,two,three,backTwo,backOne]){assert.equal(value.asOf,anchor);assert.ok(value.entries.every(row=>row.lead_id===input.id&&!row.note.includes('fuera del corte')));}
+ const ids=[...one.entries,...two.entries,...three.entries].map(row=>row.id);assert.equal(ids.length,46);assert.equal(new Set(ids).size,46);assert.equal(ids[0],maximum);assert.ok([...one.entries,...two.entries,...three.entries].some(row=>row.revenue_bs===0));assert.ok([...one.entries,...two.entries,...three.entries].some(row=>row.revenue_bs===null));
+ assert.equal(queryCalls.length,10);assert.deepEqual(rpcCalls,[]);assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),47);assert.equal(await scalar('select revision as result from commercial_leads where id=$1',[input.id]),0);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),0);
+});
+
 test('commercial history includes note-only updates, nullable or zero legacy amounts and only the public audit whitelist',async()=>{
  const input=await commercialHistoryFixture(3);actor={role:'admin'};const response=await commercialHistoryGet(input.id);assert.equal(response.status,200);const page=await response.json();
  assert.deepEqual(Object.keys(page).sort(),['asOf','entries','lead','pagination']);assert.deepEqual(page.lead,{id:input.id,reference:'EK-A1B2C3D4'});assert.deepEqual(Object.keys(page.entries[0]).sort(),['created_at','from_status','id','lead_id','note','revenue_bs','to_status']);
@@ -902,7 +915,9 @@ test('commercial history rejects extra and duplicated parameters, malformed keys
  const queries=['','leadId=','leadId='+leadId+'&leadId='+leadId,'leadId='+leadId+'&cursor='+cursor+'&cursor='+cursor,'leadId='+leadId+'&limit=100','leadId='+leadId+'&status=won','leadId='+leadId+'&cursor=',
  ...['x','%','A'.repeat(769),'abc=','abc,or'].map(value=>'leadId='+leadId+'&cursor='+encodeURIComponent(value)),
  ...[{v:2,...valid},{v:1,...valid,leadId:other},{v:1,...valid,createdAt:'2026-01-03T12:00:00Z'},{v:1,...valid,asOf:'2099-01-01T00:00:00Z'},{v:1,...valid,id:valid.id+',or(id.gt.0)'},{v:1,...valid,extra:'x'}].map(body=>'leadId='+leadId+'&cursor='+raw(body)),
- ...['x',leadId.toUpperCase(),leadId+',or(id.gt.0)',' '+leadId,leadId+'%'].map(id=>new URLSearchParams({leadId:id}).toString())];
+  ...['x',leadId.toUpperCase(),leadId+',or(id.gt.0)',' '+leadId,leadId+'%'].map(id=>new URLSearchParams({leadId:id}).toString()),
+  new URLSearchParams({leadId,cursor,asOf}).toString(),new URLSearchParams([['leadId',leadId],['asOf',asOf],['asOf',asOf]]).toString(),
+  ...['',asOf+'\n',asOf+' ',asOf.slice(0,-1)+'7Z','2001-02-30T12:00:00Z','2001-01-02T12:00:00+04:00','2099-01-01T00:00:00Z','x,or(id.gt.0)'].map(asOf=>new URLSearchParams({leadId,asOf}).toString())];
  for(const query of queries){const response=await commercialHistory.GET(req('/api/admin/commercial/history?'+query));assert.equal(response.status,400,query);assert.equal(response.headers.get('cache-control'),'private, no-store');assert.equal((await response.json()).code,'INVALID_QUERY');}
  assert.deepEqual(queryCalls,[]);assert.deepEqual(rpcCalls,[]);
 });

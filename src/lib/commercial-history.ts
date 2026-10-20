@@ -11,7 +11,7 @@ const uuid = (value: unknown): value is string => typeof value === 'string' && /
 
 /** Preserve PostgreSQL microseconds while accepting its equivalent UTC suffix. */
 export function commercialHistoryTimestamp(value: unknown): string | null {
-  if (typeof value !== 'string' || !/^(?!0000)\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?(?:Z|\+00:00)$/.test(value)) return null;
+  if (typeof value !== 'string' || value !== value.trim() || !/^(?!0000)\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?(?:Z|\+00:00)$/.test(value)) return null;
   const time = Date.parse(value);
   if (!Number.isFinite(time) || new Date(time).toISOString().slice(0, 19) !== value.slice(0, 19)) return null;
   return `${value.slice(0, 19)}.${(value.slice(19).replace(/(?:Z|\+00:00)$/, '').replace(/^\./, '')).padEnd(6, '0')}Z`;
@@ -41,20 +41,20 @@ export function decodeCommercialHistoryCursor(value: unknown): CommercialHistory
   } catch { return null; }
 }
 
-export function parseCommercialHistoryQuery(params: URLSearchParams): { leadId: string; cursor: CommercialHistoryCursor | null } | null {
-  if (params.getAll('leadId').length !== 1 || params.getAll('cursor').length > 1 || [...params.keys()].some(key => !['leadId', 'cursor'].includes(key))) return null;
+export function parseCommercialHistoryQuery(params: URLSearchParams): { leadId: string; cursor: CommercialHistoryCursor | null; asOf: string | null } | null {
+  if (params.getAll('leadId').length !== 1 || params.getAll('cursor').length > 1 || params.getAll('asOf').length > 1 || [...params.keys()].some(key => !['leadId', 'cursor', 'asOf'].includes(key))) return null;
   const leadId = params.get('leadId');
   if (!uuid(leadId)) return null;
-  const raw = params.get('cursor'), cursor = raw === null ? null : decodeCommercialHistoryCursor(raw);
-  if (raw !== null && (!cursor || cursor.leadId !== leadId)) return null;
-  return { leadId, cursor };
+  const raw = params.get('cursor'), rawAsOf = params.get('asOf'), cursor = raw === null ? null : decodeCommercialHistoryCursor(raw), asOf = rawAsOf === null ? null : commercialHistoryTimestamp(rawAsOf);
+  if ((raw !== null && rawAsOf !== null) || (raw !== null && (!cursor || cursor.leadId !== leadId)) || (rawAsOf !== null && (!asOf || Date.parse(asOf) > Date.now() + 60000))) return null;
+  return { leadId, cursor, asOf };
 }
 
 /** Validate the complete page and whitelist each audit entry before showing private notes. */
-export function parseCommercialHistoryPage(value: unknown, lead: { id: string; reference: string }, cursor: string | null = null): CommercialHistoryPage | null {
+export function parseCommercialHistoryPage(value: unknown, lead: { id: string; reference: string }, cursor: string | null = null, expectedAsOf: string | null = null): CommercialHistoryPage | null {
   if (!uuid(lead.id) || normalizeCommercialReference(lead.reference) !== lead.reference || !record(value) || !record(value.lead) || value.lead.id !== lead.id || value.lead.reference !== lead.reference || !record(value.pagination)) return null;
-  const asOf = commercialHistoryTimestamp(value.asOf), after = cursor === null ? null : decodeCommercialHistoryCursor(cursor);
-  if (!asOf || Date.parse(asOf) > Date.now() + 60000 || (cursor !== null && (!after || after.leadId !== lead.id || after.asOf !== asOf)) || !Array.isArray(value.entries) || value.entries.length > 20) return null;
+  const asOf = commercialHistoryTimestamp(value.asOf), after = cursor === null ? null : decodeCommercialHistoryCursor(cursor), expected = expectedAsOf === null ? null : commercialHistoryTimestamp(expectedAsOf);
+  if (!asOf || Date.parse(asOf) > Date.now() + 60000 || (expectedAsOf !== null && (!expected || expected !== asOf)) || (cursor !== null && (!after || after.leadId !== lead.id || after.asOf !== asOf)) || !Array.isArray(value.entries) || value.entries.length > 20) return null;
   const entries: CommercialHistoryEntry[] = [];
   for (const row of value.entries) {
     if (!record(row) || !uuid(row.id) || row.lead_id !== lead.id || !COMMERCIAL_LEAD_STATUSES.includes(row.from_status as CommercialLeadStatus) || !COMMERCIAL_LEAD_STATUSES.includes(row.to_status as CommercialLeadStatus) || typeof row.note !== 'string' || row.note.length > 1000) return null;
@@ -75,10 +75,13 @@ export function parseCommercialHistoryPage(value: unknown, lead: { id: string; r
   return { lead: { id: lead.id, reference: lead.reference }, asOf, entries, pagination: { size: 20, hasMore: p.hasMore, nextCursor: p.nextCursor as string | null } };
 }
 
-export async function requestCommercialHistory(lead: { id: string; reference: string }, cursor: string | null = null, transport: typeof fetch = fetch, signal?: AbortSignal): Promise<CommercialHistoryPage> {
+export async function requestCommercialHistory(lead: { id: string; reference: string }, cursor: string | null = null, transport: typeof fetch = fetch, signal?: AbortSignal, asOf: string | null = null): Promise<CommercialHistoryPage> {
   const params = new URLSearchParams({ leadId: lead.id });
   if (cursor !== null) params.set('cursor', cursor);
-  if (!parseCommercialHistoryQuery(params) || normalizeCommercialReference(lead.reference) !== lead.reference) throw new Error('No se pudo identificar el contacto para consultar su historial.');
+  if (asOf !== null && typeof asOf === 'string') params.set('asOf', asOf);
+  const query = parseCommercialHistoryQuery(params);
+  if (!query || (asOf !== null && typeof asOf !== 'string') || normalizeCommercialReference(lead.reference) !== lead.reference) throw new Error('No se pudo identificar el contacto para consultar su historial.');
+  if (query.asOf) params.set('asOf', query.asOf);
   const cancelMessage = 'La consulta del historial se interrumpió. Vuelve a intentarlo.';
   return runSalesRead(async childSignal => {
     const active = () => { if (childSignal.aborted) throw new Error(cancelMessage); };
@@ -92,7 +95,7 @@ export async function requestCommercialHistory(lead: { id: string; reference: st
     try { body = await response.json(); } catch { throw new Error('El historial llegó incompleto. Vuelve a intentarlo.'); }
     active();
     if (!response.ok) throw new Error(record(body) && body.code === 'MIGRATION_REQUIRED' ? 'El historial comercial requiere la migración 012. Consulta con administración.' : 'No se pudo cargar el historial. Vuelve a intentarlo.');
-    const page = parseCommercialHistoryPage(body, lead, cursor);
+    const page = parseCommercialHistoryPage(body, lead, cursor, query.asOf);
     if (!page) throw new Error('El historial llegó incompleto o corresponde a otro contacto. Vuelve a intentarlo.');
     active(); return page;
   }, { signal, timeoutMs: COMMERCIAL_HISTORY_TIMEOUT_MS, timeoutMessage: 'El historial tardó demasiado en responder. Vuelve a intentarlo.', cancelMessage });
