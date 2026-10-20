@@ -57,3 +57,18 @@ La evidencia privada se guarda en `tmp/builder-legacy-media/`: `legacy-media-ui.
 - **28/28 pruebas offline** de los helpers privados de atestación, permisos y cierre de sesión correctas. No se suman a las pruebas de la aplicación ni se conectan a producción.
 
 Permanecen los avisos anteriores de imágenes; no se añaden avisos de lint en los archivos afectados. No se requieren migraciones. Evidencia privada adicional: `verify.log`, `typecheck.log`, `smoke-helper-tests.log`, `protected.json` y `distribution.json`.
+
+## Producción verificada, 20 de octubre de 2026
+
+- Código final **`713475aabca07f3f55fdca8e3b60705b4f2177b4`**, integrado en `main`. [CI del commit exacto](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39460703926): `completed/success`, con `npm run verify` y auditoría de dependencias aprobados. Sólo se consultaron metadatos públicos del workflow y sus pasos.
+- Vercel **`dpl_BrRya63gWMvbcHm6S82o8HtKyPmh`**, `READY`, destino producción y alias [enkarta.vercel.app](https://enkarta.vercel.app). Despliegue inmutable: [enkarta-gn8ql3cu4](https://enkarta-gn8ql3cu4-juangabrielchoqueortiz7-engs-projects.vercel.app). Se desplegó el workspace completo para incluir los originales archivados fuera de Git.
+- Los identificadores de contenido y SHA-256 de las **15 fuentes** coinciden con los archivos de entrada del despliegue Ready: diez variantes, tres subpaneles, `useLegacyDraft` y `builder-list-state`. Esto acredita las fuentes publicadas; no afirma ejecutar la carrera de subida desde un navegador autenticado de producción.
+- **11 grupos HTTP correctos**, con **58 denegaciones exactas**, incluidas **46 solicitudes de escritura**. Se conservan los permisos de cuenta, pagos, publicación, eliminación y medios de Socios; una cookie administrativa válida tampoco permite suplantar una sesión de Socios.
+- Los archivos ficticios se enviaron únicamente sin autenticación válida. El formulario administrativo autenticado no contenía archivo ni propietario y devolvió el rechazo exacto 400 antes del almacenamiento. No se realizaron subidas autenticadas ni se presenta la denegación como aceptación visual de una galería.
+- La configuración administrativa conserva `no-store` y vinculación a su sesión. El historial del constructor conserva `no-store`, `Vary: Cookie` y respuesta vacía para un UUID ficticio cuya ausencia se comprobó mediante conteos exactos antes y después. No se leyeron filas de clientes.
+- **129/129 recursos públicos** conservan tamaño y SHA-256, **6/6 rutas** responden como corresponde y los **597/597 archivos protegidos** siguen idénticos después del despliegue.
+- **Cero registros de negocio, archivos almacenados, usuarios Auth, fixtures, pagos, operaciones bancarias o mensajes creados**. La cookie administrativa temporal quedó cerrada. No hay datos ficticios persistentes que retirar de Supabase.
+
+BCP permanece bloqueado: no se cambiaron proveedor ni credenciales ni se consultaron variables remotas de pago o endpoints bancarios. Las regresiones locales cubren las carreras con componentes y cargador múltiple reales y transporte controlado; la verificación remota acredita fuentes, permisos y conservación. La aceptación manual permanece aplazada. No se requiere SQL.
+
+Evidencia privada adicional en `tmp/builder-legacy-media/`: `deployment.log`, `deployment-final.json`, `deployment-files.json`, `ci.json`, `production-http.json`, `production-public.json` y `RESULTADO.json`. Las verificaciones y el despliegue intermedios del commit `4e6997d` se conservan aparte; la aceptación final de este documento corresponde exclusivamente a `713475a` y al despliegue indicado arriba.
