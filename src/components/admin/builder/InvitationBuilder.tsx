@@ -133,6 +133,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const [compareMode, setCompareMode] = useState(false);
   const [previewGuest, setPreviewGuest] = useState<Guest | null>(null);
   const hasChanges = useRef(false);
+  const blockMediaRevision = useRef(0);
   const validation = useMemo(() => validateInvitationBuilder(data), [data]);
   const publicationChanges = useMemo(() => summarizeBuilderChanges(data, publishedVersion?.data), [data, publishedVersion]);
   const previewInvitation = useMemo<InvitationParsed>(() => previewGuest ? {
@@ -215,7 +216,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   // Aplica un cambio registrando el historial. `coalesce` agrupa cambios rápidos
   // (escritura, arrastre) en un único paso de deshacer.
-  const commit = useCallback((next: InvitationParsed, coalesce = false) => {
+  const commit = useCallback((next: InvitationParsed, coalesce = false, replaceDocument = false) => {
     const prev = dataRef.current;
     if (next === prev) return;
     if (changesUncontractedColors(prev, next)) {
@@ -223,6 +224,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
       return;
     }
     setContractNotice('');
+    if (replaceDocument) blockMediaRevision.current += 1;
     const workflowChanged = next.config?.workflow?.reviewStatus !== prev.config?.workflow?.reviewStatus;
     const committed = workflowChanged ? next : {
       ...next,
@@ -309,6 +311,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     const prev = past.current[past.current.length - 1];
     past.current = past.current.slice(0, -1);
     future.current = [dataRef.current, ...future.current];
+    blockMediaRevision.current += 1;
     editSequence.current += 1;
     dataRef.current = prev;
     setData(prev);
@@ -322,6 +325,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     const next = future.current[0];
     future.current = future.current.slice(1);
     past.current = [...past.current, dataRef.current];
+    blockMediaRevision.current += 1;
     editSequence.current += 1;
     dataRef.current = next;
     setData(next);
@@ -577,9 +581,12 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     setHistTick(value => value + 1);
   };
 
-  const retainLaterEdits = (snapshot: InvitationParsed, editedAt: number, change: PublicationChange, message: string) => {
+  const retainLaterEdits = (snapshot: InvitationParsed, editedAt: number, change: PublicationChange, message: string, replaceDocument = false) => {
     publicationEpoch.current += 1;
-    if (editSequence.current === editedAt) { applySnapshot(snapshot); return false; }
+    if (editSequence.current === editedAt) {
+      if (replaceDocument) blockMediaRevision.current += 1;
+      applySnapshot(snapshot); return false;
+    }
     // Undo and redo may change content, but must not restore an obsolete public status.
     past.current = past.current.map(item => withPublicationState(item, snapshot, change));
     future.current = future.current.map(item => withPublicationState(item, snapshot, change));
@@ -675,7 +682,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
       const result = await persistBuilderVersion(snapshot, `Rollback · ${version.label}`, 'publish', summary, 'admin', 'publish');
       const finalSnapshot = { ...snapshot, config: { ...snapshot.config, workflow: { ...(snapshot.config.workflow ?? {}), lastPublishedVersionId: result.version.id } } };
       const notice = 'La versión elegida quedó publicada. Tus cambios posteriores siguen en el borrador, sin publicar.';
-      const retained = retainLaterEdits(finalSnapshot, editedAt, 'publish', notice);
+      const retained = retainLaterEdits(finalSnapshot, editedAt, 'publish', notice, true);
       setPublishedVersion({ ...result.version, data: finalSnapshot });
       try {
         if (!retained) {
@@ -943,7 +950,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             {/* Contenido del panel (scrollable) */}
             <div className="flex-1 overflow-y-auto overscroll-contain">
               {activeTab === 'content' && <ContentPanel data={data} onChange={handleChange} />}
-              {activeTab === 'blocks'  && <BlockEditorPanel data={data} onChange={handleChange} selectedId={selectedBlockId} selectedIds={selectedBlockIds} onSelect={selectBlock} previewMode={previewMode} previewWidth={previewWidth} />}
+              {activeTab === 'blocks'  && <BlockEditorPanel data={data} onChange={handleChange} selectedId={selectedBlockId} selectedIds={selectedBlockIds} onSelect={selectBlock} previewMode={previewMode} previewWidth={previewWidth} editingRevision={blockMediaRevision} />}
               {activeTab === 'elements' && <ElementsPanel data={data} onChange={handleChange} selectedId={selectedBlockId} onSelect={id => selectBlock(id)} />}
               {activeTab === 'style'   && <StylePanel   data={data} onChange={handleChange} />}
               {activeTab === 'decor'   && <DecorPanel   data={data} onChange={handleChange} />}
@@ -956,7 +963,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
                 publishedVersionId={publishedVersion?.id}
                 onUnpublish={unpublishInvitation}
                 onCancelSchedule={versionId => { if (scheduledVersion?.id === versionId) setScheduledVersion(null); }}
-                onRestore={snapshot => { commit({ ...snapshot, id: data.id, slug: data.slug, status: data.status }); selectBlock(''); }}
+                onRestore={snapshot => { commit({ ...snapshot, id: data.id, slug: data.slug, status: data.status }, false, true); selectBlock(''); }}
                 onRollback={rollbackPublication}
                 onWorkflowChange={(status: ReviewStatus) => handleChange({ config: { ...(data.config ?? {}), workflow: { ...(data.config?.workflow ?? {}), reviewStatus: status, reviewUpdatedAt: new Date().toISOString() } } })}
                 onOpenBlock={blockId => { selectBlock(blockId); setActiveTab('blocks'); }}

@@ -26,7 +26,7 @@ No se guarda ni publica una invitación automáticamente. Descartar un callback 
 
 BCP permanece desactivado. Las pruebas manuales de Android, Safari y acceso con Google quedan aplazadas. Las comprobaciones remotas de permisos y fuentes complementan las regresiones locales; no equivalen a ejecutar la carrera de callbacks en un navegador autenticado de producción.
 
-Hallazgo fuera del alcance de estas variantes: el editor genérico por bloques todavía debe incluir la generación de reemplazo de layout en la identidad de sus campos múltiples, para un reemplazo que reutilice IDs de bloque y campo. Los callbacks individuales del editor por bloques ya tienen protección de generación; no se presenta esta entrega de variantes heredadas como cierre de aquel caso específico del cargador múltiple.
+El hallazgo del editor genérico por bloques al reemplazar plantillas que reutilizan IDs de bloque y campo se trata en la corrección posterior [Cambio de plantilla con subidas pendientes](CONSTRUCTOR_CAMBIO_DE_PLANTILLA_Y_SUBIDAS.md), incluida la señal de historial del constructor exterior. Esta entrega de variantes heredadas conserva su alcance y evidencia originales.
 
 ## Evidencia automática
 

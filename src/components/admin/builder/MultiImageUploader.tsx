@@ -11,6 +11,8 @@ interface Props {
   max?: number;
   /** Identidad del campo cuando el inspector reutiliza esta instancia. */
   destinationKey?: string;
+  /** Synchronous guard while a parent replaces the destination before rendering. */
+  isDestinationCurrent?: () => boolean;
 }
 
 function validUploadUrl(value: unknown): value is string {
@@ -26,6 +28,7 @@ export default function MultiImageUploader({
   ownerId = 'shared',
   max = 12,
   destinationKey = '',
+  isDestinationCurrent,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const mounted = useRef(true);
@@ -39,8 +42,8 @@ export default function MultiImageUploader({
     binding.current = { ownerId, folder, destinationKey, max, epoch: before.epoch + 1 };
   }
   const epoch = binding.current.epoch;
-  const latest = useRef({ values, onChange });
-  latest.current = { values, onChange };
+  const latest = useRef({ values, onChange, isDestinationCurrent });
+  latest.current = { values, onChange, isDestinationCurrent };
   const [feedback, setFeedback] = useState({ epoch, uploading: false, error: null as string | null, savedBytes: 0 });
   const uploading = feedback.epoch === epoch && feedback.uploading;
   const error = feedback.epoch === epoch ? feedback.error : null;
@@ -67,13 +70,14 @@ export default function MultiImageUploader({
   };
 
   const uploadFiles = useCallback(async (files: FileList) => {
-    if (!mounted.current || binding.current.epoch !== epoch || active.current) return;
+    const destinationIsCurrent = latest.current.isDestinationCurrent;
+    if (!mounted.current || binding.current.epoch !== epoch || active.current || destinationIsCurrent?.() === false) return;
     const room = Math.max(0, max - latest.current.values.length);
     const batch = Array.from(files).slice(0, room);
     if (!batch.length) return;
     const controller = new AbortController();
     active.current = controller;
-    const current = () => mounted.current && binding.current.epoch === epoch && active.current === controller && !controller.signal.aborted;
+    const current = () => mounted.current && binding.current.epoch === epoch && active.current === controller && !controller.signal.aborted && destinationIsCurrent?.() !== false;
     const update = (patch: Partial<typeof feedback>) => {
       if (current()) setFeedback(previous => ({ ...(previous.epoch === epoch ? previous : { epoch, uploading: false, error: null, savedBytes: 0 }), ...patch, epoch }));
     };

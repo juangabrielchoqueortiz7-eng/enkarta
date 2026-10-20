@@ -50,6 +50,8 @@ interface Props {
   onSelect: (id: string, additive?: boolean) => void;
   previewMode: 'mobile' | 'desktop';
   previewWidth?: number;
+  /** Parent history/restoration changes invalidate pending media synchronously. */
+  editingRevision?: { readonly current: number };
 }
 
 const ANIM_PRESETS: { value: ScrollPreset; label: string }[] = [
@@ -132,7 +134,7 @@ function VisualLayoutSelect({ kind, value, options, set }: { kind: 'itinerary' |
 }
 
 // Renderiza un campo según su tipo (texto, color, imagen, icono, lista…).
-function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, eventType, accent, visualSelect, destinationKey }: {
+function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, eventType, accent, visualSelect, destinationKey, isDestinationCurrent }: {
   field: FieldDef; value: any; set: (v: any) => void;
   setIcon?: (v: string, colors?: any, speed?: number) => void;
   colors?: any; speed?: number; ownerId?: string; eventType?: any;
@@ -140,6 +142,7 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
   accent?: string;
   visualSelect?: 'itinerary' | 'gallery';
   destinationKey?: string;
+  isDestinationCurrent?: () => boolean;
 }) {
   switch (field.kind) {
     case 'textarea':
@@ -162,7 +165,7 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
     case 'video':
       return <ImageUploader value={value} onChange={set} folder="videos" ownerId={ownerId} kind="video" aspect={field.previewAspect ?? 'wide'} hint={field.hint ?? 'Recomendado: MP4 H.264 o WebM, 3–12 s y menos de 6 MB.'} />;
     case 'images':
-      return <MultiImageUploader values={Array.isArray(value) ? value : []} onChange={set} ownerId={ownerId} destinationKey={destinationKey} />;
+      return <MultiImageUploader values={Array.isArray(value) ? value : []} onChange={set} ownerId={ownerId} destinationKey={destinationKey} isDestinationCurrent={isDestinationCurrent} />;
     case 'icon':
       return <IconPicker value={value} colors={colors} speed={speed} defaultIcon="rings" onChange={(v, c, s) => setIcon?.(v, c, s)} ownerId={ownerId} eventType={eventType} />;
     case 'divider': {
@@ -210,8 +213,9 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
 }
 
 // Editor de una lista de objetos (ej: pasos del itinerario).
-function ListEditor({ rows, images, itemFields, onAction, ownerId, eventType, destinationKey }: {
+function ListEditor({ rows, images, itemFields, onAction, ownerId, eventType, destinationKey, isDestinationCurrent }: {
   rows: BuilderListRow[]; images?: string[]; itemFields: FieldDef[]; onAction: (action: BuilderListAction) => void; ownerId?: string; eventType?: any; destinationKey: string;
+  isDestinationCurrent?: () => boolean;
 }) {
   return (
     <div className="space-y-2">
@@ -231,6 +235,7 @@ function ListEditor({ rows, images, itemFields, onAction, ownerId, eventType, de
               <FieldControl
                 field={f} value={it[f.key]} set={v => onAction({ type: 'patch', key, patch: { [f.key]: v } })}
                 destinationKey={`${destinationKey}:${key}:${f.key}`}
+                isDestinationCurrent={isDestinationCurrent}
                 setIcon={(v, c, s) => onAction({ type: 'patch', key, patch: { [f.key]: v, [`${f.key}Colors`]: c, [`${f.key}Speed`]: s } })}
                 colors={it[`${f.key}Colors`]} speed={typeof it[`${f.key}Speed`] === 'number' ? it[`${f.key}Speed`] as number : undefined}
                 ownerId={ownerId} eventType={eventType}
@@ -282,14 +287,15 @@ function imageMediaLibrary(data: InvitationParsed, cfg: BuilderConfig, blocks: B
   return Array.from(found);
 }
 
-export default function BlockEditorPanel({ data, onChange: notifyChange, selectedId, selectedIds, onSelect, previewMode, previewWidth }: Props) {
+export default function BlockEditorPanel({ data, onChange: notifyChange, selectedId, selectedIds, onSelect, previewMode, previewWidth, editingRevision }: Props) {
   const mounted = useRef(true);
   const lists = useRef<BuilderListState | null>(null);
   if (!lists.current) lists.current = new BuilderListState();
-  const context = useRef({ id: data.id, template: data.template, designKey: data.config?.designKey, epoch: 0 });
-  if (context.current.id !== data.id || context.current.template !== data.template || context.current.designKey !== data.config?.designKey) {
+  const revision = editingRevision?.current ?? 0;
+  const context = useRef({ id: data.id, template: data.template, designKey: data.config?.designKey, revision, epoch: 0 });
+  if (context.current.id !== data.id || context.current.template !== data.template || context.current.designKey !== data.config?.designKey || context.current.revision !== revision) {
     lists.current.clear();
-    context.current = { id: data.id, template: data.template, designKey: data.config?.designKey, epoch: context.current.epoch + 1 };
+    context.current = { id: data.id, template: data.template, designKey: data.config?.designKey, revision, epoch: context.current.epoch + 1 };
   }
   const epoch = context.current.epoch;
   const latest = useRef({ data, notifyChange });
@@ -299,6 +305,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
     return () => { mounted.current = false; lists.current?.clear(); };
   }, []);
   const currentContext = () => mounted.current && context.current.epoch === epoch
+    && (editingRevision?.current ?? 0) === revision
     && latest.current.data.id === data.id && latest.current.data.template === data.template
     && latest.current.data.config?.designKey === data.config?.designKey;
   const commit = (patch: Partial<InvitationParsed>, replaceLayout = false) => {
@@ -618,6 +625,8 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
     };
     const editSelected = (update: (block: Block, current: InvitationParsed) => Partial<Block> | null) =>
       patchBlock(selected.id, (block, current) => block.type === selected.type ? update(block, current) : null);
+    const mediaDestination = (target: Block, field: string, child = false) =>
+      JSON.stringify([data.id, data.template, cfg.designKey, epoch, selected.id, selected.type, child ? target.id : null, child ? target.type : null, field]);
     const setProp = (key: string, v: any) => editSelected((block, current) => ({ ...detachBinding(block, key), props: editedProps(block, key, v, current) }));
     const setProps = (patch: Record<string, unknown>) => editSelected(block => ({ props: { ...block.props, ...patch } }));
     const setIcon = (key: string, v: string, colors?: any, speed?: number) =>
@@ -626,7 +635,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
     const setAnim = (patch: Record<string, any>) => editSelected(block => ({ animation: { ...(block.animation ?? {}), ...patch } }));
     const setVisibility = (patch: NonNullable<Block['visibility']>) => editSelected(block => ({ visibility: { ...(block.visibility ?? {}), ...patch } }));
     const listControls = (target: Block, field: FieldDef, child = false) => {
-      const scope = JSON.stringify([epoch, selected.id, child ? target.id : null, field.key]);
+      const scope = mediaDestination(target, field.key, child);
       const readList = (block: Block, current: InvitationParsed) => {
         const props = resolveBlockEditorProps(block, current);
         const source = (Array.isArray(props[field.key]) ? props[field.key] : []) as BuilderListItem[];
@@ -652,7 +661,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
         const patch = { ...detachBinding(destination, field.key), props: editedProps(destination, field.key, next, current) };
         return child ? { children: block.children!.map(item => item.id === target.id ? { ...item, ...patch } : item) } : patch;
       });
-      return { rows, images: initial.images, itemFields: field.itemFields ?? [], onAction, ownerId: data.id, eventType: data.type, destinationKey: scope };
+      return { rows, images: initial.images, itemFields: field.itemFields ?? [], onAction, ownerId: data.id, eventType: data.type, destinationKey: scope, isDestinationCurrent: currentContext };
     };
     const setBinding = (key: string, path: string) => {
       const bindings = { ...(selected.bindings ?? {}) };
@@ -841,7 +850,8 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
               <Labeled label={f.label}>
                 <FieldControl
                   field={f} value={editorProps[f.key]} set={v => setProp(f.key, v)}
-                  destinationKey={`${selected.id}:${f.key}`}
+                  destinationKey={mediaDestination(selected, f.key)}
+                  isDestinationCurrent={currentContext}
                   setIcon={(v, c, s) => setIcon(f.key, v, c, s)}
                   colors={selected.props[`${f.key}Colors`]} speed={selected.props[`${f.key}Speed`] as number | undefined}
                   ownerId={data.id} eventType={data.type} accent={cfg.theme?.primary}
@@ -1004,7 +1014,8 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
                       <Labeled key={f.key} label={f.label}>
                         <FieldControl
                           field={f} value={childProps[f.key]} set={v => setKidProp(i, f.key, v)}
-                          destinationKey={`${selected.id}:${c.id}:${f.key}`}
+                          destinationKey={mediaDestination(c, f.key, true)}
+                          isDestinationCurrent={currentContext}
                           setIcon={(v, col, sp) => setKidIcon(i, f.key, v, col, sp)}
                           colors={c.props[`${f.key}Colors`]} speed={c.props[`${f.key}Speed`] as number | undefined}
                           ownerId={data.id} eventType={data.type}
