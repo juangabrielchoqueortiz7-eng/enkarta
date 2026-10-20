@@ -40,5 +40,30 @@ La auditoría estática de consumidores recorre 54 instancias o rutas de uploade
 - `npm run verify`: **1.041 pruebas correctas en 32 suites**, incluidas las **16 nuevas** de este bloque, además de lint, TypeScript y build de producción. Permanecen los avisos anteriores de imágenes de las invitaciones; no hay nuevos avisos de lint en los archivos afectados.
 - **597/597 archivos protegidos** conservan su SHA-256. El guard de distribución encuentra completos los **129 originales públicos**, incluidos los audios conservados fuera de Git.
 - Los helpers privados de denegaciones HTTP y atestación de la fuente tienen **27/27 regresiones offline** correctas. Esos casos no se suman a las 1.041 pruebas de la aplicación y no crean usuarios o archivos remotos.
+- El arnés privado de cuentas y limpieza pasa **15/15 regresiones offline**, incluido el listado de Storage que devuelve una ruta en minúsculas al consultar un prefijo en mayúsculas. Estos casos tampoco se suman a las pruebas de la aplicación.
 
 Evidencia privada en `tmp/builder-upload-access/`: `reproduction-baseline.json`, `api-tests.log`, `verify.log`, `protected.json` y `smoke-helper-tests.log`. La aplicación no requiere SQL ni dependencias nuevas. La verificación autenticada de producción usa un alcance ficticio independiente y debe conservar su manifiesto y resultado de limpieza; no se da por realizada en esta comprobación local.
+
+## Producción verificada, 20 de octubre de 2026
+
+- Código **`506661c5b5c5e188028d8d43169a54aaf09ada14`**, integrado en `main`. [CI del commit exacto](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39436894616): `completed/success`, con `npm run verify` y auditoría de dependencias aprobados.
+- Vercel **`dpl_D8TgwfxqYa9TZYWSTyePGtJ97MsS`**, `READY`, destino producción y alias [enkarta.vercel.app](https://enkarta.vercel.app). Despliegue inmutable: [enkarta-29nzhvbly](https://enkarta-29nzhvbly-juangabrielchoqueortiz7-engs-projects.vercel.app). Se desplegó el workspace completo para conservar los originales ignorados por Git.
+- El identificador de contenido de la ruta `src/app/api/admin/upload/route.ts` coincide con el archivo de entrada del despliegue Ready. **11 grupos HTTP correctos** conservan los permisos de cuenta, pagos, invitaciones y medios: **58 denegaciones**, incluidas **46 solicitudes de escritura**. La cookie administrativa temporal quedó cerrada. La petición administrativa sin archivo devuelve el 400 anterior y no almacena nada.
+- **129/129 originales públicos** conservan tamaño y SHA-256, las **6/6 rutas** públicas, de acceso y de desarrollo comprobadas responden correctamente y los **597/597 archivos protegidos** permanecen idénticos después de las pruebas.
+
+La verificación adicional usó una sesión real de contraseña de Supabase Auth con un usuario confirmado `@example.invalid`, dos perfiles ficticios y dos borradores independientes. Antes de escribir se guardaron UUID, correos ficticios, slugs, propietarios y una carpeta QA única en un manifiesto. Contraseña y cookies se mantuvieron sólo en memoria. Los planes permanecieron inactivos y ningún borrador se publicó.
+
+1. Con la sesión del socio A se intentaron ocho subidas del mismo PNG sintético a un UUID ajeno, inexistente, `shared`, alterado, con espacio, en mayúsculas, ausente y de tipo archivo. **Las ocho respondieron 403** con el rechazo genérico y la carpeta de prueba permaneció vacía.
+2. La subida a la invitación propia respondió **200** una sola vez. Se verificaron la ruta bajo su propietario, los **68 bytes** y el SHA-256 del PNG sintético mediante una lectura separada. No se reutilizaron recursos originales y no se repitió la subida.
+3. La limpieza validó marcadores exactos de Auth, perfiles, suscripciones inactivas, borradores y dependencias; comprobó ausencia de pagos, invitados y publicaciones. Suspendió los perfiles ficticios y retiró el archivo verificado, los dos borradores, las suscripciones inactivas, los perfiles y el usuario Auth.
+4. Las comprobaciones finales acreditan **cero usuarios Auth, perfiles, suscripciones, pagos, invitaciones de los propietarios ficticios, filas dependientes y archivos de prueba restantes**. Los UUID y slugs exactos también quedaron ausentes. La sesión temporal fue descartada y no quedó ninguna mutación con resultado desconocido.
+
+### Incidencia de la herramienta y recuperación
+
+La primera ejecución del arnés se detuvo después de confirmar los ocho rechazos y la subida propia. Su inspección recorría también variantes de prefijo permitidas en mayúsculas; Supabase devolvía el archivo de la ruta en minúsculas en ese listado, mientras que descargar el objeto con la clave en mayúsculas fallaba. La herramienta conservó el alcance y bloqueó la limpieza antes de borrar nada.
+
+Se corrigió únicamente el inspector privado para recorrer los nombres reales de directorio devueltos por la carpeta QA. Una lectura independiente confirmó la identidad de los borradores y el hash del único PNG; después `--cleanup-only` completó y verificó la limpieza. No se cambiaron los resultados HTTP, no se repitieron Auth ni upload y no se marcó artificialmente como exitosa la ejecución inicial: `auth-scope.json` conserva su fase `failed`, motivo y journal; `production-authenticated-readback.json` acredita la comprobación posterior y `production-authenticated.json` registra `cleanup: complete`.
+
+BCP sigue bloqueado: **cero pagos, activaciones, operaciones bancarias, correos o mensajes**. No se modificaron proveedor ni credenciales y no se necesita SQL. La sesión sintética verifica permisos por HTTP; no equivale a un consentimiento de Google ni a una aceptación visual de Android/Safari. Las pruebas manuales continúan aplazadas.
+
+Evidencia privada adicional en `tmp/builder-upload-access/`: `deployment.log`, `deployment-final.json`, `deployment-files.json`, `ci.json`, `production-http.json`, `production-public.json`, `auth-scope.json`, `production-authenticated.json`, `production-authenticated-readback.json`, `auth-helper-tests.log` y `RESULTADO.json`. La aceptación y limpieza anteriores de Ventas y el borrador del cotizador del navegador permanecen intactos.
