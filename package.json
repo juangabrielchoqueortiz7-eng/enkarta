@@ -24,7 +24,7 @@
     "test:integrity": "node scripts/test-integrity.cjs",
     "test:deployment": "node scripts/test-deployment.cjs",
     "monitor:production": "node scripts/check-production-health.cjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:builder && npm run test:services && npm run test:commercial-updates && npm run test:commercial-editor && npm run test:commercial-pending && npm run test:commercial-pending-ui && npm run test:commercial-drafts && npm run test:commercial-draft-ui && npm run test:commercial-search-recovery && npm run test:commercial-search-ui && npm run test:commercial-dashboard && npm run test:commercial-dashboard-client && npm run test:commercial-history-client && npm run test:sales-read && npm run test:sales-read-ui && npm run test:commercial-navigation && npm run test:commercial-recovery-ui && npm run test:sales-quote && npm run test:sales-quote-ui && npm run test:commercial-roster-quote && npm run test:commercial-history-navigation-ui && npm run test:builder-publication-ui && npm run test:builder-hydration && npm run test:partner-design-picker-ui && npm run test:partner-draft-api && npm run test:partner-checkout && npm run test:partner-checkout-ui && npm run test:partner-invitation-actions-ui && npm run test:integrity && npm run test:deployment && npm run build",
+    "verify": "npm run lint && npm run typecheck && npm run test:builder && npm run test:services && npm run test:commercial-updates && npm run test:commercial-editor && npm run test:commercial-pending && npm run test:commercial-pending-ui && npm run test:commercial-drafts && npm run test:commercial-draft-ui && npm run test:commercial-search-recovery && npm run test:commercial-search-ui && npm run test:commercial-dashboard && npm run test:commercial-dashboard-client && npm run test:commercial-history-client && npm run test:sales-read && npm run test:sales-read-ui && npm run test:commercial-navigation && npm run test:commercial-recovery-ui && npm run test:sales-quote && npm run test:sales-quote-ui && npm run test:commercial-roster-quote && npm run test:commercial-history-navigation-ui && npm run test:builder-publication-ui && npm run test:builder-hydration && npm run test:partner-design-picker-ui && npm run test:partner-draft-api && npm run test:partner-checkout && npm run test:partner-checkout-ui && npm run test:partner-invitation-actions-ui && npm run test:builder-media-upload-ui && npm run test:integrity && npm run test:deployment && npm run build",
     "test:commercial-drafts": "node scripts/test-commercial-drafts.cjs",
     "test:commercial-draft-ui": "node scripts/test-commercial-draft-ui.cjs",
     "test:commercial-search-recovery": "node scripts/test-commercial-search-recovery.cjs",
@@ -40,7 +40,8 @@
     "test:partner-draft-concurrency": "node scripts/test-partner-draft-concurrency.cjs",
     "test:partner-checkout": "node scripts/test-partner-checkout.cjs",
     "test:partner-checkout-ui": "node scripts/test-partner-checkout-ui.cjs",
-    "test:partner-invitation-actions-ui": "node scripts/test-partner-invitation-actions-ui.cjs"
+    "test:partner-invitation-actions-ui": "node scripts/test-partner-invitation-actions-ui.cjs",
+    "test:builder-media-upload-ui": "node scripts/test-builder-media-upload-ui.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

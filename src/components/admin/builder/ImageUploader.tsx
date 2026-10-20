@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { compressImage } from '@/lib/image-compress';
 
 interface Props {
@@ -22,6 +22,8 @@ interface Props {
   /** Límites opcionales para usos más estrictos, como el clip de entrada. */
   maxBytes?: number;
   maxDurationSeconds?: number;
+  /** Revisión síncrona del campo cuando otra acción puede cambiarlo antes del render. */
+  fieldRevision?: { readonly current: number };
 }
 
 const ASPECTS: Record<string, string> = {
@@ -45,8 +47,15 @@ function isEmbeddedVideoUrl(value: string) {
   return /(?:youtube\.com|youtu\.be|vimeo\.com)/i.test(value);
 }
 
-function videoDuration(file: File): Promise<number> {
+function validUploadUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try { return ['https:', 'http:'].includes(new URL(value).protocol); }
+  catch { return false; }
+}
+
+function videoDuration(file: File, signal: AbortSignal): Promise<number> {
   return new Promise((resolve, reject) => {
+    if (signal.aborted) { reject(new Error('Lectura cancelada.')); return; }
     const media = document.createElement('video');
     const objectUrl = URL.createObjectURL(file);
     const clear = () => {
@@ -55,12 +64,15 @@ function videoDuration(file: File): Promise<number> {
       URL.revokeObjectURL(objectUrl);
       media.removeAttribute('src');
       media.load();
+      signal.removeEventListener('abort', cancel);
     };
+    const cancel = () => { window.clearTimeout(timeout); clear(); reject(new Error('Lectura cancelada.')); };
     const timeout = window.setTimeout(() => {
       clear();
       reject(new Error('No pudimos leer la duración del video. Prueba exportándolo nuevamente como MP4 o WebM.'));
     }, 10_000);
     media.preload = 'metadata';
+    signal.addEventListener('abort', cancel, { once: true });
     media.onloadedmetadata = () => {
       window.clearTimeout(timeout);
       const duration = media.duration;
@@ -90,24 +102,69 @@ export default function ImageUploader({
   compact = false,
   maxBytes,
   maxDurationSeconds = VIDEO_MAX_SECONDS,
+  fieldRevision,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const mounted = useRef(true);
+  const sequence = useRef(0);
+  const active = useRef<AbortController | null>(null);
+  const obsoleteControllers = useRef<AbortController[]>([]);
+  const latestChange = useRef(onChange);
+  latestChange.current = onChange;
+  const binding = useRef({ ownerId, folder, kind, value: value ?? '', maxBytes, maxDurationSeconds, fieldRevision, revision: fieldRevision?.current, epoch: 0 });
+  const before = binding.current;
+  if (before.ownerId !== ownerId || before.folder !== folder || before.kind !== kind || before.value !== (value ?? '')
+    || before.maxBytes !== maxBytes || before.maxDurationSeconds !== maxDurationSeconds || before.fieldRevision !== fieldRevision || before.revision !== fieldRevision?.current) {
+    if (active.current) obsoleteControllers.current.push(active.current);
+    active.current = null; sequence.current += 1;
+    binding.current = { ownerId, folder, kind, value: value ?? '', maxBytes, maxDurationSeconds, fieldRevision, revision: fieldRevision?.current, epoch: before.epoch + 1 };
+  }
+  const epoch = binding.current.epoch;
+  const [feedback, setFeedback] = useState<{ epoch: number; serial: number; uploading: boolean; error: string | null; optimization: string | null }>({ epoch, serial: 0, uploading: false, error: null, optimization: null });
+  const visible = feedback.epoch === epoch && feedback.serial === sequence.current;
+  const uploading = visible && feedback.uploading;
+  const error = visible ? feedback.error : null;
+  const optimization = visible ? feedback.optimization : null;
   const [dragOver, setDragOver] = useState(false);
   const [showUrl, setShowUrl] = useState(false);
-  const [optimization, setOptimization] = useState<string | null>(null);
+  useEffect(() => {
+    for (const controller of obsoleteControllers.current.splice(0)) controller.abort();
+  }, [epoch]);
+  useEffect(() => {
+    mounted.current = true;
+    const obsolete = obsoleteControllers.current;
+    return () => {
+      mounted.current = false; sequence.current += 1; active.current?.abort(); active.current = null;
+      for (const controller of obsolete.splice(0)) controller.abort();
+    };
+  }, []);
+
+  const choose = (url: string) => {
+    if (!mounted.current || binding.current.epoch !== epoch) return;
+    active.current?.abort(); active.current = null;
+    const serial = ++sequence.current;
+    setFeedback({ epoch, serial, uploading: false, error: null, optimization: null });
+    latestChange.current(url);
+  };
 
   const upload = useCallback(async (file: File) => {
-    setError(null);
-    setOptimization(null);
-    setUploading(true);
+    if (!mounted.current || binding.current.epoch !== epoch) return;
+    active.current?.abort();
+    const controller = new AbortController(), serial = ++sequence.current, revision = fieldRevision?.current;
+    active.current = controller;
+    const current = () => mounted.current && binding.current.epoch === epoch && sequence.current === serial
+      && !controller.signal.aborted && fieldRevision?.current === revision;
+    const update = (patch: Partial<typeof feedback>) => {
+      if (current()) setFeedback(previous => ({ ...previous, ...patch, epoch, serial }));
+    };
+    setFeedback({ epoch, serial, uploading: true, error: null, optimization: null });
     try {
       // Imágenes: comprimir/redimensionar en el cliente (no toca audio/SVG/GIF).
       if (kind === 'image') {
         const originalSize = file.size;
         file = await compressImage(file);
-        setOptimization(file.size < originalSize ? `Optimizada: ${readableSize(originalSize)} → ${readableSize(file.size)}` : null);
+        if (!current()) return;
+        update({ optimization: file.size < originalSize ? `Optimizada: ${readableSize(originalSize)} → ${readableSize(file.size)}` : null });
       }
       if (kind === 'video') {
         const isVideo = file.type === 'video/mp4' || file.type === 'video/webm';
@@ -121,29 +178,37 @@ export default function ImageUploader({
           throw new Error(`El archivo supera el máximo recomendado de ${Math.round(allowedBytes / 1024 / 1024)} MB.`);
         }
         if (isVideo) {
-          const duration = await videoDuration(file);
+          const duration = await videoDuration(file, controller.signal);
+          if (!current()) return;
           if (duration > maxDurationSeconds) {
             throw new Error(`El video dura ${Math.ceil(duration)} s. Para este uso debe durar máximo ${maxDurationSeconds} s.`);
           }
-          setOptimization(`Video listo: ${readableSize(file.size)} · ${Math.max(1, Math.round(duration))} s`);
+          update({ optimization: `Video listo: ${readableSize(file.size)} · ${Math.max(1, Math.round(duration))} s` });
         } else {
-          setOptimization(`Animación lista: ${readableSize(file.size)}`);
+          update({ optimization: `Animación lista: ${readableSize(file.size)}` });
         }
       }
+      if (!current()) return;
       const fd = new FormData();
       fd.append('file', file);
       fd.append('folder', folder);
       fd.append('id', ownerId);
-      const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
+      const res = await fetch('/api/admin/upload', { method: 'POST', body: fd, signal: controller.signal });
+      if (!current()) return;
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Error al subir');
-      onChange(json.url as string);
+      if (!current()) return;
+      if (!res.ok) throw new Error(typeof json?.error === 'string' ? json.error : 'Error al subir');
+      if (!validUploadUrl(json?.url)) throw new Error('No pudimos verificar el archivo subido. Vuelve a elegirlo para intentarlo de nuevo.');
+      // Keep the selected destination. Shared block editors may change their
+      // callback while both fields are empty; that must not redirect this upload.
+      onChange(json.url);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al subir');
+      update({ error: e instanceof Error ? e.message : 'Error al subir' });
     } finally {
-      setUploading(false);
+      update({ uploading: false });
+      if (active.current === controller) active.current = null;
     }
-  }, [folder, ownerId, onChange, kind, maxBytes, maxDurationSeconds]);
+  }, [folder, ownerId, kind, maxBytes, maxDurationSeconds, epoch, fieldRevision, onChange]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -177,7 +242,7 @@ export default function ImageUploader({
             ) : <span aria-hidden>↑</span>}
             {value ? `Reemplazar ${itemLabel}` : `Subir ${itemLabel}`}
           </button>
-          {value && <button type="button" onClick={() => onChange('')} className="min-h-9 rounded-lg border border-[#e7dfd6] px-3 text-[10px] text-[#a15d5d] hover:bg-red-50 font-outfit">Quitar</button>}
+          {value && <button type="button" onClick={() => choose('')} className="min-h-9 rounded-lg border border-[#e7dfd6] px-3 text-[10px] text-[#a15d5d] hover:bg-red-50 font-outfit">Quitar</button>}
         </div>
       ) : value ? (
         <div className="relative group">
@@ -208,7 +273,7 @@ export default function ImageUploader({
             </button>
             <button
               type="button"
-              onClick={() => onChange('')}
+              onClick={() => choose('')}
               className="px-2.5 py-1 text-xs font-outfit bg-white/95 text-red-500 rounded-lg shadow hover:bg-white"
             >
               Quitar
@@ -263,7 +328,7 @@ export default function ImageUploader({
         }}
       />
 
-      {error && <p className="text-xs text-red-500 font-outfit mt-1.5">{error}</p>}
+      {error && <p role="alert" className="text-xs text-red-500 font-outfit mt-1.5">{error}</p>}
       {optimization && !error && <p className="mt-1.5 text-xs font-outfit text-emerald-600">✓ {optimization}</p>}
       {hint && !error && <p className="text-xs text-gray-400 font-outfit mt-1.5">{hint}</p>}
 
@@ -280,7 +345,7 @@ export default function ImageUploader({
             <input
               className="mt-1.5 w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit"
               value={value ?? ''}
-              onChange={e => onChange(e.target.value)}
+              onChange={e => choose(e.target.value)}
               placeholder="https://..."
             />
           )}

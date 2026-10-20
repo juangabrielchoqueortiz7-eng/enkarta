@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { InvitationParsed, BuilderConfig } from '@/lib/types';
 import { resolveFeatures, PACKAGE_LABELS } from '@/lib/packages';
 import { MUSIC_LIBRARY } from '@/lib/music';
@@ -14,17 +15,40 @@ interface Props {
 
 export default function MediaPanel({ data, onChange }: Props) {
   const cfg = data.config ?? {};
-  const setCfg = (patch: Partial<BuilderConfig>) => onChange({ config: { ...cfg, ...patch } });
+  const owner = useRef({ id: data.id, epoch: 0 });
+  if (owner.current.id !== data.id) owner.current = { id: data.id, epoch: owner.current.epoch + 1 };
+  const ownerEpoch = owner.current.epoch;
+  const latest = useRef({ data, onChange, cfg });
+  latest.current = { data, onChange, cfg };
+  const musicRevision = useRef(0);
+  const setCfg = (patch: Partial<BuilderConfig>) => {
+    if (owner.current.epoch !== ownerEpoch) return;
+    const current = latest.current;
+    if ('musicUrl' in patch && (current.cfg.musicUrl ?? '') !== (patch.musicUrl ?? '')) musicRevision.current += 1;
+    const config = { ...current.cfg, ...patch };
+    latest.current = { ...current, cfg: config, data: { ...current.data, config } };
+    current.onChange({ config });
+  };
+  const setData = (patch: Partial<InvitationParsed>) => {
+    if (owner.current.epoch !== ownerEpoch) return;
+    const current = latest.current;
+    latest.current = { ...current, data: { ...current.data, ...patch } };
+    current.onChange(patch);
+  };
   const feats = resolveFeatures(cfg);
   const pkgName = cfg.package ? PACKAGE_LABELS[cfg.package] : null;
   const galleryImages = cfg.galleryImages ?? [];
   const galleryCaptions = captionsForImages(galleryImages, cfg.galleryCaptions ?? []);
-  const setGalleryImages = (urls: string[]) => setCfg({
-    galleryImages: urls,
-    galleryCaptions: reorderGalleryCaptions(galleryImages, galleryCaptions, urls),
-  });
+  const setGalleryImages = (urls: string[]) => {
+    const current = latest.current.cfg;
+    const images = current.galleryImages ?? [];
+    setCfg({ galleryImages: urls, galleryCaptions: reorderGalleryCaptions(images, captionsForImages(images, current.galleryCaptions ?? []), urls) });
+  };
   const setGalleryCaption = (index: number, patch: Partial<(typeof galleryCaptions)[number]>) => {
-    setCfg({ galleryCaptions: galleryCaptions.map((caption, current) => current === index ? { ...caption, ...patch } : caption) });
+    const current = latest.current.cfg, images = current.galleryImages ?? [];
+    const target = images.indexOf(galleryImages[index]);
+    if (target < 0) return;
+    setCfg({ galleryCaptions: captionsForImages(images, current.galleryCaptions ?? []).map((caption, position) => position === target ? { ...caption, ...patch } : caption) });
   };
 
   return (
@@ -35,7 +59,7 @@ export default function MediaPanel({ data, onChange }: Props) {
         <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">Foto de Portada</h4>
         <ImageUploader
           value={data.cover_image_url ?? ''}
-          onChange={url => onChange({ cover_image_url: url || null })}
+          onChange={url => setData({ cover_image_url: url || null })}
           folder="covers"
           ownerId={data.id}
           aspect="portrait"
@@ -61,7 +85,7 @@ export default function MediaPanel({ data, onChange }: Props) {
               <button
                 key={track.id}
                 type="button"
-                onClick={() => setCfg({ musicUrl: active ? undefined : track.url })}
+                onClick={() => setCfg({ musicUrl: latest.current.cfg.musicUrl === track.url ? undefined : track.url })}
                 className={`px-3 py-1.5 text-xs font-outfit rounded-full border transition-colors ${
                   active
                     ? 'bg-enkarta-gold/10 border-enkarta-gold text-enkarta-gold'
@@ -80,6 +104,7 @@ export default function MediaPanel({ data, onChange }: Props) {
           onChange={url => setCfg({ musicUrl: url || undefined })}
           folder="music"
           ownerId={data.id}
+          fieldRevision={musicRevision}
           hint="Sube un MP3 (máx 15 MB) o pega un enlace directo a un audio. Sonará de fondo al abrir la invitación."
         />
       </div>
@@ -136,7 +161,7 @@ export default function MediaPanel({ data, onChange }: Props) {
           <input
             className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit"
             value={data.gallery_url ?? ''}
-            onChange={e => onChange({ gallery_url: e.target.value })}
+            onChange={e => setData({ gallery_url: e.target.value })}
             placeholder="https://photos.google.com/..."
           />
           <p className="text-xs text-gray-400 font-outfit mt-1">
