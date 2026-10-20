@@ -1,6 +1,7 @@
 import { COMMERCIAL_LEAD_STATUSES, type CommercialLeadStatus } from './commercial';
 import { parseCommercialLead, type CommercialLead } from './commercial-lookup';
 import { isUuid } from './rsvp-contract';
+import { COMMERCIAL_DRAFT_TTL, parseCommercialDraftEntry, type CommercialDraftEntry } from './commercial-drafts';
 
 export type CommercialUpdate = { id: string; requestId: string; expectedRevision: number; status: CommercialLeadStatus; revenueBs: number | null; notes: string };
 export type CommercialDraft = { status: CommercialLeadStatus; revenue: string; notes: string };
@@ -107,10 +108,22 @@ export type CommercialEditorAction =
   | { type: 'result'; result: CommercialSaveResult }
   | { type: 'receive'; lead: CommercialLead }
   | { type: 'resume'; request: CommercialUpdate }
+  | { type: 'restore-draft'; entry: CommercialDraftEntry }
   | { type: 'rebase' | 'discard' | 'reset' };
 export const createCommercialEditor = (lead: CommercialLead): CommercialEditorState => ({ base: lead, draft: commercialDraft(lead), phase: 'editing', request: null, incoming: null, message: '' });
 
 export function commercialEditorReducer(state: CommercialEditorState, action: CommercialEditorAction): CommercialEditorState {
+  if (action.type === 'restore-draft') {
+    const now = Date.now(), entry = parseCommercialDraftEntry(action.entry, now);
+    if (!entry || now - entry.savedAt > COMMERCIAL_DRAFT_TTL || state.phase !== 'editing' || state.request || commercialDraftDirty(state.draft, state.base)
+      || entry.id !== state.base.id || entry.reference !== state.base.reference || state.base.revision < entry.base.revision
+      || (state.base.revision === entry.base.revision && (state.base.status !== entry.base.status || state.base.revenue_bs !== entry.base.revenueBs || state.base.notes !== entry.base.notes))) return state;
+    const base: CommercialLead = { ...state.base, revision: entry.base.revision, status: entry.base.status, revenue_bs: entry.base.revenueBs, notes: entry.base.notes };
+    if (!commercialDraftDirty(entry.draft, base)) return state;
+    const newer = state.base.revision > entry.base.revision;
+    return { ...createCommercialEditor(base), draft: entry.draft, phase: newer ? 'conflict' : 'editing', incoming: newer ? state.base : null,
+      message: newer ? 'Recuperamos tus cambios sin enviar. El contacto tiene una versión más reciente; revisa los valores antes de guardar.' : 'Recuperamos tus cambios sin enviar. Revísalos y pulsa Guardar cambios cuando estén listos; aún no se guardaron.' };
+  }
   if (action.type === 'resume') {
     const command = parseCanonicalCommercialUpdate(action.request);
     if (!command || state.phase !== 'editing' || state.request || commercialDraftDirty(state.draft, state.base) || command.id !== state.base.id || state.base.revision < command.expectedRevision) return state;

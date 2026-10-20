@@ -17,6 +17,7 @@ require.extensions['.ts'] = require.extensions['.tsx'] = (module, file) => modul
 const { COMMERCIAL_SAVE_TIMEOUT_MS, commercialRevenue, commercialDraftRevenue, parseCommercialUpdate, parseCanonicalCommercialUpdate, prepareCommercialDraftUpdate, commercialDraft, commercialDraftDirty, saveCommercialLead,
   createCommercialEditor, commercialEditorReducer: reduce } = require('../src/lib/commercial-update.ts');
 const { parseCommercialLead, requestCommercialLead } = require('../src/lib/commercial-lookup.ts');
+const { createCommercialDraftEntry, COMMERCIAL_DRAFT_TTL } = require('../src/lib/commercial-drafts.ts');
 const fixture = Object.freeze({
   id: 'abcdef01-0000-4000-8000-000000000019', reference: 'EK-A1B2C3D4', status: 'contacted', package_key: 'premium',
   design: 'Lunaria', event_category: 'Boda', placement: 'catalogo', utm_source: 'qa', utm_medium: '', utm_campaign: '',
@@ -917,4 +918,97 @@ test('recovery is pure and keeps its command and original editor available witho
   const request = Object.freeze(command()), before = JSON.stringify(original), requestBefore = JSON.stringify(request);
   const restored = resume(original, request); assert.notStrictEqual(restored, original); assert.equal(JSON.stringify(original), before); assert.equal(JSON.stringify(request), requestBefore);
   assert.deepEqual(restored.request, command()); assert.notStrictEqual(restored.request, request);
+});
+
+const unsentDraft = (base = fixture, changes = {}, now = Date.now()) => createCommercialDraftEntry(base, { ...commercialDraft(base), ...changes }, now);
+const restoreDraft = (state, entry) => reduce(state, { type: 'restore-draft', entry });
+
+test('an unsent draft restores exact values against the same canonical revision without a request', () => {
+  const entry = unsentDraft(fixture, { status: 'reserved', revenue: '930,50', notes: '  QA cambios sin enviar  ' });
+  const canonical = { ...fixture, design: 'QA metadata actual', package_key: 'exclusive' }, restored = restoreDraft(createCommercialEditor(canonical), entry);
+  assert.equal(restored.phase, 'editing'); assert.deepEqual(restored.draft, entry.draft); assert.equal(restored.draft.revenue, '930,50');
+  assert.equal(restored.base.design, 'QA metadata actual'); assert.equal(restored.base.package_key, 'exclusive'); assert.equal(restored.base.revision, fixture.revision);
+  assert.equal(restored.request, null); assert.equal(restored.resumed, undefined); assert.equal(restored.incoming, null);
+  assert.match(restored.message, /Recuperamos tus cambios sin enviar/); assert.match(restored.message, /aún no se guardaron/);
+});
+
+test('invalid or incomplete raw amounts remain editable after restoration rather than becoming a save', () => {
+  for (const revenue of ['930,', '12.', '1e3', '-1', 'bad', ' ']) {
+    const entry = unsentDraft(fixture, { revenue }), restored = restoreDraft(createCommercialEditor(fixture), entry);
+    assert.equal(restored.phase, 'editing'); assert.equal(restored.draft.revenue, revenue); assert.equal(restored.request, null);
+    assert.equal(prepareCommercialDraftUpdate(restored.base, restored.draft, command().requestId), null);
+  }
+});
+
+test('restoring against a newer contact reconstructs only the original operative baseline', () => {
+  const entry = unsentDraft(fixture, { revenue: '930,50' });
+  const current = { ...fixture, revision: 8, status: 'won', revenue_bs: 1100, notes: 'QA nota actual', design: 'QA diseño actual', event_category: 'Corporativo' };
+  const restored = restoreDraft(createCommercialEditor(current), entry);
+  assert.equal(restored.phase, 'conflict'); assert.strictEqual(restored.incoming, current); assert.equal(restored.request, null);
+  assert.equal(restored.base.id, current.id); assert.equal(restored.base.reference, current.reference); assert.equal(restored.base.design, current.design); assert.equal(restored.base.event_category, current.event_category);
+  assert.equal(restored.base.revision, fixture.revision); assert.equal(restored.base.status, fixture.status); assert.equal(restored.base.revenue_bs, fixture.revenue_bs); assert.equal(restored.base.notes, fixture.notes);
+  assert.deepEqual(restored.draft, entry.draft); assert.match(restored.message, /versión más reciente/);
+});
+
+test('selective rebase of a restored status edit adopts untouched remote revenue and notes', () => {
+  const entry = unsentDraft(fixture, { status: 'reserved', revenue: '200,00' });
+  const current = { ...fixture, revision: 8, status: 'lost', revenue_bs: 350, notes: 'QA nota remota' };
+  const reviewed = reduce(restoreDraft(createCommercialEditor(current), entry), { type: 'rebase' });
+  assert.equal(reviewed.phase, 'editing'); assert.strictEqual(reviewed.base, current);
+  assert.deepEqual(reviewed.draft, { status: 'reserved', revenue: '350', notes: 'QA nota remota' });
+  const request = prepareCommercialDraftUpdate(reviewed.base, reviewed.draft, command().requestId);
+  assert.equal(request.expectedRevision, 8); assert.equal(request.revenueBs, 350); assert.equal(request.notes, current.notes); assert.equal(reviewed.request, null);
+});
+
+test('selective rebase of restored revenue and notes preserves only the actual local edits', () => {
+  const current = { ...fixture, revision: 8, status: 'won', revenue_bs: 350, notes: 'QA nota remota' };
+  const revenueEntry = unsentDraft(fixture, { revenue: '930,50' }), revenueReviewed = reduce(restoreDraft(createCommercialEditor(current), revenueEntry), { type: 'rebase' });
+  assert.deepEqual(revenueReviewed.draft, { status: 'won', revenue: '930,50', notes: 'QA nota remota' });
+  const noteEntry = unsentDraft(fixture, { revenue: '0200,00', notes: '  QA nota local  ' }), noteReviewed = reduce(restoreDraft(createCommercialEditor(current), noteEntry), { type: 'rebase' });
+  assert.deepEqual(noteReviewed.draft, { status: 'won', revenue: '350', notes: '  QA nota local  ' });
+  assert.equal(noteReviewed.request, null); assert.equal(revenueReviewed.request, null);
+});
+
+test('a stored baseline inconsistent with the same canonical revision cannot be restored', () => {
+  const entry = unsentDraft(fixture, { notes: 'QA editada' }), clean = createCommercialEditor(fixture);
+  for (const patch of [{ status: 'reserved' }, { revenueBs: null }, { revenueBs: 0 }, { revenueBs: 201 }, { notes: 'QA otra base' }]) {
+    assert.strictEqual(restoreDraft(clean, { ...entry, base: { ...entry.base, ...patch } }), clean);
+  }
+});
+
+test('a draft cannot cross contact identity or reference or start from a future server revision', () => {
+  const entry = unsentDraft(fixture, { notes: 'QA editada' }), clean = createCommercialEditor(fixture);
+  for (const other of [{ ...entry, id: 'abcdef03-0000-4000-8000-000000000019' }, { ...entry, reference: 'EK-DEADBEEF' }, { ...entry, base: { ...entry.base, revision: fixture.revision + 1 } }]) assert.strictEqual(restoreDraft(clean, other), clean);
+});
+
+test('expired drafts and malformed raw values cannot be restored', () => {
+  const entry = unsentDraft(fixture, { notes: 'QA editada' }), clean = createCommercialEditor(fixture);
+  const expired = unsentDraft(fixture, { notes: 'QA editada' }, Date.now() - COMMERCIAL_DRAFT_TTL - 1000);
+  for (const invalid of [expired, null, {}, { ...entry, savedAt: Date.now() + 61000 }, { ...entry, requestId: command().requestId }, { ...entry, draft: { ...entry.draft, revenue: 'x'.repeat(17) } }, { ...entry, draft: { ...entry.draft, notes: 'bad\0note' } }]) assert.strictEqual(restoreDraft(clean, invalid), clean);
+});
+
+test('restoration never replaces a dirty editor or an active sent operation', () => {
+  const clean = createCommercialEditor(fixture), entry = unsentDraft(fixture, { notes: 'QA borrador almacenado' });
+  const dirty = edit(clean, { notes: 'QA edición actual' }), pending = start(edit(clean, { status: 'reserved', revenue: '930', notes: command().notes }));
+  const uncertain = settle(pending, { kind: 'uncertain', message: 'QA pérdida de respuesta' }), conflict = settle(pending, { kind: 'conflict', lead: { ...fixture, revision: 5 } });
+  for (const state of [dirty, pending, uncertain, conflict, { ...clean, request: command() }]) assert.strictEqual(restoreDraft(state, entry), state);
+});
+
+test('matching a newer canonical value still requires explicit conflict review and never creates a UUID', () => {
+  const entry = unsentDraft(fixture, { notes: 'QA coincidente' }), current = { ...fixture, revision: 8, notes: entry.draft.notes };
+  const restored = restoreDraft(createCommercialEditor(current), entry); assert.equal(restored.phase, 'conflict'); assert.equal(restored.request, null);
+  const reviewed = reduce(restored, { type: 'rebase' }); assert.equal(reviewed.phase, 'editing'); assert.equal(commercialDraftDirty(reviewed.draft, reviewed.base), false); assert.equal(reviewed.request, null);
+});
+
+test('discarding a restored draft conflict returns to the canonical version without touching a server', () => {
+  const entry = unsentDraft(fixture, { notes: 'QA local' }), current = { ...fixture, revision: 8, notes: 'QA actual' };
+  const conflict = restoreDraft(createCommercialEditor(current), entry), discarded = reduce(conflict, { type: 'discard' });
+  assert.strictEqual(discarded.base, current); assert.deepEqual(discarded.draft, commercialDraft(current)); assert.equal(discarded.request, null); assert.equal(discarded.resumed, undefined);
+});
+
+test('restoring an unsent draft preserves immutable inputs and cannot infer an operation receipt', () => {
+  const entry = unsentDraft(fixture, { notes: 'QA local' }); Object.freeze(entry.base); Object.freeze(entry.draft); Object.freeze(entry);
+  const clean = createCommercialEditor(fixture); Object.freeze(clean.draft); Object.freeze(clean);
+  const entryBefore = JSON.stringify(entry), stateBefore = JSON.stringify(clean), restored = restoreDraft(clean, entry);
+  assert.equal(JSON.stringify(entry), entryBefore); assert.equal(JSON.stringify(clean), stateBefore); assert.notStrictEqual(restored.draft, entry.draft); assert.equal(restored.request, null); assert.equal(restored.phase, 'editing');
 });

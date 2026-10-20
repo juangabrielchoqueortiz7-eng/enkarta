@@ -8,6 +8,7 @@ import { parseCommercialUpdate } from '@/lib/commercial-update';
 import type { CommercialLead } from '@/lib/commercial-lookup';
 import { clearSalesDraft } from '@/lib/sales-draft';
 import { clearCommercialPending, readCommercialPending } from '@/lib/commercial-pending';
+import { clearCommercialDraft, readCommercialDrafts } from '@/lib/commercial-drafts';
 
 const anchor = '2026-10-19T12:00:00.000000Z';
 function fixtures(): CommercialLead[] {
@@ -59,6 +60,8 @@ export default function CommercialDashboardWorkbench() {
     const storage = { getItem: (key: string) => window.sessionStorage.getItem(key), setItem: (key: string, value: string) => window.sessionStorage.setItem(key, value), removeItem: (key: string) => window.sessionStorage.removeItem(key) };
     const pending = readCommercialPending(storage, 'e'.repeat(64));
     if (pending.kind !== 'ready' || pending.entries.some(entry => !clearCommercialPending(storage, 'e'.repeat(64), entry))) { setNotice('No se pudo completar la limpieza de operaciones ficticias. Habilita el almacenamiento y vuelve a limpiar QA.'); return; }
+    const drafts = readCommercialDrafts(storage, 'e'.repeat(64));
+    if (drafts.kind !== 'ready' || [...drafts.entries, ...drafts.expired].some(entry => !clearCommercialDraft(storage, 'e'.repeat(64), entry))) { setNotice('No se pudo completar la limpieza de borradores ficticios. Habilita el almacenamiento y vuelve a limpiar QA.'); return; }
     const cleared = clearSalesDraft(storage, 'e'.repeat(64));
     if (!cleared) { setNotice('No se pudo retirar el borrador ficticio. Habilita el almacenamiento y vuelve a limpiar QA.'); return; }
     server.current = fixtures(); receipts.current.clear(); setAttempts(0); setMode('ok'); setVisible(true); setMount(value => value + 1);
@@ -69,7 +72,7 @@ export default function CommercialDashboardWorkbench() {
     <p className="text-sm leading-6">Para revisar la recuperación: elige «Fallar una consulta» y cambia de página o estado. Después pulsa «Reintentar carga solicitada». Para una falla inicial, elige «Sin conexión» y «Reiniciar carga»; la referencia ficticia EK-00000001 y el cotizador siguen disponibles.</p>
     <p className="text-sm leading-6">Seguimiento histórico: busca EK-ABCDEF99 y pulsa «Abrir seguimiento», incluso sin cargar el embudo. Guarda una nota o un estado y cambia de página: la ficha permanece abierta y las métricas de 180 días no incorporan este contacto de 2001. Los cambios y el borrador del cotizador se retiran con «Limpiar QA».</p>
     <p className="text-sm leading-6">Cotización: busca EK-ABCDEF99 y pulsa «Preparar cotización». Revisa y confirma antes de reemplazar el borrador. Vuelve al mismo código para conservar los ajustes. Con EK-ABCDEF98 debes elegir un paquete y completar evento y diseño. Cancelar conserva el borrador anterior; estas acciones no guardan un seguimiento ni envían mensajes.</p>
-    <p className="text-sm leading-6">Recuperación: elige «Guardar y perder respuesta» y guarda un cambio ficticio. La operación conserva su identificador en esta pestaña. «Reiniciar carga» permite recuperarla y comprobarla explícitamente; no vuelve a enviarse al abrir. Los cambios sin enviar siguen solo en memoria. Una recarga real reinicia este servidor ficticio, por lo que no representa persistencia real en Supabase.</p>
+    <p className="text-sm leading-6">Recuperación: edita una nota o un importe incompleto y pulsa «Reiniciar carga». «Cambios sin enviar» permite recuperarlos explícitamente durante 24 horas. Para revisar operaciones, elige «Guardar y perder respuesta», guarda un cambio ficticio y reinicia la carga: conserva su identificador y exige comprobarlo. Ninguna recuperación envía cambios al abrir. Una recarga real reinicia este servidor ficticio, por lo que no representa persistencia real en Supabase.</p>
     <div className="flex flex-wrap items-end gap-3"><label className="grid gap-2">Respuesta QA<select aria-label="Respuesta QA" className={control} value={mode} onChange={event => setMode(event.target.value as Mode)}><option value="ok">Normal</option><option value="offline">Sin conexión</option><option value="once">Fallar una consulta</option><option value="truncated">Página truncada</option><option value="slow">Lenta</option><option value="migration">SQL pendiente</option><option value="lost-save">Guardar y perder respuesta</option></select></label><button type="button" className={control} onClick={() => setMount(value => value + 1)}>Reiniciar carga</button><button type="button" className={control} onClick={() => setVisible(value => !value)}>{visible ? 'Ocultar Ventas QA' : 'Volver a Ventas QA'}</button><button type="button" className={control} onClick={clean}>Limpiar QA</button><p role="status">Consultas de página: {attempts}</p></div>
     <p role="status">{notice}</p>
     <div hidden={!visible}><CommercialDashboard key={mount} transport={transport} /></div>

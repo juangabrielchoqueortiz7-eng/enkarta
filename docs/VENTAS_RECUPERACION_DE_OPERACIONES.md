@@ -4,13 +4,13 @@
 
 El guardado seguro conservaba su UUID en memoria. Si el servidor procesaba el cambio y se perdía la respuesta, «Comprobar guardado» podía recuperar el recibo durante esa sesión de pantalla. Una recarga completa perdía la intención original y su identificador.
 
-La mejora conserva **operaciones enviadas o a punto de enviarse**, con su UUID y payload canónico, en `sessionStorage` de la pestaña. No conserva borradores de seguimiento sin enviar, historial, atribución, snapshot completo del contacto ni credenciales. Esos borradores mantienen la advertencia existente al abandonar.
+La mejora conserva **operaciones enviadas o a punto de enviarse**, con su UUID y payload canónico, en `sessionStorage` de la pestaña. Este journal no conserva borradores de seguimiento sin enviar, historial, atribución, snapshot completo del contacto ni credenciales. Los cambios sin enviar cuentan ahora con un journal separado, descrito en [Recuperación de borradores](VENTAS_RECUPERACION_DE_BORRADORES.md), y mantienen la advertencia al abandonar.
 
 ## Flujo de recuperación
 
 1. La configuración autenticada existente comunica al dashboard su huella opaca de sesión. No se añade una API ni se comparte con el dashboard el contenido de las instrucciones de pago. La clave del journal es distinta de la del cotizador.
 2. Antes del PATCH se conserva la intención exacta. Mientras queda pendiente, otra intención del mismo contacto no puede sustituirla silenciosamente.
-3. Tras recargar, **Guardados por comprobar** muestra únicamente referencia y fecha. Leer la copia no consulta contactos ni envía cambios.
+3. Tras recargar, **Operaciones por comprobar** muestra únicamente referencia y fecha. Leer la copia no consulta contactos ni envía cambios.
 4. **Recuperar operación** consulta la referencia exacta y comprueba UUID, referencia y revisión canónicos. Una ausencia, otra identidad, una revisión inferior o un error conserva la copia y no abre la operación. Si la ficha ya tiene cambios activos, se pide revisarla antes de recuperar.
 5. Se abre el editor habitual como **incierto**, con campos bloqueados. Aunque el contacto ya coincida con el payload, no se anuncia éxito. **Comprobar guardado** envía explícitamente el mismo UUID, revisión y cuerpo; reutiliza el recibo de la migración 019.
 6. Al recibir confirmación o conflicto válido se retira solo la copia exacta que corresponde al intento. Una respuesta antigua no elimina una intención diferente o posterior. Un fallo de limpieza se anuncia y mantiene la copia revisable.
