@@ -33,7 +33,7 @@ Las modificaciones válidas mantienen el comportamiento de desvincular únicamen
 
 Se aplica `vercel-react-best-practices` para evitar cierres obsoletos, usar claves estables y mantener estado por instancia en React 18. No se añaden dependencias ni APIs de React 19.
 
-Sólo cambia la lógica del editor de listas y su estado auxiliar. Se conservan textos, controles, clases y composición de la interfaz; los cambios de clave React no se guardan en el documento. No se modifican renderizadores públicos, presets, fotografías, fuentes, música, animaciones ni recursos originales. Los setters generales de las variantes heredadas siguen siendo un pendiente independiente.
+Sólo cambia la lógica del editor de listas y su estado auxiliar. Se conservan textos, controles, clases y composición de la interfaz; los cambios de clave React no se guardan en el documento. No se modifican renderizadores públicos, presets, fotografías, fuentes, música, animaciones ni recursos originales. La corrección posterior de los setters generales de variantes heredadas se documenta en [Subidas en variantes heredadas](CONSTRUCTOR_VARIANTES_HEREDADAS.md).
 
 No se publica ni se guarda automáticamente una invitación. El constructor exterior conserva sus estados de borrador, guardado y publicación. Descartar una respuesta del cliente no acredita que el servidor haya borrado un archivo ya recibido: no hay borrados remotos ni reintentos automáticos nuevos.
 

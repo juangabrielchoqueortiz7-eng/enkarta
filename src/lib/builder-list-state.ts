@@ -4,7 +4,7 @@ export type BuilderListAction =
   | { type: 'patch'; key: string; patch: BuilderListItem }
   | { type: 'remove'; key: string }
   | { type: 'move'; key: string; direction: -1 | 1 }
-  | { type: 'add' };
+  | { type: 'add'; item?: BuilderListItem };
 export type BuilderListIdentity = (item: BuilderListItem) => string | undefined;
 
 /** Editor-only identities. Neither keys nor tracking metadata enter saved JSON. */
@@ -59,7 +59,7 @@ export class BuilderListState {
   change(scope: string, source: BuilderListItem[], action: BuilderListAction, identity?: BuilderListIdentity): BuilderListItem[] | null {
     const rows = this.rows(scope, source, identity);
     let next: BuilderListRow[];
-    if (action.type === 'add') next = [...rows, { key: `list-row-${++this.serial}`, item: {} }];
+    if (action.type === 'add') next = [...rows, { key: `list-row-${++this.serial}`, item: { ...action.item } }];
     else {
       const index = rows.findIndex(row => row.key === action.key);
       if (index < 0) return null;
