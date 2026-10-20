@@ -14,7 +14,7 @@ require.extensions['.ts'] = require.extensions['.tsx'] = (module, file) => modul
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true }, fileName: file,
 }).outputText, file);
 
-const { commercialRevenue, commercialDraftRevenue, parseCommercialUpdate, prepareCommercialDraftUpdate, commercialDraft, commercialDraftDirty, saveCommercialLead,
+const { COMMERCIAL_SAVE_TIMEOUT_MS, commercialRevenue, commercialDraftRevenue, parseCommercialUpdate, prepareCommercialDraftUpdate, commercialDraft, commercialDraftDirty, saveCommercialLead,
   createCommercialEditor, commercialEditorReducer: reduce } = require('../src/lib/commercial-update.ts');
 const { parseCommercialLead, requestCommercialLead } = require('../src/lib/commercial-lookup.ts');
 const fixture = Object.freeze({
@@ -72,7 +72,7 @@ test('lead parsing keeps only public operational fields and requires a valid num
     { ...fixture, notes: null }, { ...fixture, revenue_bs: true }, { ...fixture, status: 'paid' }]) assert.equal(parseCommercialLead(value), null);
 });
 
-test('one explicit save sends one canonical PATCH with private caching and the caller abort signal', async () => {
+test('one explicit save sends one canonical PATCH with private caching and its own active abort signal', async () => {
   let calls = 0;
   const controller = new AbortController();
   const input = command({ id: fixture.id.toUpperCase(), requestId: command().requestId.toUpperCase(), notes: ' QA resumen acordado ', revenueBs: '0930.00', apiKey: 'never-send' });
@@ -81,7 +81,9 @@ test('one explicit save sends one canonical PATCH with private caching and the c
     assert.equal(url, '/api/admin/commercial');
     assert.equal(options.method, 'PATCH');
     assert.equal(options.cache, 'no-store');
-    assert.equal(options.signal, controller.signal);
+    assert.ok(options.signal instanceof AbortSignal);
+    assert.notEqual(options.signal, controller.signal);
+    assert.equal(options.signal.aborted, false);
     assert.equal(options.headers['Content-Type'], 'application/json');
     assert.deepEqual(JSON.parse(options.body), command());
     return json(receipt());
@@ -508,6 +510,262 @@ test('rechecking an uncertain localized save retains its UUID and exact canonica
   assert.equal(state.phase, 'editing');
   assert.equal(state.base.revenue_bs, 930.5);
   assert.equal(state.request, null);
+});
+
+const deferred = () => {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+};
+const flushMicrotasks = async () => { for (let index = 0; index < 6; index++) await Promise.resolve(); };
+const mockSaveDeadline = t => {
+  assert.equal(COMMERCIAL_SAVE_TIMEOUT_MS, 20_000);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+};
+
+test('a stalled transport settles at the real 20-second deadline even when abort is ignored', async t => {
+  mockSaveDeadline(t);
+  const caller = new AbortController(), pending = deferred();
+  let observed, calls = 0, relay;
+  const saving = saveCommercialLead(command(), fixture.reference, async (_url, options) => {
+    calls++; relay = options.signal; return pending.promise;
+  }, caller.signal).then(result => (observed = result));
+  t.mock.timers.tick(COMMERCIAL_SAVE_TIMEOUT_MS - 1);
+  await flushMicrotasks();
+  assert.equal(observed, undefined);
+  assert.equal(relay.aborted, false);
+  t.mock.timers.tick(1);
+  const result = await saving;
+  assert.equal(result.kind, 'uncertain');
+  assert.match(result.message, /^Tiempo de espera agotado\./);
+  assert.match(result.message, /Comprobar guardado/);
+  assert.equal(relay.aborted, true);
+  assert.equal(caller.signal.aborted, false);
+  assert.equal(calls, 1);
+});
+
+test('the same deadline covers transport and a stalled response body without restarting its clock', async t => {
+  mockSaveDeadline(t);
+  const response = deferred(), body = deferred();
+  let observed, jsonCalls = 0, relay;
+  const saving = saveCommercialLead(command(), fixture.reference, async (_url, options) => {
+    relay = options.signal; return response.promise;
+  }).then(result => (observed = result));
+  t.mock.timers.tick(10_000);
+  response.resolve({ status: 200, ok: true, json: () => { jsonCalls++; return body.promise; } });
+  await flushMicrotasks();
+  assert.equal(jsonCalls, 1);
+  t.mock.timers.tick(9_999);
+  await flushMicrotasks();
+  assert.equal(observed, undefined);
+  t.mock.timers.tick(1);
+  assert.equal((await saving).kind, 'uncertain');
+  assert.equal(relay.aborted, true);
+});
+
+test('a pre-aborted caller makes no request and installs no timer or abort listener', async t => {
+  mockSaveDeadline(t);
+  const caller = new AbortController(); caller.abort();
+  const add = t.mock.method(caller.signal, 'addEventListener'), timer = t.mock.method(global, 'setTimeout');
+  let calls = 0;
+  const result = await saveCommercialLead(command(), fixture.reference, async () => { calls++; return json(receipt()); }, caller.signal);
+  assert.equal(result.kind, 'uncertain');
+  assert.equal(calls, 0);
+  assert.equal(add.mock.calls.length, 0);
+  assert.equal(timer.mock.calls.length, 0);
+});
+
+test('caller cancellation promptly settles a transport that ignores abort and relays only to the owned signal', async t => {
+  mockSaveDeadline(t);
+  const caller = new AbortController(), pending = deferred();
+  let relay, calls = 0;
+  const saving = saveCommercialLead(command(), fixture.reference, async (_url, options) => {
+    calls++; relay = options.signal; return pending.promise;
+  }, caller.signal);
+  assert.notEqual(relay, caller.signal);
+  caller.abort();
+  const result = await saving;
+  assert.equal(result.kind, 'uncertain');
+  assert.doesNotMatch(result.message, /^Tiempo de espera agotado\./);
+  assert.equal(relay.aborted, true);
+  assert.equal(calls, 1);
+});
+
+test('caller cancellation also settles a response body that ignores abort', async t => {
+  mockSaveDeadline(t);
+  const caller = new AbortController(), body = deferred();
+  let jsonCalls = 0, relay;
+  const saving = saveCommercialLead(command(), fixture.reference, async (_url, options) => {
+    relay = options.signal;
+    return { status: 200, ok: true, json: () => { jsonCalls++; return body.promise; } };
+  }, caller.signal);
+  await flushMicrotasks();
+  assert.equal(jsonCalls, 1);
+  caller.abort();
+  assert.equal((await saving).kind, 'uncertain');
+  assert.equal(relay.aborted, true);
+});
+
+test('a valid transport response arriving after timeout cannot confirm or read its late body', async t => {
+  mockSaveDeadline(t);
+  const pending = deferred(), results = [];
+  let jsonCalls = 0;
+  const saving = saveCommercialLead(command(), fixture.reference, async () => pending.promise);
+  void saving.then(result => results.push(result.kind));
+  t.mock.timers.tick(COMMERCIAL_SAVE_TIMEOUT_MS);
+  const result = await saving;
+  pending.resolve({ status: 200, ok: true, json: async () => { jsonCalls++; return receipt(); } });
+  await flushMicrotasks();
+  assert.equal(await saving, result);
+  assert.deepEqual(results, ['uncertain']);
+  assert.equal(jsonCalls, 0);
+});
+
+test('a valid body arriving after timeout cannot replace the uncertain result or emit a second completion', async t => {
+  mockSaveDeadline(t);
+  const body = deferred(), results = [];
+  const saving = saveCommercialLead(command(), fixture.reference, async () => ({ status: 200, ok: true, json: () => body.promise }));
+  void saving.then(result => results.push(result.kind));
+  await flushMicrotasks();
+  t.mock.timers.tick(COMMERCIAL_SAVE_TIMEOUT_MS);
+  const result = await saving;
+  body.resolve(receipt());
+  await flushMicrotasks();
+  assert.equal(await saving, result);
+  assert.deepEqual(results, ['uncertain']);
+});
+
+test('a transport rejection after timeout is handled without a second result or automatic retry', async t => {
+  mockSaveDeadline(t);
+  const pending = deferred(), results = [];
+  let calls = 0;
+  const saving = saveCommercialLead(command(), fixture.reference, async () => { calls++; return pending.promise; });
+  void saving.then(result => results.push(result.kind));
+  t.mock.timers.tick(COMMERCIAL_SAVE_TIMEOUT_MS);
+  await saving;
+  pending.reject(new TypeError('late network rejection'));
+  await flushMicrotasks();
+  assert.deepEqual(results, ['uncertain']);
+  assert.equal(calls, 1);
+});
+
+test('a body rejection after cancellation is handled without a second result', async t => {
+  mockSaveDeadline(t);
+  const caller = new AbortController(), body = deferred(), results = [];
+  const saving = saveCommercialLead(command(), fixture.reference, async () => ({ status: 200, ok: true, json: () => body.promise }), caller.signal);
+  void saving.then(result => results.push(result.kind));
+  await flushMicrotasks();
+  caller.abort();
+  await saving;
+  body.reject(new TypeError('late body rejection'));
+  await flushMicrotasks();
+  assert.deepEqual(results, ['uncertain']);
+});
+
+test('success removes its deadline and caller listener without aborting either signal afterward', async t => {
+  mockSaveDeadline(t);
+  const caller = new AbortController(), add = t.mock.method(caller.signal, 'addEventListener'), remove = t.mock.method(caller.signal, 'removeEventListener');
+  const clear = t.mock.method(global, 'clearTimeout');
+  let relay;
+  const result = await saveCommercialLead(command(), fixture.reference, async (_url, options) => { relay = options.signal; return json(receipt()); }, caller.signal);
+  assert.equal(result.kind, 'confirmed');
+  assert.equal(add.mock.calls.length, 1);
+  assert.equal(remove.mock.calls.length, 1);
+  assert.equal(remove.mock.calls[0].arguments[1], add.mock.calls[0].arguments[1]);
+  assert.equal(clear.mock.calls.length, 1);
+  t.mock.timers.tick(COMMERCIAL_SAVE_TIMEOUT_MS);
+  assert.equal(caller.signal.aborted, false);
+  assert.equal(relay.aborted, false);
+  caller.abort();
+  assert.equal(relay.aborted, false);
+  assert.equal(clear.mock.calls.length, 1);
+});
+
+test('network failure removes its timer and listener while retaining uncertainty', async t => {
+  mockSaveDeadline(t);
+  const caller = new AbortController(), remove = t.mock.method(caller.signal, 'removeEventListener'), clear = t.mock.method(global, 'clearTimeout');
+  let relay;
+  const result = await saveCommercialLead(command(), fixture.reference, async (_url, options) => { relay = options.signal; throw new TypeError('offline'); }, caller.signal);
+  assert.equal(result.kind, 'uncertain');
+  assert.equal(remove.mock.calls.length, 1);
+  assert.equal(clear.mock.calls.length, 1);
+  t.mock.timers.tick(COMMERCIAL_SAVE_TIMEOUT_MS);
+  caller.abort();
+  assert.equal(relay.aborted, false);
+  assert.equal(clear.mock.calls.length, 1);
+});
+
+test('cancellation removes its timer and listener and cannot settle again when the deadline passes', async t => {
+  mockSaveDeadline(t);
+  const caller = new AbortController(), remove = t.mock.method(caller.signal, 'removeEventListener'), clear = t.mock.method(global, 'clearTimeout'), results = [];
+  const saving = saveCommercialLead(command(), fixture.reference, async () => new Promise(() => {}), caller.signal);
+  void saving.then(result => results.push(result.kind));
+  caller.abort();
+  await saving;
+  assert.equal(remove.mock.calls.length, 1);
+  assert.equal(clear.mock.calls.length, 1);
+  t.mock.timers.tick(COMMERCIAL_SAVE_TIMEOUT_MS);
+  await flushMicrotasks();
+  assert.deepEqual(results, ['uncertain']);
+  assert.equal(clear.mock.calls.length, 1);
+});
+
+test('timeout removes its caller listener and cannot settle twice on a later caller abort', async t => {
+  mockSaveDeadline(t);
+  const caller = new AbortController(), remove = t.mock.method(caller.signal, 'removeEventListener'), clear = t.mock.method(global, 'clearTimeout'), results = [];
+  const saving = saveCommercialLead(command(), fixture.reference, async () => new Promise(() => {}), caller.signal);
+  void saving.then(result => results.push(result.kind));
+  t.mock.timers.tick(COMMERCIAL_SAVE_TIMEOUT_MS);
+  const result = await saving;
+  assert.equal(remove.mock.calls.length, 1);
+  assert.equal(clear.mock.calls.length, 1);
+  assert.equal(caller.signal.aborted, false);
+  caller.abort();
+  await flushMicrotasks();
+  assert.equal(await saving, result);
+  assert.deepEqual(results, ['uncertain']);
+});
+
+test('explicit recovery after a timed-out save retains the UUID and complete canonical body', async t => {
+  mockSaveDeadline(t);
+  const input = Object.freeze(command({ revenueBs: 930.5 })), bodies = [], signals = [];
+  let state = start(edit(createCommercialEditor(fixture), { status: input.status, revenue: '0930,50', notes: input.notes }), input);
+  const transport = async (_url, options) => {
+    bodies.push(options.body); signals.push(options.signal);
+    if (bodies.length === 1) return new Promise(() => {});
+    return json(receipt({ outcome: 'replayed' }, input));
+  };
+  const first = saveCommercialLead(state.request, fixture.reference, transport);
+  t.mock.timers.tick(COMMERCIAL_SAVE_TIMEOUT_MS);
+  state = settle(state, await first);
+  assert.equal(state.phase, 'uncertain');
+  assert.deepEqual(state.request, input);
+  assert.equal(state.draft.revenue, '0930,50');
+  assert.strictEqual(edit(state, { notes: 'replacement' }), state);
+  state = start(state, state.request);
+  state = settle(state, await saveCommercialLead(state.request, fixture.reference, transport));
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[0], bodies[1]);
+  assert.deepEqual(JSON.parse(bodies[1]), input);
+  assert.notEqual(signals[0], signals[1]);
+  assert.equal(signals[0].aborted, true);
+  assert.equal(signals[1].aborted, false);
+  assert.equal(state.phase, 'editing');
+  assert.equal(state.request, null);
+  assert.equal(state.base.revenue_bs, 930.5);
+});
+
+test('definitive-looking HTTP failures still preserve uncertainty and never schedule another write', async t => {
+  mockSaveDeadline(t);
+  for (const [status, code] of [[400, 'INVALID_UPDATE'], [404, 'NOT_FOUND'], [409, 'REQUEST_REUSED']]) {
+    let calls = 0;
+    const result = await saveCommercialLead(command(), fixture.reference, async () => {
+      calls++; return json({ code }, status);
+    });
+    assert.equal(result.kind, 'uncertain');
+    t.mock.timers.tick(COMMERCIAL_SAVE_TIMEOUT_MS);
+    assert.equal(calls, 1);
+  }
 });
 
 const React = require('react');

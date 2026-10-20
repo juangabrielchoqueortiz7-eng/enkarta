@@ -8,6 +8,7 @@ export type CommercialSaveResult =
   | { kind: 'confirmed'; lead: CommercialLead; outcome: 'saved' | 'unchanged' | 'replayed' }
   | { kind: 'conflict'; lead: CommercialLead }
   | { kind: 'uncertain'; message: string };
+export const COMMERCIAL_SAVE_TIMEOUT_MS = 20_000;
 
 export function commercialRevenue(value: unknown): number | null | undefined {
   if (value === '' || value === null) return null;
@@ -47,21 +48,48 @@ export async function saveCommercialLead(update: CommercialUpdate, reference: st
   const uncertain = (message = 'No se pudo confirmar el guardado. Pulsa «Comprobar guardado»; se usará la misma operación para evitar duplicados.'): CommercialSaveResult => ({ kind: 'uncertain', message });
   const command = parseCommercialUpdate(update);
   if (!command) return uncertain('El cambio no es válido. Conserva tus datos y vuelve a cargar el contacto antes de continuar.');
-  let response: Response, body: Record<string, unknown>;
-  try {
-    response = await transport('/api/admin/commercial', { method: 'PATCH', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(command), signal });
-    body = await response.json();
-  } catch { return uncertain(); }
-  if (!body || typeof body !== 'object' || Array.isArray(body)) return uncertain();
-  if (response.status === 401) return uncertain('Tu sesión terminó. Vuelve a ingresar. El guardado anterior aún no está confirmado.');
-  if (response.status === 503 && body.code === 'MIGRATION_REQUIRED') return uncertain('El guardado seguro requiere la migración 019. Tus cambios siguen aquí y no se enviarán por el método anterior.');
-  if (body.requestId !== command.requestId) return uncertain();
-  const lead = parseCommercialLead(body.lead, reference);
-  if (response.status === 409 && body.code === 'REVISION_CONFLICT' && lead?.id === command.id && lead.revision !== command.expectedRevision) return { kind: 'conflict', lead };
-  if (!response.ok || !lead || lead.id !== command.id || !['saved', 'unchanged', 'replayed'].includes(String(body.outcome))) return uncertain();
-  const expected = body.outcome === 'saved' ? lead.revision === command.expectedRevision + 1 : body.outcome === 'unchanged' ? lead.revision === command.expectedRevision : [command.expectedRevision, command.expectedRevision + 1].includes(lead.revision);
-  if (!expected || lead.status !== command.status || lead.notes !== command.notes || lead.revenue_bs !== command.revenueBs) return uncertain();
-  return { kind: 'confirmed', lead, outcome: body.outcome as 'saved' | 'unchanged' | 'replayed' };
+  if (signal?.aborted) return uncertain();
+  const controller = new AbortController();
+  const attempt = async (): Promise<CommercialSaveResult> => {
+    let response: Response, body: Record<string, unknown>;
+    try {
+      response = await transport('/api/admin/commercial', { method: 'PATCH', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(command), signal: controller.signal });
+      if (controller.signal.aborted) return uncertain();
+      body = await response.json();
+    } catch { return uncertain(); }
+    if (controller.signal.aborted || !body || typeof body !== 'object' || Array.isArray(body)) return uncertain();
+    if (response.status === 401) return uncertain('Tu sesión terminó. Vuelve a ingresar. El guardado anterior aún no está confirmado.');
+    if (response.status === 503 && body.code === 'MIGRATION_REQUIRED') return uncertain('El guardado seguro requiere la migración 019. Tus cambios siguen aquí y no se enviarán por el método anterior.');
+    if (body.requestId !== command.requestId) return uncertain();
+    const lead = parseCommercialLead(body.lead, reference);
+    if (response.status === 409 && body.code === 'REVISION_CONFLICT' && lead?.id === command.id && lead.revision !== command.expectedRevision) return { kind: 'conflict', lead };
+    if (!response.ok || !lead || lead.id !== command.id || !['saved', 'unchanged', 'replayed'].includes(String(body.outcome))) return uncertain();
+    const expected = body.outcome === 'saved' ? lead.revision === command.expectedRevision + 1 : body.outcome === 'unchanged' ? lead.revision === command.expectedRevision : [command.expectedRevision, command.expectedRevision + 1].includes(lead.revision);
+    if (!expected || lead.status !== command.status || lead.notes !== command.notes || lead.revenue_bs !== command.revenueBs) return uncertain();
+    return { kind: 'confirmed', lead, outcome: body.outcome as 'saved' | 'unchanged' | 'replayed' };
+  };
+  return new Promise<CommercialSaveResult>(resolve => {
+    let settled = false;
+    const finish = (result: CommercialSaveResult) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+      resolve(result);
+    };
+    const cancel = (message?: string) => {
+      if (settled) return;
+      // Settle before aborting: transports may reject synchronously on abort.
+      finish(uncertain(message));
+      controller.abort();
+    };
+    const abort = () => cancel();
+    const timer = setTimeout(() => cancel('Tiempo de espera agotado. No se pudo confirmar el guardado. Pulsa «Comprobar guardado»; se usará la misma operación para evitar duplicados.'), COMMERCIAL_SAVE_TIMEOUT_MS);
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) { cancel(); return; }
+    // A transport/body that ignores abort may finish later; only one result wins.
+    void attempt().then(finish, () => finish(uncertain()));
+  });
 }
 
 export type CommercialEditorState = { base: CommercialLead; draft: CommercialDraft; phase: 'editing' | 'saving' | 'uncertain' | 'conflict'; request: CommercialUpdate | null; incoming: CommercialLead | null; message: string };

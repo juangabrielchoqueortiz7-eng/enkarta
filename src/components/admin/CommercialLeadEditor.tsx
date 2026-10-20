@@ -36,11 +36,10 @@ export default function CommercialLeadEditor({ lead, onSaved, onActivityChange, 
     }
     busy.current = true; setValidation(''); dispatch({ type: 'start', request: command });
     const controller = new AbortController(); active.current = controller;
-    const timer = setTimeout(() => controller.abort(), 20000);
     let result: CommercialSaveResult;
     try { result = await saveCommercialLead(command, state.base.reference, transport, controller.signal); }
     catch { result = { kind: 'uncertain', message: 'No se pudo confirmar el guardado. Pulsa «Comprobar guardado» antes de editar otra vez.' }; }
-    finally { clearTimeout(timer); active.current = null; busy.current = false; }
+    finally { active.current = null; busy.current = false; }
     if (!mounted.current) return;
     dispatch({ type: 'result', result });
     if (result.kind === 'confirmed') onSaved(result.lead);
@@ -59,7 +58,7 @@ export default function CommercialLeadEditor({ lead, onSaved, onActivityChange, 
     </form>
     <p id={`${id}-help`} className="font-outfit text-xs leading-5 text-gray-600">Registra solo ingresos verificados por tu equipo. Este formulario no procesa cobros. No copies conversaciones ni datos sensibles en la nota.</p>
     {validation && <p id={`${id}-error`} role="alert" className="font-outfit text-sm text-red-800">{validation}</p>}
-    {state.phase === 'saving' && <p role="status" className="font-outfit text-sm text-gray-700">Guardando el contacto y su historial…</p>}
+    {state.phase === 'saving' && <p role="status" className="font-outfit text-sm text-gray-700">Guardando el contacto y su historial… Si la espera se agota, podrás comprobar esta misma operación.</p>}
     {state.phase === 'editing' && state.message && <p role="status" className="font-outfit text-sm text-[#3d6b4f]">{state.message}</p>}
     {state.phase === 'editing' && dirty && <div className="space-y-3"><button type="button" className={button} onClick={() => setConfirmDiscard(true)}>Descartar cambios…</button>{confirmDiscard && <div className="space-y-3"><p className="font-outfit text-sm text-gray-700">Se retirarán los cambios locales de este contacto.</p><div className="flex flex-wrap gap-3"><button type="button" className={button} onClick={() => { setValidation(''); setConfirmDiscard(false); dispatch({ type: 'reset' }); }}>Sí, descartar cambios</button><button type="button" className={button} onClick={() => setConfirmDiscard(false)}>Seguir editando</button></div></div>}</div>}
     {state.phase === 'uncertain' && <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4"><p role="alert" className="font-outfit text-sm leading-6 text-amber-950">{state.message}</p><button type="button" onClick={() => void save()} className={button}>Comprobar guardado</button><p className="font-outfit text-xs leading-5 text-amber-900">Los campos quedan bloqueados hasta confirmar la operación. No se creará otro cambio al comprobar.</p></div>}

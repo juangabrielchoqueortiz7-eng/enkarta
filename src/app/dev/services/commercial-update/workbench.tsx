@@ -1,20 +1,23 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import CommercialLeadEditor from '@/components/admin/CommercialLeadEditor';
 import { leadStatusLabel } from '@/lib/commercial';
 import type { CommercialLead } from '@/lib/commercial-lookup';
 import { parseCommercialUpdate } from '@/lib/commercial-update';
 
 const initial: CommercialLead = { id: '30000000-0000-4000-8000-000000000001', reference: 'EK-A1B2C3D4', status: 'whatsapp_open', package_key: 'premium', design: 'Lunaria', event_category: 'Boda', placement: 'qa-commercial-update', utm_source: '', utm_medium: '', utm_campaign: '', referrer_host: '', revenue_bs: null, notes: '', revision: 0, created_at: '2026-10-19T12:00:00Z', updated_at: '2026-10-19T12:00:00Z' };
-type Mode = 'ok' | 'offline' | 'lost' | 'incomplete' | 'slow' | 'migration';
+type Mode = 'ok' | 'offline' | 'lost' | 'incomplete' | 'slow' | 'held-fetch' | 'held-json' | 'migration';
 const control = 'min-h-11 rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900';
 
 export default function CommercialUpdateWorkbench() {
   const [mode, setMode] = useState<Mode>('ok'), [a, setA] = useState(initial), [b, setB] = useState(initial), [mount, setMount] = useState(0);
   const [snapshot, setSnapshot] = useState(initial), [history, setHistory] = useState(0), [attempts, setAttempts] = useState(0), [pending, setPending] = useState(0);
+  const [heldCount, setHeldCount] = useState(0), held = useRef<(() => void)[]>([]);
   const server = useRef(initial), behavior = useRef(mode), receipts = useRef(new Map<string, { body: string; result: unknown }>()), epoch = useRef(0);
   behavior.current = mode;
+  useEffect(() => () => { epoch.current += 1; held.current.splice(0).forEach(release => release()); }, []);
+  const releaseHeld = () => { held.current.splice(0).forEach(release => release()); setHeldCount(0); };
   const transport = useMemo<typeof fetch>(() => async (url, options) => {
     if (url !== '/api/admin/commercial' || options?.method !== 'PATCH') throw Error('Unexpected QA route');
     const command = parseCommercialUpdate(JSON.parse(String(options.body))), currentMode = behavior.current, generation = epoch.current;
@@ -34,14 +37,19 @@ export default function CommercialUpdateWorkbench() {
       const result = { outcome: changed ? 'saved' : 'unchanged', requestId: command.requestId, lead: saved };
       receipts.current.set(command.requestId, { body: JSON.stringify(command), result });
       if (currentMode === 'lost') throw new TypeError('QA response lost after fictional commit');
+      // Deliberately ignore AbortSignal: the client deadline must settle independently.
+      const hold = <T,>(value: T) => new Promise<T>(resolve => { held.current.push(() => resolve(value)); setHeldCount(held.current.length); });
+      if (currentMode === 'held-fetch') return await hold(Response.json(result));
+      if (currentMode === 'held-json') { const response = Response.json(result); response.json = () => hold(result); return response; }
       return currentMode === 'incomplete' ? Response.json({}) : Response.json(result);
-    } finally { setPending(value => value - 1); }
+    } finally { if (generation === epoch.current) setPending(value => Math.max(0, value - 1)); }
   }, []);
-  const reset = () => { epoch.current += 1; server.current = initial; receipts.current.clear(); setSnapshot(initial); setA(initial); setB(initial); setHistory(0); setAttempts(0); setMode('ok'); setMount(value => value + 1); };
+  const reset = () => { epoch.current += 1; releaseHeld(); server.current = initial; receipts.current.clear(); setSnapshot(initial); setA(initial); setB(initial); setHistory(0); setAttempts(0); setPending(0); setMode('ok'); setMount(value => value + 1); };
   return <main className="mx-auto min-h-screen max-w-7xl space-y-6 bg-[#faf7f2] p-4 text-gray-900 sm:p-8">
     <h1 className="text-2xl font-semibold">Seguimiento comercial QA</h1><p>Dos pantallas ficticias del mismo contacto. Solo memoria local; sin red real, mensajes ni pagos.</p>
     <p className="text-sm leading-6">Importes QA: prueba 930,50 y 930.50, cero y el campo vacío. Un decimal incompleto como 930, o un separador de miles como 1.000,50 debe conservarse para corregirlo, sin solicitud. Cambiar solo coma por punto en el mismo importe no crea un cambio.</p>
-    <div className="flex flex-wrap items-end gap-4"><label className="grid gap-2">Transporte QA<select aria-label="Transporte QA" value={mode} onChange={event => setMode(event.target.value as Mode)} className={control}><option value="ok">Normal</option><option value="offline">Sin conexión antes de guardar</option><option value="lost">Respuesta perdida después de guardar</option><option value="incomplete">Respuesta incompleta después de guardar</option><option value="slow">Lento (1,2 s)</option><option value="migration">Migración pendiente</option></select></label><button type="button" disabled={pending > 0} onClick={reset} className={control}>Limpiar QA</button></div>
+    <p className="text-sm leading-6">Espera QA: retén la respuesta o su lectura, guarda y espera el aviso de tiempo agotado. «Comprobar guardado» debe recuperar el mismo recibo sin otra fila de historial. Después libera la respuesta anterior y limpia QA; esa respuesta tardía no debe confirmar otra operación.</p>
+    <div className="flex flex-wrap items-end gap-4"><label className="grid gap-2">Transporte QA<select aria-label="Transporte QA" value={mode} onChange={event => setMode(event.target.value as Mode)} className={control}><option value="ok">Normal</option><option value="offline">Sin conexión antes de guardar</option><option value="lost">Respuesta perdida después de guardar</option><option value="incomplete">Respuesta incompleta después de guardar</option><option value="slow">Lento (1,2 s)</option><option value="held-fetch">Retener respuesta tras guardar</option><option value="held-json">Retener lectura de respuesta</option><option value="migration">Migración pendiente</option></select></label><button type="button" disabled={heldCount === 0} onClick={releaseHeld} className={control}>Liberar respuestas retenidas ({heldCount})</button><button type="button" disabled={pending > 0} onClick={reset} className={control}>Limpiar QA</button></div>
     <p role="status">Sistema ficticio: revisión {snapshot.revision} · {leadStatusLabel(snapshot.status)} · Historial: {history} · Operaciones: {receipts.current.size} · Intentos HTTP: {attempts}</p>
     <div className="grid min-w-0 gap-6">{([['A', a, setA], ['B', b, setB]] as const).map(([name, lead, setLead]) => <section key={`${name}-${mount}`} aria-label={`Pantalla ${name}`} className="min-w-0 rounded-2xl border border-[#e4dfd4] bg-white p-4 sm:p-5"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="font-playfair text-2xl">Pantalla {name} · Lunaria · EK-A1B2C3D4</h2><button type="button" className={control} onClick={() => setLead(server.current)}>Cargar actual en pantalla {name}</button></div><CommercialLeadEditor lead={lead} transport={transport} onSaved={saved => setLead(previous => saved.revision >= previous.revision ? saved : previous)} /></section>)}</div>
   </main>;

@@ -37,6 +37,7 @@ El recibo y las respuestas omiten `session_hash`, claves y campos futuros no aut
 
 - Controles de 16 px, objetivos táctiles de unos 44 px, etiquetas y foco visible.
 - Mientras guarda o comprueba un resultado incierto, bloquea los campos. «Comprobar guardado» reutiliza exactamente UUID, revisión y payload; no crea una intención diferente.
+- El [límite de espera del cliente](VENTAS_LIMITE_DE_ESPERA.md) incluye transporte y lectura JSON. Si cualquiera no termina, la operación pasa a incierta con el mismo UUID; una respuesta tardía no sustituye ese resultado.
 - Un conflicto conserva los campos locales y muestra estado, ingreso y nota actuales. «Revisar mis cambios» incorpora los campos remotos que no se habían editado y exige volver a pulsar «Guardar cambios».
 - Descartar cambios requiere una confirmación explícita. No permite descartar una operación incierta como si nunca se hubiera enviado.
 - Una actualización del panel no retrocede la revisión. Conserva contactos con ediciones pendientes aunque dejen de aparecer en la consulta acotada.
