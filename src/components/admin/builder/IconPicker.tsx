@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import IconLibrary from '@/components/admin/IconLibrary';
 import ImageUploader from './ImageUploader';
 import { EventIcon } from '@/components/invitations/shared';
@@ -19,6 +19,9 @@ interface Props {
   onChange: (value: string, colors?: Record<string, string>, speed?: number) => void;
   ownerId?: string;
   eventType?: InvitationType;
+  /** Campo/contexto cuando el inspector reutiliza este selector. */
+  destinationKey?: string;
+  isDestinationCurrent?: () => boolean;
 }
 
 const tabCls = (active: boolean) =>
@@ -32,11 +35,39 @@ const isLottie = (s?: string) => !!s && (s.startsWith('/lottie/') || s.endsWith(
  * Selector de icono: elegir de la galería, subir uno propio, y —para iconos
  * animados (Lottie)— editar individualmente cada color que contiene.
  */
-export default function IconPicker({ value, colors, speed, defaultIcon, onChange, ownerId, eventType }: Props) {
+export default function IconPicker({ value, colors, speed, defaultIcon, onChange, ownerId, eventType, destinationKey = '', isDestinationCurrent }: Props) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'lib' | 'upload' | 'colors'>('lib');
   const [palette, setPalette] = useState<string[]>([]);
   const current = value || defaultIcon;
+  const mounted = useRef(true);
+  const iconRevision = useRef(0);
+  const latestChange = useRef(onChange);
+  latestChange.current = onChange;
+  const context = useRef({ ownerId, destinationKey, defaultIcon, eventType, current, epoch: 0 });
+  const before = context.current;
+  if (before.ownerId !== ownerId || before.destinationKey !== destinationKey || before.defaultIcon !== defaultIcon
+    || before.eventType !== eventType || before.current !== current) {
+    context.current = { ownerId, destinationKey, defaultIcon, eventType, current, epoch: before.epoch + 1 };
+    iconRevision.current += 1;
+  }
+  const epoch = context.current.epoch;
+  const isCurrent = () => mounted.current && context.current.epoch === epoch && (!isDestinationCurrent || isDestinationCurrent());
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const changeStyle = (nextColors?: Record<string, string>, nextSpeed = speed) => {
+    if (isCurrent()) onChange(current, nextColors, nextSpeed);
+  };
+  const chooseIcon = (next: string) => {
+    if (!isCurrent()) return false;
+    // SVG, Lottie y el default pueden compartir value='' en el cargador.
+    // La elección explícita invalida su respuesta incluso antes del render.
+    iconRevision.current += 1;
+    onChange(next, undefined, undefined);
+    return true;
+  };
 
   // Detecta los colores del icono Lottie actual para poder editarlos uno a uno.
   useEffect(() => {
@@ -50,25 +81,25 @@ export default function IconPicker({ value, colors, speed, defaultIcon, onChange
   }, [current]);
 
   const setColor = (orig: string, next: string) => {
-    onChange(current, { ...(colors ?? {}), [orig]: next }, speed);
+    changeStyle({ ...(colors ?? {}), [orig]: next });
   };
   const toggleTransparent = (orig: string) => {
     const c = { ...(colors ?? {}) };
     if (c[orig] === 'transparent') delete c[orig];
     else c[orig] = 'transparent';
-    onChange(current, c, speed);
+    changeStyle(c);
   };
   const resetColor = (orig: string) => {
     const c = { ...(colors ?? {}) };
     delete c[orig];
-    onChange(current, c, speed);
+    changeStyle(c);
   };
-  const setSpeed = (next: number) => onChange(current, colors, next);
-  const setUniformTint = (next: string) => onChange(current, { ...(colors ?? {}), __tint: next }, speed);
+  const setSpeed = (next: number) => changeStyle(colors, next);
+  const setUniformTint = (next: string) => changeStyle({ ...(colors ?? {}), __tint: next });
   const clearUniformTint = () => {
     const next = { ...(colors ?? {}) };
     delete next.__tint;
-    onChange(current, Object.keys(next).length ? next : undefined, speed);
+    changeStyle(Object.keys(next).length ? next : undefined);
   };
   const uniformTint = colors?.__tint;
 
@@ -89,7 +120,7 @@ export default function IconPicker({ value, colors, speed, defaultIcon, onChange
           {value ? (value.startsWith('http') ? 'Icono propio' : isLottie(value) ? 'Animado' : 'Personalizado') : 'Por defecto'}
         </span>
         {(value || (colors && Object.keys(colors).length > 0)) && (
-          <button type="button" onClick={() => onChange('', undefined, undefined)} className="text-xs text-gray-400 hover:text-red-500 font-outfit">
+          <button type="button" onClick={() => chooseIcon('')} className="text-xs text-gray-400 hover:text-red-500 font-outfit">
             Restaurar
           </button>
         )}
@@ -135,7 +166,7 @@ export default function IconPicker({ value, colors, speed, defaultIcon, onChange
                 className="flex-1 accent-enkarta-gold"
               />
               {speed !== undefined && (
-                <button type="button" onClick={() => onChange(current, colors, undefined)} className="text-[11px] text-gray-400 hover:text-gray-600 font-outfit">
+                <button type="button" onClick={() => { if (isCurrent()) onChange(current, colors, undefined); }} className="text-[11px] text-gray-400 hover:text-gray-600 font-outfit">
                   1x
                 </button>
               )}
@@ -146,7 +177,7 @@ export default function IconPicker({ value, colors, speed, defaultIcon, onChange
             {tab === 'lib' && (
               <IconLibrary
                 eventType={eventType}
-                onSelect={(icon: LottieIconMeta) => { onChange(icon.path, undefined, undefined); setTab('colors'); }}
+                onSelect={(icon: LottieIconMeta) => { if (chooseIcon(icon.path)) setTab('colors'); }}
                 selectedId={value?.split('/').pop()?.replace('.json', '')}
               />
             )}
@@ -156,10 +187,11 @@ export default function IconPicker({ value, colors, speed, defaultIcon, onChange
                 kind="image"
                 folder="icons"
                 ownerId={ownerId}
+                fieldRevision={iconRevision}
                 aspect="square"
                 allowUrl
                 value={value?.startsWith('http') ? value : ''}
-                onChange={(url) => { if (url) { onChange(url, undefined, undefined); setOpen(false); } }}
+                onChange={(url) => { if (url && isCurrent()) { latestChange.current(url, undefined, undefined); setOpen(false); } }}
                 hint="Sube un PNG o SVG (idealmente con fondo transparente y en el color de la invitación)."
               />
             )}

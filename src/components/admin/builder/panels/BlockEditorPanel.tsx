@@ -167,7 +167,7 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
     case 'images':
       return <MultiImageUploader values={Array.isArray(value) ? value : []} onChange={set} ownerId={ownerId} destinationKey={destinationKey} isDestinationCurrent={isDestinationCurrent} />;
     case 'icon':
-      return <IconPicker value={value} colors={colors} speed={speed} defaultIcon="rings" onChange={(v, c, s) => setIcon?.(v, c, s)} ownerId={ownerId} eventType={eventType} />;
+      return <IconPicker value={value} colors={colors} speed={speed} defaultIcon="rings" onChange={(v, c, s) => setIcon?.(v, c, s)} ownerId={ownerId} eventType={eventType} destinationKey={destinationKey} isDestinationCurrent={isDestinationCurrent} />;
     case 'divider': {
       // Se dibujan con el color real de la invitación: elegir un separador a
       // ciegas por su nombre ("Floritura", "Art déco") no dice nada.
