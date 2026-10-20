@@ -53,3 +53,18 @@ Las dos suites forman parte de `npm run verify`. La evidencia privada se guarda 
 - **28/28 pruebas offline** de los helpers privados de atestación, permisos y cierre de sesión correctas; no se suman a las 1.156 pruebas de la aplicación ni realizan red.
 
 Permanecen los avisos anteriores de imágenes. No se requieren migraciones ni cambios de dependencias. Evidencia privada adicional: `verify.log` y `smoke-helper-tests.log`.
+
+## Producción verificada, 20 de octubre de 2026
+
+- Código **`6c18ac205f59140d5017be85cbe443d30d476769`**, integrado en `main`. [CI del commit exacto](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39463250247): `completed/success`, con `npm run verify` y auditoría de dependencias aprobados. Sólo se consultaron metadatos públicos del workflow y sus pasos.
+- Vercel **`dpl_J8BzDgD8PUJR7nt87nnMExgNauRp`**, `READY`, destino producción y alias [enkarta.vercel.app](https://enkarta.vercel.app). Despliegue inmutable: [enkarta-6vzjfq503](https://enkarta-6vzjfq503-juangabrielchoqueortiz7-engs-projects.vercel.app). Se desplegó el workspace completo para incluir los originales archivados fuera de Git.
+- Los identificadores de contenido y SHA-256 de las **tres fuentes** coinciden con los archivos de entrada del despliegue Ready: `InvitationBuilder`, `BlockEditorPanel` y `MultiImageUploader`. Esto acredita las fuentes publicadas; no afirma ejecutar una carrera de callbacks desde un navegador autenticado de producción.
+- **11 grupos HTTP correctos**, con **58 denegaciones exactas**, incluidas **46 solicitudes de escritura**. Se conservan los permisos de cuenta, pagos, publicación, eliminación y medios de Socios; una cookie administrativa válida tampoco permite suplantar una sesión de Socios.
+- Los archivos ficticios se enviaron únicamente sin autenticación válida. El formulario administrativo autenticado no contenía archivo ni propietario y devolvió el rechazo exacto 400 antes del almacenamiento. No se realizaron subidas autenticadas ni se deduce de estas denegaciones la aceptación visual del constructor.
+- La configuración administrativa conserva `no-store` y vinculación a su sesión. El historial del constructor conserva `no-store`, `Vary: Cookie` y respuesta vacía para un UUID ficticio cuya ausencia se comprobó mediante conteos exactos antes y después. No se leyeron filas de clientes.
+- **129/129 recursos públicos** conservan tamaño y SHA-256, **6/6 rutas** responden como corresponde y los **597/597 archivos protegidos** siguen idénticos después del despliegue.
+- **Cero registros de negocio, archivos almacenados, usuarios Auth, fixtures, pagos, operaciones bancarias o mensajes creados**. La cookie administrativa temporal quedó cerrada. No hay datos ficticios persistentes que retirar de Supabase.
+
+BCP permanece bloqueado: no se cambiaron proveedor ni credenciales ni se consultaron variables remotas de pago o endpoints bancarios. Las regresiones locales cubren el cambio de plantilla y la señal de historial con componentes reales y transporte controlado; la verificación remota acredita fuentes, permisos y conservación. La aceptación manual permanece aplazada. No se requiere SQL.
+
+Evidencia privada adicional en `tmp/builder-template-upload/`: `deployment.log`, `deployment-final.json`, `deployment-files.json`, `ci.json`, `production-http.json`, `production-public.json` y `RESULTADO.json`.
