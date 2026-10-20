@@ -16,6 +16,7 @@ interface DraftList<T> {
 }
 export interface LegacyDraft {
   get: () => InvitationParsed;
+  destination: (field: string) => string;
   patch: (change: Patch<InvitationParsed>) => void;
   config: (change: Patch<BuilderConfig>) => void;
   variant: <K extends VariantKey>(key: K) => (change: Patch<NonNullable<BuilderConfig[K]>>, fields?: Omit<Partial<InvitationParsed>, 'config'>) => void;
@@ -74,5 +75,8 @@ export function useLegacyDraft(data: InvitationParsed, onChange: (patch: Partial
       move: (key, direction) => change({ type: 'move', key, direction }),
     };
   };
-  return { get, patch, config, variant, list };
+  // The multi-uploader intentionally uses its latest callback while a batch is
+  // active. Bind that batch to this field/session so it cannot follow a new one.
+  const destination = (field: string) => JSON.stringify([data.id, data.template, data.config?.designKey, epoch, field]);
+  return { get, destination, patch, config, variant, list };
 }
