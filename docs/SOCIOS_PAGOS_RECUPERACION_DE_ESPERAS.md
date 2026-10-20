@@ -50,3 +50,17 @@ El alcance visual se limita al aviso de recuperación y conserva el contenedor, 
 - La revisión independiente de los cambios del helper y del panel no detectó bloqueantes. Los helpers privados para comprobar HTTP y recursos en producción tienen 17 regresiones offline correctas; esos casos no se suman a las 985 pruebas de la aplicación.
 
 Evidencia privada: `tmp/partner-checkout-recovery/verify.log`, `helper-tests.log`, `ui-tests.log` y `protected.json`. No se necesita otra migración SQL. La aceptación manual de dispositivo queda pendiente por decisión del usuario.
+
+## Producción verificada, 20 de octubre de 2026
+
+- Código **`2317b6d44a50568bb671540a79a701cede1853ce`**, integrado en `main`. [CI del commit exacto](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39418505993): `completed/success`, con `npm run verify` y auditoría de dependencias aprobados.
+- Vercel **`dpl_8zGCumjnT9zNNg4NrBYfw7PYzZZj`**, `READY`, destino producción y alias [enkarta.vercel.app](https://enkarta.vercel.app). Despliegue inmutable: [enkarta-8i6u29bwe](https://enkarta-8i6u29bwe-juangabrielchoqueortiz7-engs-projects.vercel.app). Se desplegó el workspace completo para incluir los originales ignorados por Git.
+- Los identificadores de contenido de `PartnerDashboard.tsx` y `partner-checkout.ts` coinciden con los dos archivos de entrada del despliegue Ready. Esto acredita la fuente subida; no acredita haber ejecutado el nuevo timeout desde un navegador real.
+- **9 grupos HTTP correctos**, incluidas **24 denegaciones**, de las que **18 son intentos de escritura**. Las rutas de cuenta, preparar referencia, retirar y adjuntar comprobante rechazan sesiones ausentes, cookies inválidas de otros roles y una cookie administrativa válida sin sesión de Socios. El panel conserva el acceso normal de Socios. No se autenticó ninguna escritura de negocio.
+- La configuración administrativa conserva `no-store` y su vinculación a la sesión. El historial privado del constructor conserva `no-store` y `Vary: Cookie`, con respuesta vacía para un UUID ficticio cuya ausencia se comprobó mediante conteos exactos antes y después. No se leyeron filas de clientes.
+- **129/129 originales públicos** conservan tamaño y SHA-256 y las **6/6 rutas** públicas, de acceso y de desarrollo comprobadas responden como corresponde. Los **597/597 archivos protegidos** de la verificación local permanecen intactos.
+- Se cerró correctamente la cookie administrativa temporal, mantenida sólo en memoria. **Cero registros de negocio, usuarios Auth, pagos, fixtures, llamadas bancarias o mensajes creados**: no hay datos de prueba que retirar de la base.
+
+BCP permanece bloqueado por el contrato existente y no se cambiaron sus credenciales ni configuración. Las comprobaciones no consultaron variables remotas de pago ni endpoints bancarios. Las carreras, plazos y cambios de pestaña se validaron con pruebas automáticas locales; la aceptación manual de Android/Safari, Google y el flujo autenticado completo de comprobante siguen pendientes. Este despliegue no necesita SQL ni modifica los diseños originales.
+
+Evidencia privada adicional en `tmp/partner-checkout-recovery/`: `deployment.log`, `deployment-final.json`, `deployment-files.json`, `ci.json`, `production-http.json`, `production-public.json` y `RESULTADO.json`. La aceptación y limpieza anteriores de Ventas y el borrador del cotizador del navegador permanecen intactos.
