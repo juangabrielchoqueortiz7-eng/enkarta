@@ -30,7 +30,7 @@ BCP sigue desactivado. No hay operaciones bancarias, nuevas credenciales ni migr
 
 Pendientes independientes que este bloque no resuelve:
 
-- `ListEditor` todavía reconstruye sus elementos internos con un índice/lista capturados. Una imagen dentro de un elemento de itinerario o timeline requiere una corrección específica; la identidad de los hijos de bloque no es la identidad de esos elementos internos.
+- `ListEditor` reconstruía sus elementos internos con un índice/lista capturados; este bloque no incluía esa corrección. **Resuelto posteriormente** en [Imágenes de las listas de itinerario](CONSTRUCTOR_IMAGENES_EN_LISTAS.md), con identidad de filas independiente de la identidad de hijos de bloque.
 - Los setters generales de las ocho variantes heredadas continúan fuera de esta corrección del editor por bloques. No se afirma que todas las posibles ediciones concurrentes de esas variantes estén cubiertas.
 - La cancelación del cliente no acredita que un archivo ya recibido por el servidor haya sido eliminado. No se añaden borrados remotos ni reintentos automáticos de upload.
 
