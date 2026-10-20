@@ -6,7 +6,8 @@ import {
   BILLING_CYCLES, cyclePrice, formatBs, PARTNER_PLANS, PARTNER_PLAN_ORDER, PAYMENT_METHOD_LABELS,
   draftCap, type PartnerPaymentMethod, type PartnerPlanKey, type SubscriptionState,
 } from '@/lib/partner-plans';
-import { checkoutPaymentLabel, checkoutQuoteMatches, paymentUnderReview, partnerRequest, validCheckoutPayment } from '@/lib/partner-checkout';
+import { checkoutPaymentLabel, checkoutQuoteMatches, paymentUnderReview, PartnerRequestError, partnerRequest, validCheckoutPayment } from '@/lib/partner-checkout';
+import { isUuid } from '@/lib/rsvp-contract';
 
 // Panel del socio: estado de la mensualidad, su cartera de invitaciones y el
 // registro del pago con comprobante. Todo pasa por /api/partner/*; este
@@ -96,12 +97,47 @@ function checkedAccount(value: PartnerAccount): PartnerAccount {
   return value;
 }
 
+function validInvitation(value: unknown): value is PartnerInvitation {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const item = value as Record<string, unknown>;
+  return isUuid(item.id) && typeof item.slug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(item.slug)
+    && ['draft', 'ready', 'disabled', 'expired'].includes(String(item.status))
+    && typeof item.template === 'string' && !!item.template && typeof item.type === 'string' && !!item.type
+    && ['names', 'event_date', 'cover_image_url'].every(key => item[key] === null || typeof item[key] === 'string')
+    && (item.event_date === null || Number.isFinite(Date.parse(String(item.event_date))))
+    && typeof item.created_at === 'string' && Number.isFinite(Date.parse(item.created_at));
+}
+function checkedInvitations(value: unknown): PartnerInvitation[] {
+  if (!Array.isArray(value) || value.length > 200 || !value.every(validInvitation)
+    || new Set(value.map(item => item.id)).size !== value.length) throw new Error('No pudimos verificar la lista. Pulsa «Actualizar invitaciones» antes de continuar.');
+  return value;
+}
+const sameInvitation = (left: PartnerInvitation, right: PartnerInvitation) =>
+  (['id', 'slug', 'status', 'template', 'type', 'names', 'event_date', 'cover_image_url', 'created_at'] as const).every(key => left[key] === right[key]);
+function checkInvitationCounts(entries: PartnerInvitation[], fresh: PartnerAccount) {
+  if (fresh.totalInvitations !== entries.length || fresh.quota.used !== entries.filter(entry => entry.status === 'ready').length) {
+    throw new Error('La lista y el cupo cambiaron durante la consulta. Pulsa «Actualizar invitaciones» para comprobarlos juntos.');
+  }
+}
+type InvitationOperation = { id: string; controller: AbortController };
+function invitationFailure(failure: unknown, fallback: string, verificationRequired = false) {
+  const message = (failure instanceof Error ? failure.message : fallback).replaceAll('Actualizar estado', 'Actualizar invitaciones');
+  return verificationRequired && !message.includes('Actualizar invitaciones') ? `${message} Pulsa «Actualizar invitaciones» antes de repetir.` : message;
+}
+
 export default function PartnerDashboard({ initialAccount, initialTab = 'invitaciones', selectedPlan }: { initialAccount: PartnerAccount; initialTab?: Tab; selectedPlan?: PartnerPlanKey }) {
   const router = useRouter();
   const [account, setAccount] = useState(initialAccount);
   const [invitations, setInvitations] = useState<PartnerInvitation[] | null>(null);
   const [tab, setTab] = useState<Tab>(initialTab);
   const [invitationError, setInvitationError] = useState('');
+  const [invitationRefreshing, setInvitationRefreshing] = useState(false);
+  const [invitationNeedsRefresh, setInvitationNeedsRefresh] = useState(false);
+  const invitationSnapshot = useRef<PartnerInvitation[] | null>(null);
+  const invitationSequence = useRef(0);
+  const invitationRead = useRef<AbortController | null>(null);
+  const invitationOperation = useRef<InvitationOperation | null>(null);
+  const invitationUncertain = useRef(false);
   const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -115,10 +151,17 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
     accountSequence.current += 1;
     accountRead.current?.abort(); accountRead.current = null;
   }, []);
+  const invalidateInvitationRead = useCallback(() => {
+    invitationSequence.current += 1;
+    invitationRead.current?.abort(); invitationRead.current = null;
+  }, []);
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; invalidateAccountRead(); };
-  }, [invalidateAccountRead]);
+    return () => {
+      mounted.current = false; invalidateAccountRead(); invalidateInvitationRead();
+      invitationOperation.current?.controller.abort(); invitationOperation.current = null;
+    };
+  }, [invalidateAccountRead, invalidateInvitationRead]);
 
   const say = useCallback((tone: 'ok' | 'error', text: string) => {
     if (!mounted.current) return;
@@ -126,7 +169,7 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
     window.setTimeout(() => { if (mounted.current) setNotice(current => (current?.text === text ? null : current)); }, 6000);
   }, []);
 
-  const loadAccount = useCallback(async (signal?: AbortSignal): Promise<PartnerAccount> => {
+  const loadAccount = useCallback(async (signal?: AbortSignal, validate?: (value: PartnerAccount) => void): Promise<PartnerAccount> => {
     invalidateAccountRead();
     const serial = accountSequence.current, controller = new AbortController();
     accountRead.current = controller;
@@ -136,6 +179,7 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
     try {
       const value = checkedAccount(await partnerRequest<PartnerAccount>('/api/partner/account', { signal: controller.signal }));
       if (!mounted.current || controller.signal.aborted || serial !== accountSequence.current) throw new Error('Esta consulta fue reemplazada. Vuelve a consultar el estado.');
+      validate?.(value);
       setAccount(value);
       return value;
     } finally {
@@ -163,19 +207,39 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
     return true;
   }, [invalidateAccountRead]);
 
-  const loadInvitations = useCallback(async () => {
+  const loadInvitations = useCallback(async (explicit = false) => {
+    if (!mounted.current || invitationOperation.current || paymentOperation.current) return;
+    invalidateInvitationRead();
+    const serial = invitationSequence.current, controller = new AbortController();
+    invitationRead.current = controller; setInvitationRefreshing(true);
+    if (explicit) invalidateAccountRead();
+    const accountSerial = accountSequence.current;
+    const current = () => mounted.current && !controller.signal.aborted && invitationSequence.current === serial && (!explicit || accountSequence.current === accountSerial);
     try {
-      const value = await partnerRequest<{ invitations: PartnerInvitation[] }>('/api/partner/invitations');
-      if (!Array.isArray(value.invitations)) throw new Error('No pudimos verificar la lista. Vuelve a consultarla.');
-      setInvitations(value.invitations); setInvitationError('');
-    } catch (failure) { setInvitationError(failure instanceof Error ? failure.message : 'No se pudo consultar la lista.'); }
-  }, []);
+      const [value, fresh] = await Promise.all([
+        partnerRequest<{ invitations: PartnerInvitation[] }>('/api/partner/invitations', { signal: controller.signal }),
+        explicit ? partnerRequest<PartnerAccount>('/api/partner/account', { signal: controller.signal }).then(checkedAccount) : Promise.resolve(null),
+      ]);
+      const entries = checkedInvitations(value.invitations);
+      if (fresh) checkInvitationCounts(entries, fresh);
+      if (!current()) return;
+      invitationSnapshot.current = entries; setInvitations(entries); setInvitationError('');
+      if (fresh) { setAccount(fresh); invitationUncertain.current = false; setInvitationNeedsRefresh(false); say('ok', 'Invitaciones y cupo consultados. Revisa su estado antes de compartir.'); }
+    } catch (failure) {
+      if (current()) setInvitationError(invitationFailure(failure, 'No se pudo consultar la lista.', true));
+    } finally {
+      if (mounted.current && invitationSequence.current === serial) {
+        invitationRead.current = null; setInvitationRefreshing(false);
+      }
+      controller.abort();
+    }
+  }, [invalidateInvitationRead, invalidateAccountRead, say]);
 
   useEffect(() => { void loadInvitations(); }, [loadInvitations]);
   useEffect(() => {
     if (!account.payments.some(payment => payment.status === 'pending')) return;
     const timer = window.setInterval(() => {
-      if (document.visibilityState !== 'visible' || paymentOperation.current || accountRead.current || !mounted.current) return;
+      if (document.visibilityState !== 'visible' || paymentOperation.current || invitationOperation.current || invitationRead.current || accountRead.current || !mounted.current) return;
       const serial = accountSequence.current + 1;
       void loadAccount().catch(() => {
         if (mounted.current && accountSequence.current === serial) say('error', 'No pudimos actualizar el pago. Conservamos el último estado consultado. Pulsa «Actualizar estado».');
@@ -187,45 +251,81 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
   const pending = useMemo(() => account.payments.find(payment => payment.status === 'pending') ?? null, [account.payments]);
 
   // ── Acciones sobre invitaciones ────────────────────────────────────────────
+  const invitationView = invitationSequence.current;
+  const canActOnInvitation = (invitation: PartnerInvitation) => mounted.current && invitationView === invitationSequence.current
+    && !invitationOperation.current && !invitationRead.current && !paymentOperation.current && !invitationUncertain.current
+    && validInvitation(invitation) && invitationSnapshot.current?.some(item => sameInvitation(item, invitation));
+  const startInvitationOperation = (invitation: PartnerInvitation) => {
+    if (!canActOnInvitation(invitation)) return null;
+    invalidateInvitationRead(); invalidateAccountRead();
+    const operation = { id: invitation.id, controller: new AbortController() };
+    invitationOperation.current = operation; invitationUncertain.current = true;
+    setInvitationNeedsRefresh(true); setInvitationError(''); setInvitationRefreshing(false); setBusy(invitation.id); setCopied(null);
+    return operation;
+  };
+  const currentInvitationOperation = (operation: InvitationOperation) => mounted.current && invitationOperation.current === operation && !operation.controller.signal.aborted;
+  const finishInvitationOperation = (operation: InvitationOperation) => {
+    if (!currentInvitationOperation(operation)) return;
+    invitationOperation.current = null; setBusy(null);
+  };
+  const acknowledgeInvitation = async (operation: InvitationOperation, entries: PartnerInvitation[], success: string) => {
+    invalidateInvitationRead(); invalidateAccountRead();
+    invitationSnapshot.current = entries; setInvitations(entries);
+    try {
+      await loadAccount(operation.controller.signal, fresh => checkInvitationCounts(entries, fresh));
+      if (!currentInvitationOperation(operation)) return;
+      invitationUncertain.current = false; setInvitationNeedsRefresh(false); say('ok', success === 'Invitación publicada.' ? `${success} Ya puedes compartir el enlace.` : success);
+    } catch {
+      if (currentInvitationOperation(operation)) { setInvitationError(`${success} No pudimos comprobar el cupo. Pulsa «Actualizar invitaciones» antes de otra acción.`); say('error', `${success} Falta comprobar el cupo.`); }
+    }
+  };
   const togglePublish = async (invitation: PartnerInvitation) => {
     const next = invitation.status === 'ready' ? 'draft' : 'ready';
-    setBusy(invitation.id);
+    const operation = startInvitationOperation(invitation); if (!operation) return;
     try {
-      const res = await fetch('/api/partner/invitations', {
+      const result = await partnerRequest<{ invitation: PartnerInvitation }>('/api/partner/invitations', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: invitation.id, status: next }),
+        body: JSON.stringify({ id: invitation.id, status: next }), signal: operation.controller.signal,
       });
-      const result = await res.json();
-      if (!res.ok) {
-        say('error', result.error || 'No se pudo cambiar el estado');
-        if (result.needsSubscription || ['SUBSCRIPTION_REQUIRED', 'QUOTA_REACHED'].includes(result.code)) setTab('suscripcion');
-        return;
-      }
-      setInvitations(list => (list ?? []).map(item => (item.id === invitation.id ? result.invitation : item)));
-      await loadAccount();
-      say('ok', next === 'ready' ? 'Invitación publicada. Ya puedes compartir el enlace.' : 'Invitación despublicada.');
-    } catch { say('error', 'No pudimos comprobar el estado. Actualiza la lista antes de volver a publicar.'); }
-    finally {
-      setBusy(null);
+      if (!currentInvitationOperation(operation)) return;
+      if (!validInvitation(result.invitation) || result.invitation.id !== invitation.id || result.invitation.slug !== invitation.slug
+        || result.invitation.status !== (next === 'ready' ? 'ready' : 'disabled')) throw new Error('No pudimos verificar el cambio de publicación. Pulsa «Actualizar invitaciones» antes de repetir.');
+      const entries = (invitationSnapshot.current ?? []).map(item => item.id === invitation.id ? result.invitation : item);
+      await acknowledgeInvitation(operation, entries, next === 'ready' ? 'Invitación publicada.' : 'Invitación despublicada.');
+    } catch (failure) {
+      if (!currentInvitationOperation(operation)) return;
+      if (failure instanceof PartnerRequestError && (failure.needsSubscription || ['SUBSCRIPTION_REQUIRED', 'QUOTA_REACHED'].includes(failure.code ?? ''))) setTab('suscripcion');
+      const message = invitationFailure(failure, 'No pudimos comprobar el estado.', invitationUncertain.current);
+      setInvitationError(message); say('error', message);
     }
+    finally { finishInvitationOperation(operation); }
   };
 
   const removeInvitation = async (invitation: PartnerInvitation) => {
-    if (!confirm(`¿Eliminar "${invitation.names || invitation.slug}"? No se puede deshacer.`)) return;
-    setBusy(invitation.id);
+    if (!canActOnInvitation(invitation) || !window.confirm(`¿Eliminar "${invitation.names || invitation.slug}"? No se puede deshacer.`)) return;
+    const operation = startInvitationOperation(invitation); if (!operation) return;
     try {
-      const res = await fetch(`/api/partner/invitations?id=${invitation.id}`, { method: 'DELETE' });
-      if (!res.ok) { say('error', 'No se pudo eliminar'); return; }
-      setInvitations(list => (list ?? []).filter(item => item.id !== invitation.id));
-      await loadAccount();
-    } catch { say('error', 'No pudimos comprobar la eliminación. Actualiza la lista antes de repetirla.'); }
-    finally {
-      setBusy(null);
+      const result = await partnerRequest<{ success: boolean }>(`/api/partner/invitations?id=${invitation.id}`, { method: 'DELETE', signal: operation.controller.signal });
+      if (!currentInvitationOperation(operation)) return;
+      if (result.success !== true) throw new Error('No pudimos verificar la eliminación. Pulsa «Actualizar invitaciones» antes de repetir.');
+      await acknowledgeInvitation(operation, (invitationSnapshot.current ?? []).filter(item => item.id !== invitation.id), 'Invitación eliminada.');
+    } catch (failure) {
+      if (!currentInvitationOperation(operation)) return;
+      const message = invitationFailure(failure, 'No pudimos comprobar la eliminación.', invitationUncertain.current);
+      setInvitationError(message); say('error', message);
     }
+    finally { finishInvitationOperation(operation); }
   };
 
   const copyLink = async (slug: string) => {
-    try { await navigator.clipboard.writeText(`${window.location.origin}/i/${slug}`); setCopied(slug); window.setTimeout(() => setCopied(null), 2000); }
+    if (!mounted.current || invitationView !== invitationSequence.current || invitationOperation.current || invitationRead.current || invitationUncertain.current
+      || !invitationSnapshot.current?.some(item => item.slug === slug && item.status === 'ready')) return;
+    const serial = invitationSequence.current;
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/i/${slug}`);
+      if (!mounted.current || serial !== invitationSequence.current || invitationUncertain.current) return;
+      setCopied(slug); window.setTimeout(() => { if (mounted.current && serial === invitationSequence.current) setCopied(null); }, 2000);
+    }
     catch { say('error', 'No se pudo copiar el enlace. Abre la invitación y copia su dirección.'); }
   };
 
@@ -283,17 +383,20 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
         <div className="pt-8">
           {tab === 'invitaciones' && (
             <>
-            {invitationError && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{invitationError}<button type="button" onClick={() => void loadInvitations()} className="ml-2 min-h-11 underline">Volver a consultar invitaciones</button></div>}
+            {invitationError && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{invitationError}</div>}
             <InvitationsTab
               invitations={invitations}
               failed={!!invitationError}
               busy={busy}
               copied={copied}
+              refreshing={invitationRefreshing}
+              needsRefresh={invitationNeedsRefresh}
               quota={account.quota}
               onCreate={() => router.push('/socios/panel/nueva')}
               onCopy={copyLink}
               onToggle={togglePublish}
               onRemove={removeInvitation}
+              onRefresh={() => void loadInvitations(true)}
             />
             </>
           )}
@@ -362,33 +465,40 @@ function StatusCard({ account, onGoToPlans }: { account: PartnerAccount; onGoToP
 
 // ── Cartera de invitaciones ──────────────────────────────────────────────────
 
-function InvitationsTab({ invitations, failed, busy, copied, quota, onCreate, onCopy, onToggle, onRemove }: {
+function InvitationsTab({ invitations, failed, busy, copied, refreshing, needsRefresh, quota, onCreate, onCopy, onToggle, onRemove, onRefresh }: {
   invitations: PartnerInvitation[] | null;
   failed: boolean;
   busy: string | null;
   copied: string | null;
+  refreshing: boolean;
+  needsRefresh: boolean;
   quota: PartnerAccount['quota'];
   onCreate: () => void;
   onCopy: (slug: string) => void;
   onToggle: (invitation: PartnerInvitation) => void;
   onRemove: (invitation: PartnerInvitation) => void;
+  onRefresh: () => void;
 }) {
-  if (invitations === null) return failed ? null : <p role="status" className="font-outfit text-[13px] text-[#2C2519]/50">Cargando tus invitaciones…</p>;
+  const blocked = !!busy || refreshing || needsRefresh;
 
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <p className="font-outfit text-[13px] text-[#2C2519]/60">
-          {invitations.length} {invitations.length === 1 ? 'invitación creada' : 'invitaciones creadas'} ·{' '}
+          {invitations === null ? 'Tus invitaciones' : `${invitations.length} ${invitations.length === 1 ? 'invitación creada' : 'invitaciones creadas'}`} ·{' '}
           {quota.used} publicada{quota.used === 1 ? '' : 's'}
           {!quota.unlimited && ` de ${quota.limit}`}
         </p>
-        <button onClick={onCreate} className="rounded-full bg-[#2C2519] px-6 py-2.5 font-outfit text-[13px] text-[#FAF7F2] transition hover:bg-[#3d342a]">
-          Nueva invitación
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" onClick={onRefresh} disabled={!!busy || refreshing} aria-busy={refreshing || undefined} className="min-h-11 font-outfit text-sm text-[#514735] underline underline-offset-4 disabled:opacity-50">Actualizar invitaciones</button>
+          <button onClick={onCreate} className="rounded-full bg-[#2C2519] px-6 py-2.5 font-outfit text-[13px] text-[#FAF7F2] transition hover:bg-[#3d342a]">Nueva invitación</button>
+        </div>
       </div>
 
-      {!invitations.length ? (
+      {refreshing && <p role="status" className="mb-4 font-outfit text-sm text-[#2C2519]/60">Consultando invitaciones…</p>}
+      {needsRefresh && !busy && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 font-outfit text-sm text-amber-950">Hay una operación por comprobar. Pulsa «Actualizar invitaciones» antes de publicar, eliminar o compartir. Cambiar de pestaña no cancela una operación recibida por el servidor.</p>}
+
+      {invitations === null ? (failed ? null : <p role="status" className="font-outfit text-[13px] text-[#2C2519]/50">Cargando tus invitaciones…</p>) : !invitations.length ? (
         <div className="rounded-3xl border border-dashed border-[#2C2519]/15 bg-white/50 p-12 text-center">
           <p className="font-playfair text-[20px]">Todavía no creaste ninguna</p>
           <p className="mx-auto mt-2 max-w-md font-outfit text-[13px] leading-relaxed text-[#2C2519]/60">
@@ -425,20 +535,20 @@ function InvitationsTab({ invitations, failed, busy, copied, quota, onCreate, on
                     <a href={`/socios/constructor/${invitation.id}`} className="rounded-full bg-[#2C2519] px-4 py-2 font-outfit text-[12px] text-[#FAF7F2]">Editar</a>
                     <button
                       onClick={() => onToggle(invitation)}
-                      disabled={busy === invitation.id}
+                      disabled={blocked}
                       className="rounded-full border border-[#2C2519]/15 px-4 py-2 font-outfit text-[12px] transition hover:border-[#B8975A]/50 disabled:opacity-50"
                     >
                       {busy === invitation.id ? '…' : published ? 'Despublicar' : 'Publicar'}
                     </button>
                     {published && (
-                      <button onClick={() => onCopy(invitation.slug)} className="rounded-full border border-[#2C2519]/15 px-4 py-2 font-outfit text-[12px] transition hover:border-[#B8975A]/50">
+                      <button onClick={() => onCopy(invitation.slug)} disabled={blocked} className="rounded-full border border-[#2C2519]/15 px-4 py-2 font-outfit text-[12px] transition hover:border-[#B8975A]/50 disabled:opacity-50">
                         {copied === invitation.slug ? 'Copiado' : 'Copiar enlace'}
                       </button>
                     )}
                     <a href={`/i/${invitation.slug}${published ? '' : '?preview=1'}`} target="_blank" rel="noreferrer" className="rounded-full border border-[#2C2519]/15 px-4 py-2 font-outfit text-[12px] transition hover:border-[#B8975A]/50">Ver</a>
                     <button
                       onClick={() => onRemove(invitation)}
-                      disabled={busy === invitation.id}
+                      disabled={blocked}
                       className="ml-auto font-outfit text-[12px] text-red-600/80 underline-offset-4 hover:underline disabled:opacity-50"
                     >
                       Eliminar

@@ -3,7 +3,7 @@
 'use strict';
 const fs = require('node:fs'), ts = require('typescript'), test = require('node:test'), assert = require('node:assert/strict');
 require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 }, fileName: file }).outputText, file);
-const { partnerRequest, PARTNER_REQUEST_TIMEOUT_MS: timeout } = require('../src/lib/partner-checkout.ts');
+const { partnerRequest, PartnerRequestError, PARTNER_REQUEST_TIMEOUT_MS: timeout } = require('../src/lib/partner-checkout.ts');
 const url = '/api/partner/payments', timeoutText = /No pudimos comprobar el resultado en 25 segundos/, cancelText = /Se interrumpió la espera/;
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 const flush = () => new Promise(done => setImmediate(done));
@@ -146,4 +146,52 @@ test('independent requests do not share deadlines or cancellation and null exter
   first.controller.abort(); await flush(); uncertain(one.error, cancelText); assert.equal(childA.aborted, true); assert.equal(childB.aborted, false); assert.equal(fake.timers.size, 1); assert.equal(two.kind, 'pending');
   b.resolve(reply({ account: true })); await flush(); assert.deepEqual(two.value, { account: true }); assert.equal(fake.timers.size, 0); assert.equal(second.signal.aborted, false);
   assert.deepEqual(await partnerRequest(url, { signal: null }, async () => reply({ success: true })), { success: true }); assert.equal(fake.timers.size, 0);
+});
+
+test('a received HTTP rejection retains only validated domain metadata for the subscription route', async t => {
+  const fake = clock(t);
+  for (const payload of [
+    { error: 'QA suscripción requerida', code: 'SUBSCRIPTION_REQUIRED' },
+    { error: 'QA cupo completo', code: 'QUOTA_REACHED' },
+    { error: 'QA activar plan', needsSubscription: true },
+  ]) {
+    let calls = 0;
+    await assert.rejects(partnerRequest('/api/partner/invitations', { method: 'PATCH' }, async () => {
+      calls++; return { ok: false, status: 402, json: async () => payload };
+    }), error => {
+      assert.ok(error instanceof Error && error instanceof PartnerRequestError);
+      assert.equal(error.message, payload.error); assert.equal(error.status, 402);
+      assert.equal(error.code, payload.code); assert.equal(error.needsSubscription, payload.needsSubscription === true);
+      assert.deepEqual(Object.keys(error).sort(), ['code', 'name', 'needsSubscription', 'status']);
+      return true;
+    });
+    assert.equal(calls, 1); assert.equal(fake.timers.size, 0);
+  }
+});
+
+test('malformed error metadata cannot request subscription navigation or expose the error payload', async t => {
+  const fake = clock(t);
+  for (const code of [null, 42, {}, [], 'subscription_required', 'QUOTA_REACHED\n', 'A'.repeat(81)]) {
+    await assert.rejects(partnerRequest(url, undefined, async () => ({ ok: false, status: 500,
+      json: async () => ({ error: 'QA rechazo', code, needsSubscription: 'true', privatePayload: 'QA_PRIVATE' }),
+    })), error => {
+      assert.ok(error instanceof PartnerRequestError); assert.equal(error.code, undefined);
+      assert.equal(error.needsSubscription, false); assert.equal(error.status, 500);
+      assert.doesNotMatch(JSON.stringify(error), /QA_PRIVATE|privatePayload/); return true;
+    });
+  }
+  assert.equal(fake.timers.size, 0);
+});
+
+test('network failure, aborted wait and incomplete JSON never become received HTTP rejections', async t => {
+  const fake = clock(t);
+  for (const transport of [async () => { throw Error('QA_PRIVATE'); }, async () => ({ ok: false, status: 402, json: async () => { throw Error('QA_PRIVATE'); } })]) {
+    await assert.rejects(partnerRequest(url, undefined, transport), error => {
+      assert.equal(error instanceof PartnerRequestError, false); assert.equal(error.status, undefined);
+      assert.equal(error.code, undefined); assert.equal(error.needsSubscription, undefined); return true;
+    });
+  }
+  const wait = observe(partnerRequest(url, { method: 'PATCH' }, async () => new Promise(() => {})));
+  fake.tick(timeout); await flush(); uncertain(wait.error, timeoutText);
+  assert.equal(wait.error instanceof PartnerRequestError, false); assert.equal(fake.timers.size, 0);
 });

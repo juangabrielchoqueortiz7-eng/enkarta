@@ -28,6 +28,14 @@ export const PARTNER_REQUEST_TIMEOUT_MS = 25_000;
 const TIMEOUT_MESSAGE = 'No pudimos comprobar el resultado en 25 segundos. Pulsa «Actualizar estado» antes de repetir. La operación puede haberse recibido en el servidor.';
 const CANCEL_MESSAGE = 'Se interrumpió la espera y no pudimos comprobar el resultado. Pulsa «Actualizar estado» antes de repetir. La operación puede haberse recibido en el servidor.';
 
+/** Only a received HTTP rejection carries domain metadata; network uncertainty does not. */
+export class PartnerRequestError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string, readonly needsSubscription = false) {
+    super(message);
+    this.name = 'PartnerRequestError';
+  }
+}
+
 /** Bound the complete attempt, including its body. Never retries or assumes an aborted write rolled back. */
 export async function partnerRequest<T>(url: string, options?: RequestInit, transport: typeof fetch = fetch): Promise<T> {
   const signal = options?.signal;
@@ -64,7 +72,12 @@ export async function partnerRequest<T>(url: string, options?: RequestInit, tran
     try { value = await response.json(); }
     catch { assertCurrent(); throw new Error('La respuesta llegó incompleta. Actualiza los datos para comprobar el resultado antes de repetir.'); }
     assertCurrent();
-    if (!response.ok) throw new Error(typeof value?.error === 'string' ? value.error : 'No se pudo completar la operación. Actualiza los datos y vuelve a revisar.');
+    if (!response.ok) throw new PartnerRequestError(
+      typeof value?.error === 'string' ? value.error : 'No se pudo completar la operación. Actualiza los datos y vuelve a revisar.',
+      response.status,
+      typeof value?.code === 'string' && /^[A-Z][A-Z0-9_]{0,79}$/.test(value.code) ? value.code : undefined,
+      value?.needsSubscription === true,
+    );
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('No pudimos verificar la respuesta. Actualiza los datos antes de continuar.');
     assertCurrent();
     return value as T;
