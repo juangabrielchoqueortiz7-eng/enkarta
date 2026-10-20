@@ -41,5 +41,17 @@ Evidencia privada: `tmp/sales-contact-quote/`. Las pruebas manuales permanecen a
 ## Verificación local
 
 - `npm run verify`: **607 pruebas correctas**, lint, TypeScript y build. Desglose: 200 constructor/contratos, 155 servicios, 19 PostgreSQL del guardado, 55 editor/contrato/render, 14 PostgreSQL del dashboard, 26 cliente del dashboard, 17 historial, 11 navegación, 25 recuperación/render/estado, 28 dominio del cotizador, 21 cotizador/render/estado/copia/limpieza, 31 integridad y 5 distribución.
-- Revisión independiente sin bloqueantes en producción. Se corrigió el hallazgo de limpieza del borrador de la muestra y se añadieron dos regresiones específicas. Sin nuevos avisos de lint en los archivos afectados; permanecen los avisos anteriores sobre imágenes de invitaciones originales.
+- Revisión independiente del código sin bloqueantes en el flujo de la aplicación. Se corrigió el hallazgo de limpieza del borrador de la muestra y se añadieron dos regresiones específicas. Sin nuevos avisos de lint en los archivos afectados; permanecen los avisos anteriores sobre imágenes de invitaciones originales.
 - **597/597 archivos protegidos** idénticos por SHA-256 y **129 recursos originales** completos para distribución. Sin migración ni modificación de BCP.
+
+## Producción, 19 de octubre de 2026
+
+- Código **`a87de21`**, fusionado a `main`. Vercel **`dpl_AfaT6iAXm1wKGiJ6B77iVR3ShxYT`**, Ready y alias [enkarta.vercel.app](https://enkarta.vercel.app). Despliegue inmutable: [enkarta-8a9einraz](https://enkarta-8a9einraz-juangabrielchoqueortiz7-engs-projects.vercel.app).
+- CI **completed / success** para ese SHA exacto, con `npm run verify` y auditoría de dependencias de producción correctos. [Verify application #39351347896](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39351347896). El conteo de 607 procede del informe local; no se descargaron los logs de CI.
+- **9 comprobaciones de contrato y HTTP correctas**: bloqueo BCP local; configuración denegada sin caché a visitantes/cookies inválidas; muestras de desarrollo HTTP 404; acciones nuevas presentes en el código publicado; búsqueda, historial, listado y guardado anónimos HTTP 401; autenticación normal con cookie segura; configuración privada acotada y borrador ligado a la sesión; entradas ficticias malformadas HTTP 400 antes de acceder a la base; petición anónima separada todavía denegada.
+- **129/129 recursos originales publicados** conservan tamaño y SHA-256; **6/6 rutas** públicas/de acceso respondieron como se esperaba. Comprobación local final: **597/597 archivos protegidos** idénticos.
+- No se consultaron fichas ni historiales de clientes ni se crearon, modificaron o eliminaron contactos, pagos, usuarios, movimientos o recibos. Cero mensajes y llamadas bancarias. La cookie temporal se mantuvo en memoria y se retiró al terminar; esta entrega no dejó nuevos datos ficticios en producción que limpiar.
+- La conexión del cotizador, su confirmación, cancelación, recuperación y copia se comprobaron automáticamente en el entorno local, con dependencias ficticias. La comprobación remota verifica publicación y permisos; no representa una interacción real de navegador ni una lectura del portapapeles de Android. La aceptación manual sigue aplazada.
+- BCP conserva su código y configuración. Se comprobó el bloqueo en código y entorno local; no se afirma haber leído la variable remota del proveedor. Diseños, presets y recursos originales permanecen intactos.
+
+Evidencia privada adicional: `verify.log`, `deployment.log`, `deployment-inspect.log`, `production-readonly.json`, `production-public.json`, `protected-local-final.json`, `ci.json` y `RESULTADO.json`, sin contraseñas, claves, cookies ni fichas de clientes.
