@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { builderActor } from '@/lib/builder-access';
 import { partnerOwnsInvitation } from '@/lib/partner-session';
+import { isUuid } from '@/lib/rsvp-contract';
 import { sanitizeSvg } from '@/lib/sanitize-svg';
 
 export const runtime = 'nodejs';
@@ -47,12 +48,25 @@ function slugifyName(name: string): string {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await builderActor())) return unauthenticated();
+  const actor = await builderActor();
+  if (!actor) return unauthenticated();
   try {
     const form = await request.formData();
     const file = form.get('file');
     const folderRaw = (form.get('folder') as string) || 'misc';
-    const ownerId = (form.get('id') as string) || 'shared';
+    const ownerRaw = form.get('id');
+
+    // A partner's storage path must name an invitation they actually own.
+    // Check the exact supplied UUID before any bucket or file operation: cleaning
+    // an arbitrary value first could turn it into an authorized owner's alias.
+    if (actor.kind === 'partner') {
+      if (!isUuid(ownerRaw) || ownerRaw !== ownerRaw.toLowerCase()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+      let ownsInvitation: boolean;
+      try { ownsInvitation = await partnerOwnsInvitation(actor.partnerId, ownerRaw); }
+      catch { return NextResponse.json({ error: 'No pudimos verificar el permiso para subir archivos. Inténtalo de nuevo.' }, { status: 503 }); }
+      if (!ownsInvitation) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+    const ownerId = (ownerRaw as string) || 'shared';
 
     if (!file || typeof file === 'string') {
       return NextResponse.json({ error: 'No se recibió ningún archivo' }, { status: 400 });
