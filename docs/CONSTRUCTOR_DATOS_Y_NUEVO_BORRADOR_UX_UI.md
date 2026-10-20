@@ -113,14 +113,27 @@ La comprobación local conserva **597 archivos protegidos sin cambios** y confir
 
 ## Resultados finales de publicación
 
-Pendientes de completar tras confirmar la verificación integral y el despliegue. Los resultados locales descritos no acreditan por sí solos que este código esté publicado.
+Bloque publicado el 20 de octubre de 2026. Código integrado en `main`: `9527f4b9489e843f157e7d31fa7776b652a5b0c1`. La actualización posterior de este informe sólo modifica documentación.
 
 | Comprobación | Resultado |
 | --- | --- |
-| Inspección visual final en navegador y medidas | 44 comprobaciones en 11 escenas y 4 anchos, más 3 dirigidas a 1200 px; sin desbordamientos, campos sin etiqueta ni áreas táctiles pequeñas en esos casos |
-| Verificación integral: lint, TypeScript, todas las suites y build | `npm run verify`: salida 0; 1.371 pruebas en 46 archivos, sin fallos; lint, TypeScript y build correctos; 65 páginas generadas |
-| Commit y CI de la revisión publicada | Pendiente de registrar |
-| Despliegue y cotejo de fuentes en producción | Pendiente de registrar |
-| Comprobaciones HTTP de permisos y recursos originales | Pendiente de registrar |
-| Datos ficticios y limpieza final, si se utilizaron | Pendiente de registrar |
-| Aceptación manual en dispositivos físicos | Aplazada por solicitud del usuario |
+| Inspección visual | 44 comprobaciones en 11 escenas y cuatro anchos, más tres dirigidas a 1200 px; sin incidencias de disposición o etiquetas en esos casos |
+| Verificación integral local | `npm run verify`: salida 0; 1.371 pruebas en 46 archivos, incluidas 26 nuevas; lint, TypeScript y build correctos; 65 páginas generadas |
+| CI del código publicado | [Run 39496859534](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39496859534): verificación completa y auditoría de dependencias de producción aprobadas |
+| Producción | `dpl_3GEVfbg9w8jvMH12TiddhDP3CPbK`, estado Ready y alias [enkarta.vercel.app](https://enkarta.vercel.app) |
+| Fuentes del despliegue | Los identificadores de entrada de ContentPanel, PartnerDesignPicker y la guarda BCP coinciden exactamente con los bytes locales verificados |
+| Matriz HTTP final | 13 grupos aprobados; 75 solicitudes indebidas rechazadas con 401, incluidas 63 de escritura, sin sesión, con sesiones inválidas y con sesión de administrador que no puede suplantar a un socio |
+| Continuación de acceso | Panel y Nueva invitación redirigen al acceso de Socios y conservan la continuación segura, incluida la pestaña solicitada o el diseño original seleccionado |
+| Comprobaciones autenticadas | Historial vacío de UUID inexistente y configuración privada; auditoría sin recursos, sin sondeos, y subida vacía rechazada antes de almacenar archivos |
+| Originales | 129 de 129 recursos públicos coinciden en bytes y SHA-256; seis rutas devuelven su estado esperado; 597 archivos protegidos locales intactos |
+| Limpieza | Cero filas, invitaciones, usuarios Auth, pagos o archivos de prueba persistidos; UUID ausente comprobado antes y después; sesión temporal cerrada y descartada |
+| BCP y mensajes | BCP bloqueado; cero llamadas bancarias y cero mensajes enviados; sin cambios de proveedor, credenciales o variables de producción |
+| Aceptación manual | Aplazada por solicitud del usuario |
+
+La prueba HTTP comprueba el contrato del middleware: `safePartnerNext(pathname + search)` conserva también `tab=invitaciones`. Se corrigió una expectativa inicial del verificador privado que había supuesto el destino genérico de la página de servidor; no se modificó la aplicación ni se relajó la comprobación del origen o de la continuación. La matriz final volvió a ejecutarse completa y pasó.
+
+Se utilizaron únicamente un UUID ficticio inexistente, cookies inválidas, una imagen sintética en solicitudes sin sesión válida y cuerpos vacíos en dos comprobaciones autenticadas. No se consultaron filas de clientes ni se crearon datos que requirieran eliminación posterior. La limpieza valida el cierre de la sesión temporal.
+
+La verificación de producción acredita fuentes de entrada, disponibilidad, cabeceras privadas, permisos y conservación de recursos. No certifica la aceptación visual autenticada en un dispositivo físico ni prueba un cobro, una creación real de borrador o una subida exitosa en producción. Los flujos válidos de edición y creación se cubren mediante los componentes reales con datos y transporte en memoria; las manuales siguen aplazadas.
+
+Evidencia privada local de cierre: `tmp/creation-content-ux/RESULTADO.json`, `production-http.json`, `production-public.json`, `deployment-final.json`, `deployment-files.json`, `ci.json`, `verify.log` y `harness-negative-proof.log`. No se distribuye en la aplicación ni contiene claves o cookies de acceso.
