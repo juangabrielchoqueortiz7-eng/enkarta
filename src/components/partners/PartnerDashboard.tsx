@@ -8,6 +8,7 @@ import {
 } from '@/lib/partner-plans';
 import { checkoutPaymentLabel, checkoutQuoteMatches, paymentUnderReview, PartnerRequestError, partnerRequest, validCheckoutPayment } from '@/lib/partner-checkout';
 import { isUuid } from '@/lib/rsvp-contract';
+import { PartnerProfileSave, PROFILE_FIELDS, normalizedProfileFields, profileFields, sameProfileIdentity, validPartnerProfile, type ProfileFields, type ProfileSaveAttempt } from '@/lib/partner-account';
 
 // Panel del socio: estado de la mensualidad, su cartera de invitaciones y el
 // registro del pago con comprobante. Todo pasa por /api/partner/*; este
@@ -63,10 +64,7 @@ const dateLabel = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
 
 function validProfile(value: unknown): value is PartnerAccount['profile'] {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const profile = value as Record<string, unknown>;
-  return ['email', 'name', 'avatar', 'brand', 'phone', 'city'].every(key => typeof profile[key] === 'string')
-    && ['active', 'suspended'].includes(String(profile.status)) && typeof profile.memberSince === 'string' && Number.isFinite(Date.parse(profile.memberSince));
+  return validPartnerProfile(value);
 }
 
 // Only a complete account response can resolve an uncertain payment operation.
@@ -146,6 +144,12 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
   const accountSequence = useRef(0);
   const accountRead = useRef<AbortController | null>(null);
   const paymentOperation = useRef(false);
+  const profileSave = useRef<PartnerProfileSave | null>(null);
+  if (!profileSave.current) profileSave.current = new PartnerProfileSave(initialAccount.profile);
+  const acceptAccount = useCallback((value: PartnerAccount) => {
+    profileSave.current!.observe(value.profile);
+    setAccount(value);
+  }, []);
 
   const invalidateAccountRead = useCallback(() => {
     accountSequence.current += 1;
@@ -160,6 +164,7 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
     return () => {
       mounted.current = false; invalidateAccountRead(); invalidateInvitationRead();
       invitationOperation.current?.controller.abort(); invitationOperation.current = null;
+      profileSave.current?.dispose();
     };
   }, [invalidateAccountRead, invalidateInvitationRead]);
 
@@ -180,13 +185,13 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
       const value = checkedAccount(await partnerRequest<PartnerAccount>('/api/partner/account', { signal: controller.signal }));
       if (!mounted.current || controller.signal.aborted || serial !== accountSequence.current) throw new Error('Esta consulta fue reemplazada. Vuelve a consultar el estado.');
       validate?.(value);
-      setAccount(value);
+      acceptAccount(value);
       return value;
     } finally {
       signal?.removeEventListener('abort', cancel);
       if (accountRead.current === controller) accountRead.current = null;
     }
-  }, [invalidateAccountRead]);
+  }, [invalidateAccountRead, acceptAccount]);
 
   const setPaymentOperation = useCallback((active: boolean) => {
     paymentOperation.current = active;
@@ -200,9 +205,12 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
     invalidateAccountRead();
     setAccount(current => ({ ...current, payments: [payment, ...current.payments.filter(item => item.id !== payment.id)] }));
   }, [invalidateAccountRead]);
-  const acceptProfile = useCallback((updated: PartnerAccount) => {
-    if (!mounted.current || !validProfile(updated?.profile)) return false;
+  const acceptProfile = useCallback((updated: PartnerAccount, attempt?: ProfileSaveAttempt) => {
+    const session = profileSave.current!;
+    if (!mounted.current || !validProfile(updated?.profile) || !sameProfileIdentity(session.profile, updated.profile)
+      || (attempt && !session.canApply(attempt, updated.profile))) return false;
     invalidateAccountRead();
+    session.observe(updated.profile);
     setAccount(current => ({ ...current, profile: updated.profile }));
     return true;
   }, [invalidateAccountRead]);
@@ -224,7 +232,7 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
       if (fresh) checkInvitationCounts(entries, fresh);
       if (!current()) return;
       invitationSnapshot.current = entries; setInvitations(entries); setInvitationError('');
-      if (fresh) { setAccount(fresh); invitationUncertain.current = false; setInvitationNeedsRefresh(false); say('ok', 'Invitaciones y cupo consultados. Revisa su estado antes de compartir.'); }
+      if (fresh) { acceptAccount(fresh); invitationUncertain.current = false; setInvitationNeedsRefresh(false); say('ok', 'Invitaciones y cupo consultados. Revisa su estado antes de compartir.'); }
     } catch (failure) {
       if (current()) setInvitationError(invitationFailure(failure, 'No se pudo consultar la lista.', true));
     } finally {
@@ -233,7 +241,7 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
       }
       controller.abort();
     }
-  }, [invalidateInvitationRead, invalidateAccountRead, say]);
+  }, [invalidateInvitationRead, invalidateAccountRead, acceptAccount, say]);
 
   useEffect(() => { void loadInvitations(); }, [loadInvitations]);
   useEffect(() => {
@@ -413,7 +421,7 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
               onVerificationChange={setPaymentVerification}
             />
           )}
-          {tab === 'cuenta' && <AccountTab account={account} onSaved={acceptProfile} onNotice={say} />}
+          {tab === 'cuenta' && <AccountTab account={account} onSaved={acceptProfile} onNotice={say} profileSave={profileSave.current} onSaveStart={invalidateAccountRead} />}
         </div>
       </main>
     </div>
@@ -919,31 +927,111 @@ function PaymentHistory({ payments }: { payments: PartnerPayment[] }) {
 
 // ── Datos del socio ──────────────────────────────────────────────────────────
 
-function AccountTab({ account, onSaved, onNotice }: {
+function AccountTab({ account, onSaved, onNotice, profileSave, onSaveStart }: {
   account: PartnerAccount;
-  onSaved: (account: PartnerAccount) => boolean;
+  onSaved: (account: PartnerAccount, attempt?: ProfileSaveAttempt) => boolean;
   onNotice: (tone: 'ok' | 'error', text: string) => void;
+  profileSave?: PartnerProfileSave;
+  onSaveStart?: () => void;
 }) {
-  const [brand, setBrand] = useState(account.profile.brand);
-  const [phone, setPhone] = useState(account.profile.phone);
-  const [city, setCity] = useState(account.profile.city);
-  const [saving, setSaving] = useState(false);
+  const localSession = useRef<PartnerProfileSave | null>(null);
+  if (!localSession.current) localSession.current = new PartnerProfileSave(account.profile);
+  const session = profileSave ?? localSession.current;
+  const retained = session.draft;
+  const [fields, setFields] = useState(() => retained?.fields ?? profileFields(account.profile));
+  const [mode, setMode] = useState<'idle' | 'save' | 'check'>('idle');
+  const draft = useRef(fields);
+  const edits = useRef({ brand: 0, phone: 0, city: 0 });
+  const dirty = useRef(new Set<keyof ProfileFields>(retained?.dirty));
+  const verified = useRef(account.profile);
+  const mounted = useRef(true);
+  const active = useRef<{ session: PartnerProfileSave; attempt: ProfileSaveAttempt } | null>(null);
+  const identity = JSON.stringify([account.profile.email, account.profile.memberSince]);
+  const context = useRef({ session, identity, epoch: 0 });
+  if (!profileSave && verified.current !== account.profile) session.observe(account.profile);
+  if (context.current.session !== session || context.current.identity !== identity) {
+    if (active.current) active.current.session.cancel(active.current.attempt);
+    active.current = null;
+    context.current = { session, identity, epoch: context.current.epoch + 1 };
+    const restored = session.draft;
+    dirty.current = new Set(restored?.dirty); draft.current = restored?.fields ?? profileFields(account.profile);
+    verified.current = account.profile; setFields(draft.current); setMode('idle');
+  }
+  if (verified.current !== account.profile) {
+    const next = { ...draft.current };
+    for (const key of PROFILE_FIELDS) if (!dirty.current.has(key)) next[key] = account.profile[key];
+    verified.current = account.profile;
+    if (PROFILE_FIELDS.some(key => next[key] !== draft.current[key])) { draft.current = next; setFields(next); session.rememberDraft(next, dirty.current); }
+  }
+  const epoch = context.current.epoch;
+  const live = () => mounted.current && context.current.epoch === epoch && context.current.session === session
+    && sameProfileIdentity(account.profile, session.profile);
+  useEffect(() => {
+    mounted.current = true;
+    if (!active.current) setMode('idle');
+    return () => {
+      mounted.current = false;
+      if (active.current) active.current.session.cancel(active.current.attempt);
+      active.current = null;
+    };
+  }, []);
 
-  const save = async () => {
-    setSaving(true);
+  const edit = (key: keyof ProfileFields, value: string) => {
+    if (!live()) return;
+    edits.current[key] += 1; dirty.current.add(key);
+    draft.current = { ...draft.current, [key]: value }; setFields(draft.current); session.rememberDraft(draft.current, dirty.current);
+  };
+  const run = async (kind: 'save' | 'check') => {
+    if (!live() || active.current) return;
+    const attempt = session.begin(kind, normalizedProfileFields(draft.current));
+    if (!attempt) return;
+    const revisions = { ...edits.current };
+    active.current = { session, attempt }; setMode(kind);
+    const current = () => live() && active.current?.attempt === attempt && session.owns(attempt);
+    let outcome: 'confirmed' | 'rejected' | 'uncertain' = 'uncertain';
     try {
-      const res = await fetch('/api/partner/account', {
+      onSaveStart?.();
+      const result = await partnerRequest<PartnerAccount>('/api/partner/account', kind === 'save' ? {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brand, phone, city }),
-      });
-      const result = await res.json();
-      if (!res.ok) { onNotice('error', result.error || 'No se pudo guardar'); return; }
-      if (onSaved(result)) onNotice('ok', 'Datos guardados.');
-      else onNotice('error', 'La respuesta del perfil llegó incompleta. Conservamos los últimos datos verificados.');
+        body: JSON.stringify(attempt.submission.fields), signal: attempt.controller.signal,
+      } : { signal: attempt.controller.signal });
+      if (!current()) return;
+      if (kind === 'check') checkedAccount(result);
+      if (!validProfile(result.profile)) throw new Error('La respuesta del perfil llegó incompleta. Conservamos los últimos datos verificados.');
+      if (!session.canApply(attempt, result.profile)) throw new Error('El perfil cambió durante la consulta. Conservamos tus cambios y los últimos datos verificados.');
+      const matches = session.matches(attempt, result.profile);
+      if (kind === 'save' && !matches) throw new Error('La respuesta no coincide con los datos enviados. El guardado aún no está confirmado.');
+      if (!onSaved(result, attempt)) throw new Error('No pudimos aplicar la respuesta del perfil. Conservamos tus cambios y los últimos datos verificados.');
+      session.observe(result.profile);
+      if (!matches) {
+        onNotice('error', 'Los datos consultados todavía no coinciden con lo enviado. Conservamos tu borrador; vuelve a comprobar el guardado.');
+        return;
+      }
+      outcome = 'confirmed';
+      const next = { ...draft.current };
+      for (const key of PROFILE_FIELDS) {
+        if (edits.current[key] === revisions[key] && (kind === 'save' || !dirty.current.has(key)
+          || normalizedProfileFields(draft.current)[key] === attempt.submission.fields[key])) {
+          next[key] = result.profile[key]; dirty.current.delete(key);
+        }
+      }
+      draft.current = next; setFields(next); session.rememberDraft(next, dirty.current);
+      onNotice('ok', kind === 'save'
+        ? (dirty.current.size ? 'Datos enviados guardados. Conservamos los cambios que hiciste después.' : 'Datos guardados.')
+        : 'Los datos actuales coinciden con lo enviado. Conservamos tus cambios posteriores.');
+    } catch (failure) {
+      if (!current()) return;
+      const definitive = kind === 'save' && failure instanceof PartnerRequestError && [400, 401, 403].includes(failure.status);
+      if (definitive) outcome = 'rejected';
+      const message = failure instanceof Error ? failure.message.replaceAll('Actualizar estado', 'Comprobar guardado') : 'No pudimos comprobar el guardado.';
+      onNotice('error', definitive ? message : `${message} Pulsa «Comprobar guardado» antes de volver a guardar.`);
     } finally {
-      setSaving(false);
+      session.finish(attempt, outcome);
+      if (live() && active.current?.attempt === attempt) { active.current = null; setMode('idle'); }
     }
   };
+  const save = () => run('save');
+  const check = () => run('check');
 
   const field = 'mt-2 w-full rounded-xl border border-[#2C2519]/12 bg-white px-4 py-2.5 font-outfit text-[13px]';
   const label = 'font-outfit text-[11px] uppercase tracking-[0.18em] text-[#2C2519]/50';
@@ -958,15 +1046,15 @@ function AccountTab({ account, onSaved, onNotice }: {
       <div className="mt-7 space-y-5">
         <label className="block">
           <span className={label}>Nombre de tu marca</span>
-          <input value={brand} onChange={event => setBrand(event.target.value)} maxLength={80} placeholder="Ej. Estudio Aurora" className={field} />
+          <input value={fields.brand} onChange={event => edit('brand', event.target.value)} maxLength={80} placeholder="Ej. Estudio Aurora" className={field} />
         </label>
         <label className="block">
           <span className={label}>WhatsApp</span>
-          <input value={phone} onChange={event => setPhone(event.target.value)} maxLength={30} placeholder="591 7XXXXXXX" className={field} />
+          <input value={fields.phone} onChange={event => edit('phone', event.target.value)} maxLength={30} placeholder="591 7XXXXXXX" className={field} />
         </label>
         <label className="block">
           <span className={label}>Ciudad</span>
-          <input value={city} onChange={event => setCity(event.target.value)} maxLength={60} placeholder="La Paz" className={field} />
+          <input value={fields.city} onChange={event => edit('city', event.target.value)} maxLength={60} placeholder="La Paz" className={field} />
         </label>
         <label className="block">
           <span className={label}>Correo</span>
@@ -976,11 +1064,19 @@ function AccountTab({ account, onSaved, onNotice }: {
 
       <button
         onClick={save}
-        disabled={saving}
+        disabled={mode !== 'idle' || session.busy || session.needsCheck || session.alreadySaved(normalizedProfileFields(fields))}
         className="mt-7 rounded-full bg-[#2C2519] px-7 py-2.5 font-outfit text-[13px] text-[#FAF7F2] transition hover:bg-[#3d342a] disabled:opacity-50"
       >
-        {saving ? 'Guardando…' : 'Guardar cambios'}
+        {mode === 'save' ? 'Guardando…' : 'Guardar cambios'}
       </button>
+      {session.needsCheck && (
+        <div className="mt-4 font-outfit text-[13px] leading-relaxed text-[#2C2519]/70">
+          <p role="status" aria-live="polite">El guardado aún no está confirmado. Tus cambios siguen en el formulario.</p>
+          <button type="button" onClick={check} disabled={mode !== 'idle' || session.busy} className="mt-3 rounded-full border border-[#2C2519]/20 px-5 py-2.5 disabled:opacity-50">
+            {mode === 'check' ? 'Comprobando…' : 'Comprobar guardado'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
