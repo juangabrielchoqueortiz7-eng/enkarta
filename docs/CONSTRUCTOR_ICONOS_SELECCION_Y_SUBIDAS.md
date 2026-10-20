@@ -52,3 +52,19 @@ La comparación AST frente a ese commit mantiene todos los textos JSX, clases y 
 - **28/28 pruebas offline** de los helpers privados de permisos, atestación y cierre de sesión pasan. No se suman a las pruebas de la aplicación ni realizan red. Evidencia: `smoke-helper-tests.log`.
 
 Permanecen los avisos anteriores de imágenes. No se modificaron dependencias, diseños, recursos ni migraciones.
+
+## Producción, 20 de octubre de 2026
+
+Código integrado en `main`: `2e4759f0e6ce20a86cbacff79864b2917cf23f61`. Vercel terminó el despliegue `dpl_FmZ47XfjiAyF4TgjgbdeVorAhzzu` en estado **READY**, destino **production**, con alias [enkarta.vercel.app](https://enkarta.vercel.app). URL inmutable: [enkarta-5ezjrm8k0](https://enkarta-5ezjrm8k0-juangabrielchoqueortiz7-engs-projects.vercel.app). Se desplegó el workspace completo para incluir los originales archivados fuera de Git.
+
+El workflow [39475724525](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39475724525) del mismo SHA completó correctamente `verify` y `audit` (`npm audit --omit=dev --audit-level=high`). La comprobación final conjunta validó CI, fuentes, HTTP, recursos, cierre de sesión y **597/597 archivos protegidos** intactos. Evidencia: `ci.json`, `protected.json` y `RESULTADO.json`.
+
+- El inventario remoto acredita por UID de contenido las tres fuentes exactas comprobadas: `IconPicker.tsx`, `ImageUploader.tsx` y `BlockEditorPanel.tsx`. Esto verifica las entradas del despliegue Ready; no afirma ejecutar la carrera dentro del navegador de producción.
+- **11 grupos HTTP correctos**, con **58 denegaciones exactas 401**, incluidas **46 solicitudes de escritura**. Sesiones ausentes o inválidas y una sesión de administrador no pueden suplantar una sesión de Socios. Los archivos ficticios sólo se enviaron sin sesión válida y fueron rechazados antes de almacenamiento. El administrador sólo envió un formulario sin archivo ni propietario, con el 400 esperado.
+- La configuración administrativa y el historial conservan `no-store`; el historial también conserva `Vary: Cookie`. Se verificó por conteo HEAD exacto que un UUID ficticio no existía antes ni después, sin leer filas de clientes.
+- **6/6 rutas públicas correctas** y **129/129 originales distribuidos** conservan sus hashes. No se sustituyeron fotografías, música, fuentes o animaciones.
+- **Cero** invitaciones, usuarios Auth, archivos, pagos o fixtures persistentes creados; **cero** operaciones bancarias y mensajes. Se cerró y descartó la cookie temporal de administrador. No quedaron registros de prueba que eliminar.
+
+BCP conserva su bloqueo en el código desplegado y no se modificaron proveedor ni credenciales. El smoke HTTP no inspeccionó variables remotas del proveedor ni llamó endpoints bancarios. Las pruebas de carrera son locales con componentes reales y transporte controlado; no se realizó una subida autenticada de Socios en producción. La aceptación manual permanece aplazada.
+
+Evidencia privada de producción en `tmp/builder-icon-upload/`: `deployment-final.json`, `deployment-files.json`, `production-http.json` y `production-public.json`. No se necesita SQL adicional.
