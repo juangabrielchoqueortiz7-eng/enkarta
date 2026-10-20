@@ -10,7 +10,7 @@ La reproducción aislada carga la fuente de `BlockEditorPanel` del commit `21f03
 
 ## Corrección
 
-- El panel mantiene una referencia del documento y del callback actuales. Todos sus cambios sincronizan esa referencia antes de notificar al constructor; los cambios consecutivos no necesitan esperar al siguiente render para ver el resultado anterior.
+- El panel mantiene una referencia del documento y del callback actuales. Cada notificación sincroniza esa referencia antes de avisar al constructor; las mutaciones funcionales de medios la consultan sin esperar al siguiente render para ver el resultado anterior.
 - Actualizar un bloque busca su ID en el layout vigente. Si el bloque o el layout ya no existe, no emite una nueva configuración ni recupera contenido eliminado. Una respuesta tampoco edita un bloque que ahora tiene otro tipo.
 - Las mutaciones de contenido, ajustes de `ImageStudio`, iconos, estilos, animación y visibilidad combinan únicamente sus campos con el bloque actual. La configuración global, el orden, los hermanos y los metadatos del layout se conservan.
 - Las imágenes y captions de la galería se resuelven contra el bloque y documento actuales, incluidos los enlaces `media.galleryImages` y `media.galleryCaptions`. Reordenar mantiene la asociación por imagen y conserva los títulos, pies y descripciones recientes. Editar una propiedad mantiene el comportamiento existente de desvincular ese campo de los datos globales.
@@ -53,3 +53,18 @@ La suite forma parte de `npm run verify`. Evidencia privada en `tmp/builder-bloc
 - Revisión independiente del diff y ejecución independiente de las 18 regresiones: sin bloqueantes para el alcance declarado. Permanecen los avisos anteriores de imágenes; no aparecen nuevos avisos de lint en el componente afectado.
 - **597/597 archivos protegidos** conservan SHA-256 y el guard de distribución encuentra completos los **129 originales públicos**, incluidos los audios archivados fuera de Git.
 - **28/28 pruebas offline** de los helpers privados de atestación de fuente, denegaciones y cierre de sesión correctas; no se suman a las 1.078 pruebas de la aplicación ni se conectan a producción.
+
+## Producción verificada, 20 de octubre de 2026
+
+- Código **`26577b74339821cd4aeddc4b1503adfe4232e461`**, integrado en `main`. [CI del commit exacto](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39452359390): `completed/success`, con `npm run verify` y auditoría de dependencias aprobados. Se consultaron únicamente metadatos públicos de workflow y pasos.
+- Vercel **`dpl_HDkiCUeikJ3r2r5PjW5CFp9pyqCU`**, `READY`, destino producción y alias [enkarta.vercel.app](https://enkarta.vercel.app). Despliegue inmutable: [enkarta-qdqic2vwo](https://enkarta-qdqic2vwo-juangabrielchoqueortiz7-engs-projects.vercel.app). El workspace completo incluye los originales ignorados por Git.
+- El identificador de contenido de `panels/BlockEditorPanel.tsx` coincide con el archivo de entrada del despliegue Ready y su SHA-256 local. Esto acredita la fuente publicada; no afirma ejecutar el editor autenticado ni sus callbacks desde un navegador de producción.
+- **11 grupos HTTP correctos**, con **58 denegaciones exactas**, incluidas **46 solicitudes de escritura**. Se mantienen los permisos de cuenta, pagos, publicación y eliminación de Socios. Las solicitudes ficticias de medios sin sesión o con cookies inválidas se rechazan; la cookie administrativa no sustituye una sesión de Socios.
+- Los archivos ficticios sólo se enviaron en contextos sin autenticación válida. Con administrador se envió únicamente un formulario sin archivo ni propietario: devolvió el rechazo exacto 400 antes de almacenar nada. No se ejecutaron subidas autenticadas ni se deduce una aceptación de sus carreras a partir de estas denegaciones.
+- La configuración administrativa conserva `no-store` y vinculación a su sesión. El historial privado del constructor conserva `no-store` y `Vary: Cookie`, con respuesta vacía para un UUID ficticio cuya ausencia se comprobó mediante conteos exactos antes y después. No se leyeron filas de clientes.
+- **129/129 recursos originales públicos** conservan tamaño y SHA-256; las **6/6 rutas** comprobadas responden como corresponde. Los **597/597 archivos protegidos** siguen idénticos después del despliegue.
+- **Cero registros de negocio, archivos almacenados, usuarios Auth, fixtures, pagos, operaciones bancarias o mensajes creados**. La cookie administrativa temporal, mantenida sólo en memoria, quedó cerrada. No hay datos ficticios persistentes que retirar de Supabase.
+
+BCP permanece bloqueado: no se cambiaron proveedor ni credenciales y no se consultaron variables remotas de pago o endpoints bancarios. No se requiere SQL. Las regresiones locales cubren los callbacks del componente real sobre el borrador actual; las comprobaciones remotas complementan esa evidencia con fuentes, permisos y conservación. Las pruebas manuales permanecen aplazadas.
+
+Evidencia privada adicional en `tmp/builder-block-media/`: `smoke-helper-tests.log`, `deployment.log`, `deployment-final.json`, `deployment-files.json`, `ci.json`, `production-http.json`, `production-public.json`, `protected.json` y `RESULTADO.json`. La aceptación y limpieza anteriores de Ventas y los borradores del navegador permanecen intactos.
