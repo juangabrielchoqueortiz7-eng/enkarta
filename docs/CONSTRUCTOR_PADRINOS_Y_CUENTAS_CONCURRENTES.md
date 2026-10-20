@@ -29,7 +29,7 @@ La comparación automática de los árboles estáticos de las doce rutas nativas
 
 La verificación de producción se realiza después de que Vercel confirme el despliegue como `Ready`: correspondencia de fuentes desplegadas, permisos HTTP, comprobaciones privadas acotadas y hashes de los recursos originales. No reproduce una carrera de edición en un navegador autenticado de producción. Las pruebas manuales permanecen aplazadas por solicitud del usuario.
 
-Evidencia técnica privada: `tmp/template-list-concurrency/`. Los resultados del despliegue se registran al completar la verificación.
+Evidencia técnica privada: `tmp/template-list-concurrency/`.
 
 ## Verificación local previa al despliegue
 
@@ -37,3 +37,17 @@ Evidencia técnica privada: `tmp/template-list-concurrency/`. Los resultados del
 - **34/34 pruebas sin red** del verificador privado de producción: rechazos de permisos, cuerpos vacíos y correspondencia de fuentes desplegadas.
 - **597/597 archivos protegidos idénticos por SHA-256** y distribución completa de **129 recursos originales**. No se requieren SQL, dependencias ni cambios de variables de entorno.
 - Revisión independiente del cambio: únicamente las tres listas previstas; sin modificaciones en el hook, motor de listas, diez editores delegados, estilos, etiquetas o normalizadores.
+
+## Despliegue y comprobaciones de producción
+
+Código de aplicación `29012323ca3d2b04e57f76b864532e952c061c7d`, integrado en `main`. Vercel confirma **Ready** en el despliegue `dpl_FrB1MxQgCC8wbY7hJf6e1DJG5Y32`, asociado a [Enkarta](https://enkarta.vercel.app).
+
+[CI del SHA exacto](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39515369528) completado con éxito: `npm run verify` y `npm audit --omit=dev --audit-level=high`. El cierre automático de evidencia contrastó estos resultados con el despliegue, las fuentes y los contadores de pruebas y conservación.
+
+- Correspondencia exacta de las cuatro fuentes de entrada: `TemplateContentFields.tsx`, `useLegacyDraft.ts`, `builder-list-state.ts` y `payments/bcp.ts`.
+- **13 grupos de comprobaciones HTTP correctos**. **75 peticiones denegadas**, incluidas **63 solicitudes de escritura**, verifican que visitantes, cookies inválidas y una sesión de administrador no puedan suplantar a un Socio. Los paneles privados mantienen su redirección y el diseño elegido en el retorno seguro.
+- La consulta privada de historial usa un identificador ficticio inexistente. La auditoría de recursos recibe una lista vacía y devuelve únicamente métricas cero; la petición de subida autenticada carece de archivo y propietario y se rechaza antes del almacenamiento. No se leen filas de clientes ni se prueba una subida o guardado positivo como Socio.
+- **129/129 originales publicados idénticos por bytes y SHA-256** y **6/6 rutas públicas y de acceso correctas**.
+- **Cero datos de negocio escritos, usuarios creados, archivos almacenados, pagos, llamadas bancarias o mensajes enviados**. El identificador ficticio continúa ausente y se cerró la sesión temporal de administrador. No quedan fixtures persistentes que limpiar.
+
+BCP conserva su bloqueo en las fuentes desplegadas y su configuración local desactivada. No se ha consultado el valor remoto del proveedor ni ejecutado operaciones bancarias. La aceptación manual y las carreras dentro de un navegador autenticado de producción siguen aplazadas; las regresiones de concurrencia se ejecutaron localmente con la lógica real.
