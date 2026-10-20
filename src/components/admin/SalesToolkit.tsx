@@ -106,7 +106,11 @@ export default function SalesToolkit({ transport = fetch, storage: storageOverri
   useEffect(() => {
     if (!contactRequest || handledContact.current === contactRequest.sequence) return;
     setShow(true);
-    if (booting) return;
+    if (booting) {
+      quoteHeading.current?.focus({ preventScroll: true });
+      quoteHeading.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+      return;
+    }
     handledContact.current = contactRequest.sequence;
     setContactFocusSequence(contactRequest.sequence);
     setConfirmDiscard(false);
