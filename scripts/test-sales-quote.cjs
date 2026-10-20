@@ -1,4 +1,4 @@
-// Exercise the production quote domain without network, bank or storage access.
+// Exercise the quote domain with fictional data and memory storage; no network or bank.
 const fs = require('node:fs');
 const ts = require('typescript');
 const test = require('node:test');
@@ -7,7 +7,9 @@ require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 }, fileName: file,
 }).outputText, file);
 
-const { MAX_SALES_QUOTE_BS, parseSalesExtras, validateSalesQuote, salesQuoteTotals, formatSalesQuote, salesReply, SALES_REPLY_LABELS } = require('../src/lib/sales-playbook.ts');
+const { MAX_SALES_QUOTE_BS, parseSalesExtras, validateSalesQuote, salesQuoteTotals, formatSalesQuote, salesReply, SALES_REPLY_LABELS, isSalesCommercialReference } = require('../src/lib/sales-playbook.ts');
+const { readSalesDraft, saveSalesDraft, salesDraftKey, SALES_DRAFT_TTL } = require('../src/lib/sales-draft.ts');
+const { salesQuoteContact, prepareSalesContactDraft } = require('../src/lib/sales-contact.ts');
 const complete = {
   clientName: 'QA Familia Pérez', eventType: 'Boda', eventDate: '2028-02-29', design: 'Diseño personalizado QA',
   packageKey: 'premium', extrasBs: '270,50', extrasLabel: 'Servicio ficticio QA', paymentInstructions: 'INSTRUCCIONES FICTICIAS. SIN PAGO REAL.',
@@ -160,4 +162,127 @@ test('validation is pure and keeps raw decimal input available for correction or
     assert.equal(JSON.stringify(input), before);
     assert.equal(input.extrasBs, extrasBs);
   }
+});
+
+const reference = 'EK-A1B2C3D4';
+const contactLead = (patch = {}) => ({
+  id: '30000000-0000-4000-8000-000000000100', reference, status: 'contacted', package_key: 'premium', design: 'Lunaria', event_category: 'Boda',
+  placement: 'qa', utm_source: '', utm_medium: '', utm_campaign: '', referrer_host: '', revenue_bs: null, notes: 'QA nota ficticia', revision: 0,
+  created_at: '2001-01-01T12:00:00Z', updated_at: '2026-10-19T12:00:00Z', ...patch,
+});
+const memoryStorage = () => { const values = new Map(); return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) }; };
+const scope = 'a'.repeat(64), now = 1800000000000;
+const invalidReferences = [null, true, 123, [], [reference], {}, new String(reference), 'ENK-A1B2C3D4', 'EK-a1b2c3d4', 'ek-A1B2C3D4', ' EK-A1B2C3D4', 'EK-A1B2C3D4 ', 'EK-A1B2C3D', 'EK-A1B2C3D45', 'EK-A1B2C3G4', `${reference}\n`, `${reference}\r`, `${reference}\u0000`, `${reference}\u007f`];
+
+test('commercial quotation references are optional and never change the existing prices or readiness', () => {
+  const baseline = formatSalesQuote(complete);
+  for (const commercialReference of [undefined, '']) {
+    const input = { ...complete, commercialReference };
+    assert.equal(validateSalesQuote(input).ready, true); assert.deepEqual(salesQuoteTotals(input), salesQuoteTotals(complete));
+    assert.equal(formatSalesQuote(input), baseline); assert.doesNotMatch(formatSalesQuote(input), /Referencia comercial:/);
+  }
+  assert.equal(validateSalesQuote({ packageKey: 'premium' }).missing.includes('commercialReference'), false);
+});
+
+test('canonical EK references appear once in complete proposals and incomplete drafts', () => {
+  assert.equal(isSalesCommercialReference(reference), true);
+  for (const source of [complete, { packageKey: 'premium' }]) {
+    const input = { ...source, commercialReference: reference }, text = formatSalesQuote(input);
+    assert.equal(validateSalesQuote(input).errors.commercialReference, undefined);
+    assert.equal((text.match(/Referencia comercial: EK-A1B2C3D4/g) || []).length, 1);
+    assert.deepEqual(salesQuoteTotals(input), salesQuoteTotals(source)); assert.doesNotMatch(text, /pago confirmado|BCP habilitado/i);
+  }
+});
+
+test('commercial references reject payment codes, noncanonical text, controls and coercion', () => {
+  for (const commercialReference of invalidReferences) {
+    assert.equal(isSalesCommercialReference(commercialReference), false);
+    const result = validateSalesQuote({ ...complete, commercialReference });
+    assert.ok(result.errors.commercialReference, String(commercialReference)); assert.equal(result.ready, false);
+    assert.throws(() => formatSalesQuote({ ...complete, commercialReference }), /inválidos/);
+  }
+});
+
+test('a linked draft recovers its exact reference and excludes the commercial snapshot and bank data', () => {
+  const storage = memoryStorage(), input = { ...complete, commercialReference: reference, id: 'QA_PRIVATE_ID', notes: 'QA_PRIVATE_NOTE', revenue_bs: 930, session_hash: 'QA_PRIVATE_SESSION', accessToken: 'QA_PRIVATE_TOKEN' };
+  assert.equal(saveSalesDraft(storage, scope, input, now), true);
+  const raw = storage.getItem(salesDraftKey(scope)); assert.equal(JSON.parse(raw).version, 2); assert.doesNotMatch(raw, /QA_PRIVATE|paymentInstructions|revenue_bs|session_hash|accessToken/);
+  const { paymentInstructions, ...expected } = { ...complete, commercialReference: reference };
+  assert.deepEqual(readSalesDraft(storage, scope, now + 1), { kind: 'ready', input: expected });
+  assert.equal(paymentInstructions, complete.paymentInstructions); assert.match(formatSalesQuote({ ...readSalesDraft(storage, scope, now + 1).input, paymentInstructions }), /Referencia comercial: EK-A1B2C3D4/);
+});
+
+test('version one and two drafts remain readable with or without an optional reference and are never rewritten on read', () => {
+  const storage = memoryStorage(), key = salesDraftKey(scope);
+  for (const version of [1, 2]) for (const extra of [{}, { commercialReference: '' }, { commercialReference: reference }]) {
+    const input = { packageKey: 'plus', eventType: '', design: '', extrasBs: 0, ...extra }, raw = JSON.stringify({ version, scope, savedAt: now, input });
+    storage.setItem(key, raw); assert.deepEqual(readSalesDraft(storage, scope, now + 1), { kind: 'ready', input }); assert.equal(storage.getItem(key), raw);
+  }
+});
+
+test('an invalid reference never replaces the recoverable draft or repairs malformed stored text', () => {
+  const storage = memoryStorage(), key = salesDraftKey(scope), input = { packageKey: 'premium', commercialReference: reference };
+  assert.equal(saveSalesDraft(storage, scope, input, now), true); const safe = storage.getItem(key);
+  for (const commercialReference of invalidReferences) {
+    assert.equal(saveSalesDraft(storage, scope, { ...input, commercialReference }, now), false); assert.equal(storage.getItem(key), safe);
+  }
+  for (const commercialReference of ['ENK-Q6MRGK', 'EK-a1b2c3d4', `${reference}\n`, null, 123, [], {}]) {
+    const raw = JSON.stringify({ version: 2, scope, savedAt: now, input: { ...input, commercialReference } });
+    storage.setItem(key, raw); assert.equal(readSalesDraft(storage, scope, now).kind, 'invalid'); assert.equal(storage.getItem(key), raw);
+  }
+});
+
+test('linking a reference preserves the same strict session and expiry boundaries', () => {
+  const storage = memoryStorage(), input = { packageKey: 'premium', commercialReference: reference };
+  saveSalesDraft(storage, scope, input, now); const raw = storage.getItem(salesDraftKey(scope)), other = 'b'.repeat(64);
+  assert.equal(readSalesDraft(storage, scope, now + SALES_DRAFT_TTL).kind, 'ready'); assert.equal(readSalesDraft(storage, scope, now + SALES_DRAFT_TTL + 1).kind, 'expired');
+  assert.equal(readSalesDraft(storage, other, now).kind, 'empty'); storage.setItem(salesDraftKey(other), raw); assert.equal(readSalesDraft(storage, other, now).kind, 'invalid');
+});
+
+test('a validated historical contact yields only reference, event, design and package for quotation', () => {
+  const source = contactLead({ password: 'QA_PRIVATE_PASSWORD', session_hash: 'QA_PRIVATE_SESSION', clientName: 'QA_PRIVATE_CLIENT', eventDate: '2028-05-01' });
+  const context = salesQuoteContact(source);
+  assert.deepEqual(context, { reference, eventType: 'Boda', design: 'Lunaria', packageKey: 'premium' });
+  assert.doesNotMatch(JSON.stringify(context), /QA_PRIVATE|notes|revenue_bs|created_at|updated_at|id|status|eventDate/);
+  assert.equal(source.password, 'QA_PRIVATE_PASSWORD'); assert.equal(source.created_at.slice(0, 4), '2001');
+});
+
+test('general contacts keep empty information and require an explicitly chosen quotation package', () => {
+  const context = salesQuoteContact(contactLead({ package_key: 'general', design: '', event_category: '' }));
+  assert.deepEqual(context, { reference, eventType: '', design: '', packageKey: null });
+  for (const packageKey of [undefined, null, '', 'general', 'free', [], {}]) assert.equal(prepareSalesContactDraft(context, packageKey), null);
+  const draft = prepareSalesContactDraft(context, 'plus');
+  assert.deepEqual(draft, { commercialReference: reference, eventType: '', design: '', packageKey: 'plus', extrasBs: 0 });
+  const validation = validateSalesQuote(draft); assert.deepEqual(validation.errors, {}); assert.equal(validation.ready, false);
+  assert.ok(validation.missing.includes('eventType')); assert.ok(validation.missing.includes('design')); assert.doesNotMatch(JSON.stringify(draft), /Boda|premium/);
+});
+
+test('preparing another contact starts a clean draft without names, dates, extras or private values', () => {
+  const context = { ...salesQuoteContact(contactLead()), clientName: 'QA_PREVIOUS_CLIENT', eventDate: '2028-02-29', extrasLabel: 'QA_PREVIOUS_EXTRA', extrasBs: 270.5, paymentInstructions: 'QA_PRIVATE_BANK', notes: 'QA_PRIVATE_NOTE' };
+  const draft = prepareSalesContactDraft(context, 'premium');
+  assert.deepEqual(draft, { commercialReference: reference, eventType: 'Boda', design: 'Lunaria', packageKey: 'premium', extrasBs: 0 });
+  for (const field of ['clientName', 'eventDate', 'extrasLabel', 'paymentInstructions', 'notes']) assert.equal(Object.hasOwn(draft, field), false);
+  assert.doesNotMatch(JSON.stringify(draft), /QA_PREVIOUS|QA_PRIVATE/); assert.equal(context.extrasBs, 270.5);
+});
+
+test('a known package remains suggested while an explicit different package is allowed', () => {
+  for (const sourcePackage of ['plus', 'premium', 'exclusive']) {
+    const context = salesQuoteContact(contactLead({ package_key: sourcePackage })); assert.equal(context.packageKey, sourcePackage);
+    for (const chosen of ['plus', 'premium', 'exclusive']) {
+      const draft = prepareSalesContactDraft(context, chosen); assert.equal(draft.packageKey, chosen); assert.equal(draft.commercialReference, reference); assert.equal(context.packageKey, sourcePackage);
+    }
+  }
+});
+
+test('quotation contact preparation rejects incomplete commercial snapshots and unsafe context', () => {
+  for (const source of [null, [], {}, contactLead({ id: 'bad' }), contactLead({ revision: -1 }), contactLead({ notes: undefined }), contactLead({ package_key: 'free' }), contactLead({ reference: `${reference}\n` }), contactLead({ event_category: 'Boda\n' }), contactLead({ design: 'Lunaria\u0000' })]) assert.equal(salesQuoteContact(source), null);
+  const context = salesQuoteContact(contactLead());
+  for (const unsafe of [null, [], {}, { ...context, reference: 'ENK-Q6MRGK' }, { ...context, eventType: undefined }, { ...context, eventType: 'x'.repeat(51) }, { ...context, design: 'x'.repeat(101) }, { ...context, design: 'QA\n' }, { ...context, packageKey: 'general' }]) assert.equal(prepareSalesContactDraft(unsafe, 'premium'), null);
+});
+
+test('contact and draft preparation preserve immutable input and never infer missing customer data', () => {
+  const source = Object.freeze(contactLead({ event_category: '', design: '', package_key: 'general' })), before = JSON.stringify(source), context = Object.freeze(salesQuoteContact(source));
+  const draft = prepareSalesContactDraft(context, 'exclusive'); assert.equal(JSON.stringify(source), before);
+  assert.deepEqual(context, { reference, eventType: '', design: '', packageKey: null });
+  assert.equal(draft.clientName, undefined); assert.equal(draft.eventDate, undefined); assert.equal(draft.eventType, ''); assert.equal(draft.design, ''); assert.equal(draft.extrasBs, 0);
 });

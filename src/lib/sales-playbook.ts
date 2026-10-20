@@ -2,6 +2,7 @@ import { PACKAGE_CATALOG } from './packages';
 import type { InvitationPackage } from './types';
 
 export type SalesQuoteInput = {
+  commercialReference?: string;
   clientName?: string;
   eventType?: string;
   eventDate?: string;
@@ -12,7 +13,7 @@ export type SalesQuoteInput = {
   paymentInstructions?: string;
 };
 
-export type SalesQuoteField = 'clientName' | 'eventType' | 'eventDate' | 'design' | 'packageKey' | 'extrasBs' | 'extrasLabel' | 'paymentInstructions';
+export type SalesQuoteField = 'commercialReference' | 'clientName' | 'eventType' | 'eventDate' | 'design' | 'packageKey' | 'extrasBs' | 'extrasLabel' | 'paymentInstructions';
 export const MAX_SALES_QUOTE_BS = 1_000_000;
 export type SalesQuoteTotals = { base: number; extras: number; total: number; reservation: number; balance: number };
 export type SalesQuoteValidation = { errors: Partial<Record<SalesQuoteField, string>>; missing: SalesQuoteField[]; totals: SalesQuoteTotals | null; ready: boolean };
@@ -20,9 +21,14 @@ export type SalesQuoteValidation = { errors: Partial<Record<SalesQuoteField, str
 const MAX_CENTS = MAX_SALES_QUOTE_BS * 100;
 const controls = /[\u0000-\u001f\u007f]/;
 const fieldLabels: Record<SalesQuoteField, string> = {
-  clientName: 'Cliente', eventType: 'Evento', eventDate: 'Fecha', design: 'Diseño', packageKey: 'Paquete',
+  commercialReference: 'Referencia comercial', clientName: 'Cliente', eventType: 'Evento', eventDate: 'Fecha', design: 'Diseño', packageKey: 'Paquete',
   extrasBs: 'Importe de adicionales', extrasLabel: 'Detalle de adicionales', paymentInstructions: 'Medio de pago',
 };
+
+/** Commercial references are distinct from payment references and require canonical text. */
+export function isSalesCommercialReference(value: unknown): value is string {
+  return typeof value === 'string' && value.length === 11 && /^EK-[A-F0-9]{8}$/.test(value);
+}
 
 /** Parse the decimal representation instead of rounding a floating-point product. */
 export function parseSalesExtras(value: unknown): { cents: number; amount: number } | null {
@@ -59,6 +65,7 @@ function validDate(value: string) {
 export function validateSalesQuote(input: SalesQuoteInput): SalesQuoteValidation {
   const errors: SalesQuoteValidation['errors'] = {}, missing: SalesQuoteField[] = [];
   const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {} as SalesQuoteInput;
+  if (source.commercialReference !== undefined && source.commercialReference !== '' && !isSalesCommercialReference(source.commercialReference)) errors.commercialReference = 'Usa una referencia comercial válida: EK- y sus 8 caracteres.';
   const required: SalesQuoteField[] = ['clientName', 'eventType', 'eventDate', 'design', 'paymentInstructions'];
   for (const field of ['clientName', 'eventType', 'eventDate', 'design', 'extrasLabel', 'paymentInstructions'] as const) {
     const value = source[field];
@@ -121,6 +128,7 @@ export function formatSalesQuote(input: SalesQuoteInput, siteUrl = 'https://enka
     validation.ready ? 'RESUMEN DE PROPUESTA · ENKARTA' : 'BORRADOR DE PROPUESTA · ENKARTA',
     ...(!validation.ready ? [`Por confirmar: ${validation.missing.map(field => fieldLabels[field]).join(', ')}.`] : []),
     '',
+    ...(input.commercialReference ? [`Referencia comercial: ${input.commercialReference}`] : []),
     `Cliente: ${name}`,
     `Evento: ${event}`,
     `Fecha: ${displayDate(input.eventDate)}`,

@@ -45,7 +45,7 @@ El recibo y las respuestas omiten `session_hash`, claves y campos futuros no aut
 - Las respuestas de cargas anteriores no sustituyen una carga nueva. Se informa si falla una actualización y quedan cifras de la carga anterior.
 - Se solicita la advertencia nativa al abandonar/recargar con cambios pendientes; el navegador decide si la muestra. Los borradores de seguimiento y UUID pendientes viven en memoria, no en almacenamiento persistente. Una recarga completa vuelve a consultar datos canónicos; cerrar sesión retira la memoria privada.
 
-La búsqueda de referencias continúa siendo de solo lectura. No se añade otro editor del mismo contacto. El bloque posterior de paginación y agregación completa, dependiente de 020, se documenta en [VENTAS_PAGINACION_Y_METRICAS.md](VENTAS_PAGINACION_Y_METRICAS.md); su estado de despliegue figura allí.
+El resumen de búsqueda permanece como consulta. La acción posterior **Abrir seguimiento** utiliza el mismo editor del listado, incluso para contactos históricos, como se documenta en [VENTAS_SEGUIMIENTO_POR_REFERENCIA.md](VENTAS_SEGUIMIENTO_POR_REFERENCIA.md). No añade otro editor del mismo contacto. El bloque de paginación y agregación completa, dependiente de 020, se documenta en [VENTAS_PAGINACION_Y_METRICAS.md](VENTAS_PAGINACION_Y_METRICAS.md); su estado de despliegue figura allí.
 
 ## Verificación y despliegue
 

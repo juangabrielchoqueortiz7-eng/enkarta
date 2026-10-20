@@ -204,3 +204,46 @@ test('a late save acknowledgement cannot replace a newer canonical search snapsh
   await new Promise(resolve=>setImmediate(resolve));assert.equal(calls,1);
  });
 });
+
+test('quotation is requested only through the explicit summary action and forwarded to the existing toolkit',()=>{
+ const found=lead(),quoted=[],opened=[],request={sequence:7,contact:{reference:found.reference,eventType:'Boda',design:'Lunaria',packageKey:'premium'}};
+ const tree=Workspace({navigation:failure(),onRetry:()=>{},transport,onQuoteLead:value=>quoted.push(value),onOpenLead:value=>opened.push(value),quoteRequest:request});
+ const children=descendants(tree),toolkit=children.find(node=>node.type===SalesToolkit),search=children.find(node=>node.type===ReferenceSearch);
+ assert.strictEqual(toolkit.props.contactRequest,request);assert.deepEqual(quoted,[]);assert.deepEqual(opened,[]);
+ const summary=search.props.renderLead(found),button=nodesWhere(Summary(summary.props),node=>node.type==='button').find(node=>node.props.children==='Preparar cotización');
+ assert.ok(button);assert.equal(button.props.type,'button');button.props.onClick();assert.deepEqual(quoted,[found]);assert.deepEqual(opened,[]);
+ assert.equal(children.filter(node=>node.type===SalesToolkit).length,1);assert.equal(requests,0);
+});
+
+test('quotation action stays absent without authorization from its parent or valid contact context',()=>{
+ const withoutAction=renderToStaticMarkup(React.createElement(Summary,{lead:lead(),transport}));assert.doesNotMatch(withoutAction,/Preparar cotización/);
+ const tree=Workspace({navigation:failure(),onRetry:()=>{},transport,onQuoteLead:()=>{throw Error('Invalid contact must not be quoted');}});
+ const search=descendants(tree).find(node=>node.type===ReferenceSearch);
+ const invalid=search.props.renderLead(lead({reference:'EK-INVALID'}));assert.equal(invalid.props.onQuote,undefined);
+ const general=search.props.renderLead(lead({package_key:'general'}));assert.equal(typeof general.props.onQuote,'function');assert.equal(requests,0);
+});
+
+test('actual dashboard quotation requests preserve the open pending editor and include only the quotation context',async()=>{
+ await withDashboardHooks(async renderActual=>{
+  const pending=lead(),found=Object.freeze(lead({id:'30000000-0000-4000-8000-000000000101',reference:'EK-A1B2C3D5',package_key:'general',notes:'QA private follow-up note',revenue_bs:123,session_hash:'QA_PRIVATE_SESSION'}));
+  let tree=renderActual(transport);tree.props.onOpenLead(pending);tree=renderActual(transport);
+  let list=nodesWhere(tree,node=>node.type===ContactList)[0];list.props.onActivityChange(pending.id,true);tree=renderActual(transport);
+  const before=nodesWhere(tree,node=>node.type===ContactList)[0].props;
+  tree.props.onQuoteLead(found);tree=renderActual(transport);const first=tree.props.quoteRequest;
+  assert.equal(first.sequence,1);assert.deepEqual(first.contact,{reference:found.reference,eventType:'Boda',design:'Lunaria',packageKey:null});
+  assert.doesNotMatch(JSON.stringify(first),/QA_PRIVATE|private follow-up|revenue|status|revision|session_hash|123/);
+  list=nodesWhere(tree,node=>node.type===ContactList)[0];assert.strictEqual(list.props.leads,before.leads);assert.equal(list.props.openedId,pending.id);assert.equal(list.props.activeIds.has(pending.id),true);
+  tree.props.onQuoteLead(found);tree=renderActual(transport);assert.equal(tree.props.quoteRequest.sequence,2);assert.deepEqual(tree.props.quoteRequest.contact,first.contact);
+  assert.equal(found.notes,'QA private follow-up note');assert.equal(found.revenue_bs,123);assert.equal(requests,0);
+ });
+});
+
+test('invalid quote requests cannot erase the previously prepared contact or issue a write',async()=>{
+ await withDashboardHooks(async renderActual=>{
+  let tree=renderActual(transport);tree.props.onQuoteLead(lead());tree=renderActual(transport);const prepared=tree.props.quoteRequest;
+  for(const value of [null,{},lead({reference:'EK-INVALID'}),lead({package_key:'unregistered'}),lead({event_category:'QA\ninvalid'})]){
+   tree.props.onQuoteLead(value);tree=renderActual(transport);assert.strictEqual(tree.props.quoteRequest,prepared);
+  }
+  assert.equal(requests,0);
+ });
+});

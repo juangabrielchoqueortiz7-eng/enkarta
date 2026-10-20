@@ -1,4 +1,4 @@
-import type { SalesQuoteInput } from './sales-playbook';
+import { isSalesCommercialReference, type SalesQuoteInput } from './sales-playbook';
 
 export type SalesDraftInput = Omit<SalesQuoteInput, 'paymentInstructions'>;
 export type SalesDraftStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -17,6 +17,10 @@ function inputValue(value: unknown, version: 1 | 2): SalesDraftInput {
   const source = value as Record<string, unknown>;
   if (typeof source.packageKey !== 'string' || !['plus', 'premium', 'exclusive'].includes(source.packageKey)) throw new Error('Paquete inválido.');
   const result: SalesDraftInput = { packageKey: source.packageKey as SalesDraftInput['packageKey'] };
+  if (source.commercialReference !== undefined) {
+    if (source.commercialReference !== '' && !isSalesCommercialReference(source.commercialReference)) throw new Error('Referencia comercial inválida.');
+    result.commercialReference = source.commercialReference;
+  }
   for (const field of fields) {
     const text = source[field];
     if (text === undefined) continue;

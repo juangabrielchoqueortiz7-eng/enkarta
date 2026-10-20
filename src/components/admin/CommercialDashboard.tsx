@@ -10,6 +10,7 @@ import LeadSummary from '@/components/admin/CommercialLeadSummary';
 import { parseCommercialLead, type CommercialLead as Lead } from '@/lib/commercial-lookup';
 import { decodeCommercialCursor, mergeCommercialPageEditors, openCommercialLeadEditor, requestCommercialDashboard, type CommercialBreakdown as Breakdown, type CommercialFilter } from '@/lib/commercial-dashboard';
 import { commercialNavigationReducer, commercialRetryLocation, createCommercialNavigation, initialCommercialLocation, type CommercialNavigationState, type CommercialPageLocation } from '@/lib/commercial-navigation';
+import { salesQuoteContact, type SalesQuoteContact } from '@/lib/sales-contact';
 
 function LeadCard({ lead, onSaved, onActivityChange, transport }: { lead: Lead; onSaved: (lead: Lead) => void; onActivityChange: (id: string, active: boolean) => void; transport: typeof fetch }) {
   const source = lead.utm_source || lead.referrer_host || 'Directo';
@@ -37,10 +38,10 @@ export function CommercialDashboardFeedback({ navigation, onRetry }: { navigatio
 }
 
 /** These independent tools keep their position and identity through every dashboard load. */
-export function CommercialSalesWorkspace({ navigation, onRetry, transport, children, onOpenLead, latestLead }: { navigation: CommercialNavigationState; onRetry: () => void; transport: typeof fetch; children?: ReactNode; onOpenLead?: (lead: Lead) => void; latestLead?: Lead | null }) {
+export function CommercialSalesWorkspace({ navigation, onRetry, transport, children, onOpenLead, latestLead, onQuoteLead, quoteRequest }: { navigation: CommercialNavigationState; onRetry: () => void; transport: typeof fetch; children?: ReactNode; onOpenLead?: (lead: Lead) => void; latestLead?: Lead | null; onQuoteLead?: (lead: Lead) => void; quoteRequest?: { sequence: number; contact: SalesQuoteContact } | null }) {
   return <div className="space-y-6">
-    <SalesToolkit transport={transport} />
-    <CommercialReferenceSearch transport={transport} latestLead={latestLead} renderLead={lead => <LeadSummary lead={lead} transport={transport} onOpen={onOpenLead ? () => onOpenLead(lead) : undefined} />} />
+    <SalesToolkit transport={transport} contactRequest={quoteRequest} />
+    <CommercialReferenceSearch transport={transport} latestLead={latestLead} renderLead={lead => <LeadSummary lead={lead} transport={transport} onOpen={onOpenLead ? () => onOpenLead(lead) : undefined} onQuote={onQuoteLead && salesQuoteContact(lead) ? () => onQuoteLead(lead) : undefined} />} />
     <CommercialDashboardFeedback navigation={navigation} onRetry={onRetry} />
     {children}
   </div>;
@@ -54,6 +55,7 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
   const openedIdRef = useRef<string | null>(null), pageIdsRef = useRef(new Set<string>()), contactsHeading = useRef<HTMLHeadingElement>(null);
   const [openedId, setOpenedId] = useState<string | null>(null), [lastSaved, setLastSaved] = useState<Lead | null>(null);
   const [focusRequest, setFocusRequest] = useState<{ id: string } | null>(null);
+  const [quoteRequest, setQuoteRequest] = useState<{ sequence: number; contact: SalesQuoteContact } | null>(null);
   const loadSequence = useRef(0), activeLoad = useRef<AbortController | null>(null);
   const handleActivity = useCallback((id: string, active: boolean) => {
     if (activeIdsRef.current.has(id) === active) return;
@@ -100,6 +102,10 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
     if (openedIdRef.current && activeIdsRef.current.has(openedIdRef.current)) return;
     openedIdRef.current = null; setOpenedId(null); contactsHeading.current?.focus({ preventScroll: true });
   };
+  const quoteLead = (lead: Lead) => {
+    const contact = salesQuoteContact(lead);
+    if (contact) setQuoteRequest(previous => ({ sequence: (previous?.sequence ?? 0) + 1, contact }));
+  };
   useEffect(() => {
     if (!focusRequest) return;
     const row = document.getElementById(`commercial-lead-${focusRequest.id}`);
@@ -126,7 +132,7 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
     ['Reservas', s.reserved, 'Incluye ventas'], ['Ventas', s.sales, `${s.closeRate}% de conversaciones`], ['Ingresos registrados', `${s.revenue.toLocaleString('es-BO')} Bs`, 'Solo ventas marcadas'],
   ] : [];
   const latestSaved = lastSaved ? editors.reduce((latest, lead) => lead.id === latest.id && lead.revision > latest.revision ? lead : latest, lastSaved) : null;
-  return <CommercialSalesWorkspace navigation={navigation} onRetry={() => void load(commercialRetryLocation(navigation))} transport={transport} onOpenLead={openLead} latestLead={latestSaved}>
+  return <CommercialSalesWorkspace navigation={navigation} onRetry={() => void load(commercialRetryLocation(navigation))} transport={transport} onOpenLead={openLead} latestLead={latestSaved} onQuoteLead={quoteLead} quoteRequest={quoteRequest}>
     {data && <>
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="font-outfit text-[10px] font-semibold uppercase tracking-[.2em] text-[#a48655]">Últimos {data.periodDays} días</p><h2 className="mt-1 font-playfair text-3xl text-gray-900">Embudo comercial</h2><p className="mt-1 max-w-2xl font-outfit text-xs leading-5 text-gray-500">Relaciona anuncio, diseño, paquete y resultado mediante la referencia que aparece en WhatsApp. Un intento registra la solicitud del enlace; no confirma apertura ni envío. No registra IP, teléfono ni conversación.</p></div><button type="button" onClick={refresh} disabled={loading} className="min-h-11 self-start rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40">Actualizar</button></div>
 
