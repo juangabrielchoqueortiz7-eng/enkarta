@@ -12,6 +12,8 @@
     "test:services": "node scripts/test-services.cjs",
     "test:commercial-updates": "node scripts/test-commercial-updates.cjs",
     "test:commercial-editor": "node scripts/test-commercial-editor.cjs",
+    "test:commercial-pending": "node scripts/test-commercial-pending.cjs",
+    "test:commercial-pending-ui": "node scripts/test-commercial-pending-ui.cjs",
     "test:commercial-dashboard": "node scripts/test-commercial-dashboard.cjs",
     "test:commercial-dashboard-client": "node scripts/test-commercial-dashboard-client.cjs",
     "test:commercial-history-client": "node scripts/test-commercial-history-client.cjs",
@@ -22,7 +24,7 @@
     "test:integrity": "node scripts/test-integrity.cjs",
     "test:deployment": "node scripts/test-deployment.cjs",
     "monitor:production": "node scripts/check-production-health.cjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:builder && npm run test:services && npm run test:commercial-updates && npm run test:commercial-editor && npm run test:commercial-dashboard && npm run test:commercial-dashboard-client && npm run test:commercial-history-client && npm run test:commercial-navigation && npm run test:commercial-recovery-ui && npm run test:sales-quote && npm run test:sales-quote-ui && npm run test:integrity && npm run test:deployment && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm run test:builder && npm run test:services && npm run test:commercial-updates && npm run test:commercial-editor && npm run test:commercial-pending && npm run test:commercial-pending-ui && npm run test:commercial-dashboard && npm run test:commercial-dashboard-client && npm run test:commercial-history-client && npm run test:commercial-navigation && npm run test:commercial-recovery-ui && npm run test:sales-quote && npm run test:sales-quote-ui && npm run test:integrity && npm run test:deployment && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

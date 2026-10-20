@@ -14,7 +14,7 @@ require.extensions['.ts'] = require.extensions['.tsx'] = (module, file) => modul
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true }, fileName: file,
 }).outputText, file);
 
-const { COMMERCIAL_SAVE_TIMEOUT_MS, commercialRevenue, commercialDraftRevenue, parseCommercialUpdate, prepareCommercialDraftUpdate, commercialDraft, commercialDraftDirty, saveCommercialLead,
+const { COMMERCIAL_SAVE_TIMEOUT_MS, commercialRevenue, commercialDraftRevenue, parseCommercialUpdate, parseCanonicalCommercialUpdate, prepareCommercialDraftUpdate, commercialDraft, commercialDraftDirty, saveCommercialLead,
   createCommercialEditor, commercialEditorReducer: reduce } = require('../src/lib/commercial-update.ts');
 const { parseCommercialLead, requestCommercialLead } = require('../src/lib/commercial-lookup.ts');
 const fixture = Object.freeze({
@@ -32,6 +32,7 @@ const edit = (state, changes) => reduce(state, { type: 'edit', draft: { ...state
 const start = (state, update = command()) => reduce(state, { type: 'start', request: update });
 const received = (state, lead) => reduce(state, { type: 'receive', lead });
 const settle = (state, result) => reduce(state, { type: 'result', result });
+const resume = (state, update = command()) => reduce(state, { type: 'resume', request: update });
 
 test('money accepts explicit empty values, zero and bounded cents without changing their meaning', () => {
   for (const value of ['', null]) assert.equal(commercialRevenue(value), null);
@@ -813,4 +814,107 @@ test('the real editor displays registered zero and an empty revenue distinctly w
     assert.match(submit, /\sdisabled(?:=|[\s>])/);
     assert.doesNotMatch(html, /Comprobar guardado|Descartar cambios…|Guardando el contacto/);
   }
+});
+
+test('persisted commands require exact canonical types and fields without normalization', () => {
+  const input = Object.freeze(command());
+  assert.deepEqual(parseCanonicalCommercialUpdate(input), command());
+  assert.deepEqual(parseCanonicalCommercialUpdate({ notes: input.notes, revenueBs: input.revenueBs, status: input.status, expectedRevision: input.expectedRevision, requestId: input.requestId, id: input.id }), command());
+  for (const value of [null, [], {}, command({ id: fixture.id.toUpperCase() }), command({ requestId: command().requestId.toUpperCase() }), command({ notes: ' QA resumen acordado ' }), command({ revenueBs: '930' }), command({ revenueBs: '' }), command({ revenueBs: -0 }), command({ password: 'QA_PRIVATE' }), command({ expectedRevision: '4' })]) assert.equal(parseCanonicalCommercialUpdate(value), null);
+  assert.deepEqual(input, command());
+});
+
+test('explicit resumption locks a clean editor around the same pending operation', () => {
+  const original = createCommercialEditor(fixture), restored = resume(original);
+  assert.equal(restored.phase, 'uncertain'); assert.equal(restored.resumed, true); assert.deepEqual(restored.request, command());
+  assert.strictEqual(restored.base, fixture); assert.equal(restored.incoming, null);
+  assert.deepEqual(restored.draft, { status: command().status, revenue: '930', notes: command().notes });
+  assert.match(restored.message, /Comprobar guardado/); assert.match(restored.message, /No se ha reenviado automáticamente/);
+  assert.equal(original.phase, 'editing'); assert.equal(original.request, null); assert.equal(original.resumed, undefined);
+});
+
+test('matching current values never establish that a recovered operation was confirmed', async () => {
+  const alreadyEqual = { ...fixture, status: command().status, revenue_bs: command().revenueBs, notes: command().notes };
+  let calls = 0;
+  const restored = resume(createCommercialEditor(alreadyEqual));
+  assert.equal(restored.phase, 'uncertain'); assert.equal(restored.resumed, true); assert.equal(commercialDraftDirty(restored.draft, restored.base), false); assert.equal(calls, 0);
+  const result = await saveCommercialLead(restored.request, fixture.reference, async (_url, options) => {
+    calls++; assert.deepEqual(JSON.parse(options.body), command()); return json(receipt({ outcome: 'unchanged', lead: alreadyEqual }));
+  });
+  assert.equal(result.kind, 'confirmed'); assert.equal(result.outcome, 'unchanged'); assert.equal(calls, 1);
+  const final = settle(start(restored), result); assert.equal(final.phase, 'editing'); assert.equal(final.resumed, undefined);
+});
+
+test('resumption keeps current canonical metadata and retains a newer revision for receipt reconciliation', () => {
+  const newer = { ...fixture, revision: 8, package_key: 'exclusive', design: 'QA diseño actual', event_category: 'Corporativo', notes: 'QA nota actual' };
+  const restored = resume(createCommercialEditor(newer));
+  assert.strictEqual(restored.base, newer); assert.strictEqual(restored.incoming, newer); assert.equal(restored.base.design, 'QA diseño actual');
+  assert.deepEqual(restored.request, command()); assert.equal(restored.request.expectedRevision, 4); assert.equal(restored.phase, 'uncertain');
+});
+
+test('resumption preserves zero and null distinctly in the locked draft', () => {
+  for (const [revenueBs, value] of [[null, ''], [0, '0'], [930.5, '930.5']]) {
+    const restored = resume(createCommercialEditor(fixture), command({ revenueBs }));
+    assert.equal(restored.phase, 'uncertain'); assert.equal(restored.draft.revenue, value); assert.equal(restored.request.revenueBs, revenueBs);
+  }
+});
+
+test('resumption refuses a different contact, an impossible future revision or any unsaved local edit', () => {
+  const clean = createCommercialEditor(fixture);
+  for (const update of [command({ id: 'abcdef03-0000-4000-8000-000000000019' }), command({ expectedRevision: 5 }), command({ requestId: 'bad' }), command({ revenueBs: '930' }), command({ notes: ' QA resumen acordado ' }), command({ privateToken: 'QA_PRIVATE' })]) assert.strictEqual(resume(clean, update), clean);
+  for (const patch of [{ status: 'won' }, { revenue: '12,' }, { revenue: '' }, { notes: 'QA cambio pendiente' }]) {
+    const dirty = edit(clean, patch); assert.equal(commercialDraftDirty(dirty.draft, dirty.base), true); assert.strictEqual(resume(dirty), dirty);
+  }
+});
+
+test('resumption cannot replace a saving, uncertain or conflicting editor operation', () => {
+  const clean = createCommercialEditor(fixture), pending = start(edit(clean, { status: command().status, revenue: '930', notes: command().notes }));
+  const uncertain = settle(pending, { kind: 'uncertain', message: 'QA sin respuesta' });
+  const conflict = settle(pending, { kind: 'conflict', lead: { ...fixture, revision: 5 } });
+  for (const state of [pending, uncertain, conflict, { ...clean, request: command() }]) assert.strictEqual(resume(state), state);
+});
+
+test('a recovered replay uses its original UUID and cannot roll back a later canonical version', async () => {
+  const newer = { ...fixture, revision: 8, status: 'won', revenue_bs: 1100, notes: 'QA cambio posterior', design: 'QA diseño posterior' };
+  const restored = resume(createCommercialEditor(newer)), sending = start(restored); let calls = 0;
+  const result = await saveCommercialLead(sending.request, fixture.reference, async (_url, options) => {
+    calls++; assert.deepEqual(JSON.parse(options.body), command()); return json(receipt({ outcome: 'replayed' }));
+  });
+  const final = settle(sending, result);
+  assert.equal(calls, 1); assert.equal(result.kind, 'confirmed'); assert.equal(result.outcome, 'replayed');
+  assert.strictEqual(final.base, newer); assert.equal(final.draft.notes, newer.notes); assert.equal(final.base.design, newer.design);
+  assert.equal(final.request, null); assert.equal(final.resumed, undefined); assert.match(final.message, /Hay cambios posteriores/);
+});
+
+test('a newer snapshot arriving during recovered uncertainty does not replace the exact request', () => {
+  const restored = resume(createCommercialEditor(fixture)), newer = { ...fixture, revision: 9, notes: 'QA versión posterior' };
+  const updated = received(restored, newer);
+  assert.deepEqual(updated.request, command()); assert.equal(updated.resumed, true); assert.equal(updated.phase, 'uncertain'); assert.strictEqual(updated.incoming, newer);
+  assert.equal(reduce(updated, { type: 'edit', draft: { ...updated.draft, notes: 'QA not allowed while uncertain' } }), updated);
+});
+
+test('recovered conflicts preserve the full request and never claim knowledge of originally edited fields', () => {
+  const remote = { ...fixture, revision: 7, status: 'won', revenue_bs: 1100, notes: 'QA nota remota' };
+  const restored = resume(createCommercialEditor(remote)), conflict = settle(start(restored), { kind: 'conflict', lead: remote });
+  assert.equal(conflict.resumed, true); assert.equal(conflict.phase, 'conflict'); assert.equal(conflict.request, null);
+  const reviewed = reduce(conflict, { type: 'rebase' });
+  assert.equal(reviewed.phase, 'editing'); assert.strictEqual(reviewed.base, remote); assert.deepEqual(reviewed.draft, restored.draft);
+  assert.equal(reviewed.resumed, undefined); assert.equal(reviewed.request, null);
+  assert.match(reviewed.message, /Se recuperaron los valores de la solicitud/); assert.match(reviewed.message, /Compáralos con la versión actual/);
+  assert.doesNotMatch(reviewed.message, /solo los campos que editaste|guardado confirmado/i);
+  assert.equal(commercialDraftDirty(reviewed.draft, reviewed.base), true);
+});
+
+test('discarding a recovered conflict removes the recovery marker and uses the canonical contact', () => {
+  const remote = { ...fixture, revision: 7, notes: 'QA nota remota' }, restored = resume(createCommercialEditor(remote));
+  const discarded = reduce(settle(start(restored), { kind: 'conflict', lead: remote }), { type: 'discard' });
+  assert.equal(discarded.resumed, undefined); assert.equal(discarded.request, null); assert.equal(discarded.phase, 'editing');
+  assert.strictEqual(discarded.base, remote); assert.deepEqual(discarded.draft, commercialDraft(remote));
+});
+
+test('recovery is pure and keeps its command and original editor available without mutation', () => {
+  const original = createCommercialEditor(fixture); Object.freeze(original.draft); Object.freeze(original);
+  const request = Object.freeze(command()), before = JSON.stringify(original), requestBefore = JSON.stringify(request);
+  const restored = resume(original, request); assert.notStrictEqual(restored, original); assert.equal(JSON.stringify(original), before); assert.equal(JSON.stringify(request), requestBefore);
+  assert.deepEqual(restored.request, command()); assert.notStrictEqual(restored.request, request);
 });

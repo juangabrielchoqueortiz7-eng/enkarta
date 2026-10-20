@@ -1036,6 +1036,44 @@ test('019 ambiguous responses can be retried with the same request without dupli
  rpcObserver=null;const retry=await commercialPatch(input);assert.equal(retry.status,200);assert.equal((await retry.json()).outcome,'replayed');assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),1);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),1);
 });
 
+test('a reloaded commercial journal explicitly replays one committed operation without duplicating its history or receipt',async()=>{
+ const {readCommercialPending,putCommercialPending,clearCommercialPending}=require('../src/lib/commercial-pending.ts');
+ const {requestCommercialLead}=require('../src/lib/commercial-lookup.ts');
+ const {createCommercialEditor,commercialEditorReducer,saveCommercialLead}=require('../src/lib/commercial-update.ts');
+ const input=await commercialUpdateFixture({status:'reserved',revenueBs:930.5,notes:'QA recuperación local después de recargar'});actor={role:'admin'};
+ const reference='EK-A1B2C3D4',scope='c'.repeat(64),values=new Map(),facade=()=>({getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)});
+ const originalStorage=facade(),persisted=putCommercialPending(originalStorage,scope,reference,input);assert.equal(persisted.ok,true);
+ assert.equal(rpcCalls.length,0);assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),0);
+ const bodies=[];let loseAcknowledgement=true,lookupCalls=0;
+ const transport=async(url,options={})=>{
+  if(url==='/api/admin/commercial'&&options.method==='PATCH'){
+   // The real route must never be reached before this exact intention is durable.
+   const journal=readCommercialPending(facade(),scope);assert.equal(journal.kind,'ready');assert.equal(journal.entries.length,1);assert.deepEqual(journal.entries[0].request,JSON.parse(options.body));
+   bodies.push(options.body);const response=await commercialPatch(JSON.parse(options.body));assert.equal(response.status,200);
+   if(loseAcknowledgement){loseAcknowledgement=false;assert.equal((await response.clone().json()).outcome,'saved');throw new TypeError('QA acknowledgement lost after commit');}
+   return response;
+  }
+  const parsed=new URL(String(url),'https://enkarta.test');assert.equal(parsed.pathname,'/api/admin/commercial/lookup');assert.equal(options.method,undefined);lookupCalls++;
+  return commercialLookup.GET(req(parsed.pathname+parsed.search));
+ };
+ const first=await saveCommercialLead(input,reference,transport);assert.equal(first.kind,'uncertain');assert.equal(bodies.length,1);assert.equal(rpcCalls.length,1);
+ assert.equal(await scalar('select revision as result from commercial_leads where id=$1',[input.id]),1);
+ // A new storage facade and editor state model the lost in-memory state after reload.
+ const reloadedStorage=facade(),recovered=readCommercialPending(reloadedStorage,scope);assert.equal(recovered.kind,'ready');assert.equal(recovered.entries.length,1);assert.deepEqual(recovered.entries[0],persisted.entry);
+ const canonical=await requestCommercialLead(reference,transport);assert.equal(lookupCalls,1);assert.equal(canonical.id,input.id);assert.equal(canonical.revision,1);assert.equal(canonical.notes,input.notes);
+ let state=commercialEditorReducer(createCommercialEditor(canonical),{type:'resume',request:recovered.entries[0].request});
+ assert.equal(state.phase,'uncertain');assert.equal(state.resumed,true);assert.deepEqual(state.request,input);
+ // Lookup, matching current values and reducer restoration perform no second PATCH.
+ assert.equal(bodies.length,1);assert.equal(rpcCalls.length,1);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),1);
+ state=commercialEditorReducer(state,{type:'start',request:state.request});
+ const replay=await saveCommercialLead(state.request,reference,transport);assert.equal(replay.kind,'confirmed');assert.equal(replay.outcome,'replayed');
+ assert.equal(bodies.length,2);assert.equal(bodies[0],bodies[1]);assert.equal(replay.lead.revision,1);
+ state=commercialEditorReducer(state,{type:'result',result:replay});assert.equal(state.phase,'editing');assert.equal(state.request,null);assert.equal(state.base.revision,1);
+ assert.equal(clearCommercialPending(reloadedStorage,scope,recovered.entries[0]),true);assert.deepEqual(readCommercialPending(facade(),scope),{kind:'ready',entries:[]});assert.equal(values.size,0);
+ assert.equal(await scalar('select count(*)::int as result from commercial_lead_history'),1);assert.equal(await scalar('select count(*)::int as result from commercial_lead_update_requests'),1);
+ assert.equal(await scalar('select revision as result from commercial_leads where id=$1',[input.id]),1);assert.equal(Number(await scalar('select revenue_bs as result from commercial_leads where id=$1',[input.id])),930.5);
+});
+
 test('019 a failed history or receipt insert rolls back the commercial change and revision together',async()=>{
  const input=await commercialUpdateFixture();actor={role:'admin'};
  await db.exec("CREATE OR REPLACE FUNCTION public.test_reject_commercial_save() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'private failing test insert'; END; $$;");

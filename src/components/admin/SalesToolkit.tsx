@@ -56,7 +56,7 @@ export function SalesQuoteReview({ input, disabled = false, writeText }: { input
   </div>;
 }
 
-export default function SalesToolkit({ transport = fetch, storage: storageOverride, writeText, contactRequest }: { transport?: typeof fetch; storage?: SalesDraftStorage; writeText?: (text: string) => Promise<void>; contactRequest?: ContactRequest | null } = {}) {
+export default function SalesToolkit({ transport = fetch, storage: storageOverride, writeText, contactRequest, onScopeReady }: { transport?: typeof fetch; storage?: SalesDraftStorage; writeText?: (text: string) => Promise<void>; contactRequest?: ContactRequest | null; onScopeReady?: (scope: string | null) => void } = {}) {
   const [input, setInput] = useState<SalesDraftInput>(EMPTY_SALES_DRAFT);
   const [config, setConfig] = useState<SalesConfig | null>(null);
   const [configState, setConfigState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -78,11 +78,12 @@ export default function SalesToolkit({ transport = fetch, storage: storageOverri
     let active = true;
     const request = new AbortController(), timeout = window.setTimeout(() => request.abort(), 12000);
     setConfigState('loading');
+    onScopeReady?.(null);
     void requestSalesConfig(transport, request.signal).then(value => {
-      if (active) { setConfig(value); setConfigState('ready'); setConfigError(''); }
+      if (active) { setConfig(value); setConfigState('ready'); setConfigError(''); onScopeReady?.(value.draftScope); }
     }).catch(cause => { if (active) { setConfigState('error'); setConfigError(cause instanceof Error ? cause.message : 'No se pudo comprobar la configuración. Inténtalo de nuevo.'); } }).finally(() => window.clearTimeout(timeout));
-    return () => { active = false; request.abort(); window.clearTimeout(timeout); };
-  }, [attempt, transport]);
+    return () => { active = false; request.abort(); window.clearTimeout(timeout); onScopeReady?.(null); };
+  }, [attempt, transport, onScopeReady]);
   const scope = config?.draftScope;
   useEffect(() => {
     if (!scope) return;

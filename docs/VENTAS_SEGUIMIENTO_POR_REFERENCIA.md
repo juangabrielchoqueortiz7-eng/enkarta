@@ -17,7 +17,7 @@ Al abrir se solicita foco y desplazamiento a la ficha, sin animación de scroll.
 - La búsqueda exacta y el guardado reutilizan los permisos de administrador, las rutas existentes y la transacción de la migración 019. No hay migración, dependencia, permiso ni endpoint nuevos.
 - Las métricas y páginas mantienen su cohorte de **altas de los últimos 180 días**. Actualizar hoy una ficha de 2001 no incorpora su venta ni su ingreso a ese período. La interfaz explica este límite cuando la ficha está fijada.
 - Una consulta antigua no reemplaza una revisión superior. Los datos que entran mediante la búsqueda se validan y limitan a los campos públicos del contrato comercial.
-- Abrir otra referencia y navegar conserva los editores activos durante la sesión de la pantalla. No se añade almacenamiento persistente ni recuperación de estas fichas tras recargar por completo.
+- Abrir otra referencia y navegar conserva los editores activos durante la sesión de la pantalla. La selección y los borradores sin enviar permanecen en memoria. La ampliación posterior [recupera operaciones por comprobar](VENTAS_RECUPERACION_DE_OPERACIONES.md) después de recargar, sin restaurar automáticamente las fichas ni reenviar guardados.
 - El importe sigue siendo un registro manual de ingresos verificados; no procesa cobros. BCP continúa bloqueado y no se cambia su configuración.
 - Invitaciones, presets, estilos globales y recursos originales quedan fuera del cambio.
 

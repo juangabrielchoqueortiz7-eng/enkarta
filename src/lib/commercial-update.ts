@@ -32,6 +32,14 @@ export function parseCommercialUpdate(value: unknown): CommercialUpdate | null {
   return { id: body.id.toLowerCase(), requestId: body.requestId.toLowerCase(), expectedRevision: Number(body.expectedRevision), status: body.status as CommercialLeadStatus, revenueBs: revenue, notes: body.notes.trim() };
 }
 
+/** A persisted intention must already be canonical; recovering it never changes its payload. */
+export function parseCanonicalCommercialUpdate(value: unknown): CommercialUpdate | null {
+  const command = parseCommercialUpdate(value);
+  if (!command) return null;
+  const body = value as Record<string, unknown>, fields = Object.keys(command) as (keyof CommercialUpdate)[];
+  return Object.keys(body).length === fields.length && fields.every(field => Object.prototype.hasOwnProperty.call(body, field) && Object.is(body[field], command[field])) ? command : null;
+}
+
 export function prepareCommercialDraftUpdate(base: CommercialLead, draft: CommercialDraft, requestId: string): CommercialUpdate | null {
   const revenueBs = commercialDraftRevenue(draft.revenue);
   if (revenueBs === undefined) return null;
@@ -92,16 +100,24 @@ export async function saveCommercialLead(update: CommercialUpdate, reference: st
   });
 }
 
-export type CommercialEditorState = { base: CommercialLead; draft: CommercialDraft; phase: 'editing' | 'saving' | 'uncertain' | 'conflict'; request: CommercialUpdate | null; incoming: CommercialLead | null; message: string };
+export type CommercialEditorState = { base: CommercialLead; draft: CommercialDraft; phase: 'editing' | 'saving' | 'uncertain' | 'conflict'; request: CommercialUpdate | null; incoming: CommercialLead | null; message: string; resumed?: true };
 export type CommercialEditorAction =
   | { type: 'edit'; draft: CommercialDraft }
   | { type: 'start'; request: CommercialUpdate }
   | { type: 'result'; result: CommercialSaveResult }
   | { type: 'receive'; lead: CommercialLead }
+  | { type: 'resume'; request: CommercialUpdate }
   | { type: 'rebase' | 'discard' | 'reset' };
 export const createCommercialEditor = (lead: CommercialLead): CommercialEditorState => ({ base: lead, draft: commercialDraft(lead), phase: 'editing', request: null, incoming: null, message: '' });
 
 export function commercialEditorReducer(state: CommercialEditorState, action: CommercialEditorAction): CommercialEditorState {
+  if (action.type === 'resume') {
+    const command = parseCanonicalCommercialUpdate(action.request);
+    if (!command || state.phase !== 'editing' || state.request || commercialDraftDirty(state.draft, state.base) || command.id !== state.base.id || state.base.revision < command.expectedRevision) return state;
+    return { ...state, draft: { status: command.status, revenue: command.revenueBs?.toString() ?? '', notes: command.notes }, phase: 'uncertain', request: command, resumed: true,
+      incoming: state.base.revision > command.expectedRevision ? state.base : null,
+      message: 'Recuperamos una operación pendiente. Pulsa «Comprobar guardado» para confirmar su resultado con la misma solicitud. No se ha reenviado automáticamente.' };
+  }
   if (action.type === 'reset') return state.phase === 'editing' && !state.request ? { ...createCommercialEditor(state.base), message: 'Se retiraron los cambios locales.' } : state;
   if (action.type === 'edit') return state.phase === 'editing' ? { ...state, draft: action.draft, message: '' } : state;
   if (action.type === 'start') {
@@ -127,6 +143,7 @@ export function commercialEditorReducer(state: CommercialEditorState, action: Co
   }
   if (!state.incoming || state.phase !== 'conflict') return state;
   if (action.type === 'discard') return { ...createCommercialEditor(state.incoming), message: 'Se cargó la versión actual.' };
+  if (state.resumed) return { ...createCommercialEditor(state.incoming), draft: { ...state.draft }, message: 'Se recuperaron los valores de la solicitud. Compáralos con la versión actual, ajusta lo necesario y pulsa Guardar cambios; aún no se guardaron.' };
   const current = commercialDraft(state.incoming);
   const draft = {
     status: state.draft.status === state.base.status ? current.status : state.draft.status,

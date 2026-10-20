@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { COMMERCIAL_LEAD_STATUSES, leadStatusLabel } from '@/lib/commercial';
 import SalesToolkit from '@/components/admin/SalesToolkit';
-import CommercialLeadEditor from '@/components/admin/CommercialLeadEditor';
+import CommercialLeadEditor, { type CommercialEditorRecovery } from '@/components/admin/CommercialLeadEditor';
 import CommercialLeadHistory from '@/components/admin/CommercialLeadHistory';
 import CommercialReferenceSearch from '@/components/admin/CommercialReferenceSearch';
 import LeadSummary from '@/components/admin/CommercialLeadSummary';
@@ -11,19 +11,29 @@ import { parseCommercialLead, type CommercialLead as Lead } from '@/lib/commerci
 import { decodeCommercialCursor, mergeCommercialPageEditors, openCommercialLeadEditor, requestCommercialDashboard, type CommercialBreakdown as Breakdown, type CommercialFilter } from '@/lib/commercial-dashboard';
 import { commercialNavigationReducer, commercialRetryLocation, createCommercialNavigation, initialCommercialLocation, type CommercialNavigationState, type CommercialPageLocation } from '@/lib/commercial-navigation';
 import { salesQuoteContact, type SalesQuoteContact } from '@/lib/sales-contact';
+import CommercialPendingRecovery, { useCommercialPendingRecovery } from '@/components/admin/CommercialPendingRecovery';
+import type { CommercialPendingEntry } from '@/lib/commercial-pending';
 
-function LeadCard({ lead, onSaved, onActivityChange, transport }: { lead: Lead; onSaved: (lead: Lead) => void; onActivityChange: (id: string, active: boolean) => void; transport: typeof fetch }) {
+type PendingWorkspace = { manager: ReturnType<typeof useCommercialPendingRecovery>; resumed: ReadonlyMap<string, CommercialPendingEntry> };
+function recoveryForLead(lead: Lead, workspace?: PendingWorkspace): CommercialEditorRecovery | undefined {
+  if (!workspace) return undefined;
+  const { manager } = workspace, entry = manager.entries.find(value => value.request.id === lead.id) ?? null;
+  const resumed = workspace.resumed.get(lead.id);
+  return { ready: manager.ready, entry, resumed: entry && resumed && JSON.stringify(entry) === JSON.stringify(resumed) ? resumed : null, persist: manager.persist, complete: manager.complete, resume: manager.resume };
+}
+
+function LeadCard({ lead, onSaved, onActivityChange, transport, recovery }: { lead: Lead; onSaved: (lead: Lead) => void; onActivityChange: (id: string, active: boolean) => void; transport: typeof fetch; recovery?: CommercialEditorRecovery }) {
   const source = lead.utm_source || lead.referrer_host || 'Directo';
-  return <article className="min-w-0 p-4 sm:p-5"><div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong translate="no" className="font-mono text-sm text-[#765f39]">{lead.reference}</strong><span className="rounded-full bg-[#f1ece3] px-2 py-1 font-outfit text-[9px] uppercase text-[#75664e]">{lead.package_key === 'general' ? 'Sin paquete' : lead.package_key}</span>{lead.event_category && <span className="rounded-full bg-rose-50 px-2 py-1 font-outfit text-[9px] text-rose-600">{lead.event_category}</span>}{lead.design && <span className="rounded-full bg-gray-50 px-2 py-1 font-outfit text-[9px] text-gray-500">{lead.design}</span>}</div><p className="mt-1 break-words font-outfit text-xs text-gray-600">{source}{lead.utm_campaign ? ` · ${lead.utm_campaign}` : ''} · {new Date(lead.created_at).toLocaleString('es-BO')}</p></div></div><CommercialLeadEditor lead={lead} onSaved={onSaved} onActivityChange={onActivityChange} transport={transport} /><div className="mt-4"><CommercialLeadHistory lead={lead} transport={transport} /></div></article>;
+  return <article className="min-w-0 p-4 sm:p-5"><div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong translate="no" className="font-mono text-sm text-[#765f39]">{lead.reference}</strong><span className="rounded-full bg-[#f1ece3] px-2 py-1 font-outfit text-[9px] uppercase text-[#75664e]">{lead.package_key === 'general' ? 'Sin paquete' : lead.package_key}</span>{lead.event_category && <span className="rounded-full bg-rose-50 px-2 py-1 font-outfit text-[9px] text-rose-600">{lead.event_category}</span>}{lead.design && <span className="rounded-full bg-gray-50 px-2 py-1 font-outfit text-[9px] text-gray-500">{lead.design}</span>}</div><p className="mt-1 break-words font-outfit text-xs text-gray-600">{source}{lead.utm_campaign ? ` · ${lead.utm_campaign}` : ''} · {new Date(lead.created_at).toLocaleString('es-BO')}</p></div></div><CommercialLeadEditor lead={lead} onSaved={onSaved} onActivityChange={onActivityChange} transport={transport} recovery={recovery} /><div className="mt-4"><CommercialLeadHistory lead={lead} transport={transport} /></div></article>;
 }
 
 const locationLabel = (location: CommercialPageLocation) => `la página ${location.index + 1} de «${location.query.status === 'all' ? 'Todos' : leadStatusLabel(location.query.status)}»`;
 
 /** One keyed editing surface per contact, including searches outside the current page. */
-export function CommercialContactList({ leads, pageIds, activeIds, openedId, onUnpin, onSaved, onActivityChange, transport }: { leads: Lead[]; pageIds: ReadonlySet<string>; activeIds: ReadonlySet<string>; openedId: string | null; onUnpin: () => void; onSaved: (lead: Lead) => void; onActivityChange: (id: string, active: boolean) => void; transport: typeof fetch }) {
+export function CommercialContactList({ leads, pageIds, activeIds, openedId, onUnpin, onSaved, onActivityChange, transport, pendingRecovery }: { leads: Lead[]; pageIds: ReadonlySet<string>; activeIds: ReadonlySet<string>; openedId: string | null; onUnpin: () => void; onSaved: (lead: Lead) => void; onActivityChange: (id: string, active: boolean) => void; transport: typeof fetch; pendingRecovery?: PendingWorkspace }) {
   return <div className="divide-y divide-gray-100">{leads.filter(lead => pageIds.has(lead.id) || activeIds.has(lead.id) || lead.id === openedId).map(lead => <div key={lead.id} id={`commercial-lead-${lead.id}`} role="group" tabIndex={-1} aria-label={`Ficha de ${lead.reference}`} className="scroll-mt-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#765f39]">
     {lead.id === openedId ? <div className="space-y-2 border-b border-[#e4dfd4] bg-[#faf7f2] px-4 py-3 font-outfit text-sm text-gray-800 sm:px-5"><div className="flex flex-wrap items-center justify-between gap-3"><p className="font-semibold">Ficha abierta por referencia · {lead.reference}</p><button type="button" onClick={onUnpin} disabled={activeIds.has(lead.id)} className="min-h-11 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50">Dejar de fijar ficha</button></div><p>{!pageIds.has(lead.id) && 'Este contacto está fuera de la página o el filtro actual. '}Las métricas siguen limitadas a los últimos 180 días.</p>{activeIds.has(lead.id) && <p>Guarda, comprueba o descarta sus cambios antes de dejar de fijarla.</p>}</div> : !pageIds.has(lead.id) && <p className="bg-amber-50 px-4 py-3 font-outfit text-sm text-amber-950 sm:px-5">Cambios pendientes fuera de la página actual · {lead.reference}</p>}
-    <LeadCard lead={lead} onSaved={onSaved} onActivityChange={onActivityChange} transport={transport} />
+    <LeadCard lead={lead} onSaved={onSaved} onActivityChange={onActivityChange} transport={transport} recovery={recoveryForLead(lead, pendingRecovery)} />
   </div>)}</div>;
 }
 
@@ -38,9 +48,9 @@ export function CommercialDashboardFeedback({ navigation, onRetry }: { navigatio
 }
 
 /** These independent tools keep their position and identity through every dashboard load. */
-export function CommercialSalesWorkspace({ navigation, onRetry, transport, children, onOpenLead, latestLead, onQuoteLead, quoteRequest }: { navigation: CommercialNavigationState; onRetry: () => void; transport: typeof fetch; children?: ReactNode; onOpenLead?: (lead: Lead) => void; latestLead?: Lead | null; onQuoteLead?: (lead: Lead) => void; quoteRequest?: { sequence: number; contact: SalesQuoteContact } | null }) {
+export function CommercialSalesWorkspace({ navigation, onRetry, transport, children, onOpenLead, latestLead, onQuoteLead, quoteRequest, onRecoveryScope }: { navigation: CommercialNavigationState; onRetry: () => void; transport: typeof fetch; children?: ReactNode; onOpenLead?: (lead: Lead) => void; latestLead?: Lead | null; onQuoteLead?: (lead: Lead) => void; quoteRequest?: { sequence: number; contact: SalesQuoteContact } | null; onRecoveryScope?: (scope: string | null) => void }) {
   return <div className="space-y-6">
-    <SalesToolkit transport={transport} contactRequest={quoteRequest} />
+    <SalesToolkit transport={transport} contactRequest={quoteRequest} onScopeReady={onRecoveryScope} />
     <CommercialReferenceSearch transport={transport} latestLead={latestLead} renderLead={lead => <LeadSummary lead={lead} transport={transport} onOpen={onOpenLead ? () => onOpenLead(lead) : undefined} onQuote={onQuoteLead && salesQuoteContact(lead) ? () => onQuoteLead(lead) : undefined} />} />
     <CommercialDashboardFeedback navigation={navigation} onRetry={onRetry} />
     {children}
@@ -56,6 +66,7 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
   const [openedId, setOpenedId] = useState<string | null>(null), [lastSaved, setLastSaved] = useState<Lead | null>(null);
   const [focusRequest, setFocusRequest] = useState<{ id: string } | null>(null);
   const [quoteRequest, setQuoteRequest] = useState<{ sequence: number; contact: SalesQuoteContact } | null>(null);
+  const [recoveryScope, setRecoveryScope] = useState<string | null>(null), [resumedOperations, setResumedOperations] = useState<ReadonlyMap<string, CommercialPendingEntry>>(() => new Map());
   const loadSequence = useRef(0), activeLoad = useRef<AbortController | null>(null);
   const handleActivity = useCallback((id: string, active: boolean) => {
     if (activeIdsRef.current.has(id) === active) return;
@@ -106,6 +117,25 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
     const contact = salesQuoteContact(lead);
     if (contact) setQuoteRequest(previous => ({ sequence: (previous?.sequence ?? 0) + 1, contact }));
   };
+  const resumeOperation = useCallback((lead: Lead, entry: CommercialPendingEntry) => {
+    if (activeIdsRef.current.has(lead.id)) return false;
+    const retained = new Set([...pageIdsRef.current, ...activeIdsRef.current]);
+    setEditors(previous => openCommercialLeadEditor(previous, lead, retained));
+    setResumedOperations(previous => new Map(previous).set(lead.id, entry));
+    openedIdRef.current = lead.id; setOpenedId(lead.id); setFocusRequest({ id: lead.id });
+    return true;
+  }, []);
+  const pendingRecovery = useCommercialPendingRecovery(recoveryScope, transport, resumeOperation);
+  const resumedScope = useRef(recoveryScope);
+  useEffect(() => {
+    const scopeChanged = resumedScope.current !== recoveryScope;
+    resumedScope.current = recoveryScope;
+    setResumedOperations(previous => {
+      if (scopeChanged) return previous.size ? new Map() : previous;
+      const next = new Map([...previous].filter(([id, entry]) => pendingRecovery.entries.some(current => current.request.id === id && JSON.stringify(current) === JSON.stringify(entry))));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [recoveryScope, pendingRecovery.entries]);
   useEffect(() => {
     if (!focusRequest) return;
     const row = document.getElementById(`commercial-lead-${focusRequest.id}`);
@@ -132,7 +162,8 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
     ['Reservas', s.reserved, 'Incluye ventas'], ['Ventas', s.sales, `${s.closeRate}% de conversaciones`], ['Ingresos registrados', `${s.revenue.toLocaleString('es-BO')} Bs`, 'Solo ventas marcadas'],
   ] : [];
   const latestSaved = lastSaved ? editors.reduce((latest, lead) => lead.id === latest.id && lead.revision > latest.revision ? lead : latest, lastSaved) : null;
-  return <CommercialSalesWorkspace navigation={navigation} onRetry={() => void load(commercialRetryLocation(navigation))} transport={transport} onOpenLead={openLead} latestLead={latestSaved} onQuoteLead={quoteLead} quoteRequest={quoteRequest}>
+  return <CommercialSalesWorkspace navigation={navigation} onRetry={() => void load(commercialRetryLocation(navigation))} transport={transport} onOpenLead={openLead} latestLead={latestSaved} onQuoteLead={quoteLead} quoteRequest={quoteRequest} onRecoveryScope={setRecoveryScope}>
+    <CommercialPendingRecovery manager={pendingRecovery} />
     {data && <>
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="font-outfit text-[10px] font-semibold uppercase tracking-[.2em] text-[#a48655]">Últimos {data.periodDays} días</p><h2 className="mt-1 font-playfair text-3xl text-gray-900">Embudo comercial</h2><p className="mt-1 max-w-2xl font-outfit text-xs leading-5 text-gray-500">Relaciona anuncio, diseño, paquete y resultado mediante la referencia que aparece en WhatsApp. Un intento registra la solicitud del enlace; no confirma apertura ni envío. No registra IP, teléfono ni conversación.</p></div><button type="button" onClick={refresh} disabled={loading} className="min-h-11 self-start rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40">Actualizar</button></div>
 
@@ -151,7 +182,7 @@ export default function CommercialDashboard({ transport = fetch }: { transport?:
         <p role="status">{navigation.pending ? `Cargando ${locationLabel(navigation.pending)}…` : !data ? 'Usa la búsqueda por referencia para abrir un seguimiento mientras se recupera el listado.' : data.pagination.total === 0 ? 'No hay contactos en este estado.' : 'Página ' + (location.index + 1) + ' · ' + data.leads.length + ' contactos en esta página · ' + data.pagination.total.toLocaleString('es-BO') + ' en este estado'}</p>
         {activeIds.size > 0 && <p className="text-amber-900">{activeIds.size} contacto(s) con cambios o guardados pendientes. Sus editores se conservan aunque cambies de página o estado.</p>}
       </div>
-      <CommercialContactList leads={editors} pageIds={pageIds} activeIds={activeIds} openedId={openedId} onUnpin={unpin} onSaved={handleSaved} onActivityChange={handleActivity} transport={transport} />
+      <CommercialContactList leads={editors} pageIds={pageIds} activeIds={activeIds} openedId={openedId} onUnpin={unpin} onSaved={handleSaved} onActivityChange={handleActivity} transport={transport} pendingRecovery={{ manager: pendingRecovery, resumed: resumedOperations }} />
       {data && <nav aria-label="Páginas de contactos" className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 p-4 sm:p-5">
         <button type="button" onClick={previous} disabled={loading || location.previous.length === 0} className="min-h-11 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40">Anterior</button>
         <span className="font-outfit text-sm text-gray-700">Página {location.index + 1} · 25 por página</span>
