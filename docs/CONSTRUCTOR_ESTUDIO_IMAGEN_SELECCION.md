@@ -60,3 +60,19 @@ La evidencia privada se guarda en `tmp/builder-image-studio/`: `image-studio-upl
 - **28/28 pruebas offline** de los helpers privados de atestación, permisos y cierre de sesión correctas; no se suman a las 1.169 pruebas de la aplicación ni realizan red.
 
 Permanecen los avisos anteriores de imágenes; no se requieren migraciones ni cambios de dependencias. Evidencia privada adicional: `verify.log`.
+
+## Despliegue y comprobaciones de producción, 20 de octubre de 2026
+
+Código integrado en `main`: `6b3adc9818c67acdce0815f91dda4b3a4f13f8e5`. El workflow [39468103900](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39468103900) terminó correctamente tanto `verify` como `audit` (`npm audit --omit=dev --audit-level=high`).
+
+Vercel terminó el despliegue `dpl_76geGRbXVefS2frk4aoQ73shq2jN` en estado **READY**, destino **production**, con alias [enkarta.vercel.app](https://enkarta.vercel.app). URL inmutable: [enkarta-5f3atea7k](https://enkarta-5f3atea7k-juangabrielchoqueortiz7-engs-projects.vercel.app). Se desplegó el workspace completo para incluir los originales archivados fuera de Git.
+
+- El inventario remoto acredita por UID de contenido las tres fuentes exactas verificadas: `ImageStudio.tsx`, `ImageUploader.tsx` y `BlockEditorPanel.tsx`. Esto comprueba los archivos de entrada del despliegue Ready, sin afirmar que se haya reproducido la carrera dentro del navegador de producción.
+- **11 grupos HTTP correctos**: **58 denegaciones exactas 401**, incluidas **46 solicitudes de escritura**, prueban que sesiones ausentes, inválidas o de administrador no suplantan una sesión de Socios. Los formularios ficticios con archivo sólo se enviaron sin sesión válida y fueron rechazados antes del almacenamiento. El administrador sólo envió un formulario sin archivo ni propietario, rechazado con el 400 esperado.
+- La configuración administrativa y el historial del constructor conservan `no-store`; el historial también conserva `Vary: Cookie`. Un UUID ficticio y ausente se comprobó mediante conteo HEAD exacto antes y después, sin leer filas de clientes.
+- **6/6 rutas públicas correctas** y **129/129 recursos originales distribuidos** conservan sus hashes. La comprobación final local mantiene **597/597 archivos protegidos** intactos.
+- **Cero** invitaciones, usuarios Auth, archivos, pagos o fixtures persistentes creados; **cero** operaciones bancarias y mensajes. La cookie temporal de administrador se cerró y descartó al finalizar. No hubo registros de prueba que eliminar.
+
+BCP conserva su bloqueo en el código desplegado y no se modificaron proveedor ni credenciales. La comprobación HTTP no inspeccionó variables remotas del proveedor ni llamó endpoints bancarios. Las pruebas de carrera usan componentes reales y transporte controlado localmente; no se realizó una subida autenticada de Socios en producción. La aceptación manual permanece aplazada.
+
+Evidencia privada final en `tmp/builder-image-studio/`: `ci.json`, `deployment-final.json`, `deployment-files.json`, `production-http.json`, `production-public.json`, `protected.json` y `RESULTADO.json`. No se necesita SQL adicional.
