@@ -1,15 +1,16 @@
 'use client';
 import type { InvitationParsed } from '@/lib/types';
-import { useLegacyDraft } from '../useLegacyDraft';
+import { useLegacyDraft, type LegacyDraft } from '../useLegacyDraft';
 import { LA_TEXTS, LA_SECTIONS, laText } from '@/lib/laura-andres';
 import MultiImageUploader from '../MultiImageUploader';
 import ImageUploader from '../ImageUploader';
-export default function LauraAndresFields({ data, onChange }: {
+export default function LauraAndresFields({ data, onChange, draft: inherited }: {
     data: InvitationParsed;
     onChange: (patch: Partial<InvitationParsed>) => void;
+    draft?: LegacyDraft;
 }) {
     const cfg = data.config, settings = cfg.lauraAndres ?? {};
-    const draft = useLegacyDraft(data, onChange);
+    const draft = useLegacyDraft(data, onChange, inherited);
     const set = draft.variant('lauraAndres');
     const lodging = draft.list('lodging', current => current.config.lodging ?? [], (current, next) => ({ config: { ...current.config, lodging: next } }));
     const input = 'w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-outfit';

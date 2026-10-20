@@ -16,6 +16,7 @@ interface DraftList<T> {
 }
 export interface LegacyDraft {
   get: () => InvitationParsed;
+  isCurrent: () => boolean;
   destination: (field: string) => string;
   patch: (change: Patch<InvitationParsed>) => void;
   config: (change: Patch<BuilderConfig>) => void;
@@ -24,13 +25,14 @@ export interface LegacyDraft {
 }
 
 /** A shared working draft for one legacy editor and its optional child panels. */
-export function useLegacyDraft(data: InvitationParsed, onChange: (patch: Partial<InvitationParsed>) => void, inherited?: LegacyDraft): LegacyDraft {
+export function useLegacyDraft(data: InvitationParsed, onChange: (patch: Partial<InvitationParsed>) => void, inherited?: LegacyDraft, editingRevision?: { readonly current: number }, source?: { readonly current: InvitationParsed }): LegacyDraft {
   const mounted = useRef(true);
   const lists = useRef<BuilderListState | null>(null);
   if (!lists.current) lists.current = new BuilderListState();
-  const context = useRef({ id: data.id, template: data.template, designKey: data.config?.designKey, epoch: 0 });
-  if (context.current.id !== data.id || context.current.template !== data.template || context.current.designKey !== data.config?.designKey) {
-    context.current = { id: data.id, template: data.template, designKey: data.config?.designKey, epoch: context.current.epoch + 1 };
+  const revision = editingRevision?.current;
+  const context = useRef({ id: data.id, template: data.template, designKey: data.config?.designKey, revision, epoch: 0 });
+  if (context.current.id !== data.id || context.current.template !== data.template || context.current.designKey !== data.config?.designKey || context.current.revision !== revision) {
+    context.current = { id: data.id, template: data.template, designKey: data.config?.designKey, revision, epoch: context.current.epoch + 1 };
     lists.current.clear();
   }
   const epoch = context.current.epoch;
@@ -38,11 +40,16 @@ export function useLegacyDraft(data: InvitationParsed, onChange: (patch: Partial
   latest.current = { data, onChange };
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; lists.current?.clear(); };
+    return () => { mounted.current = false; };
   }, []);
-  const get = () => inherited ? inherited.get() : latest.current.data;
+  const get = () => inherited ? inherited.get() : source?.current ?? latest.current.data;
+  const isCurrent = () => {
+    if (!mounted.current || context.current.epoch !== epoch || editingRevision?.current !== revision || (inherited && !inherited.isCurrent())) return false;
+    const current = get();
+    return current.id === data.id && current.template === data.template && current.config?.designKey === data.config?.designKey;
+  };
   const patch = (change: Patch<InvitationParsed>) => {
-    if (!mounted.current || context.current.epoch !== epoch) return;
+    if (!isCurrent()) return;
     const current = get();
     if (current.id !== data.id || current.template !== data.template || current.config?.designKey !== data.config?.designKey) return;
     if (inherited) { inherited.patch(change); return; }
@@ -77,6 +84,7 @@ export function useLegacyDraft(data: InvitationParsed, onChange: (patch: Partial
   };
   // The multi-uploader intentionally uses its latest callback while a batch is
   // active. Bind that batch to this field/session so it cannot follow a new one.
-  const destination = (field: string) => JSON.stringify([data.id, data.template, data.config?.designKey, epoch, field]);
-  return { get, destination, patch, config, variant, list };
+  const destination = (field: string) => inherited ? inherited.destination(field)
+    : JSON.stringify([data.id, data.template, data.config?.designKey, epoch, field]);
+  return { get, isCurrent, destination, patch, config, variant, list };
 }

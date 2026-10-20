@@ -1,15 +1,16 @@
 'use client';
 import type { InvitationParsed } from '@/lib/types';
-import { useLegacyDraft } from '../useLegacyDraft';
+import { useLegacyDraft, type LegacyDraft } from '../useLegacyDraft';
 import { AM_TEXTS, AM_SECTIONS, amText } from '@/lib/annie-micky';
 import MultiImageUploader from '../MultiImageUploader';
 import ImageUploader from '../ImageUploader';
-export default function AnnieMickyFields({ data, onChange }: {
+export default function AnnieMickyFields({ data, onChange, draft: inherited }: {
     data: InvitationParsed;
     onChange: (patch: Partial<InvitationParsed>) => void;
+    draft?: LegacyDraft;
 }) {
     const cfg = data.config, settings = cfg.annieMicky ?? {};
-    const draft = useLegacyDraft(data, onChange);
+    const draft = useLegacyDraft(data, onChange, inherited);
     const set = draft.variant('annieMicky');
     const lodging = draft.list('lodging', current => current.config.lodging ?? [], (current, next) => ({ config: { ...current.config, lodging: next } }));
     const input = 'w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-outfit';

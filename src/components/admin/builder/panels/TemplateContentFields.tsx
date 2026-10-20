@@ -13,10 +13,12 @@ import RolyYelianaFields from './RolyYelianaFields';
 import { InvitationParsed, BuilderConfig } from '@/lib/types';
 import AnnieMickyFields from './AnnieMickyFields';
 import LauraAndresFields from './LauraAndresFields';
+import { useLegacyDraft, type LegacyDraft } from '../useLegacyDraft';
 
 interface Props {
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
+  draft?: LegacyDraft;
 }
 
 const inputCls = "w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit";
@@ -33,20 +35,21 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 /** Editor de campos "ricos" específico de cada plantilla premium (guardados en config). */
-export default function TemplateContentFields({ data, onChange }: Props) {
+export default function TemplateContentFields({ data, onChange, draft: inherited }: Props) {
+  const draft = useLegacyDraft(data, onChange, inherited);
   if (data.config.layout?.presetKey === 'marfil-vivo') return <p className="rounded-xl bg-[#f6f2eb] p-3 text-xs leading-5 text-[#625946]">Los capítulos y textos de Marfil Vivo se editan seleccionándolos en la vista previa o desde Más herramientas → Bloques.</p>;
-  if(isCleanDesign(data.config.designKey))return <CleanDesignFields data={data} onChange={onChange}/>;
-  if ((data.config.designKey === 'maria-angelica-y-mario' || isCleanDesign(data.config.designKey))) return <MariaMarioFields data={data} onChange={onChange} />;
-  if (data.config.designKey === 'karla-y-mauricio') return <KarlaMauricioFields data={data} onChange={onChange} />;
-  if (data.config.designKey === 'paula-y-juan-felipe') return <PaulaJuanFelipeFields data={data} onChange={onChange} />;
-  if (data.config.designKey === 'mariana-y-jesus') return <MarianaJesusFields data={data} onChange={onChange} />;
-  if (data.config.designKey === 'manuel-y-maya') return <ManuelMayaFields data={data} onChange={onChange} />;
-  if (data.config.designKey === 'nicole-y-francisco') return <NicoleFranciscoFields data={data} onChange={onChange} />;
-  if (data.config.designKey === 'roly-y-yeliana') return <RolyYelianaFields data={data} onChange={onChange} />;
-  if (data.config.designKey === 'annie-y-micky') return <AnnieMickyFields data={data} onChange={onChange} />;
-  if (data.config.designKey === 'laura-y-andres') return <LauraAndresFields data={data} onChange={onChange} />;
+  if(isCleanDesign(data.config.designKey))return <CleanDesignFields data={data} onChange={draft.patch} draft={draft}/>;
+  if ((data.config.designKey === 'maria-angelica-y-mario' || isCleanDesign(data.config.designKey))) return <MariaMarioFields data={data} onChange={draft.patch} draft={draft} />;
+  if (data.config.designKey === 'karla-y-mauricio') return <KarlaMauricioFields data={data} onChange={draft.patch} draft={draft} />;
+  if (data.config.designKey === 'paula-y-juan-felipe') return <PaulaJuanFelipeFields data={data} onChange={draft.patch} draft={draft} />;
+  if (data.config.designKey === 'mariana-y-jesus') return <MarianaJesusFields data={data} onChange={draft.patch} draft={draft} />;
+  if (data.config.designKey === 'manuel-y-maya') return <ManuelMayaFields data={data} onChange={draft.patch} draft={draft} />;
+  if (data.config.designKey === 'nicole-y-francisco') return <NicoleFranciscoFields data={data} onChange={draft.patch} draft={draft} />;
+  if (data.config.designKey === 'roly-y-yeliana') return <RolyYelianaFields data={data} onChange={draft.patch} draft={draft} />;
+  if (data.config.designKey === 'annie-y-micky') return <AnnieMickyFields data={data} onChange={draft.patch} draft={draft} />;
+  if (data.config.designKey === 'laura-y-andres') return <LauraAndresFields data={data} onChange={draft.patch} draft={draft} />;
   const cfg = data.config ?? {};
-  const setCfg = (patch: Partial<BuilderConfig>) => onChange({ config: { ...cfg, ...patch } });
+  const setCfg = (patch: Partial<BuilderConfig>) => draft.config(patch);
 
   // textarea ↔ array (una línea = un elemento)
   const linesValue = (arr?: string[]) => (arr ?? []).join('\n');
@@ -90,7 +93,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
           <textarea className={textareaCls} rows={3} value={cfg.rsvpMessage ?? ''} onChange={e => setCfg({ rsvpMessage: e.target.value })} placeholder="Los esperamos con toda la alegría y energía." />
         </Field>
         <Field label="Mensaje de la pareja" hint="Cada salto de línea es un párrafo. (Se edita arriba en 'Mensaje personalizado'.)">
-          <textarea className={textareaCls} rows={4} value={data.message ?? ''} onChange={e => onChange({ message: e.target.value })} />
+          <textarea className={textareaCls} rows={4} value={data.message ?? ''} onChange={e => draft.patch({ message: e.target.value })} />
         </Field>
       </Wrapper>
     );
@@ -120,7 +123,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
           <input className={inputCls} value={cfg.verseRef ?? ''} onChange={e => setCfg({ verseRef: e.target.value })} placeholder="Eclesiastés 4:9-10" />
         </Field>
         <Field label="Mensaje de regalos">
-          <textarea className={textareaCls} rows={3} value={data.gift_message ?? ''} onChange={e => onChange({ gift_message: e.target.value })} placeholder="Su presencia y sus buenos deseos..." />
+          <textarea className={textareaCls} rows={3} value={data.gift_message ?? ''} onChange={e => draft.patch({ gift_message: e.target.value })} placeholder="Su presencia y sus buenos deseos..." />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Nombre mesa de regalos">
@@ -153,7 +156,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
     const sponsors = data.sponsors ?? [];
     const setSponsor = (i: number, patch: { role?: string; names?: string }) => {
       const next = sponsors.map((s, j) => (j === i ? { ...s, ...patch } : s));
-      onChange({ sponsors: next });
+      draft.patch({ sponsors: next });
     };
     return (
       <Wrapper title="Textos de la colección Nocturna">
@@ -161,13 +164,13 @@ export default function TemplateContentFields({ data, onChange }: Props) {
           <input className={inputCls} value={cfg.datePlace ?? ''} onChange={e => setCfg({ datePlace: e.target.value })} placeholder="Santa Cruz · 2026" />
         </Field>
         <Field label="Frase / versículo de intro">
-          <textarea className={textareaCls} rows={3} value={data.message ?? ''} onChange={e => onChange({ message: e.target.value })} placeholder="Lo que Dios juntó, no lo separe el hombre. / Mateo 19:6" />
+          <textarea className={textareaCls} rows={3} value={data.message ?? ''} onChange={e => draft.patch({ message: e.target.value })} placeholder="Lo que Dios juntó, no lo separe el hombre. / Mateo 19:6" />
         </Field>
         <Field label="Bendición / encabezado de padres">
           <input className={inputCls} value={cfg.blessing ?? ''} onChange={e => setCfg({ blessing: e.target.value })} placeholder="Con la bendición de Dios y nuestros padres" />
         </Field>
         <Field label="Mensaje de regalos">
-          <textarea className={textareaCls} rows={2} value={data.gift_message ?? ''} onChange={e => onChange({ gift_message: e.target.value })} placeholder="Su presencia es nuestro mejor regalo..." />
+          <textarea className={textareaCls} rows={2} value={data.gift_message ?? ''} onChange={e => draft.patch({ gift_message: e.target.value })} placeholder="Su presencia es nuestro mejor regalo..." />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Opción 'Lluvia de sobres'">
@@ -192,13 +195,13 @@ export default function TemplateContentFields({ data, onChange }: Props) {
               <div key={i} className="rounded-xl border border-gray-200 p-2 space-y-2">
                 <div className="flex gap-2">
                   <input className={`${inputCls} flex-1`} value={s.role} onChange={e => setSponsor(i, { role: e.target.value })} placeholder="Padrinos de Civil" />
-                  <button type="button" onClick={() => onChange({ sponsors: sponsors.filter((_, j) => j !== i) })} className="text-red-300 hover:text-red-500 px-1">✕</button>
+                  <button type="button" onClick={() => draft.patch({ sponsors: sponsors.filter((_, j) => j !== i) })} className="text-red-300 hover:text-red-500 px-1">✕</button>
                 </div>
                 <textarea className={textareaCls} rows={2} value={s.names} onChange={e => setSponsor(i, { names: e.target.value })} placeholder={'Nombre 1\nNombre 2'} />
               </div>
             ))}
           </div>
-          <button type="button" onClick={() => onChange({ sponsors: [...sponsors, { role: '', names: '' }] })} className="mt-2 text-xs text-enkarta-gold hover:underline font-outfit">+ Agregar padrinos</button>
+          <button type="button" onClick={() => draft.patch({ sponsors: [...sponsors, { role: '', names: '' }] })} className="mt-2 text-xs text-enkarta-gold hover:underline font-outfit">+ Agregar padrinos</button>
         </div>
 
         <Field label="Mensaje de la galería">
@@ -217,14 +220,14 @@ export default function TemplateContentFields({ data, onChange }: Props) {
   if (t === 'dolcevita' || t === 'carmesi_v2' || t === 'napoly' || t === 'euforia' || t === 'rosegold' || t === 'allegria') {
     const sponsors = data.sponsors ?? [];
     const setSponsor = (i: number, patch: { role?: string; names?: string }) =>
-      onChange({ sponsors: sponsors.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
+      draft.patch({ sponsors: sponsors.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
     return (
       <Wrapper title="Textos de la colección Oliva">
         <Field label="Ciudad (marco de fecha)">
           <input className={inputCls} value={cfg.dateCity ?? ''} onChange={e => setCfg({ dateCity: e.target.value })} placeholder="La Paz" />
         </Field>
         <Field label="Mensaje de intro">
-          <textarea className={textareaCls} rows={3} value={data.message ?? ''} onChange={e => onChange({ message: e.target.value })} placeholder="Casarse es de locos, pero es que nos queremos con locura..." />
+          <textarea className={textareaCls} rows={3} value={data.message ?? ''} onChange={e => draft.patch({ message: e.target.value })} placeholder="Casarse es de locos, pero es que nos queremos con locura..." />
         </Field>
         <Field label="Bendición / encabezado de padres">
           <input className={inputCls} value={cfg.blessing ?? ''} onChange={e => setCfg({ blessing: e.target.value })} placeholder="Con la bendición de Dios y de nuestros padres" />
@@ -238,17 +241,17 @@ export default function TemplateContentFields({ data, onChange }: Props) {
               <div key={i} className="rounded-xl border border-gray-200 p-2 space-y-2">
                 <div className="flex gap-2">
                   <input className={`${inputCls} flex-1`} value={s.role} onChange={e => setSponsor(i, { role: e.target.value })} placeholder="Padrinos" />
-                  <button type="button" onClick={() => onChange({ sponsors: sponsors.filter((_, j) => j !== i) })} className="text-red-300 hover:text-red-500 px-1">✕</button>
+                  <button type="button" onClick={() => draft.patch({ sponsors: sponsors.filter((_, j) => j !== i) })} className="text-red-300 hover:text-red-500 px-1">✕</button>
                 </div>
                 <textarea className={textareaCls} rows={2} value={s.names} onChange={e => setSponsor(i, { names: e.target.value })} placeholder={'Nombre 1\nNombre 2'} />
               </div>
             ))}
           </div>
-          <button type="button" onClick={() => onChange({ sponsors: [...sponsors, { role: 'Padrinos', names: '' }] })} className="mt-2 text-xs text-enkarta-gold hover:underline font-outfit">+ Agregar padrinos</button>
+          <button type="button" onClick={() => draft.patch({ sponsors: [...sponsors, { role: 'Padrinos', names: '' }] })} className="mt-2 text-xs text-enkarta-gold hover:underline font-outfit">+ Agregar padrinos</button>
         </div>
 
         <Field label="Mensaje de regalos">
-          <textarea className={textareaCls} rows={2} value={data.gift_message ?? ''} onChange={e => onChange({ gift_message: e.target.value })} placeholder="Su presencia y sus buenos deseos..." />
+          <textarea className={textareaCls} rows={2} value={data.gift_message ?? ''} onChange={e => draft.patch({ gift_message: e.target.value })} placeholder="Su presencia y sus buenos deseos..." />
         </Field>
         <Field label="Frase de gracias (regalo)">
           <input className={inputCls} value={cfg.giftThanks ?? ''} onChange={e => setCfg({ giftThanks: e.target.value })} placeholder="Gracias por tu muestra de cariño" />
@@ -318,7 +321,7 @@ export default function TemplateContentFields({ data, onChange }: Props) {
           <textarea className={textareaCls} rows={4} value={cfg.storyMessage ?? ''} onChange={e => setCfg({ storyMessage: e.target.value })} placeholder="Nuestros caminos se unieron..." />
         </Field>
         <Field label="Mensaje de regalos">
-          <textarea className={textareaCls} rows={2} value={data.gift_message ?? ''} onChange={e => onChange({ gift_message: e.target.value })} placeholder="El mejor regalo que nos das es tu presencia..." />
+          <textarea className={textareaCls} rows={2} value={data.gift_message ?? ''} onChange={e => draft.patch({ gift_message: e.target.value })} placeholder="El mejor regalo que nos das es tu presencia..." />
         </Field>
 
         {/* Cuentas bancarias */}
