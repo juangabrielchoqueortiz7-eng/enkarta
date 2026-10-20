@@ -6,6 +6,7 @@ import { newServiceContract } from '@/lib/packages';
 import { storedServiceConfig } from '@/lib/package-services-server';
 import { integrityError } from '@/lib/integrity-server';
 import { draftCap } from '@/lib/partner-plans';
+import { partnerDraftCreationError } from '@/lib/partner-draft-server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
       itinerary: JSON.stringify(starter.itinerary),
     }).select(LIST_COLUMNS).single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) return partnerDraftCreationError(error) || NextResponse.json({ error: 'No se pudo confirmar la creación del borrador. Revisa tu panel antes de intentarlo de nuevo.' }, { status: 500 });
     return NextResponse.json(data, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });

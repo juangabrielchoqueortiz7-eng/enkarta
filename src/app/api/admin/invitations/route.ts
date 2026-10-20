@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { builderActor, invitationActor, publishDenial } from '@/lib/builder-access';
 import { packageForPlan } from '@/lib/partner-session';
 import { draftCap } from '@/lib/partner-plans';
+import { partnerDraftCreationError } from '@/lib/partner-draft-server';
 import { contractErrors, isCurrentContract, isPackage, newServiceContract, retainServiceContract } from '@/lib/packages';
 import { storedServiceConfig } from '@/lib/package-services-server';
 import { changesUncontractedColors } from '@/lib/package-colors';
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return partnerDraftCreationError(error) || NextResponse.json({ error: 'No se pudo confirmar la creación del borrador. Revisa tu panel antes de intentarlo de nuevo.' }, { status: 500 });
     }
 
     return NextResponse.json(safeInvitation(data), { status: 201 });
