@@ -41,3 +41,17 @@ Evidencia privada: `tmp/template-lodging-concurrency/`.
 - **34/34 pruebas sin red** del verificador privado de producción.
 - **597/597 archivos protegidos idénticos por SHA-256** y distribución completa de **129 recursos originales**.
 - La suite de hospedaje final queda revisada con hash SHA-256 del texto normalizado a LF `5d8e43895a9d316ffa7fcf99dcae90429a7cc04dfd969d49e400c1abb69e9d95`. La revisión independiente confirma el uso del componente, hook y motor reales y delimita la simulación de hooks en memoria.
+
+## Despliegue y comprobaciones de producción
+
+Código de aplicación `62f44d086536d0e52a69957258683ff4defd7063`, integrado en `main`. Vercel confirma **Ready** para el despliegue `dpl_n4MBQoK3Q65phHwqPyybKhgx3wsv`, asociado a [Enkarta](https://enkarta.vercel.app).
+
+[CI del SHA exacto](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39516709661) completado con éxito: `npm run verify` y `npm audit --omit=dev --audit-level=high`. El cierre automático de evidencia contrastó CI, despliegue, fuentes exactas, pruebas y conservación de originales; `RESULTADO.json` registra el resultado y sus límites.
+
+- Correspondencia exacta de cuatro fuentes de entrada: `TemplateContentFields.tsx`, `useLegacyDraft.ts`, `builder-list-state.ts` y `payments/bcp.ts`.
+- **13 grupos de comprobaciones HTTP correctos** y **75 peticiones denegadas**, incluidas **63 solicitudes de escritura**. Visitantes, cookies inválidas y una sesión de administrador no pueden suplantar a un Socio para modificar cuenta, invitaciones o pagos. Los paneles privados conservan la redirección y el diseño elegido en el retorno seguro.
+- La consulta privada de historial utiliza un identificador ficticio inexistente. La auditoría autenticada recibe recursos vacíos y devuelve únicamente métricas cero; la solicitud de subida autenticada carece de archivo y propietario y se rechaza antes del almacenamiento. No se leen filas de clientes ni se realiza una subida o un guardado positivo como Socio.
+- **129/129 originales publicados idénticos por bytes y SHA-256**, **6/6 rutas públicas y de acceso correctas** y **597/597 archivos protegidos locales intactos**.
+- **Cero datos de negocio escritos, usuarios creados, archivos almacenados, pagos, llamadas bancarias o mensajes enviados**. El identificador ficticio continúa ausente; la sesión temporal de administrador fue cerrada. No quedan fixtures persistentes que limpiar.
+
+BCP conserva su bloqueo en las fuentes desplegadas y su configuración local desactivada. No se ha consultado el valor remoto del proveedor ni ejecutado operaciones bancarias. Las regresiones de concurrencia se ejecutaron localmente con la lógica real; la carrera en un navegador autenticado de producción y la aceptación manual permanecen aplazadas.
