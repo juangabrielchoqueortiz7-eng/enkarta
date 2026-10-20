@@ -19,7 +19,7 @@ global.fetch=async()=>new Response('',{status:404});
 const own='10000000-0000-4000-8000-000000000001',other='10000000-0000-4000-8000-000000000002';
 const partnerId='20000000-0000-4000-8000-000000000001',paymentId='30000000-0000-4000-8000-000000000001';
 const guestId='40000000-0000-4000-8000-000000000001';
-let actor='partner',rpcFailure=null,beforeInvitationUpdate=null,paymentReadFailure=false;
+let actor='partner',rpcFailure=null,beforeInvitationUpdate=null,paymentReadFailure=false,builderReadFailure=null;
 const scalar=async(sql,args=[])=> (await db.query(sql,args)).rows[0]?.result;
 const row=async(table,id)=> (await db.query(`select * from ${table} where id=$1`,[id])).rows[0];
 const wire=row=>Object.fromEntries(Object.entries(row).map(([key,value])=>[key,value instanceof Date?(['event_date','expires_at','rsvp_deadline'].includes(key)?value.toISOString().slice(0,10):value.toISOString()):value]));
@@ -38,6 +38,7 @@ function queryClient(table){
   maybeSingle(){this.one=true;return this;},single(){this.one=true;return this;},
   async then(ok){try{
    if(table==='partner_payments'&&operation==='read'&&paymentReadFailure)return ok({data:null,error:{code:'DATABASE_UNAVAILABLE'}});
+   if(operation==='read'&&builderReadFailure?.table===table&&(!builderReadFailure.anchorsOnly||filters.some(([key,,operator])=>key==='id'&&operator==='in')))return ok({data:null,error:builderReadFailure.error});
    if(table==='invitations'&&operation==='update'&&beforeInvitationUpdate){const interleave=beforeInvitationUpdate;beforeInvitationUpdate=null;await interleave();}
    let values=[];const bind=v=>{values.push(v);return '$'+values.length;};
    const where=filters.length?' where '+filters.map(([k,v,op])=>op==='in'?`${k}=any(${bind(v)}::text[])`:`${k}=${bind(v)}`).join(' and '):'';
@@ -100,7 +101,7 @@ before(async()=>{
  }
 });
 beforeEach(async()=>{
- actor='partner';rpcFailure=null;beforeInvitationUpdate=null;paymentReadFailure=false;delete process.env.PAYMENT_PROVIDER;
+ actor='partner';rpcFailure=null;beforeInvitationUpdate=null;paymentReadFailure=false;builderReadFailure=null;delete process.env.PAYMENT_PROVIDER;
  await db.exec('truncate invitations,partners cascade');
  await db.query("insert into partners(id,email,status) values($1,'test@example.invalid','active')",[partnerId]);
  await db.query("insert into partner_subscriptions(partner_id,plan_key,status,current_period_end) values($1,'estudio','active',now()+interval '1 month')",[partnerId]);
@@ -129,6 +130,49 @@ test('new published anchor survives 35 draft versions and public content stays p
  assert.equal((await publicInvitationData(wire(await row('invitations',own)))).names,'Published names');
  const history=await (await builder.GET(new NextRequest('http://localhost/api/test?invitationId='+own))).json();
  assert.ok(history.versions.some(v=>v.id==='published'));
+});
+const assertPrivateBuilderRead=response=>{
+ assert.equal(response.headers.get('cache-control'),'private, no-store');
+ assert.deepEqual(response.headers.get('vary').split(',').map(value=>value.trim().toLowerCase()),['cookie']);
+ assert.equal(response.headers.has('set-cookie'),false,'Reading state must not create, rotate or clear a session cookie');
+};
+test('builder history is private for authorized cookie reads without changing snapshots or exposing credentials',async()=>{
+ assert.equal((await publish('private-cache-version')).status,200);
+ await db.query("insert into builder_review_notes(id,invitation_id,text,author) values('private-cache-note',$1,'Private QA review','Team')",[own]);
+ for(const role of ['partner','admin']){
+  actor=role;
+  const response=await builder.GET(new NextRequest('http://localhost/api/test?invitationId='+own,{headers:{cookie:role==='admin'?'enkarta-admin='+signAdminSession():'enkarta-partner=synthetic-private-session'}}));
+  assert.equal(response.status,200);assertPrivateBuilderRead(response);
+  const value=await response.json();assert.equal(value.versions.find(item=>item.id==='private-cache-version').data.names,'Published names');
+  assert.equal(value.notes[0].text,'Private QA review');assert.doesNotMatch(JSON.stringify(value),/SECRET-HASH|synthetic-private-session|enkarta-admin/);
+ }
+ actor='admin';
+ const missing=await builder.GET(new NextRequest('http://localhost/api/test?invitationId=10000000-0000-4000-8000-000000000099'));
+ assert.equal(missing.status,200);assertPrivateBuilderRead(missing);assert.deepEqual(await missing.json(),{versions:[],notes:[]});
+ assert.equal((await row('invitations',own)).published_version_id,'private-cache-version');
+});
+test('builder history rejects anonymous cookies without caching its authorization response',async()=>{
+ actor='none';
+ const response=await builder.GET(new NextRequest('http://localhost/api/test?invitationId='+own,{headers:{cookie:'enkarta-admin=invalid; enkarta-partner=invalid'}}));
+ assert.equal(response.status,401);assertPrivateBuilderRead(response);assert.deepEqual(await response.json(),{error:'No autorizado'});
+ assert.equal(await scalar('select count(*) as result from builder_versions'),0);
+});
+test('every builder history storage and integrity error stays private and retains its status and body',async()=>{
+ actor='admin';
+ const cases=[
+  {table:'builder_versions',error:{code:'42P01',message:'QA missing table'},status:503,body:{error:'Falta aplicar la migración 004',migrationRequired:true}},
+  {table:'builder_review_notes',error:{code:'QA_FAILURE',message:'QA read unavailable'},status:500,body:{error:'QA read unavailable',migrationRequired:false}},
+  {table:'invitations',error:{code:'42703',message:'QA missing anchor column'},status:503,body:{error:'Falta aplicar las migraciones de integridad 014 y 015.',migrationRequired:true}},
+  {table:'invitations',error:{code:'QA_FAILURE',message:'QA integrity read unavailable'},status:500,body:{error:'No se pudo completar la operación. No se confirmó ningún cambio.',code:'OPERATION_FAILED'}},
+  {table:'builder_versions',anchorsOnly:true,error:{code:'P0001',message:'NOT_FOUND'},status:404,body:{error:'No se encontró el registro.',code:'NOT_FOUND'}},
+ ];
+ await db.query("update invitations set published_version_id='private-cache-missing-anchor' where id=$1",[own]);
+ for(const value of cases){
+  builderReadFailure=value;
+  const response=await builder.GET(new NextRequest('http://localhost/api/test?invitationId='+own,{headers:{cookie:'enkarta-admin='+signAdminSession()}}));
+  assert.equal(response.status,value.status,value.table+': '+value.error.code);assertPrivateBuilderRead(response);assert.deepEqual(await response.json(),value.body);
+ }
+ assert.equal(await scalar('select count(*) as result from builder_versions'),0);
 });
 test('unpublishing removes public availability and releases quota',async()=>{
  await publish();const response=await partnerInvites.PATCH(req({id:own,status:'draft'}));assert.equal(response.status,200,JSON.stringify(await response.json()));

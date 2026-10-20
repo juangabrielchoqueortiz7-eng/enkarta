@@ -68,7 +68,7 @@ async function actorRole(invitationId: string): Promise<'admin' | 'partner' | 'c
   return await canReviewInvitation(invitationId) ? 'client' : null;
 }
 
-export async function GET(request: NextRequest) {
+async function readBuilderState(request: NextRequest) {
   const invitationId = new URL(request.url).searchParams.get('invitationId') || '';
   const actor = await actorRole(invitationId);
   if (!actor) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -89,6 +89,15 @@ export async function GET(request: NextRequest) {
     versions: (visibleVersions as VersionRow[]).map(row => { const version = versionFromRow(row); return { ...version, data: clientInvitation(version.data, actor === 'client') }; }),
     notes: ((notesResult.data || []) as NoteRow[]).map(noteFromRow),
   });
+}
+
+export async function GET(request: NextRequest) {
+  const response = await readBuilderState(request);
+  response.headers.set('Cache-Control', 'private, no-store');
+  const vary = response.headers.get('Vary')?.split(',').map(value => value.trim()).filter(Boolean) ?? [];
+  if (!vary.some(value => value.toLowerCase() === 'cookie')) vary.push('Cookie');
+  response.headers.set('Vary', vary.join(', '));
+  return response;
 }
 
 export async function POST(request: NextRequest) {

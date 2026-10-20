@@ -19,7 +19,7 @@ No se añaden reintentos automáticos de escrituras inciertas ni se inventa una 
 
 ## Alcance y conservación
 
-El cambio se limita al control de operaciones del constructor compartido por administradores y Socios y a sus regresiones. No rediseña la interfaz, no cambia el contenido de ninguna invitación, preset o recurso original y no modifica estilos globales. No requiere migración ni dependencias nuevas. BCP permanece desactivado.
+El cambio se limita al control de operaciones del constructor compartido por administradores y Socios, la política de caché de su lectura de historial y sus regresiones. No rediseña la interfaz, no cambia el contenido de ninguna invitación, preset o recurso original y no modifica estilos globales. No requiere migración ni dependencias nuevas. BCP permanece desactivado.
 
 Los hallazgos de doble creación de borradores y esperas del checkout de Socios son trabajo independiente; esta corrección no afirma resolverlos.
 
@@ -34,14 +34,21 @@ Las pruebas del componente usan transportes, almacenamiento y relojes ficticios.
 
 - `scripts/test-builder-publication-ui.cjs`: 13 casos con `InvitationBuilder`, validación, persistencia de versiones y efectos reales; sólo se sustituyen los renderizadores secundarios y las dependencias de red/almacenamiento. Cubre restauración lenta, publicación/programación con ediciones posteriores, Deshacer/Rehacer, despublicación, cola previa, reanudación del autoguardado, confirmaciones tardías, fallo de publicación, sincronización final fallida con Guardar explícito sin republicar, ausencia de reintento automático tras el error e hidratación inicial antigua.
 - `scripts/test-builder-hydration.cjs`: seis casos del helper real. Una respuesta GET antigua no elimina una publicación confirmada ni revierte notas editadas/eliminadas o un checkpoint local. La lectura normal conserva su combinación y migración actuales, los cambios de otra invitación no invalidan esta lectura y un fallo devuelve el espejo vigente.
+- `scripts/test-integrity.cjs`: tres casos nuevos con el handler real y PostgreSQL aislado cubren la política `private, no-store` y `Vary: Cookie` de las lecturas autorizadas, la denegación y los errores retornados. Conservan los cuerpos, estados HTTP, permisos y ausencia de creación de cookies; la suite de integridad pasa de 31 a 34 casos.
 
 La prueba de despublicación introduce una edición antes de su PUT y otra durante la espera: se conserva la segunda y el estado pausado también al deshacer/rehacer. La vigencia canónica se sincroniza sin tratarla como edición visual. No se modifican esquemas de servidor ni se almacenan historiales privados en una caché global nueva.
 
 ## Verificación local, 20 de octubre de 2026
 
-- `npm run verify`: **923 pruebas correctas**, incluidas **19 nuevas**, lint, TypeScript y build completos. Sin nuevos avisos de lint en los archivos afectados; permanecen los avisos anteriores de imágenes en invitaciones originales.
+- `npm run verify`: **926 pruebas correctas**, incluidas **22 nuevas** en este bloque (19 de publicación/hidratación y tres de caché), lint, TypeScript y build completos. Sin nuevos avisos de lint en los archivos afectados; permanecen los avisos anteriores de imágenes en invitaciones originales.
 - **597/597 archivos protegidos** idénticos por SHA-256. El guard de distribución verifica **129 originales completos**, incluidos los archivos ignorados por Git que se conservan en el despliegue desde el workspace completo.
 - Revisión de la UI afectada con Impeccable y las [Web Interface Guidelines](https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md): aviso operativo `role="status"`, texto legible y sin nuevos controles ni movimiento. El detector dirigido sólo informa un advisory preexistente del color del botón Publicar, que se conserva. Las pautas de React se aplican a refs, efectos, actualizaciones y separación de estado operativo.
 - Las pruebas simulan el orden de las respuestas; no publican invitaciones reales ni realizan llamadas bancarias. No se efectuó una aceptación de navegador ni una revisión visual física de este nuevo comportamiento.
 
-Evidencia local privada: `tmp/builder-safe-publication/verify.log`, `protected-local-final.json`, y los informes dirigidos en `tmp/builder-publication-edits/`.
+Evidencia local privada: `tmp/builder-safe-publication/verify-final.log`, `protected-local-final.json`, y los informes dirigidos en `tmp/builder-publication-edits/`. El log `verify.log` conserva la verificación inicial de 923 casos antes del ajuste HTTP.
+
+## Hallazgo HTTP y ajuste de caché
+
+El primer despliegue (`f329dc2430964f624afb9d31efcd14c773a71e8a`) quedó Ready y pasó CI, pero el smoke HTTP detectó `Cache-Control: public, max-age=0, must-revalidate` en `GET /api/admin/builder-state`: tanto en su error 401 genérico como en una lectura administrativa para un UUID ficticio confirmado inexistente. El error genérico no contiene datos privados; la política de una lectura autenticada del historial sí debe ser explícita. No se comprobó una filtración ni se consultaron historiales de clientes.
+
+El ajuste envuelve las respuestas existentes de ese GET con `private, no-store` y agrega `Cookie` a `Vary`, conservando sus otros valores. No cambia la autorización, los filtros de invitación, el contenido o los métodos de escritura. Las regresiones incluyen éxito administrativo y de Socios, UUID ausente y errores 401/404/500/503. La inspección temporal cerró su cookie y no escribió datos. El reporte inicial se conserva como `tmp/builder-safe-publication/production-readonly-initial.json`; las cabeceras diagnósticas están en `cache-inspection.json`.
