@@ -94,15 +94,28 @@ La comprobación local conserva **597 archivos protegidos sin cambios** y verifi
 
 ## Cierre de verificación y publicación
 
-Los resultados finales se incorporarán después de confirmarlos. Los datos locales anteriores no acreditan todavía que esta revisión esté desplegada en producción.
+Publicado el 20 de octubre de 2026. Revisión de código integrada en `main`: `ef6b211b952bafaba7c3631f66f34a1d43f26fb9`. La actualización posterior de este informe sólo modifica documentación.
 
 | Comprobación | Resultado |
 | --- | --- |
-| Suite final del bloque y comparación con la referencia | 28/28; referencia: 19 aprobadas y 9 fallos |
-| Inspección visual en navegador y medidas | 65 comprobaciones: 13 escenas y 5 anchos; sin incidencias de desbordamiento, etiquetas, áreas táctiles o ayudas en esos casos |
-| Verificación integral: lint, TypeScript, suites y build | `npm run verify`: salida 0; 1.399 pruebas en 47 archivos, sin fallos; lint, TypeScript y build correctos; 65 páginas generadas |
-| Commit y CI de la revisión publicada | Pendiente de registrar |
-| Despliegue y cotejo de fuentes en producción | Pendiente de registrar |
-| Permisos y recursos originales mediante HTTP de producción | Pendiente de registrar |
-| Datos ficticios y limpieza final, si se utilizaron | Pendiente de registrar |
-| Aceptación manual en dispositivos físicos | Aplazada por solicitud del usuario |
+| Suite nueva | 28/28 aprobadas; referencia fija: 19 aprobadas y nueve fallos |
+| Inspección visual | 65 comprobaciones en 13 escenas y cinco anchos, sin incidencias en los criterios medidos |
+| Verificación integral local | `npm run verify`: salida 0; 1.399 pruebas en 47 archivos, sin fallos; lint, TypeScript y build correctos; 65 páginas generadas |
+| CI del mismo código | [Run 39509891827](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39509891827): verificación y auditoría de dependencias de producción aprobadas |
+| Producción | `dpl_CyuzPJnvbghZaqcMg7aixB6FEYUE`, estado Ready, alias [enkarta.vercel.app](https://enkarta.vercel.app) |
+| Cotejo de fuentes | Los identificadores de entrada de TemplateContentFields, useLegacyDraft y la guarda BCP coinciden exactamente con los bytes locales verificados |
+| Matriz HTTP | 13 grupos aprobados; 75 solicitudes indebidas rechazadas con 401, incluidas 63 de escritura, sin sesión, con cookies inválidas y con sesión de administrador que no puede suplantar a un socio |
+| Acceso y privacidad | Panel y Nueva invitación conservan su acceso protegido y continuación segura; historial vacío del UUID ficticio y configuración privada no se sirven desde caché compartida |
+| Comprobaciones vacías | Auditoría sin recursos devuelve vacío sin sondeos; subida autenticada sin archivo se rechaza antes del almacenamiento |
+| Originales | 129 recursos públicos coinciden en bytes y SHA-256; seis rutas devuelven el estado esperado; 597 archivos protegidos locales intactos |
+| Limpieza | Cero filas, invitaciones, usuarios Auth, pagos o archivos de prueba persistidos; UUID ausente comprobado antes y después; sesión temporal cerrada y descartada |
+| BCP y comunicaciones | BCP bloqueado; cero llamadas bancarias y mensajes enviados; sin cambios de proveedor, credenciales o variables de producción |
+| Manuales | Aplazadas por solicitud del usuario |
+
+Las pruebas de producción utilizan exclusivamente un UUID ficticio inexistente, sesiones inválidas, una imagen sintética en solicitudes sin sesión válida y cuerpos vacíos en dos comprobaciones autenticadas. No consultan filas de clientes ni crean datos que requieran eliminación posterior. El cierre de la sesión temporal está validado.
+
+Este resultado acredita fuentes de entrada, disponibilidad, denegaciones de permisos, privacidad y originales públicos. No sustituye la aceptación visual autenticada en un Android real, no realiza un cobro y no prueba una subida o creación exitosa en producción. Las ediciones válidas se ejercitan con el componente real y transporte en memoria.
+
+Los riesgos heredados descritos sobre arrays capturados, índices y reemplazo de hospedaje permanecen fuera de este refinamiento. No se atribuye seguridad nueva a operaciones simultáneas de esas listas.
+
+Evidencia privada local: `tmp/template-fields-ux/RESULTADO.json`, `production-http.json`, `production-public.json`, `deployment-final.json`, `deployment-files.json`, `ci.json`, `verify.log` y `visual-review.json`. Estos archivos no se distribuyen en el sitio ni contienen claves o cookies de acceso.
