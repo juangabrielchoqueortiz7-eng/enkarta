@@ -38,6 +38,20 @@ Evidencia privada: `tmp/partner-event-date/`.
 - **597/597 archivos protegidos idénticos por SHA-256** y distribución completa de **129 recursos originales**.
 - Revisión independiente de fuente y pruebas sin bloqueantes; componentes reales, fixtures inmutables, expectativas literales y cero intentos de red. El alcance SSR no acredita hidratación ni aceptación móvil.
 
+## Despliegue y comprobaciones de producción
+
+Código de aplicación `7ccd0d52ad415aee2645f42b27f68bf069945768`, integrado en `main`. Vercel confirma **Ready** para `dpl_3apwF43fWLXind7bg7qeKaUsvbB6`, asociado a [Enkarta](https://enkarta.vercel.app).
+
+[CI del SHA exacto](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39536642494) completado con éxito: `npm run verify` y `npm audit --omit=dev --audit-level=high`. El cierre automático de evidencia contrastó CI, despliegue, fuentes, contadores de pruebas y conservación de originales.
+
+- Correspondencia exacta de tres fuentes desplegadas: `PartnerDashboard.tsx`, `invitation-validity.ts` y `payments/bcp.ts`.
+- **13 grupos HTTP correctos** y **75 peticiones denegadas**, incluidas **63 solicitudes de escritura**. Los paneles privados mantienen el acceso protegido y los retornos seguros. Una sesión de administrador no suplanta a un Socio.
+- El historial privado se consulta con un identificador ficticio inexistente; la auditoría de recursos recibe una lista vacía y la subida autenticada carece de archivo y propietario y se rechaza antes del almacenamiento. No se leen filas de clientes ni se realiza un guardado o subida positivos como Socio.
+- **129/129 originales publicados idénticos por bytes y SHA-256**, **6/6 rutas públicas y de acceso correctas** y **597/597 archivos protegidos locales intactos**.
+- **Cero datos de negocio escritos, usuarios creados, archivos almacenados, pagos, llamadas bancarias o mensajes enviados**. El identificador ficticio continúa ausente y la sesión temporal de administrador fue cerrada. No quedan fixtures persistentes que limpiar.
+
+BCP conserva su bloqueo en las fuentes desplegadas y su configuración local desactivada. No se consultó el valor remoto del proveedor ni se ejecutaron operaciones bancarias. Las fechas se validaron con SSR real local; la tarjeta en un navegador móvil autenticado y la aceptación manual permanecen aplazadas. `RESULTADO.json` conserva estos límites.
+
 ## Pendientes identificados para siguientes entregas
 
 Esta revisión también localizó problemas independientes, reproducidos con componentes reales y datos ficticios en memoria, que no se modifican en esta corrección:
