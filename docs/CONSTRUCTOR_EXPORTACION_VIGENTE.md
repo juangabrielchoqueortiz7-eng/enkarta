@@ -16,7 +16,7 @@ Se mantienen los formatos y generadores de CSV, PDF, ZIP, QR e imágenes, así c
 
 Skill aplicada: `vercel-react-best-practices`, con identidad de consulta y guardas de ciclo local sin cachés globales de datos privados ni APIs exclusivas de React 19.
 
-No se añade una suscripción en tiempo real al padrón ni una garantía de actualidad absoluta de la base de datos. Una lista cargada pertenece a su consulta; esta entrega no añade una transacción entre invitados y analítica ni un nuevo plazo máximo para solicitudes pendientes.
+No se añade una suscripción en tiempo real al padrón ni una garantía de actualidad absoluta de la base de datos. Una lista cargada pertenece a su consulta; esta entrega no añade una transacción entre invitados y analítica ni un nuevo plazo máximo para solicitudes pendientes. La carga conjunta todavía espera ambas respuestas: un error de analítica permite continuar, pero una solicitud que nunca termina puede mantener la consulta en espera. Un trabajo invalidado puede terminar su procesamiento interno, aunque sus guardas impiden emitir el archivo o afectar al contexto nuevo.
 
 ## Pruebas y producción
 
@@ -28,7 +28,7 @@ Los escenarios incluyen dos respuestas en orden inverso, JSON demorado, cambios 
 
 La comprobación de producción contrasta las fuentes del despliegue Ready, permisos de las rutas de exportación y el rechazo de un UUID ficticio cuya ausencia se verifica antes y después. **No se llama a analítica con una sesión válida**, porque su GET ejecuta la política de retención de eventos. Las llamadas sin autorización deben detenerse con 403 antes de acceder a los datos. No se solicita una descarga real de invitados de clientes.
 
-Evidencia privada: `tmp/builder-export/`. La aceptación manual queda aplazada; los resultados finales se registran al completar la validación y el despliegue.
+Evidencia privada: `tmp/builder-export/`. `RESULTADO.json` contrasta automáticamente CI, despliegue, fuentes, contadores de pruebas, limpieza y conservación de originales. La aceptación manual queda aplazada.
 
 ## Validación local final
 
@@ -36,3 +36,17 @@ Evidencia privada: `tmp/builder-export/`. La aceptación manual queda aplazada; 
 - **46/46 pruebas sin red** del verificador privado de producción, con revisión independiente de sus solicitudes, respuesta NOT_FOUND y cierre de sesión.
 - Revisión independiente de fuente y regresiones sin bloqueantes: **12 helpers originales y 80 atributos de clases conservados**; los estados añadidos solo comunican carga, error y reintento. Los inicializadores de HTML, CSV y páginas PDF y los generadores compartidos permanecen iguales.
 - APIs de invitados y analítica, generador de PDF/ZIP, recursos y renderizadores públicos sin modificaciones. **597/597 archivos protegidos idénticos por SHA-256** y distribución completa de **129 originales**.
+
+## Despliegue y comprobaciones de producción
+
+Código de aplicación **`f8d0cc08a69e08f764619e123b32441fde1c76d5`**, integrado en `main`. Vercel confirma **Ready** para **`dpl_5vwDe8kEJDXRpGCK4mwDPnGWqyBD`**, publicado en [Enkarta](https://enkarta.vercel.app). [CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39542570769) completada con éxito: `npm run verify` y auditoría de dependencias de producción.
+
+- **Cinco fuentes exactas contrastadas** con los UID de entrada del despliegue y sus SHA-256: `ExportPanel`, las APIs de invitados y analítica, `export-artifacts` y el adaptador BCP bloqueado.
+- **17 grupos HTTP correctos**, con **105 respuestas 401**, incluidas **78 solicitudes de escritura denegadas**. Además, **10 GET de invitados y analítica con sesiones ausentes o inválidas** devolvieron exactamente 403 y «No autorizado», sin acceso al padrón ni ejecución de retención.
+- **Un GET de administrador a invitados con el UUID ficticio ausente** devolvió exactamente el 404 privado `NOT_FOUND`, antes de leer invitados. Su ausencia se comprobó por HEAD antes, inmediatamente antes de esa consulta y al finalizar. **Cero GET autenticados de analítica**; no se solicitó su operación de retención.
+- **129/129 recursos originales publicados idénticos por bytes y SHA-256**, **6/6 rutas comprobadas correctas** y **597/597 archivos protegidos locales intactos**.
+- **Cero datos de negocio escritos, usuarios creados, archivos almacenados, pagos, llamadas bancarias o mensajes enviados**. La sesión temporal de administrador se cerró y no quedan fixtures persistentes que limpiar. Sus credenciales se usaron únicamente en memoria para el inicio de sesión habitual, sin registrarlas.
+
+BCP conserva el bloqueo de sus fuentes y su configuración local desactivada; no se inspeccionó el valor remoto del proveedor ni se realizaron operaciones bancarias. No se ejecutó SQL nuevo ni se alteró la migración local pendiente.
+
+Los CSV, PDF y ZIP se verificaron automáticamente en memoria mediante el componente real con hooks controlados. La comprobación remota acredita las fuentes publicadas y sus controles de acceso; **no realiza una descarga de invitados reales ni una exportación desde un navegador autenticado**. No sustituye la aceptación manual móvil, que permanece aplazada.
