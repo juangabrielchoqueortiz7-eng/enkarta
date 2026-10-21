@@ -34,3 +34,17 @@ La evidencia privada se guarda en tmp/builder-style/. RESULTADO.json reúne CI, 
 - Revisión independiente de las dos fuentes y la suite sin bloqueantes. El retorno JSX, sus textos, **123 atributos de clases y 17 estilos inline de StylePanel** son idénticos, excepto los callbacks de eventos. Las constantes y catálogos siguen intactos; el constructor sólo añade las dos referencias a StylePanel.
 - **46/46 comprobaciones sin red** del verificador privado de producción y revisión independiente de sus cinco scripts.
 - **597 archivos protegidos sin cambios** por SHA-256 y distribución completa de **129 originales**. La modificación local preexistente de la migración 021 queda fuera de los commits.
+
+## Despliegue y comprobaciones de producción
+
+Código de aplicación **ddd5e5f83ccd5c96d64bb77cf3f453be9d0c170d**, integrado en main. Vercel confirma **Ready** para **dpl_DdmSfwtzBEGU41wxgZYFmaz49EZJ**, publicado en [Enkarta](https://enkarta.vercel.app). [CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39549714459) completada con éxito: npm run verify y auditoría de dependencias de producción.
+
+- **Ocho fuentes exactas contrastadas** con sus UID de entrada del despliegue y SHA-256: StylePanel, InvitationBuilder, useLegacyDraft, design-kits, design-audit, user-design-kits, template-themes y el adaptador BCP bloqueado.
+- **17 grupos HTTP correctos**, **105 respuestas 401**, incluidas **78 solicitudes de escritura denegadas**, y **10 GET de invitados/analítica rechazados con 403**. No se consulta analítica con una sesión válida ni se solicita su operación de retención.
+- El UUID ficticio se comprobó ausente por HEAD antes y después. Las consultas protegidas devolvieron resultados vacíos o rechazos exactos, sin leer filas de clientes ni modificar invitaciones. La subida autenticada sin archivo devolvió 400 antes del bucket; la auditoría vacía no recibió URL alguna.
+- **129/129 originales publicados idénticos por bytes y SHA-256**, **6/6 rutas correctas** y **597/597 archivos protegidos locales intactos**.
+- **Cero datos de negocio escritos, usuarios creados, archivos almacenados, pagos, llamadas bancarias o mensajes enviados**. Se cerró la sesión temporal de administrador; no quedaron fixtures persistentes que limpiar. No se registraron credenciales ni cookies.
+
+BCP conserva el bloqueo de sus fuentes y su configuración local desactivada. No se inspeccionó el valor remoto del proveedor ni se realizaron operaciones bancarias. No se requiere SQL nuevo; la modificación local preexistente de la migración 021 permanece fuera de los commits.
+
+La conservación de ediciones se comprueba localmente con StylePanel, el borrador y las librerías reales, con almacenamiento aislado en RAM. La comprobación remota acredita fuentes publicadas, permisos y originales; **no realiza una edición de estilo autenticada ni guarda kits en un navegador de producción**. La aceptación visual y móvil permanece aplazada por indicación del usuario.
