@@ -35,3 +35,15 @@ La suite scripts/test-builder-media-final-ui.cjs contiene **30 pruebas correctas
 - **1.804 pruebas correctas en 59 ejecuciones**, lint, TypeScript y build con **65 páginas generadas**, salida 0. Se conservan las advertencias anteriores de imágenes y SVG heredado; no se añaden supresiones ni se modifican sus recursos.
 - Revisión independiente de las dos fuentes y la suite sin bloqueantes. Clases, estilos inline y textos JSX idénticos tras normalizar saltos de línea: MediaPanel **30/0/17**, InvitationBuilder **128/0/37**. Es una comprobación estática, no aceptación visual.
 - **597/597 archivos protegidos** idénticos por SHA-256, distribución completa de **129 originales** y **46/46 pruebas sin red** del verificador de producción. Sus cinco scripts privados quedaron revisados y congelados por hash.
+
+## Producción y cierre de evidencia
+
+El commit de aplicación `26120cb527dd1a6f52d932ca110ccbf5db1f5da1` quedó integrado en main y desplegado como `dpl_6nwwFwWaJBoP8fo6Dwge67nBUoC1`, con estado **READY** y alias [enkarta.vercel.app](https://enkarta.vercel.app). [CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39616432254) terminó correctamente, incluida la verificación completa y la auditoría de dependencias de producción. Las **ocho fuentes críticas** coinciden con los archivos revisados.
+
+- **17 grupos HTTP correctos**, **105 rechazos 401**, incluidos **78 intentos de escritura sin permiso**, y **10 rechazos 403** de lectura de exportación/analítica. No se ejecutó analítica autenticada porque ese endpoint puede realizar mantenimiento de retención.
+- El UUID ficticio inexistente conservó **0 filas antes y después**. La subida autenticada sin archivo recibió 400 antes de acceder al almacenamiento. La auditoría vacía no recibió URLs ni produjo cambios.
+- **129/129 originales publicados** conservaron longitud y SHA-256; **6/6 rutas públicas** respondieron correctamente. La comprobación final conserva los **597 archivos locales protegidos**.
+- **0 escrituras de negocio, usuarios, archivos, pagos, llamadas bancarias o mensajes**. No quedaron fixtures persistentes que eliminar y la cookie temporal de administración se cerró al terminar.
+- BCP conserva su bloqueo en el código y la configuración local; no se inspeccionó la configuración remota del proveedor ni se realizaron operaciones bancarias. Esta entrega no requiere SQL y conserva la modificación local preexistente de la migración 021 fuera de los commits.
+
+La comprobación remota acredita fuentes, permisos y conservación de recursos. No se realizó una edición autenticada de medios ni una subida exitosa en el navegador de producción. Los casos de concurrencia y respuestas demoradas se verificaron con componentes reales y fronteras controladas en la suite local; la aceptación visual y móvil permanece aplazada. El cierre de evidencia está registrado en `tmp/builder-media-final/RESULTADO.json`.
