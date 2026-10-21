@@ -27,7 +27,7 @@ El arnés transpila el componente real y ejecuta sus hooks con respuestas y cicl
 
 En producción se contrastan las fuentes exactas del despliegue Ready, la protección de GET/POST de los tres accesos y el rechazo de un identificador ficticio cuya ausencia se comprueba antes y después. No se envía ninguna contraseña en esa comprobación, ni se modifica una invitación real. Se comprueban también los hashes de los originales publicados. Estas pruebas técnicas no sustituyen la aceptación manual del editor autenticado, que queda aplazada.
 
-Evidencia privada: `tmp/service-access-save/`. Los resultados definitivos se registran después de completar las comprobaciones.
+Evidencia privada: `tmp/service-access-save/`. `RESULTADO.json` contrasta automáticamente CI, fuentes del despliegue, contadores de pruebas, limpieza y conservación de originales.
 
 ## Validación local final
 
@@ -36,3 +36,17 @@ Evidencia privada: `tmp/service-access-save/`. Los resultados definitivos se reg
 - Revisión independiente de fuente y regresiones sin bloqueantes. Los 21 atributos de clases existentes se conservan; el botón añade `aria-busy` y la interfaz distingue datos enviados de ediciones posteriores.
 - **597/597 archivos protegidos idénticos por SHA-256** y distribución local completa de **129 originales**.
 - Una primera validación completa también pasó, pero detectó una advertencia del analizador de hooks. Se sustituyó el incremento abreviado de la generación por una asignación explícita equivalente, sin silenciar reglas; se repitió la validación completa para esa fuente final.
+
+## Producción y limpieza
+
+Código de aplicación **`30f42b441b1875e22e97edc9a77132768df70e17`**, integrado en `main`. Vercel confirma **Ready** para **`dpl_ANS7EtCYiKsz2nxyek1URho7ZKa3`**, publicado en [Enkarta](https://enkarta.vercel.app). [CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39539013674) completada con éxito: `npm run verify` y auditoría de dependencias de producción.
+
+- Correspondencia exacta por UID de las tres fuentes cargadas al despliegue: `ServiceAccessPanel.tsx`, la ruta `host-credentials` sin modificaciones y el adaptador BCP bloqueado. Se contrastaron también sus SHA-256 locales.
+- **15 grupos HTTP correctos**, con **105 respuestas 401** y **78 solicitudes de escritura denegadas**. Incluyen 30 GET/POST de los accesos de revisión, gestión y puerta con sesiones ausentes o inválidas.
+- Para el administrador autenticado, **seis GET/POST adicionales** de esos accesos devuelven exactamente 404 e «Invitación no encontrada». El UUID ficticio se verificó ausente con consultas HEAD antes, inmediatamente antes de esas solicitudes y al finalizar. Los cuerpos de acceso no contienen contraseña ni fecha límite; el servidor rechaza antes de construir o escribir cambios.
+- **129/129 recursos originales publicados idénticos por bytes y SHA-256**, **6/6 rutas comprobadas correctas** y **597/597 archivos protegidos locales intactos**.
+- **Cero datos de negocio escritos, usuarios creados, archivos almacenados, pagos, llamadas bancarias o mensajes enviados**. La sesión temporal de administrador se cerró y no quedan fixtures persistentes que limpiar. El inicio de sesión normal sí utiliza la contraseña de administrador en memoria, sin registrarla.
+
+BCP conserva el bloqueo de sus fuentes y su configuración local desactivada; no se inspeccionó el valor remoto del proveedor ni se realizaron operaciones bancarias. No se ejecutó SQL nuevo.
+
+Las regresiones de concurrencia ejecutan localmente el componente real con un modelo controlado de hooks, sin ReactDOM ni navegador físico. La comprobación remota acredita despliegue, permisos e inexistencia del objetivo ficticio; **no prueba un guardado positivo de credenciales ni la interacción del editor autenticado en un celular**. La aceptación manual queda aplazada. Siguen abiertos el plazo máximo de una solicitud pendiente y la idempotencia o los conflictos entre pestañas/dispositivos descritos en los límites.
