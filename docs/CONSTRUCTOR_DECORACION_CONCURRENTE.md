@@ -34,3 +34,17 @@ La evidencia privada se guarda en tmp/builder-decor/. RESULTADO.json reúne CI, 
 - Revisión independiente de las dos fuentes y la suite sin bloqueantes. El retorno JSX, sus textos y **48 atributos de clases de DecorPanel** son idénticos salvo los callbacks. PREMIUM, THEME_DEFAULTS, los cuatro helpers visuales y los seis colores/literales nocturnos permanecen iguales. InvitationBuilder sólo añade las dos referencias al panel.
 - **46/46 comprobaciones sin red** del verificador privado de producción y revisión independiente de sus cinco scripts.
 - **597 archivos protegidos sin cambios** por SHA-256 y distribución completa de **129 originales**. La modificación local preexistente de la migración 021 queda fuera de los commits.
+
+## Despliegue y comprobaciones de producción
+
+Código de aplicación **9d0ff3e3ed0cc0454591238f432bb09d1f6b2c31**, integrado en main. Vercel confirma **Ready** para **dpl_5hLwbVxH15Hvr9K64DaNJiztYF95**, publicado en [Enkarta](https://enkarta.vercel.app). [CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39552662970) completada con éxito: npm run verify y auditoría de dependencias de producción.
+
+- **Cinco fuentes exactas contrastadas** con los UID de entrada y sus SHA-256: DecorPanel, InvitationBuilder, useLegacyDraft, decorations y el adaptador BCP bloqueado.
+- **17 grupos HTTP correctos**, **105 respuestas 401**, incluidas **78 solicitudes de escritura denegadas**, y **10 GET de invitados/analítica rechazados con 403**. No se consulta analítica con una sesión válida ni se solicita su operación de retención.
+- El UUID ficticio se comprobó ausente por HEAD antes y después. Las consultas protegidas devolvieron resultados vacíos o rechazos exactos, sin leer filas de clientes ni modificar invitaciones. La subida autenticada sin archivo devolvió 400 antes del bucket; la auditoría vacía no recibió URL alguna.
+- **129/129 originales publicados idénticos por bytes y SHA-256**, **6/6 rutas correctas** y **597/597 archivos protegidos locales intactos**.
+- **Cero datos de negocio escritos, usuarios creados, archivos almacenados, pagos, llamadas bancarias o mensajes enviados**. Se cerró la sesión temporal de administrador; no quedaron fixtures persistentes que limpiar. No se registraron credenciales ni cookies.
+
+BCP conserva el bloqueo de sus fuentes y su configuración local desactivada. No se inspeccionó el valor remoto del proveedor ni se realizaron operaciones bancarias. No se requiere SQL nuevo y la modificación local preexistente de la migración 021 permanece fuera de los commits.
+
+La conservación de ediciones se comprueba localmente con el panel y el borrador reales. La comprobación remota acredita fuentes publicadas, permisos y originales; **no realiza una edición de decoración autenticada ni ejecuta sus partículas y animaciones en un navegador de producción**. La aceptación visual y móvil permanece aplazada por indicación del usuario.
