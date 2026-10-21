@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AdditionalServiceStatus, AdditionalServicesConfig, InvitationLocale, InvitationParsed } from '@/lib/types';
 import type { SaveDateResponse } from '@/lib/save-date';
 import {
@@ -14,6 +14,7 @@ import {
   type AdditionalServiceKey,
 } from '@/lib/additional-services';
 import ImageUploader from '../ImageUploader';
+import { useLegacyDraft } from '../useLegacyDraft';
 
 const STATUS: { value: AdditionalServiceStatus; label: string }[] = [
   { value: 'not_contracted', label: 'No contratado' },
@@ -48,11 +49,51 @@ function SaveDateSummary({ id, enabled }: { id: string; enabled: boolean }) {
   return <div className="rounded-2xl border border-gray-100 bg-white p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Respuestas previas</p><div className="mt-2 grid grid-cols-4 gap-1.5 text-center"><div><strong className="block text-sm text-gray-700">{state.metrics.total}</strong><span className="text-[8px] text-gray-400">Total</span></div><div><strong className="block text-sm text-emerald-700">{state.metrics.interested}</strong><span className="text-[8px] text-gray-400">Sí</span></div><div><strong className="block text-sm text-amber-700">{state.metrics.maybe}</strong><span className="text-[8px] text-gray-400">Quizás</span></div><div><strong className="block text-sm text-violet-700">{state.metrics.estimatedGuests}</strong><span className="text-[8px] text-gray-400">Personas</span></div></div>{state.responses.slice(0, 4).map(item => <p key={item.id} className="mt-2 flex justify-between gap-2 border-t border-gray-50 pt-2 text-[10px] text-gray-500"><span className="truncate">{item.name}</span><span>{item.interest === 'interested' ? 'Sí' : item.interest === 'maybe' ? 'Quizás' : 'No'} · {item.guests}</span></p>)}</div>;
 }
 
-export default function AdditionalServicesPanel({ data, onChange }: { data: InvitationParsed; onChange: (config: InvitationParsed['config']) => void }) {
+export default function AdditionalServicesPanel({ data, onChange, editingRevision, draftSource }: {
+  data: InvitationParsed;
+  onChange: (config: InvitationParsed['config']) => void;
+  editingRevision?: { readonly current: number };
+  draftSource?: { readonly current: InvitationParsed };
+}) {
+  const draft = useLegacyDraft(data, patch => { if (patch.config) onChange(patch.config); }, undefined, editingRevision, draftSource);
+  const photoRevision = useRef(0);
+  const photo = useRef<{
+    id: string; template: string; designKey: string | undefined; revision: number | undefined;
+    present: boolean; active: boolean; enabled: boolean | undefined; heroImage: string; origin: object;
+  } | null>(null);
+  const observePhoto = (config = draft.get().config, ownPhotoChange = false) => {
+    const current = draft.get();
+    const item = additionalServices(config).saveDate;
+    const next = {
+      id: current.id, template: current.template, designKey: current.config?.designKey, revision: editingRevision?.current,
+      present: !!item, active: !!item && (item.status ?? 'not_contracted') !== 'not_contracted',
+      enabled: item?.enabled, heroImage: item?.heroImage ?? '',
+    };
+    const previous = photo.current;
+    const changedDestination = !!previous && (previous.id !== next.id || previous.template !== next.template || previous.designKey !== next.designKey
+      || previous.revision !== next.revision || previous.present !== next.present || previous.active !== next.active || (previous.enabled === true && next.enabled !== true));
+    const changedPhoto = !!previous && previous.heroImage !== next.heroImage;
+    if (changedDestination || changedPhoto || ownPhotoChange) photoRevision.current += 1;
+    photo.current = { ...next, origin: !previous || changedDestination || (changedPhoto && !ownPhotoChange) ? {} : previous.origin };
+    return photo.current;
+  };
+  const photoOrigin = observePhoto().origin;
   const services = additionalServices(data.config);
   const update = <K extends AdditionalServiceKey>(key: K, patch: Partial<NonNullable<AdditionalServicesConfig[K]>>) => {
-    const current = (services[key] ?? {}) as NonNullable<AdditionalServicesConfig[K]>;
-    onChange({ ...data.config, additionalServices: { ...services, [key]: { ...current, ...patch, updatedAt: new Date().toISOString() } } });
+    draft.config(config => {
+      observePhoto(config);
+      const services = additionalServices(config);
+      const current = (services[key] ?? {}) as NonNullable<AdditionalServicesConfig[K]>;
+      const next = { ...services, [key]: { ...current, ...patch, updatedAt: new Date().toISOString() } };
+      observePhoto({ ...config, additionalServices: next }, key === 'saveDate' && 'heroImage' in patch);
+      return { additionalServices: next };
+    });
+  };
+  const updatePhoto = (heroImage: string) => {
+    if (!draft.isCurrent()) return;
+    const current = observePhoto();
+    if (current.origin !== photoOrigin || !current.active) return;
+    update('saveDate', { heroImage });
   };
   const candidates = navigationCandidates(data.config.layout);
 
@@ -88,7 +129,7 @@ export default function AdditionalServicesPanel({ data, onChange }: { data: Invi
         </div>
         <label className="text-[11px] text-gray-500">Mensaje<textarea rows={3} className={input} value={item.message ?? ''} onChange={event => update('saveDate', { message: event.target.value })} placeholder="Muy pronto compartiremos todos los detalles…" /></label>
         <label className="text-[11px] text-gray-500">Texto del botón<input className={input} value={item.buttonLabel ?? ''} onChange={event => update('saveDate', { buttonLabel: event.target.value })} placeholder="Guardar mi preconfirmación" /></label>
-        <ImageUploader value={item.heroImage ?? ''} onChange={heroImage => update('saveDate', { heroImage })} folder="save-the-date" ownerId={data.id} aspect="portrait" hint="Foto vertical para la página previa. Se reutiliza la infraestructura segura de medios." />
+        <ImageUploader value={item.heroImage ?? ''} onChange={updatePhoto} fieldRevision={photoRevision} folder="save-the-date" ownerId={data.id} aspect="portrait" hint="Foto vertical para la página previa. Se reutiliza la infraestructura segura de medios." />
         <div className="grid gap-2 sm:grid-cols-3">
           {[['enabled', 'Página activa'], ['preconfirmationEnabled', 'Preconfirmación'], ['published', 'Publicada']] .map(([field, label]) => <label key={field} className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white p-2.5 text-[11px] text-gray-600"><input type="checkbox" className={check} checked={item[field as keyof typeof item] === true} onChange={event => update('saveDate', { [field]: event.target.checked })} />{label}</label>)}
         </div>

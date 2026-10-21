@@ -1029,7 +1029,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
               />}
               {activeTab === 'quality' && <QualityControlPanel data={data} onChange={config => handleChange({ config })} />}
               {activeTab === 'export'  && <ExportPanel  data={data} />}
-              {activeTab === 'config'  && <ConfigPanel data={data} onChange={handleChange} onValiditySync={syncValidity} onDelete={handleDelete} validation={validation} onOpenBlock={blockId => { selectBlock(blockId); setActiveTab('blocks'); }} />}
+              {activeTab === 'config'  && <ConfigPanel data={data} onChange={handleChange} onValiditySync={syncValidity} onDelete={handleDelete} validation={validation} onOpenBlock={blockId => { selectBlock(blockId); setActiveTab('blocks'); }} editingRevision={blockMediaRevision} draftSource={dataRef} />}
             </div>
           </div>
         </div>

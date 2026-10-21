@@ -20,6 +20,8 @@ interface Props {
   validation: BuilderValidation;
   onOpenBlock?: (blockId: string) => void;
   onValiditySync?: (fields: ValidityFields & { expires_at: string | null }) => void;
+  editingRevision?: { readonly current: number };
+  draftSource?: { readonly current: InvitationParsed };
 }
 
 const PREMIUM_TEMPLATES: { value: InvitationTemplate; label: string; available: boolean }[] = [
@@ -51,7 +53,7 @@ function LinkRow({ label, url }: { label: string; url: string }) {
   );
 }
 
-export default function ConfigPanel({ data, onChange, onDelete, validation, onOpenBlock, onValiditySync }: Props) {
+export default function ConfigPanel({ data, onChange, onDelete, validation, onOpenBlock, onValiditySync, editingRevision, draftSource }: Props) {
   // Calcular si está expirada
   const isExpired = invitationValidity(data).state === 'expired';
   const publicationPaused = data.status === 'disabled';
@@ -125,7 +127,7 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
       </div>
 
       <PackageSettings config={data.config ?? {}} onChange={config => onChange({ config })} />
-      <AdditionalServicesPanel data={data} onChange={config => onChange({ config })} />
+      <AdditionalServicesPanel data={data} onChange={config => onChange({ config })} editingRevision={editingRevision} draftSource={draftSource} />
       <ValidityPanel data={data} onSync={onValiditySync} />
 
       {/* Pantalla de entrada / sobre */}
