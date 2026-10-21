@@ -1,7 +1,8 @@
 'use client';
 
-import { InvitationParsed, BuilderConfig, PageMotion, PageMotionPreset } from '@/lib/types';
+import { InvitationParsed, PageMotion, PageMotionPreset } from '@/lib/types';
 import { PAGE_MOTION_PRESETS, PRESET_TO_VARIANT } from '@/lib/scroll-motion';
+import { useLegacyDraft } from '../useLegacyDraft';
 
 // Mini-teléfono animado: tres "secciones" entran en loop con el efecto real del
 // preset, para elegir la transición viéndola (no leyéndola).
@@ -59,6 +60,8 @@ const MINI_CSS = `
 interface Props {
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
+  editingRevision?: { readonly current: number };
+  draftSource?: { readonly current: InvitationParsed };
 }
 
 const PREMIUM = ['azure', 'primicia', 'passport', 'paradise', 'obsidiana', 'dolcevita', 'grazia', 'carmesi_v2', 'napoly', 'euforia', 'rosegold', 'allegria'];
@@ -89,7 +92,8 @@ function Section({ title, children, hint }: { title: string; children: React.Rea
   );
 }
 
-export default function MotionPanel({ data, onChange }: Props) {
+export default function MotionPanel({ data, onChange, editingRevision, draftSource }: Props) {
+  const draft = useLegacyDraft(data, onChange, undefined, editingRevision, draftSource);
   const cfg = data.config ?? {};
   const motion = cfg.motion ?? {};
   const preset = motion.preset ?? 'elegant';
@@ -101,7 +105,7 @@ export default function MotionPanel({ data, onChange }: Props) {
   const parallax = motion.parallax ?? 0.08;
 
   const setMotion = (patch: Partial<PageMotion>) =>
-    onChange({ config: { ...cfg, motion: { ...motion, ...patch } } as BuilderConfig });
+    draft.config(current => ({ motion: { ...(current?.motion ?? {}), ...patch } }));
 
   if (!PREMIUM.includes(data.template)) {
     return (
@@ -250,7 +254,7 @@ export default function MotionPanel({ data, onChange }: Props) {
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={() => onChange({ config: { ...cfg, motion: {} } as BuilderConfig })}
+          onClick={() => draft.config({ motion: {} })}
           className="text-xs text-gray-400 hover:underline font-outfit"
         >
           Restaurar (Elegante)
