@@ -42,3 +42,15 @@ Cinco casos con promesas diferidas comprueban la adopción de respuestas de bibl
 - La revisión de otro agente detectó dos regresiones durante el desarrollo: el bloqueo global de biblioteca con una petición pendiente y la invalidación de vigencia por cambios visuales. Ambas se corrigieron y cuentan con regresiones. El informe final consolida esa revisión y las comprobaciones de hashes realizadas por el agente principal.
 - Clases, estilos y textos JSX idénticos tras normalizar saltos de línea: ConfigPanel **80/1/30**, PackageSettings **39/0/19**, BlockEditorPanel **370/5/183** e InvitationBuilder **128/0/37**. Los números representan clases, estilos inline y nodos de texto; son una comprobación estática, no aceptación visual.
 - **597/597 archivos protegidos** idénticos por SHA-256, distribución local completa de **129 originales** y **46/46 pruebas sin red** del verificador de producción. Los cinco scripts de verificación privados fueron revisados por otro agente y sus hashes permanecen congelados.
+
+## Resultado de producción
+
+El commit de aplicación `250c27d61591a358d9181adca93b4507a2a76f6d` quedó integrado en main y desplegado como `dpl_45SqTW4EmZUR1A21LWKjpqUjfRPT`, con estado **READY** y alias [enkarta.vercel.app](https://enkarta.vercel.app). [CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39613943219) terminó correctamente, incluida la verificación completa y la auditoría de dependencias de producción. Las **12 fuentes críticas** coinciden con los archivos revisados.
+
+- **17 grupos HTTP correctos**, **105 rechazos 401**, incluidos **78 intentos de escritura sin permiso**, y **10 rechazos 403** de lectura de exportación/analítica. No se ejecutó analítica autenticada porque ese endpoint puede realizar mantenimiento de retención.
+- El UUID ficticio inexistente conservó **0 filas antes y después**. La subida autenticada sin archivo recibió 400 antes de acceder al almacenamiento. La auditoría vacía no recibió URLs ni produjo cambios.
+- **129/129 originales publicados** conservaron longitud y SHA-256; **6/6 rutas públicas** respondieron correctamente. La comprobación final conserva los **597 archivos locales protegidos**.
+- **0 escrituras de negocio, usuarios, archivos, pagos, llamadas bancarias o mensajes**. No quedaron fixtures persistentes que eliminar y la cookie temporal de administración se cerró al terminar.
+- BCP conserva su bloqueo en el código y la configuración local; no se inspeccionó la configuración remota del proveedor ni se realizaron operaciones bancarias. Esta entrega no requiere SQL y conserva la modificación local preexistente de la migración 021 fuera de los commits.
+
+La prueba remota acredita fuentes, permisos y conservación de recursos. No se realizó una edición autenticada de configuración/bloques ni una subida exitosa en el navegador de producción. Los casos de concurrencia y respuestas demoradas se verificaron con componentes reales y fronteras controladas en la suite local; las manuales permanecen aplazadas. `tmp/builder-config-blocks/RESULTADO.json` contiene el cierre de evidencia.
