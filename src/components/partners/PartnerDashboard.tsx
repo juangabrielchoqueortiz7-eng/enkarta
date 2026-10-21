@@ -8,6 +8,7 @@ import {
 } from '@/lib/partner-plans';
 import { checkoutPaymentLabel, checkoutQuoteMatches, paymentUnderReview, PartnerRequestError, partnerRequest, validCheckoutPayment } from '@/lib/partner-checkout';
 import { isUuid } from '@/lib/rsvp-contract';
+import { formatValidityDate } from '@/lib/invitation-validity';
 import { PartnerProfileSave, PROFILE_FIELDS, normalizedProfileFields, profileFields, sameProfileIdentity, validPartnerProfile, type ProfileFields, type ProfileSaveAttempt } from '@/lib/partner-account';
 
 // Panel del socio: estado de la mensualidad, su cartera de invitaciones y el
@@ -559,7 +560,7 @@ function InvitationsTab({ invitations, failed, busy, copied, refreshing, needsRe
                 <div className="flex min-w-0 flex-1 flex-col p-5">
                   <h3 className="break-words font-outfit text-lg font-semibold leading-snug [overflow-wrap:anywhere]">{invitation.names || 'Sin nombres'}</h3>
                   <p className="mt-2 break-words font-outfit text-sm leading-relaxed text-[#655B4A]">
-                    {invitation.event_date ? dateLabel(invitation.event_date) : 'Sin fecha'} · {invitation.template.replace('_v2', '')}
+                    {formatValidityDate(invitation.event_date)} · {invitation.template.replace('_v2', '')}
                   </p>
 
                   <div className="mt-auto flex flex-wrap items-center gap-2 pt-5">
