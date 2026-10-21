@@ -44,3 +44,15 @@ La evidencia privada se guarda en tmp/builder-elements/. RESULTADO.json reúne C
 - Revisión independiente de las tres fuentes y la suite sin bloqueantes. Se conservan las **113 clases y 8 estilos inline de ElementsPanel**, las **32 clases y 1 estilo inline de ElementPicker**, y sus raíces JSX salvo callbacks y props de guardas explícitas. Registry, librerías de SVG/packs, uploader, iconos heredados y borrador compartido permanecen intactos.
 - **46/46 comprobaciones sin red** del verificador privado de producción y revisión independiente de sus cinco scripts.
 - **597/597 archivos protegidos idénticos por SHA-256** y distribución completa de **129 originales**. La modificación local preexistente de la migración 021 queda fuera de los commits.
+
+## Resultado del despliegue y comprobaciones remotas
+
+El commit de aplicación `295a5f4733e990d395133fb1131ba1d6688e19fe` quedó integrado en main y desplegado como `dpl_HXTL4VGynr7CaLZhgKWVCnDxkXZV`, con estado **READY** y alias [enkarta.vercel.app](https://enkarta.vercel.app). [CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39556130836) finalizó correctamente, incluida la verificación completa y la auditoría de dependencias de producción. Las once fuentes críticas del despliegue coinciden con las fuentes revisadas.
+
+- **17 grupos HTTP correctos**, con **105 rechazos 401**, incluidos **78 intentos de escritura sin permiso**, y **10 rechazos 403** de lectura de exportación/analítica. No se ejecutó analítica autenticada porque ese endpoint puede realizar mantenimiento de retención.
+- El UUID ficticio inexistente conservó **0 filas antes y después**. La solicitud autenticada de subida sin archivo recibió 400 antes de acceder al almacenamiento; la auditoría vacía de recursos no recibió URLs ni produjo cambios.
+- **129/129 originales publicados** conservaron longitud y SHA-256; **6/6 rutas públicas** respondieron correctamente. Se volvió a comprobar la conservación de los **597 archivos locales protegidos**.
+- **0 escrituras de negocio, usuarios, archivos, pagos, llamadas bancarias o mensajes**. No quedaron fixtures persistentes que eliminar y la cookie temporal de administración se cerró al terminar.
+- BCP conserva su bloqueo en el código y la configuración local. No se inspeccionó su configuración remota ni se realizó ninguna operación bancaria. Esta entrega no requiere SQL y deja intacta la modificación local preexistente de la migración 021.
+
+La comprobación remota acredita las fuentes desplegadas, los permisos y la conservación de recursos. **No se realizó una edición autenticada de elementos/packs ni una subida exitosa en el navegador de producción**. Los casos de concurrencia se verificaron con los componentes reales en la suite local; el arrastre, la aceptación visual y las pruebas de Android siguen pendientes por indicación del usuario. El cierre de evidencia está registrado en `tmp/builder-elements/RESULTADO.json`.
