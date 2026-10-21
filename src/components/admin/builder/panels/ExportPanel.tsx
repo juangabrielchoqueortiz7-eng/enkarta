@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import type { Guest, InvitationParsed } from '@/lib/types';
 import { collectPublicationResources } from '@/lib/publication-audit';
@@ -22,6 +22,23 @@ interface AnalyticsSummary {
   analyticsEnabled: boolean;
   analyticsReady: boolean;
   sources: { label: string; value: number }[];
+}
+
+interface ExportQuery {
+  id: string;
+  guestMeta: InvitationParsed['config']['guestMeta'];
+}
+interface ExportSnapshot {
+  query: ExportQuery;
+  analytics: AnalyticsSummary | null;
+  guests: Guest[];
+  error: string;
+}
+interface ExportAttempt {
+  query: ExportQuery;
+  data: InvitationParsed;
+  kind: string;
+  snapshot?: ExportSnapshot;
 }
 
 function extensionFor(type: string | null, url: string) {
@@ -152,9 +169,9 @@ function calendarFile(data: InvitationParsed) {
   ].join('\r\n');
 }
 
-function ExportCard({ icon, title, desc, format, onClick, busy }: { icon: string; title: string; desc: string; format: string; onClick: () => void; busy?: boolean }) {
+function ExportCard({ icon, title, desc, format, onClick, busy, disabled }: { icon: string; title: string; desc: string; format: string; onClick: () => void; busy?: boolean; disabled?: boolean }) {
   return (
-    <button type="button" onClick={onClick} disabled={busy} className="group w-full rounded-2xl border border-gray-100 bg-white p-3.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-enkarta-gold/40 hover:shadow-md disabled:opacity-60">
+    <button type="button" onClick={onClick} disabled={busy || disabled} className="group w-full rounded-2xl border border-gray-100 bg-white p-3.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-enkarta-gold/40 hover:shadow-md disabled:opacity-60">
       <span className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f5efe3] text-lg">{icon}</span>
         <span className="min-w-0 flex-1">
@@ -171,53 +188,119 @@ function ExportCard({ icon, title, desc, format, onClick, busy }: { icon: string
 }
 
 export default function ExportPanel({ data }: Props) {
-  const [busy, setBusy] = useState<string | null>(null);
-  const [progress, setProgress] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
-  const [guests, setGuests] = useState<Guest[]>([]);
+  const [activity, setActivity] = useState<{ attempt: ExportAttempt; progress: string } | null>(null);
+  const [copiedContext, setCopiedContext] = useState<{ query: ExportQuery; data: InvitationParsed } | null>(null);
+  const [snapshot, setSnapshot] = useState<ExportSnapshot | null>(null);
+  const [, renderQuery] = useState(0);
+  const latestData = useRef(data), mounted = useRef(false);
+  latestData.current = data;
+  const guestMeta = data.config?.guestMeta;
+  const queryRef = useRef<ExportQuery>({ id: data.id, guestMeta });
+  if (queryRef.current.id !== data.id || queryRef.current.guestMeta !== guestMeta) queryRef.current = { id: data.id, guestMeta };
+  const query = queryRef.current;
+  const read = useRef<{ query: ExportQuery; controller: AbortController } | null>(null);
+  const result = useRef<ExportSnapshot | null>(null);
+  const operation = useRef<ExportAttempt | null>(null);
+  const copyOperation = useRef<object | null>(null);
+  const currentData = () => mounted.current && latestData.current === data && queryRef.current === query;
+  const currentExport = (attempt: ExportAttempt) => mounted.current && operation.current === attempt
+    && latestData.current === attempt.data && queryRef.current === attempt.query
+    && (!attempt.snapshot || result.current === attempt.snapshot);
+  const currentSnapshot = snapshot?.query === query ? snapshot : null;
+  const analytics = currentSnapshot?.analytics ?? null;
+  const guests = currentSnapshot?.guests ?? [];
+  const guestsReady = !!currentSnapshot && !currentSnapshot.error;
+  const busy = activity && currentExport(activity.attempt) ? activity.attempt.kind : null;
+  const progress = busy ? activity?.progress ?? '' : '';
+  const copied = copiedContext?.query === query && copiedContext.data === data;
   const file = safeName(data.names || data.slug);
   const publicUrl = typeof window === 'undefined' ? `/i/${data.slug}` : `${window.location.origin}/i/${data.slug}`;
-  const guestMeta = data.config?.guestMeta;
 
   useEffect(() => {
+    mounted.current = true;
+    const request = { query, controller: new AbortController() };
+    read.current = request; result.current = null; operation.current = null; copyOperation.current = null;
+    setSnapshot(null); setActivity(null); setCopiedContext(null);
+    const current = () => mounted.current && read.current === request && queryRef.current === query && !request.controller.signal.aborted;
+    const fetchJson = async (url: string) => {
+      const response = await fetch(url, { cache: 'no-store', signal: request.controller.signal });
+      if (!current()) return null;
+      if (!response.ok) throw new Error('query-failed');
+      const value = await response.json();
+      return current() ? value : null;
+    };
     Promise.all([
-      fetch(`/api/admin/analytics?id=${data.id}`, { cache: 'no-store' }).then(res => res.ok ? res.json() : null),
-      fetch(`/api/guests?id=${data.id}`, { cache: 'no-store' }).then(res => res.ok ? res.json() : []),
+      fetchJson(`/api/admin/analytics?id=${query.id}`).catch(() => null),
+      fetchJson(`/api/guests?id=${query.id}`),
     ]).then(([summary, rawGuests]) => {
-      if (summary) setAnalytics(summary);
-      const meta = guestMeta ?? {};
-      if (Array.isArray(rawGuests)) setGuests((rawGuests as Guest[]).map(guest => ({ ...guest, ...(meta[guest.publicId] ?? {}) })));
-    }).catch(() => {});
-  }, [data.id, guestMeta]);
+      if (!current()) return;
+      if (!Array.isArray(rawGuests)) throw new Error('invalid-guests');
+      const meta = query.guestMeta ?? {};
+      const next: ExportSnapshot = { query, analytics: summary && typeof summary === 'object' && !Array.isArray(summary)
+        && Array.isArray(summary.trend) && Array.isArray(summary.funnel) && Array.isArray(summary.sources) && summary.engagement && summary.scroll ? summary as AnalyticsSummary : null,
+      guests: (rawGuests as Guest[]).map(guest => ({ ...guest, ...(meta[guest.publicId] ?? {}) })), error: '' };
+      result.current = next; setSnapshot(next);
+    }).catch(() => {
+      if (!current()) return;
+      const next: ExportSnapshot = { query, analytics: null, guests: [], error: 'No se pudo consultar el padrón. Reintenta la consulta antes de exportar invitados.' };
+      result.current = next; setSnapshot(next);
+    }).finally(() => { if (read.current === request) read.current = null; });
+    return () => {
+      mounted.current = false; result.current = null; operation.current = null; copyOperation.current = null;
+      if (read.current === request) read.current = null;
+      request.controller.abort();
+    };
+  }, [query]);
+
+  const retry = () => {
+    if (!currentData()) return;
+    queryRef.current = { id: query.id, guestMeta: query.guestMeta };
+    renderQuery(value => value + 1);
+  };
+  const startExport = (kind: string, needsGuests = false) => {
+    if (!currentData()) return null;
+    if (operation.current && currentExport(operation.current)) return null;
+    const ready = result.current?.query === query && !result.current.error ? result.current : null;
+    if (needsGuests && !ready) return null;
+    const attempt: ExportAttempt = { query, data, kind, ...(needsGuests ? { snapshot: ready! } : {}) };
+    operation.current = attempt; setActivity({ attempt, progress: '' });
+    return attempt;
+  };
+  const exportProgress = (attempt: ExportAttempt, value: string) => {
+    if (currentExport(attempt)) setActivity(previous => previous?.attempt === attempt ? { attempt, progress: value } : previous);
+  };
+  const finishExport = (attempt: ExportAttempt) => {
+    if (currentExport(attempt)) { operation.current = null; setActivity(null); }
+  };
 
   const downloadQr = async () => {
-    setBusy('qr');
+    const attempt = startExport('qr'); if (!attempt) return;
     try {
       const url = await QRCode.toDataURL(publicUrl, { width: 1200, margin: 4, color: { dark: data.config?.theme?.primaryDeep || '#211b14', light: '#ffffff' } });
+      if (!currentExport(attempt)) return;
       const a = document.createElement('a');
       a.href = url;
       a.download = `${file}-qr.png`;
       a.click();
-    } finally {
-      setBusy(null);
-    }
+    } catch (error) { if (currentExport(attempt)) alert(error instanceof Error ? error.message : 'No se pudo crear el QR'); }
+    finally { finishExport(attempt); }
   };
 
   const downloadCover = async () => {
-    setBusy('cover');
+    const attempt = startExport('cover'); if (!attempt) return;
     try {
       const res = await fetch(`/i/${data.slug}/opengraph-image`);
+      if (!currentExport(attempt)) return;
       if (!res.ok) throw new Error('No se pudo crear la portada');
-      downloadBlob(await res.blob(), `${file}-portada.png`);
+      const blob = await res.blob();
+      if (currentExport(attempt)) downloadBlob(blob, `${file}-portada.png`);
     } catch {
-      window.open(`/i/${data.slug}/opengraph-image`, '_blank', 'noopener,noreferrer');
-    } finally {
-      setBusy(null);
-    }
+      if (currentExport(attempt)) window.open(`/i/${data.slug}/opengraph-image`, '_blank', 'noopener,noreferrer');
+    } finally { finishExport(attempt); }
   };
 
   const downloadBackup = () => {
+    if (!currentData()) return;
     const backup = {
       enkartaVersion: 2,
       exportedAt: new Date().toISOString(),
@@ -226,22 +309,26 @@ export default function ExportPanel({ data }: Props) {
     downloadBlob(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' }), `${file}-diseno.json`);
   };
 
-  const downloadCalendar = () => downloadBlob(new Blob([calendarFile(data)], { type: 'text/calendar;charset=utf-8' }), `${file}.ics`);
+  const downloadCalendar = () => { if (currentData()) downloadBlob(new Blob([calendarFile(data)], { type: 'text/calendar;charset=utf-8' }), `${file}.ics`); };
 
   const downloadQrCard = async () => {
-    setBusy('qr-card');
+    const attempt = startExport('qr-card'); if (!attempt) return;
     try {
       const qr = await QRCode.toDataURL(publicUrl, { width: 720, margin: 2, color: { dark: data.config?.theme?.primaryDeep || '#211b14', light: '#ffffff' } });
+      if (!currentExport(attempt)) return;
       const primary = safeCssColor(data.config?.theme?.primary || data.color_primary, '#ad8448');
       const bg = safeCssColor(data.config?.theme?.bg || data.color_secondary, '#f7f3ec');
       const title = htmlEscape(data.names || 'Invitación');
       const eventLine = htmlEscape(`${(data.event_date || '').slice(0, 10)} · ${data.ceremony_place || data.reception_place || ''}`);
       const html = `<!doctype html><html lang="es"><meta charset="utf-8"><title>${title}</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:${bg};font-family:Georgia,serif;color:#302a23}.card{width:520px;text-align:center;padding:64px 52px;background:#fff;border:1px solid ${primary};border-radius:32px;box-shadow:0 24px 80px #0002}.eyebrow{font:12px Arial,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:${primary}}h1{font-size:44px;font-weight:400;margin:18px 0 6px}p{color:#756c62}img{width:260px;margin:26px auto 16px;display:block}.url{font:13px Arial,sans-serif;color:${primary};word-break:break-all}@media print{body{background:white}.card{box-shadow:none}}</style><body><main class="card"><div class="eyebrow">Estás invitado</div><h1>${title}</h1><p>${eventLine}</p><img src="${qr}" alt="Código QR"><p>Escanea para abrir la invitación digital</p><div class="url">${htmlEscape(publicUrl)}</div></main></body></html>`;
       downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${file}-tarjeta-qr.html`);
-    } finally { setBusy(null); }
+    } catch (error) { if (currentExport(attempt)) alert(error instanceof Error ? error.message : 'No se pudo crear la tarjeta QR'); }
+    finally { finishExport(attempt); }
   };
 
   const downloadAnalytics = () => {
+    if (!currentData()) return;
+    const analytics = result.current?.query === query ? result.current.analytics : null;
     if (!analytics) return;
     const rows = [
       ['Métrica', 'Valor'], ['Vistas', analytics.views], ['Visitantes únicos', analytics.uniqueVisitors], ['Invitados', analytics.guests], ['Enviadas', analytics.sent], ['Confirmados', analytics.confirmed], ['No asisten', analytics.declined], ['Pendientes', analytics.pending], ['RSVP abiertos', analytics.openRsvps], ['Pases confirmados', analytics.confirmedPasses], ['Pases totales', analytics.totalPasses], ['Tasa de respuesta', `${analytics.responseRate}%`], ['Conversión por vista', `${analytics.conversionRate}%`],
@@ -269,14 +356,20 @@ export default function ExportPanel({ data }: Props) {
     ];
   };
 
-  const downloadStaticPdf = () => downloadBlob(createTextPdf(staticPdfPages()), `${file}-invitacion.pdf`);
+  const downloadStaticPdf = () => { if (currentData()) downloadBlob(createTextPdf(staticPdfPages()), `${file}-invitacion.pdf`); };
 
   const downloadPackage = async () => {
-    setBusy('package'); setProgress('Preparando archivos esenciales');
+    const attempt = startExport('package'); if (!attempt) return;
+    exportProgress(attempt, 'Preparando archivos esenciales');
     try {
       const entries: ZipEntryInput[] = [];
       const qr = await QRCode.toDataURL(publicUrl, { width: 1200, margin: 4, color: { dark: data.config?.theme?.primaryDeep || '#211b14', light: '#ffffff' } });
-      entries.push({ name: '01-compartir/codigo-qr.png', data: await (await fetch(qr)).blob() });
+      if (!currentExport(attempt)) return;
+      const qrResponse = await fetch(qr);
+      if (!currentExport(attempt)) return;
+      const qrBlob = await qrResponse.blob();
+      if (!currentExport(attempt)) return;
+      entries.push({ name: '01-compartir/codigo-qr.png', data: qrBlob });
       entries.push({ name: '02-calendario/evento.ics', data: calendarFile(data) });
       entries.push({ name: '03-documentos/invitacion-estatica.pdf', data: createTextPdf(staticPdfPages()) });
       entries.push({ name: '03-documentos/contenido.txt', data: [data.names, data.event_date, data.message, data.ceremony_place, data.ceremony_address, data.reception_place, data.reception_address, publicUrl].filter(Boolean).join('\r\n\r\n') });
@@ -285,48 +378,62 @@ export default function ExportPanel({ data }: Props) {
 
       try {
         const cover = await fetch(`/i/${data.slug}/opengraph-image`);
-        if (cover.ok) entries.push({ name: '01-compartir/portada.png', data: await cover.blob() });
+        if (!currentExport(attempt)) return;
+        if (cover.ok) {
+          const coverBlob = await cover.blob();
+          if (!currentExport(attempt)) return;
+          entries.push({ name: '01-compartir/portada.png', data: coverBlob });
+        }
       } catch { /* el resto del paquete sigue siendo válido */ }
 
+      if (!currentExport(attempt)) return;
       const photos = collectPublicationResources(data).filter(resource => resource.kind === 'image').slice(0, 30);
       const unavailable: string[] = [];
       for (let index = 0; index < photos.length; index += 1) {
         const resource = photos[index];
-        setProgress(`Descargando imagen ${index + 1} de ${photos.length}`);
+        exportProgress(attempt, `Descargando imagen ${index + 1} de ${photos.length}`);
         try {
           const response = await fetch(resource.url, { cache: 'no-store' });
+          if (!currentExport(attempt)) return;
           if (!response.ok) throw new Error('download-failed');
           const blob = await response.blob();
+          if (!currentExport(attempt)) return;
           if (blob.size > 12_000_000) throw new Error('too-heavy');
           entries.push({ name: `05-fotos/foto-${String(index + 1).padStart(2, '0')}.${extensionFor(blob.type, resource.url)}`, data: blob });
-        } catch { unavailable.push(`${resource.label}: ${resource.url}`); }
+        } catch { if (!currentExport(attempt)) return; unavailable.push(`${resource.label}: ${resource.url}`); }
       }
       if (unavailable.length) entries.push({ name: '05-fotos/enlaces-no-incluidos.txt', data: unavailable.join('\r\n') });
-      setProgress('Comprimiendo paquete');
-      downloadBlob(await createStoredZip(entries), `${file}-paquete-completo.zip`);
+      exportProgress(attempt, 'Comprimiendo paquete');
+      const zip = await createStoredZip(entries);
+      if (currentExport(attempt)) downloadBlob(zip, `${file}-paquete-completo.zip`);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'No se pudo crear el paquete');
-    } finally { setBusy(null); setProgress(''); }
+      if (currentExport(attempt)) alert(error instanceof Error ? error.message : 'No se pudo crear el paquete');
+    } finally { finishExport(attempt); }
   };
 
   const downloadGuestCards = async () => {
-    if (!guests.length) { alert('Agrega invitados antes de generar tarjetas individuales.'); return; }
-    setBusy('guest-png');
+    const attempt = startExport('guest-png', true); if (!attempt) return;
+    const guests = attempt.snapshot!.guests;
+    if (!guests.length) { alert('Agrega invitados antes de generar tarjetas individuales.'); finishExport(attempt); return; }
     try {
       const entries: ZipEntryInput[] = [];
       for (let index = 0; index < guests.length; index += 1) {
         const guest = guests[index];
-        setProgress(`Creando tarjeta ${index + 1} de ${guests.length}`);
-        entries.push({ name: `${String(index + 1).padStart(3, '0')}-${safeName(guest.name)}.png`, data: await guestCardBlob(data, guest, publicUrl) });
+        exportProgress(attempt, `Creando tarjeta ${index + 1} de ${guests.length}`);
+        const blob = await guestCardBlob(data, guest, publicUrl);
+        if (!currentExport(attempt)) return;
+        entries.push({ name: `${String(index + 1).padStart(3, '0')}-${safeName(guest.name)}.png`, data: blob });
       }
-      downloadBlob(await createStoredZip(entries), `${file}-tarjetas-personales-png.zip`);
-    } catch (error) { alert(error instanceof Error ? error.message : 'No se pudieron generar las tarjetas'); }
-    finally { setBusy(null); setProgress(''); }
+      const zip = await createStoredZip(entries);
+      if (currentExport(attempt)) downloadBlob(zip, `${file}-tarjetas-personales-png.zip`);
+    } catch (error) { if (currentExport(attempt)) alert(error instanceof Error ? error.message : 'No se pudieron generar las tarjetas'); }
+    finally { finishExport(attempt); }
   };
 
   const downloadGuestPdf = async () => {
-    if (!guests.length) { alert('Agrega invitados antes de generar tarjetas individuales.'); return; }
-    setBusy('guest-pdf');
+    const attempt = startExport('guest-pdf', true); if (!attempt) return;
+    const guests = attempt.snapshot!.guests;
+    if (!guests.length) { alert('Agrega invitados antes de generar tarjetas individuales.'); finishExport(attempt); return; }
     const pages: PdfPage[] = guests.map(guest => ({
       eyebrow: 'Invitación personal', title: guest.name,
       subtitle: data.names || 'Nuestro evento',
@@ -343,14 +450,15 @@ export default function ExportPanel({ data }: Props) {
     try {
       const entries: ZipEntryInput[] = [{ name: '000-todas-las-tarjetas.pdf', data: createTextPdf(pages) }];
       pages.forEach((page, index) => entries.push({ name: `${String(index + 1).padStart(3, '0')}-${safeName(guests[index].name)}.pdf`, data: createTextPdf([page]) }));
-      setProgress('Empaquetando PDFs individuales');
-      downloadBlob(await createStoredZip(entries), `${file}-tarjetas-personales-pdf.zip`);
-    } catch (error) { alert(error instanceof Error ? error.message : 'No se pudieron generar los PDFs'); }
-    finally { setBusy(null); setProgress(''); }
+      exportProgress(attempt, 'Empaquetando PDFs individuales');
+      const zip = await createStoredZip(entries);
+      if (currentExport(attempt)) downloadBlob(zip, `${file}-tarjetas-personales-pdf.zip`);
+    } catch (error) { if (currentExport(attempt)) alert(error instanceof Error ? error.message : 'No se pudieron generar los PDFs'); }
+    finally { finishExport(attempt); }
   };
 
   const downloadSocialKit = async () => {
-    setBusy('social');
+    const attempt = startExport('social'); if (!attempt) return;
     try {
       const sizes = [
         { width: 1080, height: 1920, label: 'story-1080x1920' },
@@ -359,16 +467,23 @@ export default function ExportPanel({ data }: Props) {
       ];
       const entries: ZipEntryInput[] = [];
       for (let index = 0; index < sizes.length; index += 1) {
-        setProgress(`Diseñando formato ${index + 1} de ${sizes.length}`);
-        entries.push({ name: `${sizes[index].label}.png`, data: await socialAssetBlob(data, sizes[index]) });
+        exportProgress(attempt, `Diseñando formato ${index + 1} de ${sizes.length}`);
+        const blob = await socialAssetBlob(data, sizes[index]);
+        if (!currentExport(attempt)) return;
+        entries.push({ name: `${sizes[index].label}.png`, data: blob });
       }
       entries.push({ name: 'texto-para-publicar.txt', data: `${data.names || 'Nuestro evento'}\r\n${(data.event_date || '').slice(0, 10)}\r\n${publicUrl}` });
-      downloadBlob(await createStoredZip(entries), `${file}-kit-redes.zip`);
-    } catch (error) { alert(error instanceof Error ? error.message : 'No se pudo crear el kit social'); }
-    finally { setBusy(null); setProgress(''); }
+      const zip = await createStoredZip(entries);
+      if (currentExport(attempt)) downloadBlob(zip, `${file}-kit-redes.zip`);
+    } catch (error) { if (currentExport(attempt)) alert(error instanceof Error ? error.message : 'No se pudo crear el kit social'); }
+    finally { finishExport(attempt); }
   };
 
   const downloadTablesPdf = () => {
+    if (!currentData()) return;
+    const ready = result.current?.query === query && !result.current.error ? result.current : null;
+    if (!ready) return;
+    const guests = ready.guests;
     if (!guests.length) { alert('Agrega invitados antes de imprimir mesas y accesos.'); return; }
     const grouped = new Map<string, Guest[]>();
     guests.forEach(guest => { const key = guest.tableNo || 'Sin mesa'; grouped.set(key, [...(grouped.get(key) || []), guest]); });
@@ -385,9 +500,14 @@ export default function ExportPanel({ data }: Props) {
   };
 
   const copyLink = async () => {
-    await navigator.clipboard.writeText(publicUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
+    if (!currentData()) return;
+    const attempt = {}; copyOperation.current = attempt;
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      if (!currentData() || copyOperation.current !== attempt) return;
+      setCopiedContext({ query, data });
+      setTimeout(() => { if (currentData() && copyOperation.current === attempt) setCopiedContext(null); }, 1600);
+    } catch { /* no se anuncia una copia que no pudo completarse */ }
   };
 
   return (
@@ -408,7 +528,9 @@ export default function ExportPanel({ data }: Props) {
           {analytics.sources.length > 0 && <div className="mt-3"><p className="text-[9px] font-outfit uppercase tracking-wider text-gray-400">Fuentes de visita</p><div className="mt-1.5 flex flex-wrap gap-1.5">{analytics.sources.map(source => <span key={source.label} className="rounded-full bg-white px-2 py-1 text-[9px] font-outfit text-gray-500">{source.label} · {source.value}</span>)}</div></div>}
           <p className="mt-2 text-[9px] leading-relaxed text-emerald-700/70 font-outfit">Privacidad: sin IP, nombres, teléfonos ni mensajes. Retención activa: {analytics.retentionDays} días.</p>
           {!analytics.analyticsReady && <p className="mt-2 text-[10px] font-outfit text-amber-600">Aplica las migraciones 004 y 005 para registrar el recorrido detallado.</p>}
-        </> : <p className="mt-3 text-xs font-outfit text-gray-400">La analítica se cargará cuando la base de datos esté disponible.</p>}
+        </> : <p role={currentSnapshot ? undefined : 'status'} className="mt-3 text-xs font-outfit text-gray-400">{currentSnapshot ? 'La analítica no está disponible en esta consulta.' : 'Consultando invitados y analítica…'}</p>}
+        {currentSnapshot?.error && <p role="alert" className="mt-3 text-xs font-outfit text-red-700">{currentSnapshot.error}</p>}
+        {currentSnapshot && (currentSnapshot.error || !analytics) && <button type="button" onClick={retry} className="mt-3 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs font-outfit text-emerald-700">Reintentar consulta</button>}
       </div>
 
       <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#272117] to-[#5d4a2e] p-4 text-white shadow-lg">
@@ -428,15 +550,15 @@ export default function ExportPanel({ data }: Props) {
       {busy && progress && <div className="flex items-center gap-3 rounded-2xl border border-amber-100 bg-amber-50 p-3"><span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-amber-500 border-t-transparent"/><div className="min-w-0"><p className="text-xs font-semibold text-amber-800 font-outfit">Generando exportación</p><p className="truncate text-[10px] text-amber-600 font-outfit">{progress}</p></div></div>}
 
       <div className="space-y-2.5">
-        <ExportCard icon="✦" title="Paquete completo" desc="Portada, QR, calendario, PDF, textos, respaldo y hasta 30 recursos." format="ZIP" onClick={() => void downloadPackage()} busy={busy === 'package'} />
-        <ExportCard icon="▦" title="Código QR" desc="Para tarjetas impresas, mesas y recordatorios." format="PNG" onClick={downloadQr} busy={busy === 'qr'} />
-        <ExportCard icon="▤" title="Tarjeta QR imprimible" desc="Mini landing autocontenida para imprimir o convertir a PDF." format="HTML" onClick={downloadQrCard} busy={busy === 'qr-card'} />
-        <ExportCard icon="▣" title="Portada para compartir" desc="Imagen horizontal optimizada para WhatsApp y redes." format="PNG" onClick={downloadCover} busy={busy === 'cover'} />
+        <ExportCard icon="✦" title="Paquete completo" desc="Portada, QR, calendario, PDF, textos, respaldo y hasta 30 recursos." format="ZIP" onClick={() => void downloadPackage()} busy={busy === 'package'} disabled={!!busy} />
+        <ExportCard icon="▦" title="Código QR" desc="Para tarjetas impresas, mesas y recordatorios." format="PNG" onClick={downloadQr} busy={busy === 'qr'} disabled={!!busy} />
+        <ExportCard icon="▤" title="Tarjeta QR imprimible" desc="Mini landing autocontenida para imprimir o convertir a PDF." format="HTML" onClick={downloadQrCard} busy={busy === 'qr-card'} disabled={!!busy} />
+        <ExportCard icon="▣" title="Portada para compartir" desc="Imagen horizontal optimizada para WhatsApp y redes." format="PNG" onClick={downloadCover} busy={busy === 'cover'} disabled={!!busy} />
         <ExportCard icon="Aa" title="Invitación estática" desc="Documento A4 multipágina, ligero y optimizado para impresión." format="PDF" onClick={downloadStaticPdf} />
-        <ExportCard icon="◫" title="Kit para redes" desc="Story, post vertical y pieza horizontal listos para publicar." format="ZIP · PNG" onClick={() => void downloadSocialKit()} busy={busy === 'social'} />
-        <ExportCard icon="◉" title={`Tarjetas por invitado${guests.length ? ` · ${guests.length}` : ''}`} desc="Una tarjeta PNG con QR y enlace único para cada invitado." format="ZIP · PNG" onClick={() => void downloadGuestCards()} busy={busy === 'guest-png'} />
-        <ExportCard icon="▥" title="Tarjetas personales imprimibles" desc="Un PDF individual por invitado y un documento combinado." format="ZIP · PDF" onClick={() => void downloadGuestPdf()} busy={busy === 'guest-pdf'} />
-        <ExportCard icon="▦" title="Mesas y control de accesos" desc="Resumen agrupado por mesa para coordinación y puerta." format="PDF" onClick={downloadTablesPdf} />
+        <ExportCard icon="◫" title="Kit para redes" desc="Story, post vertical y pieza horizontal listos para publicar." format="ZIP · PNG" onClick={() => void downloadSocialKit()} busy={busy === 'social'} disabled={!!busy} />
+        <ExportCard icon="◉" title={`Tarjetas por invitado${guests.length ? ` · ${guests.length}` : ''}`} desc="Una tarjeta PNG con QR y enlace único para cada invitado." format="ZIP · PNG" onClick={() => void downloadGuestCards()} busy={busy === 'guest-png'} disabled={!!busy || !guestsReady} />
+        <ExportCard icon="▥" title="Tarjetas personales imprimibles" desc="Un PDF individual por invitado y un documento combinado." format="ZIP · PDF" onClick={() => void downloadGuestPdf()} busy={busy === 'guest-pdf'} disabled={!!busy || !guestsReady} />
+        <ExportCard icon="▦" title="Mesas y control de accesos" desc="Resumen agrupado por mesa para coordinación y puerta." format="PDF" onClick={downloadTablesPdf} disabled={!guestsReady} />
         <ExportCard icon="◷" title="Agregar al calendario" desc="Archivo compatible con Google, Apple y Outlook." format="ICS" onClick={downloadCalendar} />
         <ExportCard icon="◇" title="Copia del diseño" desc="Respaldo completo de contenido, bloques, estilos y animaciones." format="JSON" onClick={downloadBackup} />
       </div>
