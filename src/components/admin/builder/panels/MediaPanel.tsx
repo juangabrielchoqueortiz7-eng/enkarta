@@ -7,48 +7,104 @@ import { MUSIC_LIBRARY } from '@/lib/music';
 import { captionsForImages, reorderGalleryCaptions } from '@/lib/gallery';
 import ImageUploader from '../ImageUploader';
 import MultiImageUploader from '../MultiImageUploader';
+import { useLegacyDraft } from '../useLegacyDraft';
 
 interface Props {
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
+  editingRevision?: { readonly current: number };
+  draftSource?: { readonly current: InvitationParsed };
 }
 
-export default function MediaPanel({ data, onChange }: Props) {
+function galleryLimit(config: BuilderConfig) {
+  const max = resolveFeatures(config).galleryMax;
+  return max > 0 && max < 99 ? max : 20;
+}
+
+function galleryRows(images: string[]) {
+  const counts = new Map<string, number>();
+  return images.map(url => {
+    const occurrence = counts.get(url) ?? 0;
+    counts.set(url, occurrence + 1);
+    return { url, key: JSON.stringify([url, occurrence]) };
+  });
+}
+
+/** Apply the child's list intent to the current gallery, not its old snapshot. */
+function rebaseGallery(previous: string[], next: string[], current: string[], max: number): string[] {
+  const before = galleryRows(previous), after = galleryRows(next), live = galleryRows(current);
+  const beforeKeys = new Set(before.map(row => row.key)), afterKeys = new Set(after.map(row => row.key));
+  const removed = new Set(before.filter(row => !afterKeys.has(row.key)).map(row => row.key));
+  const retainedBefore = before.filter(row => afterKeys.has(row.key)).map(row => row.key);
+  const retainedAfter = after.filter(row => beforeKeys.has(row.key)).map(row => row.key);
+  const kept = live.filter(row => !removed.has(row.key));
+  // Appending/removing does not request a reorder: preserve an external reorder.
+  if (retainedBefore.some((key, index) => key !== retainedAfter[index])) {
+    const byKey = new Map(kept.map(row => [row.key, row]));
+    const ordered = retainedAfter.filter(key => byKey.has(key)).map(key => byKey.get(key)!);
+    const reorderKeys = new Set(ordered.map(row => row.key));
+    let index = 0;
+    for (let slot = 0; slot < kept.length; slot++) if (reorderKeys.has(kept[slot].key)) kept[slot] = ordered[index++];
+  }
+  const added = after.filter(row => !beforeKeys.has(row.key));
+  return [...kept.map(row => row.url), ...added.slice(0, Math.max(0, max - kept.length)).map(row => row.url)];
+}
+
+export default function MediaPanel({ data, onChange, editingRevision, draftSource }: Props) {
+  const draft = useLegacyDraft(data, patch => { observeMedia({ ...draft.get(), ...patch }); onChange(patch); }, undefined, editingRevision, draftSource);
   const cfg = data.config ?? {};
-  const owner = useRef({ id: data.id, epoch: 0 });
-  if (owner.current.id !== data.id) owner.current = { id: data.id, epoch: owner.current.epoch + 1 };
-  const ownerEpoch = owner.current.epoch;
-  const latest = useRef({ data, onChange, cfg });
-  latest.current = { data, onChange, cfg };
-  const musicRevision = useRef(0);
-  const setCfg = (patch: Partial<BuilderConfig>) => {
-    if (owner.current.epoch !== ownerEpoch) return;
-    const current = latest.current;
-    if ('musicUrl' in patch && (current.cfg.musicUrl ?? '') !== (patch.musicUrl ?? '')) musicRevision.current += 1;
-    const config = { ...current.cfg, ...patch };
-    latest.current = { ...current, cfg: config, data: { ...current.data, config } };
-    current.onChange({ config });
+  const coverCounter = useRef(0);
+  const musicCounter = useRef(0);
+  const observed = useRef<{
+    id: string; template: string; designKey: string | undefined; revision: number | undefined; cover: string; music: string;
+  } | null>(null);
+  const observeMedia = (current = draft.get()) => {
+    const next = { id: current.id, template: current.template, designKey: current.config?.designKey, revision: editingRevision?.current,
+      cover: current.cover_image_url ?? '', music: current.config?.musicUrl ?? '' };
+    const previous = observed.current;
+    const changedContext = !!previous && (previous.id !== next.id || previous.template !== next.template || previous.designKey !== next.designKey || previous.revision !== next.revision);
+    if (changedContext || (!!previous && previous.cover !== next.cover)) coverCounter.current += 1;
+    if (changedContext || (!!previous && previous.music !== next.music)) musicCounter.current += 1;
+    observed.current = next;
   };
-  const setData = (patch: Partial<InvitationParsed>) => {
-    if (owner.current.epoch !== ownerEpoch) return;
-    const current = latest.current;
-    latest.current = { ...current, data: { ...current.data, ...patch } };
-    current.onChange(patch);
-  };
+  observeMedia();
+  const observeRef = useRef(observeMedia);
+  observeRef.current = observeMedia;
+  // ImageUploader checks these after every wait. Observe the parent source even
+  // before its next render; its onChange also handles legitimate manual URLs.
+  const fieldRevisions = useRef({
+    cover: { get current() { observeRef.current(); return coverCounter.current; } },
+    music: { get current() { observeRef.current(); return musicCounter.current; } },
+  });
+  const setCfg = (patch: Partial<BuilderConfig> | ((current: BuilderConfig) => Partial<BuilderConfig> | null)) => draft.config(patch);
+  const setData = (patch: Partial<InvitationParsed>) => draft.patch(patch);
   const feats = resolveFeatures(cfg);
   const pkgName = cfg.package ? PACKAGE_LABELS[cfg.package] : null;
   const galleryImages = cfg.galleryImages ?? [];
   const galleryCaptions = captionsForImages(galleryImages, cfg.galleryCaptions ?? []);
+  const max = galleryLimit(cfg);
+  // Each callback keeps the list that this rendered child knew. Multiple ACKs
+  // in the same turn advance it synchronously without following another render.
+  const galleryInput = { values: galleryImages };
+  const isGalleryCurrent = () => draft.isCurrent() && galleryLimit(draft.get().config) === max;
   const setGalleryImages = (urls: string[]) => {
-    const current = latest.current.cfg;
-    const images = current.galleryImages ?? [];
-    setCfg({ galleryImages: urls, galleryCaptions: reorderGalleryCaptions(images, captionsForImages(images, current.galleryCaptions ?? []), urls) });
+    if (!isGalleryCurrent()) return;
+    setCfg(current => {
+      const images = current.galleryImages ?? [];
+      const next = rebaseGallery(galleryInput.values, urls, images, max);
+      galleryInput.values = urls;
+      return { galleryImages: next, galleryCaptions: reorderGalleryCaptions(images, captionsForImages(images, current.galleryCaptions ?? []), next) };
+    });
   };
   const setGalleryCaption = (index: number, patch: Partial<(typeof galleryCaptions)[number]>) => {
-    const current = latest.current.cfg, images = current.galleryImages ?? [];
-    const target = images.indexOf(galleryImages[index]);
-    if (target < 0) return;
-    setCfg({ galleryCaptions: captionsForImages(images, current.galleryCaptions ?? []).map((caption, position) => position === target ? { ...caption, ...patch } : caption) });
+    const image = galleryImages[index];
+    if (image === undefined) return;
+    setCfg(current => {
+      const images = current.galleryImages ?? [];
+      const target = images.indexOf(image);
+      if (target < 0) return null;
+      return { galleryCaptions: captionsForImages(images, current.galleryCaptions ?? []).map((caption, position) => position === target ? { ...caption, ...patch } : caption) };
+    });
   };
 
   return (
@@ -60,6 +116,7 @@ export default function MediaPanel({ data, onChange }: Props) {
         <ImageUploader
           value={data.cover_image_url ?? ''}
           onChange={url => setData({ cover_image_url: url || null })}
+          fieldRevision={fieldRevisions.current.cover}
           folder="covers"
           ownerId={data.id}
           aspect="portrait"
@@ -85,7 +142,7 @@ export default function MediaPanel({ data, onChange }: Props) {
               <button
                 key={track.id}
                 type="button"
-                onClick={() => setCfg({ musicUrl: latest.current.cfg.musicUrl === track.url ? undefined : track.url })}
+                onClick={() => setCfg(current => ({ musicUrl: current.musicUrl === track.url ? undefined : track.url }))}
                 className={`px-3 py-1.5 text-xs font-outfit rounded-full border transition-colors ${
                   active
                     ? 'bg-enkarta-gold/10 border-enkarta-gold text-enkarta-gold'
@@ -104,7 +161,7 @@ export default function MediaPanel({ data, onChange }: Props) {
           onChange={url => setCfg({ musicUrl: url || undefined })}
           folder="music"
           ownerId={data.id}
-          fieldRevision={musicRevision}
+          fieldRevision={fieldRevisions.current.music}
           hint="Sube un MP3 (máx 15 MB) o pega un enlace directo a un audio. Sonará de fondo al abrir la invitación."
         />
       </div>
@@ -126,7 +183,9 @@ export default function MediaPanel({ data, onChange }: Props) {
           onChange={setGalleryImages}
           folder="gallery"
           ownerId={data.id}
-          max={feats.galleryMax > 0 && feats.galleryMax < 99 ? feats.galleryMax : 20}
+          max={max}
+          destinationKey={draft.destination('gallery')}
+          isDestinationCurrent={isGalleryCurrent}
         />
 
         {galleryImages.length > 0 && (

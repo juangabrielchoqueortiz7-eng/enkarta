@@ -1014,7 +1014,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
               {activeTab === 'style'   && <StylePanel   data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
               {activeTab === 'decor'   && <DecorPanel   data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
               {activeTab === 'motion'  && <MotionPanel  data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
-              {activeTab === 'media'   && <MediaPanel   data={data} onChange={handleChange} />}
+              {activeTab === 'media'   && <MediaPanel   data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
               {activeTab === 'guests'  && <GuestsPanel data={data} onChange={handleChange} onPreview={setPreviewGuest} previewGuestId={previewGuest?.id} />}
               {activeTab === 'versions' && <VersionsPanel
                 data={data}
