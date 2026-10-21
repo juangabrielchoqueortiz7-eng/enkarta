@@ -1,10 +1,13 @@
 'use client';
 
-import { InvitationParsed, TemplateTheme, TemplateDecor } from '@/lib/types';
+import { BuilderConfig, InvitationParsed, TemplateTheme, TemplateDecor } from '@/lib/types';
+import { useLegacyDraft } from '../useLegacyDraft';
 
 interface Props {
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
+  editingRevision?: { readonly current: number };
+  draftSource?: { readonly current: InvitationParsed };
 }
 
 const PREMIUM = ['azure', 'primicia', 'passport', 'paradise', 'obsidiana', 'dolcevita', 'grazia', 'carmesi_v2', 'napoly', 'euforia', 'rosegold', 'allegria'];
@@ -77,19 +80,52 @@ function Segmented<T extends string>({ value, options, onChange }: { value: T; o
   );
 }
 
-export default function DecorPanel({ data, onChange }: Props) {
+export default function DecorPanel({ data, onChange, editingRevision, draftSource }: Props) {
+  const draft = useLegacyDraft(data, onChange, undefined, editingRevision, draftSource);
   const cfg = data.config ?? {};
   const theme = cfg.theme ?? {};
   const decor = cfg.decor ?? {};
   const def = THEME_DEFAULTS[data.template] ?? THEME_DEFAULTS.azure;
 
-  const setTheme = (patch: Partial<TemplateTheme>) => onChange({ config: { ...cfg, theme: { ...theme, ...patch } } });
-  const setDecor = (patch: Partial<TemplateDecor>) => onChange({ config: { ...cfg, decor: { ...decor, ...patch } } });
-  const setFloating = (patch: Partial<NonNullable<TemplateDecor['floating']>>) => setDecor({ floating: { ...(decor.floating ?? {}), ...patch } });
-  const setCorners = (patch: Partial<NonNullable<TemplateDecor['corners']>>) => setDecor({ corners: { ...(decor.corners ?? {}), ...patch } });
-  const setTrail = (patch: Partial<NonNullable<TemplateDecor['cursorTrail']>>) => setDecor({ cursorTrail: { ...(decor.cursorTrail ?? {}), ...patch } });
+  const updateConfig = (change: (current: InvitationParsed) => Partial<BuilderConfig> | null) => draft.patch(current => {
+    if (!PREMIUM.includes(current.template)) return null;
+    const fields = change(current);
+    return fields ? { config: { ...current.config, ...fields } } : null;
+  });
+  const layoutActive = (current: InvitationParsed) => !!current.config?.layout?.blocks?.length;
+  const pageDecorAvailable = (current: InvitationParsed) => current.template === 'azure' || layoutActive(current);
+  const setTheme = (patch: Partial<TemplateTheme>) => updateConfig(current => ({ theme: { ...(current.config?.theme ?? {}), ...patch } }));
+  const applyBrandColors = () => updateConfig(current => ({ theme: { ...(current.config?.theme ?? {}), primary: current.color_primary, primaryDeep: current.color_accent, text: current.color_accent, bg: current.color_secondary } }));
+  const resetTheme = () => updateConfig(() => ({ theme: {} }));
+  const setDecor = (change: Partial<TemplateDecor> | ((current: InvitationParsed) => Partial<TemplateDecor> | null), legacyOnly = false) => updateConfig(current => {
+    if (!pageDecorAvailable(current) || (legacyOnly && layoutActive(current))) return null;
+    const fields = typeof change === 'function' ? change(current) : change;
+    return fields ? { decor: { ...(current.config?.decor ?? {}), ...fields } } : null;
+  });
+  const setFloating = (patch: Partial<NonNullable<TemplateDecor['floating']>>) => setDecor(current => {
+    const floating = current.config?.decor?.floating ?? {};
+    return (floating.on ?? !layoutActive(current)) ? { floating: { ...floating, ...patch } } : null;
+  });
+  const toggleFloating = () => setDecor(current => ({ floating: { ...(current.config?.decor?.floating ?? {}), on: !(current.config?.decor?.floating?.on ?? !layoutActive(current)) } }));
+  const setCorners = (patch: Partial<NonNullable<TemplateDecor['corners']>>) => setDecor(current => {
+    const corners = current.config?.decor?.corners ?? {};
+    return (corners.on ?? !layoutActive(current)) ? { corners: { ...corners, ...patch } } : null;
+  });
+  const toggleCorners = () => setDecor(current => ({ corners: { ...(current.config?.decor?.corners ?? {}), on: !(current.config?.decor?.corners?.on ?? !layoutActive(current)) } }));
+  const setTrail = (patch: Partial<NonNullable<TemplateDecor['cursorTrail']>>) => setDecor(current => {
+    const cursorTrail = current.config?.decor?.cursorTrail ?? {};
+    return cursorTrail.on === true ? { cursorTrail: { ...cursorTrail, ...patch } } : null;
+  });
+  const toggleTrail = () => setDecor(current => ({ cursorTrail: { ...(current.config?.decor?.cursorTrail ?? {}), on: !(current.config?.decor?.cursorTrail?.on === true) } }));
   const nightTheme = cfg.nightTheme;
-  const setNight = (patch: Partial<TemplateTheme>) => onChange({ config: { ...cfg, nightTheme: { ...(nightTheme ?? {}), ...patch } } });
+  const setNight = (patch: Partial<TemplateTheme>) => updateConfig(current => pageDecorAvailable(current) && current.config?.nightTheme ? { nightTheme: { ...current.config.nightTheme, ...patch } } : null);
+  const toggleNight = () => updateConfig(current => {
+    if (!pageDecorAvailable(current)) return null;
+    const currentCfg = current.config ?? {};
+    const currentDef = THEME_DEFAULTS[current.template] ?? THEME_DEFAULTS.azure;
+    return { nightTheme: currentCfg.nightTheme ? undefined : { bg: '#14110d', text: '#ece6d6', primary: currentCfg.theme?.primary || currentDef.primary, primaryDeep: '#0d0b08', muted: '#b8a988', line: 'rgba(236,230,214,0.18)', onPrimary: '#14110d' } };
+  });
+  const toggleNightDefault = () => updateConfig(current => pageDecorAvailable(current) && current.config?.nightTheme ? { nightDefault: !(current.config.nightDefault === true) } : null);
 
   if (!PREMIUM.includes(data.template)) {
     return (
@@ -137,7 +173,7 @@ export default function DecorPanel({ data, onChange }: Props) {
         <div className="mt-3 flex gap-2">
           <button
             type="button"
-            onClick={() => setTheme({ primary: data.color_primary, primaryDeep: data.color_accent, text: data.color_accent, bg: data.color_secondary })}
+            onClick={applyBrandColors}
             className="text-xs text-enkarta-gold hover:underline font-outfit"
           >
             Usar mis 3 colores de marca
@@ -145,7 +181,7 @@ export default function DecorPanel({ data, onChange }: Props) {
           <span className="text-gray-300">·</span>
           <button
             type="button"
-            onClick={() => onChange({ config: { ...cfg, theme: {} } })}
+            onClick={resetTheme}
             className="text-xs text-gray-400 hover:underline font-outfit"
           >
             Restaurar diseño original
@@ -167,7 +203,7 @@ export default function DecorPanel({ data, onChange }: Props) {
       <Section title="Partículas flotantes (plumas)">
         <label className="flex items-center justify-between cursor-pointer">
           <span className="text-sm font-outfit text-gray-700">Mostrar partículas</span>
-          <Toggle on={floatingOn} onToggle={() => setFloating({ on: !floatingOn })} />
+          <Toggle on={floatingOn} onToggle={toggleFloating} />
         </label>
         {floatingOn && (
           <div className="mt-3 space-y-3">
@@ -202,7 +238,7 @@ export default function DecorPanel({ data, onChange }: Props) {
       <Section title="Adornos de esquina (plantas)">
         <label className="flex items-center justify-between cursor-pointer">
           <span className="text-sm font-outfit text-gray-700">Mostrar adornos</span>
-          <Toggle on={cornersOn} onToggle={() => setCorners({ on: !cornersOn })} />
+          <Toggle on={cornersOn} onToggle={toggleCorners} />
         </label>
         {cornersOn && (
           <div className="mt-3 space-y-3">
@@ -246,7 +282,7 @@ export default function DecorPanel({ data, onChange }: Props) {
       <Section title="🌙 Variante día / noche">
         <label className="flex items-center justify-between cursor-pointer">
           <span className="text-sm font-outfit text-gray-700">Activar modo noche</span>
-          <Toggle on={!!nightTheme} onToggle={() => onChange({ config: { ...cfg, nightTheme: nightTheme ? undefined : { bg: '#14110d', text: '#ece6d6', primary: theme.primary || def.primary, primaryDeep: '#0d0b08', muted: '#b8a988', line: 'rgba(236,230,214,0.18)', onPrimary: '#14110d' } } })} />
+          <Toggle on={!!nightTheme} onToggle={toggleNight} />
         </label>
         {nightTheme && (
           <div className="mt-3 space-y-2.5">
@@ -257,7 +293,7 @@ export default function DecorPanel({ data, onChange }: Props) {
             <ColorRow label="Texto suave (noche)" value={nightTheme.muted}       fallback="#b8a988" onChange={v => setNight({ muted: v })} />
             <label className="flex items-center justify-between cursor-pointer pt-1">
               <span className="text-sm font-outfit text-gray-700">Arrancar en modo noche</span>
-              <Toggle on={cfg.nightDefault === true} onToggle={() => onChange({ config: { ...cfg, nightDefault: !(cfg.nightDefault === true) } })} />
+              <Toggle on={cfg.nightDefault === true} onToggle={toggleNightDefault} />
             </label>
           </div>
         )}
@@ -267,7 +303,7 @@ export default function DecorPanel({ data, onChange }: Props) {
       <Section title="Estela de cursor (escritorio)">
         <label className="flex items-center justify-between cursor-pointer">
           <span className="text-sm font-outfit text-gray-700">Seguir el cursor con destellos</span>
-          <Toggle on={decor.cursorTrail?.on === true} onToggle={() => setTrail({ on: !(decor.cursorTrail?.on === true) })} />
+          <Toggle on={decor.cursorTrail?.on === true} onToggle={toggleTrail} />
         </label>
         {decor.cursorTrail?.on === true && (
           <div className="mt-3 space-y-3">
@@ -293,7 +329,7 @@ export default function DecorPanel({ data, onChange }: Props) {
       <Section title="Separadores de sección">
         <Segmented
           value={decor.dividers ?? 'art'}
-          onChange={v => setDecor({ dividers: v })}
+          onChange={v => setDecor({ dividers: v }, true)}
           options={[{ v: 'art', label: 'Ilustrado' }, { v: 'line', label: 'Línea' }, { v: 'none', label: 'Ninguno' }]}
         />
       </Section>
@@ -301,7 +337,7 @@ export default function DecorPanel({ data, onChange }: Props) {
       <Section title="Animación de entrada">
         <Segmented
           value={decor.loader ?? 'heart'}
-          onChange={v => setDecor({ loader: v })}
+          onChange={v => setDecor({ loader: v }, true)}
           options={[{ v: 'heart', label: 'Corazón' }, { v: 'none', label: 'Ninguna' }]}
         />
       </Section>
