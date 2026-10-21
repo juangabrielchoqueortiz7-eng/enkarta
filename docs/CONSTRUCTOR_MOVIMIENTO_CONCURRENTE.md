@@ -26,7 +26,7 @@ El arnés de hooks no equivale a una prueba de ReactDOM, animación al desplazar
 
 La comprobación técnica contrasta las cinco fuentes críticas del despliegue Ready, permisos HTTP y hashes de originales publicados. Usa un identificador ficticio inexistente, solicitudes denegadas y lecturas acotadas. No realiza una edición de movimiento autenticada desde el navegador ni escribe invitaciones de clientes.
 
-Evidencia privada: tmp/builder-motion/. RESULTADO.json reúne CI, despliegue, fuentes exactas, contadores, cierre de sesión y conservación de originales. No se crean usuarios, archivos, pagos ni mensajes de prueba persistentes; el cierre de sesión temporal se verifica al terminar. Los resultados remotos de esta entrega se incorporan después de completar el despliegue.
+Evidencia privada: tmp/builder-motion/. RESULTADO.json reúne CI, despliegue, fuentes exactas, contadores, cierre de sesión y conservación de originales. No se crean usuarios, archivos, pagos ni mensajes de prueba persistentes; el cierre de sesión temporal se verifica al terminar. La comprobación final se completó con los resultados que se detallan a continuación.
 
 ## Validación local final
 
@@ -34,3 +34,17 @@ Evidencia privada: tmp/builder-motion/. RESULTADO.json reúne CI, despliegue, fu
 - Revisión independiente de las dos fuentes y el arnés sin bloqueantes. MiniPreview, Section y MINI_CSS permanecen iguales; se conservan íntegramente **41 atributos de clases en MotionPanel y 128 en InvitationBuilder**.
 - **46/46 comprobaciones sin red** del verificador privado de producción y revisión independiente de sus cinco scripts.
 - **597/597 archivos protegidos idénticos por SHA-256** y distribución completa de **129 originales**. La modificación local preexistente de la migración 021 queda fuera de los commits.
+
+## Despliegue y comprobaciones de producción
+
+Código de aplicación **67b7e46bcfbb2f39fdfc0a6680ee9838c0879c2c**, integrado en main. Vercel confirma **Ready** para **dpl_DPTThXYauHbrpjhvaHnj6mqeyFbj**, publicado en [Enkarta](https://enkarta.vercel.app). [CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39548133214) completada con éxito: npm run verify y auditoría de dependencias de producción.
+
+- **Cinco fuentes exactas contrastadas** con los UID de entrada del despliegue y sus SHA-256: MotionPanel, InvitationBuilder, useLegacyDraft, scroll-motion y el adaptador BCP bloqueado.
+- **17 grupos HTTP correctos**, **105 respuestas 401**, incluidas **78 solicitudes de escritura denegadas**, y **10 GET de invitados/analítica rechazados con 403**. No se consulta analítica con una sesión válida ni se solicita su operación de retención.
+- El UUID ficticio se verificó ausente por HEAD antes y después. Las consultas protegidas correspondientes devolvieron resultados vacíos o rechazos exactos, sin leer filas de clientes ni modificar invitaciones. La subida autenticada sin archivo devolvió 400 antes del bucket; la auditoría de recursos vacía no recibió URL alguna.
+- **129/129 originales publicados idénticos por bytes y SHA-256**, **6/6 rutas correctas** y **597/597 archivos protegidos locales intactos**.
+- **Cero datos de negocio escritos, usuarios creados, archivos almacenados, pagos, llamadas bancarias o mensajes enviados**. Se cerró la sesión temporal de administrador; no quedaron fixtures persistentes que limpiar. No se registraron credenciales ni cookies.
+
+BCP conserva el bloqueo en sus fuentes y su configuración local desactivada. No se inspeccionó el valor remoto del proveedor ni se realizaron operaciones bancarias. No se requiere SQL nuevo y la modificación local preexistente de la migración 021 permanece fuera de los commits.
+
+La conservación de ediciones se comprueba localmente con el panel y el borrador reales. La verificación remota acredita fuentes, permisos y originales; **no realiza una edición de movimiento autenticada ni reproduce sus animaciones en un navegador de producción**. La aceptación visual y móvil permanece aplazada por indicación del usuario.
