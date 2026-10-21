@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ImageUploader from './ImageUploader';
 import { ELEMENTS, ELEMENT_CATEGORIES, paletteFromPrimary, type ElementCategory, type ElementPalette } from '@/components/invitations/blocks/elements-library';
 import { listUserElements, addUserElement, removeUserElement, type UserElement } from '@/lib/user-elements';
@@ -13,6 +13,8 @@ interface Props {
   ownerId?: string;
   /** Inserta un elemento: de la librería (motif) o subido (url). */
   onPick: (sel: { motif?: string; url?: string }) => void;
+  isCurrent?: () => boolean;
+  editingRevision?: { readonly current: number };
 }
 
 const tabCls = (active: boolean) =>
@@ -31,7 +33,7 @@ function loadKeys(key: string): string[] {
   try { return JSON.parse(window.localStorage.getItem(key) || '[]') as string[]; } catch { return []; }
 }
 
-export default function ElementPicker({ color, palette, ownerId, onPick }: Props) {
+export default function ElementPicker({ color, palette, ownerId, onPick, isCurrent, editingRevision }: Props) {
   const [tab, setTab] = useState<'lib' | 'upload' | 'mine'>('lib');
   const [cat, setCat] = useState<ElementCategory>('corner');
   const [view, setView] = useState<'category' | 'favorites' | 'recent'>('category');
@@ -39,10 +41,21 @@ export default function ElementPicker({ color, palette, ownerId, onPick }: Props
   const [mine, setMine] = useState<UserElement[]>(() => listUserElements());
   const [favorites, setFavorites] = useState<string[]>([]);
   const [recents, setRecents] = useState<string[]>([]);
+  const favoritesRef = useRef(favorites);
+  const recentsRef = useRef(recents);
+  favoritesRef.current = favorites;
+  recentsRef.current = recents;
+  const mounted = useRef(true);
+  const canChange = () => mounted.current && (!isCurrent || isCurrent());
+  const act = (change: () => void) => { if (canChange()) change(); };
 
   useEffect(() => {
-    setFavorites(loadKeys(FAVORITES_KEY));
-    setRecents(loadKeys(RECENTS_KEY));
+    mounted.current = true;
+    favoritesRef.current = loadKeys(FAVORITES_KEY);
+    recentsRef.current = loadKeys(RECENTS_KEY);
+    setFavorites(favoritesRef.current);
+    setRecents(recentsRef.current);
+    return () => { mounted.current = false; };
   }, []);
 
   const resolvedPalette = palette ?? paletteFromPrimary(color);
@@ -56,13 +69,18 @@ export default function ElementPicker({ color, palette, ownerId, onPick }: Props
   }).sort((a, b) => view === 'recent' ? recents.indexOf(a.key) - recents.indexOf(b.key) : a.label.localeCompare(b.label));
 
   const pickLibrary = (motif: string) => {
-    const next = [motif, ...recents.filter(k => k !== motif)].slice(0, 12);
+    if (!canChange()) return;
+    const next = [motif, ...recentsRef.current.filter(k => k !== motif)].slice(0, 12);
+    recentsRef.current = next;
     setRecents(next);
     window.localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
     onPick({ motif });
   };
   const toggleFavorite = (motif: string) => {
-    const next = favorites.includes(motif) ? favorites.filter(k => k !== motif) : [...favorites, motif];
+    if (!canChange()) return;
+    const current = favoritesRef.current;
+    const next = current.includes(motif) ? current.filter(k => k !== motif) : [...current, motif];
+    favoritesRef.current = next;
     setFavorites(next);
     window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
   };
@@ -70,9 +88,9 @@ export default function ElementPicker({ color, palette, ownerId, onPick }: Props
   return (
     <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
       <div className="flex gap-1.5 p-2 border-b border-gray-100 bg-[#fbfaf8]">
-        <button type="button" onClick={() => setTab('lib')} className={tabCls(tab === 'lib')}>Librería</button>
-        <button type="button" onClick={() => setTab('upload')} className={tabCls(tab === 'upload')}>Subir</button>
-        <button type="button" onClick={() => { setMine(listUserElements()); setTab('mine'); }} className={tabCls(tab === 'mine')}>Mis elementos</button>
+        <button type="button" onClick={() => act(() => setTab('lib'))} className={tabCls(tab === 'lib')}>Librería</button>
+        <button type="button" onClick={() => act(() => setTab('upload'))} className={tabCls(tab === 'upload')}>Subir</button>
+        <button type="button" onClick={() => act(() => { setMine(listUserElements()); setTab('mine'); })} className={tabCls(tab === 'mine')}>Mis elementos</button>
       </div>
 
       {tab === 'lib' && (
@@ -80,21 +98,21 @@ export default function ElementPicker({ color, palette, ownerId, onPick }: Props
           <input
             type="text"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={e => act(() => setQuery(e.target.value))}
             placeholder="Buscar elemento… (rosa, marco, laurel)"
             className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:border-enkarta-gold focus:ring-2 focus:ring-enkarta-gold/20 outline-none font-outfit"
           />
           {!q && (
             <div className="space-y-2">
               <div className="flex gap-1.5">
-                <button type="button" onClick={() => setView('favorites')} className={`px-2.5 py-1 rounded-full text-[10px] font-outfit ${view === 'favorites' ? 'bg-rose-100 text-rose-600' : 'bg-gray-50 text-gray-500'}`}>♥ Favoritos {favorites.length || ''}</button>
-                <button type="button" onClick={() => setView('recent')} className={`px-2.5 py-1 rounded-full text-[10px] font-outfit ${view === 'recent' ? 'bg-violet-100 text-violet-600' : 'bg-gray-50 text-gray-500'}`}>◷ Recientes</button>
+                <button type="button" onClick={() => act(() => setView('favorites'))} className={`px-2.5 py-1 rounded-full text-[10px] font-outfit ${view === 'favorites' ? 'bg-rose-100 text-rose-600' : 'bg-gray-50 text-gray-500'}`}>♥ Favoritos {favorites.length || ''}</button>
+                <button type="button" onClick={() => act(() => setView('recent'))} className={`px-2.5 py-1 rounded-full text-[10px] font-outfit ${view === 'recent' ? 'bg-violet-100 text-violet-600' : 'bg-gray-50 text-gray-500'}`}>◷ Recientes</button>
               </div>
               <div className="grid grid-cols-4 gap-1.5">
                 {ELEMENT_CATEGORIES.map(c => {
                   const count = ELEMENTS.filter(e => e.category === c.id).length;
                   return (
-                    <button key={c.id} type="button" onClick={() => { setCat(c.id); setView('category'); }}
+                    <button key={c.id} type="button" onClick={() => act(() => { setCat(c.id); setView('category'); })}
                       className={`px-1.5 py-2 rounded-xl text-[10px] font-outfit transition-colors ${view === 'category' && cat === c.id ? 'bg-enkarta-gold/15 text-enkarta-gold ring-1 ring-enkarta-gold/20' : 'bg-gray-50 text-gray-500 hover:text-gray-700'}`}>
                       <span className="block text-base leading-none mb-1">{CATEGORY_ICONS[c.id]}</span>
                       <span className="block truncate">{c.label}</span>
@@ -134,10 +152,11 @@ export default function ElementPicker({ color, palette, ownerId, onPick }: Props
             kind="image"
             folder="elements"
             ownerId={ownerId}
+            fieldRevision={editingRevision}
             aspect="square"
             allowUrl
             value=""
-            onChange={(url) => { if (url) { setMine(addUserElement(url)); onPick({ url }); } }}
+            onChange={(url) => { if (url && canChange()) { setMine(addUserElement(url)); onPick({ url }); } }}
             hint="Sube un PNG, WEBP o SVG con fondo transparente (lo que exportas de Canva)."
           />
         </div>
@@ -151,10 +170,10 @@ export default function ElementPicker({ color, palette, ownerId, onPick }: Props
             <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto">
               {mine.map(el => (
                 <div key={el.url} className="relative group rounded-xl border border-gray-100 bg-gray-50 p-2">
-                  <button type="button" onClick={() => onPick({ url: el.url })} className="w-full h-14 flex items-center justify-center overflow-hidden">
+                  <button type="button" onClick={() => act(() => onPick({ url: el.url }))} className="w-full h-14 flex items-center justify-center overflow-hidden">
                     <img src={el.url} alt="" className="max-h-14 max-w-full object-contain" />
                   </button>
-                  <button type="button" onClick={() => setMine(removeUserElement(el.url))}
+                  <button type="button" onClick={() => act(() => setMine(removeUserElement(el.url)))}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white border border-gray-200 text-gray-400 hover:text-red-500 text-[11px] shadow opacity-0 group-hover:opacity-100 transition-opacity">
                     ✕
                   </button>
