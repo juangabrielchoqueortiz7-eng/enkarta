@@ -1009,7 +1009,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             {/* Contenido del panel (scrollable) */}
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {activeTab === 'content' && <ContentPanel data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
-              {activeTab === 'blocks'  && <BlockEditorPanel data={data} onChange={handleChange} selectedId={selectedBlockId} selectedIds={selectedBlockIds} onSelect={selectBlock} previewMode={previewMode} previewWidth={previewWidth} editingRevision={blockMediaRevision} />}
+              {activeTab === 'blocks'  && <BlockEditorPanel data={data} onChange={handleChange} selectedId={selectedBlockId} selectedIds={selectedBlockIds} onSelect={selectBlock} previewMode={previewMode} previewWidth={previewWidth} editingRevision={blockMediaRevision} draftSource={dataRef} />}
               {activeTab === 'elements' && <ElementsPanel data={data} onChange={handleChange} selectedId={selectedBlockId} onSelect={id => selectBlock(id)} editingRevision={blockMediaRevision} draftSource={dataRef} />}
               {activeTab === 'style'   && <StylePanel   data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
               {activeTab === 'decor'   && <DecorPanel   data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}

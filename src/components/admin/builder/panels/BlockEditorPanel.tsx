@@ -52,6 +52,7 @@ interface Props {
   previewWidth?: number;
   /** Parent history/restoration changes invalidate pending media synchronously. */
   editingRevision?: { readonly current: number };
+  draftSource?: { readonly current: InvitationParsed };
 }
 
 const ANIM_PRESETS: { value: ScrollPreset; label: string }[] = [
@@ -134,8 +135,9 @@ function VisualLayoutSelect({ kind, value, options, set }: { kind: 'itinerary' |
 }
 
 // Renderiza un campo según su tipo (texto, color, imagen, icono, lista…).
-function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, eventType, accent, visualSelect, destinationKey, isDestinationCurrent }: {
+function FieldControl({ field, value, set, transform, setIcon, colors, speed, ownerId, eventType, accent, visualSelect, destinationKey, isDestinationCurrent }: {
   field: FieldDef; value: any; set: (v: any) => void;
+  transform?: (change: (current: any) => any) => void;
   setIcon?: (v: string, colors?: any, speed?: number) => void;
   colors?: any; speed?: number; ownerId?: string; eventType?: any;
   /** Color con el que se dibujan las miniaturas de separador (el de la invitación). */
@@ -150,7 +152,7 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
     case 'number':
       return <input type="number" className={inputCls} value={Number(value) || 0} min={field.min} max={field.max} step={field.step} onChange={e => set(parseFloat(e.target.value) || 0)} />;
     case 'switch':
-      return <Toggle on={!!value} onToggle={() => set(!value)} />;
+      return <Toggle on={!!value} onToggle={() => transform ? transform(current => !current) : set(!value)} />;
     case 'select':
       if (visualSelect && field.options) return <VisualLayoutSelect kind={visualSelect} value={String(value ?? field.options[0]?.value ?? '')} options={field.options} set={set} />;
       return (
@@ -197,11 +199,11 @@ function FieldControl({ field, value, set, setIcon, colors, speed, ownerId, even
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <span className="text-[10px] w-3 text-gray-400 font-outfit">X</span>
-            <input type="range" min={0} max={100} value={fx} onChange={e => set(`${e.target.value}% ${fy}%`)} className="w-full accent-enkarta-gold" />
+            <input type="range" min={0} max={100} value={fx} onChange={e => { const x = e.target.value; if (transform) transform(current => `${x}% ${/(-?\d+)%\s+(-?\d+)%/.exec(String(current || '50% 50%'))?.[2] ?? 50}%`); else set(`${x}% ${fy}%`); }} className="w-full accent-enkarta-gold" />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] w-3 text-gray-400 font-outfit">Y</span>
-            <input type="range" min={0} max={100} value={fy} onChange={e => set(`${fx}% ${e.target.value}%`)} className="w-full accent-enkarta-gold" />
+            <input type="range" min={0} max={100} value={fy} onChange={e => { const y = e.target.value; if (transform) transform(current => `${/(-?\d+)%\s+(-?\d+)%/.exec(String(current || '50% 50%'))?.[1] ?? 50}% ${y}%`); else set(`${fx}% ${y}%`); }} className="w-full accent-enkarta-gold" />
           </div>
         </div>
       );
@@ -287,7 +289,7 @@ function imageMediaLibrary(data: InvitationParsed, cfg: BuilderConfig, blocks: B
   return Array.from(found);
 }
 
-export default function BlockEditorPanel({ data, onChange: notifyChange, selectedId, selectedIds, onSelect, previewMode, previewWidth, editingRevision }: Props) {
+export default function BlockEditorPanel({ data, onChange: notifyChange, selectedId, selectedIds, onSelect: notifySelect, previewMode, previewWidth, editingRevision, draftSource }: Props) {
   const mounted = useRef(true);
   const lists = useRef<BuilderListState | null>(null);
   if (!lists.current) lists.current = new BuilderListState();
@@ -300,19 +302,31 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
   const epoch = context.current.epoch;
   const latest = useRef({ data, notifyChange });
   latest.current = { data, notifyChange };
+  const currentData = () => draftSource?.current ?? latest.current.data;
+  const selection = useRef({ id: selectedId, ids: selectedIds, notify: notifySelect });
+  selection.current = { id: selectedId, ids: selectedIds, notify: notifySelect };
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; lists.current?.clear(); };
   }, []);
   const currentContext = () => mounted.current && context.current.epoch === epoch
     && (editingRevision?.current ?? 0) === revision
-    && latest.current.data.id === data.id && latest.current.data.template === data.template
-    && latest.current.data.config?.designKey === data.config?.designKey;
+    && currentData().id === data.id && currentData().template === data.template
+    && currentData().config?.designKey === data.config?.designKey;
+  const onSelect = (id: string, additive = false) => {
+    if (!currentContext() || (id && !currentData().config?.layout?.blocks?.some(block => block.id === id))) return;
+    const current = selection.current;
+    const ids = additive ? (current.ids.includes(id) ? current.ids.filter(value => value !== id) : [...current.ids, id]) : id ? [id] : [];
+    selection.current = { ...current, id: additive ? (ids.includes(current.id) ? current.id : ids[0] ?? '') : id, ids };
+    current.notify(id, additive);
+  };
+  const selectionCurrent = () => currentContext() && selection.current.id === selectedId
+    && selectedIds.length === selection.current.ids.length && selectedIds.every(id => selection.current.ids.includes(id));
   const commit = (patch: Partial<InvitationParsed>, replaceLayout = false) => {
     if (!currentContext()) return;
     if (replaceLayout) { context.current.epoch += 1; lists.current?.clear(); }
     const current = latest.current;
-    latest.current = { ...current, data: { ...current.data, ...patch } };
+    latest.current = { ...current, data: { ...currentData(), ...patch } };
     current.notifyChange(patch);
   };
   const onChange = (patch: Partial<InvitationParsed>) => commit(patch);
@@ -321,7 +335,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
   const blocks = layout?.blocks ?? [];
   const guided = cfg.designMode === 'guided' && hasInvitationVisualSystem(cfg.tokens);
   const [showOtherSections, setShowOtherSections] = useState(false);
-  const modeControl = hasInvitationVisualSystem(cfg.tokens) ? <DesignModeControl guided={guided} onChange={value => onChange({ config: { ...cfg, designMode: value ? 'guided' : 'free' } })} /> : null;
+  const modeControl = hasInvitationVisualSystem(cfg.tokens) ? <DesignModeControl guided={guided} onChange={value => currentContext() && onChange({ config: { ...currentData().config, designMode: value ? 'guided' : 'free' } })} /> : null;
 
   // Búsqueda en la paleta de bloques.
   const [paletteQuery, setPaletteQuery] = useState('');
@@ -341,23 +355,40 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
 
   // ── Plantillas guardadas (galería) ──
   const [templates, setTemplates] = useState<UserTemplate[]>([]);
+  const templatesRef = useRef(templates);
+  templatesRef.current = templates;
   const [userSections, setUserSections] = useState<UserSection[]>(() => listUserSections());
   const [sectionsCloud, setSectionsCloud] = useState(false);
+  const templateLibraryRevision = useRef(0);
+  const templateLibraryApplied = useRef(0);
+  const sectionLibraryRevision = useRef(0);
   useEffect(() => {
-    listUserTemplates().then(setTemplates);
-    hydrateUserSections().then(state => { setUserSections(state.sections); setSectionsCloud(state.cloud); });
+    const templateObserved = templateLibraryRevision.current, sectionObserved = sectionLibraryRevision.current;
+    listUserTemplates().then(items => { if (mounted.current && templateObserved === templateLibraryApplied.current) { templatesRef.current = items; setTemplates(items); } });
+    hydrateUserSections().then(state => { if (mounted.current && sectionObserved === sectionLibraryRevision.current) { setUserSections(state.sections); setSectionsCloud(state.cloud); } });
   }, []);
   const applyTemplate = (t: UserTemplate) => {
-    const current = latest.current.data.config;
-    commit({ config: { ...current, layout: t.layout, theme: t.theme ?? current.theme, motion: t.motion ?? current.motion, tokens: t.tokens ?? current.tokens } }, true);
+    if (!currentContext()) return;
+    const template = templatesRef.current.find(item => item.id === t.id);
+    if (!template) return;
+    const current = currentData().config;
+    commit({ config: { ...current, layout: template.layout, theme: template.theme ?? current.theme, motion: template.motion ?? current.motion, tokens: template.tokens ?? current.tokens } }, true);
   };
   const saveAsTemplate = () => {
-    if (!layout) return;
-    const name = window.prompt('Nombre de la plantilla:', data.names || 'Mi plantilla');
-    if (name == null) return;
-    saveUserTemplate(name, { layout, theme: cfg.theme, motion: cfg.motion, tokens: cfg.tokens }).then(setTemplates);
+    if (!currentContext() || !currentData().config.layout) return;
+    const name = window.prompt('Nombre de la plantilla:', currentData().names || 'Mi plantilla');
+    if (name == null || !currentContext()) return;
+    const current = currentData().config;
+    if (!current.layout) return;
+    const operation = ++templateLibraryRevision.current;
+    void saveUserTemplate(name, { layout: current.layout, theme: current.theme, motion: current.motion, tokens: current.tokens })
+      .then(items => { if (currentContext() && operation === templateLibraryRevision.current) { templateLibraryApplied.current = operation; templatesRef.current = items; setTemplates(items); } });
   };
-  const removeTemplate = (id: string) => { deleteUserTemplate(id).then(setTemplates); };
+  const removeTemplate = (id: string) => {
+    if (!currentContext() || !templatesRef.current.some(item => item.id === id)) return;
+    const operation = ++templateLibraryRevision.current;
+    void deleteUserTemplate(id).then(items => { if (currentContext() && operation === templateLibraryRevision.current) { templateLibraryApplied.current = operation; templatesRef.current = items; setTemplates(items); } });
+  };
 
   const renderTemplates = (canSave: boolean) => (
     <div className="space-y-2 border-t border-gray-100 pt-4">
@@ -377,16 +408,27 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
     </div>
   );
 
-  const setBlocks = (next: Block[] | ((current: Block[]) => Block[])) => {
-    if (!currentContext()) return;
-    const current = latest.current.data, config = current.config ?? {}, currentLayout = config.layout;
+  const setBlocks = (next: Block[] | ((current: Block[]) => Block[] | null)) => {
+    if (!currentContext()) return false;
+    const current = currentData(), config = current.config ?? {}, currentLayout = config.layout;
+    if (!currentLayout?.blocks) return false;
     const nextBlocks = typeof next === 'function' ? next(currentLayout?.blocks ?? []) : next;
-    onChange({ config: { ...config, layout: { ...currentLayout, version: LAYOUT_VERSION, basePreset: currentLayout?.basePreset ?? current.template, presetKey: currentLayout?.presetKey ?? current.template, blocks: nextBlocks } } });
+    if (!nextBlocks) return false;
+    onChange({ config: { ...config, layout: { ...currentLayout, version: currentLayout.version ?? LAYOUT_VERSION, basePreset: currentLayout?.basePreset ?? current.template, presetKey: currentLayout?.presetKey ?? current.template, blocks: nextBlocks } } });
+    return true;
   };
+  const reorderBlocks = (ordered: Block[]) => setBlocks(current => {
+    const known = new Map(blocks.map(block => [block.id, block.type]));
+    const ids = ordered.map(block => block.id);
+    if (ids.length !== known.size || new Set(ids).size !== ids.length || ordered.some(block => known.get(block.id) !== block.type)) return null;
+    const live = new Map(current.filter(block => known.get(block.id) === block.type).map(block => [block.id, block]));
+    const reordered = ids.filter(id => live.has(id)).map(id => live.get(id)!);
+    return current.map(block => live.get(block.id) === block ? reordered.shift()! : block);
+  });
 
   const patchBlock = (id: string, patch: Partial<Block> | ((block: Block, current: InvitationParsed) => Partial<Block> | null)) => {
     if (!currentContext()) return;
-    const current = latest.current.data, currentBlocks = current.config.layout?.blocks ?? [];
+    const current = currentData(), currentBlocks = current.config.layout?.blocks ?? [];
     const block = currentBlocks.find(item => item.id === id);
     if (!block) return;
     const update = typeof patch === 'function' ? patch(block, current) : patch;
@@ -394,15 +436,22 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
     setBlocks(currentBlocks.map(item => item.id === id ? { ...item, ...update } : item));
   };
   const saveBlocksAsSection = (items: Block[]) => {
-    if (!items.length) return;
+    if (!items.length || !selectionCurrent()) return;
     const suggested = items.length === 1 ? (BLOCKS[items[0].type]?.label ?? 'Mi sección') : `Composición de ${items.length} bloques`;
     const name = window.prompt('Nombre de la sección reutilizable:', suggested);
-    if (name == null) return;
-    setUserSections(saveUserSection(name, items));
+    if (name == null || !selectionCurrent()) return;
+    const current = currentData().config.layout?.blocks ?? [];
+    const live = items.map(item => current.find(block => block.id === item.id && block.type === item.type));
+    if (live.some(item => !item)) return;
+    sectionLibraryRevision.current++;
+    setUserSections(saveUserSection(name, live as Block[]));
   };
   const insertUserSection = (section: UserSection) => {
-    const inserted = section.blocks.map(cloneBlock);
-    setBlocks([...blocks, ...inserted]);
+    if (!currentContext()) return;
+    const currentSection = listUserSections().find(item => item.id === section.id);
+    if (!currentSection) return;
+    const inserted = currentSection.blocks.map(cloneBlock);
+    if (!setBlocks(current => [...current, ...inserted])) return;
     setLibraryView('layers');
     if (inserted[0]) onSelect(inserted[0].id);
   };
@@ -410,20 +459,25 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
   const selectedBlocks = blocks.filter(b => selectedIds.includes(b.id));
   const selectedSources = selectedBlocks.length ? selectedBlocks : blocks.filter(b => b.id === selectedId);
   const insertPreset = (preset: SectionPreset, replace = false) => {
+    if (!currentContext() || (replace && !selectionCurrent())) return;
+    const current = currentData(), currentBlocks = current.config.layout?.blocks;
+    if (!currentBlocks) return;
+    const sources = currentBlocks.filter(block => selectedSources.some(item => item.id === block.id && item.type === block.type));
+    if (replace && selectedSources.length && !sources.length) return;
     let created = attachDefaultBindings(preset.create());
-    if (guided) {
+    if (current.config.designMode === 'guided' && hasInvitationVisualSystem(current.config.tokens)) {
       const inheritStyle = (block: Block): Block => ({ ...restoreBlockCollectionStyle(block), ...(block.children ? { children: block.children.map(inheritStyle) } : {}) });
       created = created.map(inheritStyle);
     }
-    if (replace && selectedSources.length) {
-      created = transferSectionContent(created, selectedSources);
-      const ids = new Set(selectedSources.map(block => block.id));
-      const first = Math.min(...selectedSources.map(block => blocks.findIndex(item => item.id === block.id)).filter(index => index >= 0));
-      const kept = blocks.filter(block => !ids.has(block.id));
+    if (replace && sources.length) {
+      created = transferSectionContent(created, sources);
+      const ids = new Set(sources.map(block => block.id));
+      const first = Math.min(...sources.map(block => currentBlocks.findIndex(item => item.id === block.id)).filter(index => index >= 0));
+      const kept = currentBlocks.filter(block => !ids.has(block.id));
       const at = Math.max(0, first);
       setBlocks([...kept.slice(0, at), ...created, ...kept.slice(at)]);
     } else {
-      setBlocks([...blocks, ...created]);
+      setBlocks(existing => [...existing, ...created]);
     }
     setLibraryView('layers');
     setPreviewPresetKey(null);
@@ -458,60 +512,82 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
   const viewportKey = previewMode === 'mobile' ? 'mobile' : 'desktop';
   const layoutValue = (b: Block, key: 'x' | 'y' | 'w' | 'z') => b.layout?.[viewportKey]?.[key] ?? b.layout?.[key] ?? (key === 'w' ? undefined : 0);
   const patchSelectedLayouts = (makePatch: (b: Block, index: number) => Partial<BlockLayout>) => {
-    const indexById = new Map(selectedBlocks.map((b, i) => [b.id, i]));
-    setBlocks(blocks.map(b => {
-      const index = indexById.get(b.id);
-      if (index == null) return b;
-      const lay = b.layout ?? {};
-      return { ...b, layout: { ...lay, [viewportKey]: { ...(lay[viewportKey] ?? {}), ...makePatch(b, index) } } };
-    }));
+    if (!selectionCurrent()) return;
+    setBlocks(current => {
+      const indexById = new Map(current.filter(block => selectedBlocks.some(item => item.id === block.id && item.type === block.type)).map((b, i) => [b.id, i]));
+      return current.map(b => {
+        const index = indexById.get(b.id);
+        if (index == null) return b;
+        const lay = b.layout ?? {};
+        return { ...b, layout: { ...lay, [viewportKey]: { ...(lay[viewportKey] ?? {}), ...makePatch(b, index) } } };
+      });
+    });
   };
+  const currentSelectedBlocks = () => selectionCurrent() ? (currentData().config.layout?.blocks ?? []).filter(block => selectedBlocks.some(item => item.id === block.id && item.type === block.type)) : [];
   const alignSelected = (axis: 'x' | 'y', mode: 'start' | 'center' | 'end') => {
-    const values = selectedBlocks.map(b => Number(layoutValue(b, axis) ?? 0));
+    const current = currentSelectedBlocks();
+    if (!current.length) return;
+    const values = current.map(b => Number(layoutValue(b, axis) ?? 0));
     const target = mode === 'start' ? Math.min(...values) : mode === 'end' ? Math.max(...values) : 0;
     patchSelectedLayouts(() => ({ [axis]: target }));
   };
   const distributeSelected = () => {
-    if (selectedBlocks.length < 3) return;
-    const sorted = [...selectedBlocks].sort((a, b) => Number(layoutValue(a, 'y')) - Number(layoutValue(b, 'y')));
+    const current = currentSelectedBlocks();
+    if (current.length < 3) return;
+    const sorted = [...current].sort((a, b) => Number(layoutValue(a, 'y')) - Number(layoutValue(b, 'y')));
     const min = Number(layoutValue(sorted[0], 'y'));
     const max = Number(layoutValue(sorted[sorted.length - 1], 'y'));
     const byId = new Map(sorted.map((b, i) => [b.id, Math.round(min + ((max - min) * i) / (sorted.length - 1))]));
     patchSelectedLayouts(b => ({ y: byId.get(b.id) ?? 0 }));
   };
   const matchSelectedWidth = () => {
-    const primary = selectedBlocks.find(b => b.id === selectedId) ?? selectedBlocks[0];
+    const current = currentSelectedBlocks();
+    const primary = current.find(b => b.id === selectedId) ?? current[0];
     const width = primary ? layoutValue(primary, 'w') : undefined;
     if (typeof width === 'number') patchSelectedLayouts(() => ({ w: width }));
   };
-  const patchSelected = (patch: Partial<Block>) => setBlocks(blocks.map(b => selectedIds.includes(b.id) ? { ...b, ...patch } : b));
+  const patchSelected = (patch: Partial<Block>) => { if (selectionCurrent()) setBlocks(current => current.map(b => selectedBlocks.some(item => item.id === b.id && item.type === b.type) ? { ...b, ...patch } : b)); };
   const duplicateSelected = () => {
-    const copies = selectedBlocks.map(b => {
+    if (!selectionCurrent()) return;
+    const current = currentData().config.layout?.blocks ?? [], picked = currentSelectedBlocks();
+    if (!picked.length) return;
+    const copies = picked.map(b => {
       const copy = cloneBlock(b);
       copy.layout = { ...(copy.layout ?? {}), x: (copy.layout?.x ?? 0) + 16, y: (copy.layout?.y ?? 0) + 16 };
       return copy;
     });
-    const last = Math.max(...selectedBlocks.map(b => blocks.findIndex(x => x.id === b.id)));
-    setBlocks([...blocks.slice(0, last + 1), ...copies, ...blocks.slice(last + 1)]);
+    const last = Math.max(...picked.map(b => current.findIndex(x => x.id === b.id)));
+    setBlocks([...current.slice(0, last + 1), ...copies, ...current.slice(last + 1)]);
     if (copies[0]) onSelect(copies[0].id);
   };
-  const deleteSelected = () => { setBlocks(blocks.filter(b => !selectedIds.includes(b.id))); onSelect(''); };
+  const deleteSelected = () => { const picked = currentSelectedBlocks(); if (picked.length && setBlocks(current => current.filter(b => !picked.includes(b)))) onSelect(''); };
   const groupSelected = () => {
-    if (selectedBlocks.length < 2) return;
-    const first = Math.min(...selectedBlocks.map(b => blocks.findIndex(x => x.id === b.id)));
+    const current = currentData().config.layout?.blocks ?? [], picked = currentSelectedBlocks();
+    if (picked.length < 2) return;
+    const first = Math.min(...picked.map(b => current.findIndex(x => x.id === b.id)));
     const group = createBlock('group');
     group.props = { ...group.props, mode: 'overlay', columns: 1 };
     group.style = { bgKind: 'none', padTop: 8, padBottom: 8, surface: 'flat' };
-    group.children = selectedBlocks.map(cloneBlock);
-    const rest = blocks.filter(b => !selectedIds.includes(b.id));
+    group.children = picked.map(cloneBlock);
+    const rest = current.filter(b => !picked.includes(b));
     rest.splice(first, 0, group);
     setBlocks(rest);
     onSelect(group.id);
   };
   const moveSelectionInStack = (front: boolean) => {
-    const picked = blocks.filter(b => selectedIds.includes(b.id));
-    const rest = blocks.filter(b => !selectedIds.includes(b.id));
-    setBlocks(front ? [...rest, ...picked] : [...picked, ...rest]);
+    if (!selectionCurrent()) return;
+    const selected = currentSelectedBlocks();
+    setBlocks(current => {
+      const picked = current.filter(b => selected.includes(b));
+      const rest = current.filter(b => !selected.includes(b));
+      return front ? [...rest, ...picked] : [...picked, ...rest];
+    });
+  };
+  const convertToBlocks = () => {
+    if (!currentContext()) return;
+    const current = currentData(), config = current.config ?? {};
+    if (config.layout?.blocks?.length) return;
+    commit({ config: { ...config, layout: layoutForTemplate(current), theme: config.theme ?? themeForTemplate(current.template), motion: config.motion ?? { preset: motionForTemplate(current.template) }, tokens: config.tokens ?? tokensForTemplate(current.template) } }, true);
   };
 
   if(isCleanDesign(cfg.designKey)&&!blocks.length)return <div className="p-4"><CleanDesignFields data={data} onChange={onChange}/></div>;
@@ -538,15 +614,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
         </div>
         <button
           type="button"
-          onClick={() => commit({
-            config: {
-              ...cfg,
-              layout: layoutForTemplate(data),
-              theme: cfg.theme ?? themeForTemplate(data.template),
-              motion: cfg.motion ?? { preset: motionForTemplate(data.template) },
-              tokens: cfg.tokens ?? tokensForTemplate(data.template),
-            },
-          }, true)}
+          onClick={convertToBlocks}
           className="w-full py-3 text-sm font-outfit font-medium text-white bg-enkarta-gold rounded-xl hover:bg-enkarta-gold/90 shadow shadow-enkarta-gold/30"
         >
           Convertir a bloques editables
@@ -612,7 +680,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
   if (selected && !batchMode) {
     const def = BLOCKS[selected.type];
     const editorProps = resolveBlockEditorProps(selected, data);
-    const galleryImages = (block: Block, current = latest.current.data): string[] => {
+    const galleryImages = (block: Block, current = currentData()): string[] => {
       const images = resolveBlockEditorProps(block, current).images;
       return Array.isArray(images) ? images as string[] : [];
     };
@@ -627,12 +695,12 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
       patchBlock(selected.id, (block, current) => block.type === selected.type ? update(block, current) : null);
     const mediaDestination = (target: Block, field: string, child = false) =>
       JSON.stringify([data.id, data.template, cfg.designKey, epoch, selected.id, selected.type, child ? target.id : null, child ? target.type : null, field]);
-    const setProp = (key: string, v: any) => editSelected((block, current) => ({ ...detachBinding(block, key), props: editedProps(block, key, v, current) }));
+    const setProp = (key: string, v: any) => editSelected((block, current) => ({ ...detachBinding(block, key), props: editedProps(block, key, typeof v === 'function' ? v(resolveBlockEditorProps(block, current)[key]) : v, current) }));
     const setProps = (patch: Record<string, unknown>) => editSelected(block => ({ props: { ...block.props, ...patch } }));
     const setIcon = (key: string, v: string, colors?: any, speed?: number) =>
       editSelected(block => ({ ...detachBinding(block, key), props: { ...block.props, [key]: v, [`${key}Colors`]: colors, [`${key}Speed`]: speed } }));
-    const setStyle = (patch: Record<string, any>) => editSelected(block => ({ style: { ...(block.style ?? {}), ...patch } }));
-    const setAnim = (patch: Record<string, any>) => editSelected(block => ({ animation: { ...(block.animation ?? {}), ...patch } }));
+    const setStyle = (patch: Record<string, any> | ((style: NonNullable<Block['style']>) => Record<string, any>)) => editSelected(block => ({ style: { ...(block.style ?? {}), ...(typeof patch === 'function' ? patch(block.style ?? {}) : patch) } }));
+    const setAnim = (patch: Record<string, any> | ((animation: NonNullable<Block['animation']>) => Record<string, any>)) => editSelected(block => ({ animation: { ...(block.animation ?? {}), ...(typeof patch === 'function' ? patch(block.animation ?? {}) : patch) } }));
     const setVisibility = (patch: NonNullable<Block['visibility']>) => editSelected(block => ({ visibility: { ...(block.visibility ?? {}), ...patch } }));
     const listControls = (target: Block, field: FieldDef, child = false) => {
       const scope = mediaDestination(target, field.key, child);
@@ -664,48 +732,49 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
       return { rows, images: initial.images, itemFields: field.itemFields ?? [], onAction, ownerId: data.id, eventType: data.type, destinationKey: scope, isDestinationCurrent: currentContext };
     };
     const setBinding = (key: string, path: string) => {
-      const bindings = { ...(selected.bindings ?? {}) };
-      if (path) bindings[key] = path;
-      else delete bindings[key];
-      patchBlock(selected.id, { bindings: Object.keys(bindings).length ? bindings : undefined, ...(!path ? { props: { ...selected.props, [key]: editorProps[key] } } : {}) });
+      if (!selectionCurrent()) return;
+      editSelected((block, current) => {
+        const bindings = { ...(block.bindings ?? {}) };
+        if (path) bindings[key] = path;
+        else delete bindings[key];
+        return { bindings: Object.keys(bindings).length ? bindings : undefined, ...(!path ? { props: { ...block.props, [key]: resolveBlockEditorProps(block, current)[key] } } : {}) };
+      });
     };
     const insertGuestToken = (token: string) => {
       const field = def?.fields.find(item => item.kind === 'text' || item.kind === 'textarea');
       if (!field) return;
-      const current = String(editorProps[field.key] ?? '').trim();
-      setProp(field.key, current ? `${current} ${token}` : token);
+      if (!selectionCurrent()) return;
+      setProp(field.key, (value: unknown) => { const current = String(value ?? '').trim(); return current ? `${current} ${token}` : token; });
     };
-    const setBaseLayout = (patch: Partial<BlockLayout>) => patchBlock(selected.id, { layout: { ...(selected.layout ?? {}), ...patch } });
+    const editSelectedControl = (update: (block: Block, current: InvitationParsed) => Partial<Block> | null) => { if (selectionCurrent()) editSelected(update); };
+    const setBaseLayout = (patch: Partial<BlockLayout>) => editSelectedControl(block => ({ layout: { ...(block.layout ?? {}), ...patch } }));
     const st = selected.style ?? {};
     const lay = selected.layout ?? {};
     const currentViewport = previewMode === 'mobile' ? (lay.mobile ?? {}) : (lay.desktop ?? {});
     const currentViewportKey = previewMode === 'mobile' ? 'mobile' : 'desktop';
     const viewportMode = currentViewport.mode ?? (Object.keys(currentViewport).some(key => ['x', 'y', 'w', 'rotate', 'anchor', 'z'].includes(key)) ? 'custom' : 'inherit');
     const setLayout = (patch: Partial<BlockViewportLayout>) => {
-      const nextViewport = { ...currentViewport, ...patch };
-      patchBlock(selected.id, {
-        layout: {
-          ...lay,
-          [currentViewportKey]: nextViewport,
-        },
-      });
+      editSelectedControl(block => ({ layout: { ...(block.layout ?? {}), [currentViewportKey]: { ...(block.layout?.[currentViewportKey] ?? {}), ...patch } } }));
     };
     const setViewportMode = (mode: NonNullable<BlockViewportLayout['mode']>) => {
-      const next: BlockViewportLayout = { ...currentViewport, mode };
-      if (mode !== 'custom') {
-        delete next.x; delete next.y; delete next.w; delete next.rotate; delete next.anchor; delete next.z;
-      }
-      patchBlock(selected.id, { layout: { ...lay, [currentViewportKey]: next } });
+      editSelectedControl(block => {
+        const next: BlockViewportLayout = { ...(block.layout?.[currentViewportKey] ?? {}), mode };
+        if (mode !== 'custom') { delete next.x; delete next.y; delete next.w; delete next.rotate; delete next.anchor; delete next.z; }
+        return { layout: { ...(block.layout ?? {}), [currentViewportKey]: next } };
+      });
     };
     const moveForViewport = (dir: -1 | 1) => {
-      const ordered = blocks.map((block, index) => ({ block, index, order: block.layout?.[currentViewportKey]?.order ?? index }))
+      if (!selectionCurrent()) return;
+      const current = currentData().config.layout?.blocks ?? [];
+      if (!current.some(block => block.id === selected.id && block.type === selected.type)) return;
+      const ordered = current.map((block, index) => ({ block, index, order: block.layout?.[currentViewportKey]?.order ?? index }))
         .sort((a, b) => a.order - b.order || a.index - b.index);
       const index = ordered.findIndex(item => item.block.id === selected.id);
       const target = index + dir;
       if (index < 0 || target < 0 || target >= ordered.length) return;
       [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
       const order = new Map(ordered.map((item, position) => [item.block.id, position]));
-      setBlocks(blocks.map(block => ({
+      setBlocks(current.map(block => ({
         ...block,
         layout: {
           ...(block.layout ?? {}),
@@ -714,31 +783,32 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
       })));
     };
     const createDeviceVariant = () => {
+      if (!selectionCurrent()) return;
+      const current = currentData().config.layout?.blocks ?? [], live = current.find(block => block.id === selected.id && block.type === selected.type);
+      if (!live) return;
+      const liveLayout = live.layout ?? {};
       const otherKey = currentViewportKey === 'mobile' ? 'desktop' : 'mobile';
       const originalLayout: BlockLayout = {
-        ...lay,
-        [currentViewportKey]: { ...(lay[currentViewportKey] ?? {}), hidden: true },
+        ...liveLayout,
+        [currentViewportKey]: { ...(liveLayout[currentViewportKey] ?? {}), hidden: true },
       };
-      const copy = cloneBlock(selected);
+      const copy = cloneBlock(live);
       copy.layout = {
-        ...lay,
-        [currentViewportKey]: { ...(lay[currentViewportKey] ?? {}), hidden: false },
-        [otherKey]: { ...(lay[otherKey] ?? {}), hidden: true },
+        ...liveLayout,
+        [currentViewportKey]: { ...(liveLayout[currentViewportKey] ?? {}), hidden: false },
+        [otherKey]: { ...(liveLayout[otherKey] ?? {}), hidden: true },
       };
-      const index = blocks.findIndex(block => block.id === selected.id);
-      const next = blocks.map(block => block.id === selected.id ? { ...block, layout: originalLayout } : block);
+      const index = current.indexOf(live);
+      const next = current.map(block => block === live ? { ...block, layout: originalLayout } : block);
       next.splice(index + 1, 0, copy);
       setBlocks(next);
       onSelect(copy.id);
     };
     const clearViewportLayout = () => {
-      const next = { ...lay };
-      delete next[currentViewportKey];
-      patchBlock(selected.id, { layout: Object.keys(next).length ? next : undefined });
+      editSelectedControl(block => { const next = { ...(block.layout ?? {}) }; delete next[currentViewportKey]; return { layout: Object.keys(next).length ? next : undefined }; });
     };
     const copyViewportLayout = (from: 'mobile' | 'desktop', to: 'mobile' | 'desktop') => {
-      const source = lay[from] ?? {};
-      patchBlock(selected.id, { layout: { ...lay, [to]: { ...source } } });
+      editSelectedControl(block => ({ layout: { ...(block.layout ?? {}), [to]: { ...(block.layout?.[from] ?? {}) } } }));
     };
     // Hijos (columnas)
     const kids = selected.children ?? [];
@@ -751,7 +821,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
         return { children: block.children.map(child => child.id === target.id ? { ...child, ...update(child, current) } : child) };
       });
     };
-    const setKidProp = (i: number, key: string, val: any) => patchKid(i, (child, current) => ({ ...detachBinding(child, key), props: editedProps(child, key, val, current) }));
+    const setKidProp = (i: number, key: string, val: any) => patchKid(i, (child, current) => ({ ...detachBinding(child, key), props: editedProps(child, key, typeof val === 'function' ? val(resolveBlockEditorProps(child, current)[key]) : val, current) }));
     const setKidIcon = (i: number, key: string, val: string, colors?: any, speed?: number) => patchKid(i, child => ({ ...detachBinding(child, key), props: { ...child.props, [key]: val, [`${key}Colors`]: colors, [`${key}Speed`]: speed } }));
     const setKidLayout = (i: number, patch: Partial<BlockLayout>) => patchKid(i, child => ({ layout: { ...(child.layout ?? {}), ...patch } }));
     const moveKid = (i: number, dir: number) => {
@@ -819,7 +889,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
         {modeControl}
         {inspectorTab === 'design' && hasInvitationVisualSystem(cfg.tokens) && <div className="rounded-2xl border border-[#e6e0d5] bg-white p-3 font-outfit">
           <p className="text-xs leading-relaxed text-[#6c655b]">Los colores, las fuentes y los acabados se heredan de la colección. Tus ajustes individuales tienen prioridad.</p>
-          <button type="button" onClick={() => patchBlock(selected.id, restoreBlockCollectionStyle(selected))} className="mt-2 min-h-10 rounded-lg border border-[#cfc5b5] px-3 text-xs text-[#4d5944]">Restaurar tipografía y acabado</button>
+          <button type="button" onClick={() => editSelectedControl(block => restoreBlockCollectionStyle(block))} className="mt-2 min-h-10 rounded-lg border border-[#cfc5b5] px-3 text-xs text-[#4d5944]">Restaurar tipografía y acabado</button>
           <p className="mt-1 text-[10px] text-[#7b746b]">Conserva contenido y posición. Puedes revertirlo con Deshacer.</p>
         </div>}
         {inspectorTab === 'content' && <div className={`${editorCardCls} space-y-3`}>
@@ -851,6 +921,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
               <Labeled label={f.label}>
                 <FieldControl
                   field={f} value={editorProps[f.key]} set={v => setProp(f.key, v)}
+                  transform={change => setProp(f.key, change)}
                   destinationKey={mediaDestination(selected, f.key)}
                   isDestinationCurrent={currentContext}
                   setIcon={(v, c, s) => setIcon(f.key, v, c, s)}
@@ -1015,6 +1086,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
                       <Labeled key={f.key} label={f.label}>
                         <FieldControl
                           field={f} value={childProps[f.key]} set={v => setKidProp(i, f.key, v)}
+                          transform={change => setKidProp(i, f.key, change)}
                           destinationKey={mediaDestination(c, f.key, true)}
                           isDestinationCurrent={currentContext}
                           setIcon={(v, col, sp) => setKidIcon(i, f.key, v, col, sp)}
@@ -1090,8 +1162,8 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
                   const x = m ? parseInt(m[1]) : 50; const y = m ? parseInt(m[2]) : 50;
                   return (
                     <div className="space-y-1.5">
-                      <div className="flex items-center gap-2"><span className="text-[10px] w-3 text-gray-400 font-outfit">X</span><input type="range" min={0} max={100} value={x} onChange={e => setStyle({ bgFocal: `${e.target.value}% ${y}%` })} className="w-full accent-enkarta-gold" /></div>
-                      <div className="flex items-center gap-2"><span className="text-[10px] w-3 text-gray-400 font-outfit">Y</span><input type="range" min={0} max={100} value={y} onChange={e => setStyle({ bgFocal: `${x}% ${e.target.value}%` })} className="w-full accent-enkarta-gold" /></div>
+                      <div className="flex items-center gap-2"><span className="text-[10px] w-3 text-gray-400 font-outfit">X</span><input type="range" min={0} max={100} value={x} onChange={e => { const value = e.target.value; setStyle(current => ({ bgFocal: `${value}% ${/(-?\d+)%\s+(-?\d+)%/.exec(current.bgFocal || '50% 50%')?.[2] ?? 50}%` })); }} className="w-full accent-enkarta-gold" /></div>
+                      <div className="flex items-center gap-2"><span className="text-[10px] w-3 text-gray-400 font-outfit">Y</span><input type="range" min={0} max={100} value={y} onChange={e => { const value = e.target.value; setStyle(current => ({ bgFocal: `${/(-?\d+)%\s+(-?\d+)%/.exec(current.bgFocal || '50% 50%')?.[1] ?? 50}% ${value}%` })); }} className="w-full accent-enkarta-gold" /></div>
                     </div>
                   );
                 })()}
@@ -1103,7 +1175,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
               <span className="block text-sm font-outfit text-gray-700">Pantalla completa</span>
               <span className="block text-[10px] font-outfit text-gray-400">Ideal para portadas y escenas fotográficas</span>
             </span>
-            <Toggle on={!!st.fullHeight} onToggle={() => setStyle({ fullHeight: !st.fullHeight })} />
+            <Toggle on={!!st.fullHeight} onToggle={() => setStyle(current => ({ fullHeight: !current.fullHeight }))} />
           </label>
           {!st.fullHeight && (
             <Labeled label={`Alto mínimo ${st.minHeight ? `(${st.minHeight}px)` : '(automático)'}`}>
@@ -1225,7 +1297,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
               <span className="block text-sm font-outfit text-gray-700">Repetir al volver a entrar</span>
               <span className="block text-[10px] font-outfit text-gray-400">La animación se reproduce más de una vez</span>
             </span>
-            <Toggle on={!!selected.animation?.repeat} onToggle={() => setAnim({ repeat: !selected.animation?.repeat })} />
+            <Toggle on={!!selected.animation?.repeat} onToggle={() => setAnim(current => ({ repeat: !current.repeat }))} />
           </label>
         </div>}
 
@@ -1301,7 +1373,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
 
           <p className="text-[9px] leading-relaxed text-gray-400 font-outfit">En modo Personalizado puedes arrastrar sobre el preview. Alt desactiva la cuadrícula; flechas mueven 1 px y Shift + flechas 8 px.</p>
           <div className="flex gap-2">
-            <button type="button" onClick={() => patchBlock(selected.id, { layout: undefined })} className="flex-1 py-2 text-xs font-outfit text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50">
+            <button type="button" onClick={() => editSelectedControl(() => ({ layout: undefined }))} className="flex-1 py-2 text-xs font-outfit text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50">
               Reset total
             </button>
             <button type="button" onClick={() => setBaseLayout({ x: 0, y: 0, w: undefined, rotate: undefined })} className="flex-1 py-2 text-xs font-outfit text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50">
@@ -1317,11 +1389,10 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
           </button>
           <div className="flex gap-2">
             <button type="button" onClick={() => {
-              const copy = { ...selected, id: `${selected.type}-${Date.now().toString(36)}`, props: JSON.parse(JSON.stringify(selected.props)) };
-              const idx = blocks.findIndex(b => b.id === selected.id);
-              setBlocks([...blocks.slice(0, idx + 1), copy, ...blocks.slice(idx + 1)]);
+              if (!selectionCurrent()) return;
+              setBlocks(current => { const original = current.find(block => block.id === selected.id && block.type === selected.type); if (!original) return null; const copy = cloneBlock(original), idx = current.indexOf(original); return [...current.slice(0, idx + 1), copy, ...current.slice(idx + 1)]; });
             }} className="flex-1 py-2 text-xs font-outfit text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50">Duplicar</button>
-            <button type="button" onClick={() => { setBlocks(blocks.filter(b => b.id !== selected.id)); onSelect(''); }} className="flex-1 py-2 text-xs font-outfit text-red-500 border border-red-200 rounded-xl hover:bg-red-50">Eliminar</button>
+            <button type="button" onClick={() => { if (!selectionCurrent()) return; const original = currentData().config.layout?.blocks?.find(block => block.id === selected.id && block.type === selected.type); if (original && setBlocks(current => current.filter(block => block !== original))) onSelect(''); }} className="flex-1 py-2 text-xs font-outfit text-red-500 border border-red-200 rounded-xl hover:bg-red-50">Eliminar</button>
           </div>
         </div>
         <p className="text-center text-[10px] font-outfit text-gray-400">En la vista previa: Ctrl + Shift + C/V copia y pega solo el estilo.</p>
@@ -1344,11 +1415,11 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
       {libraryView === 'layers' ? <>
       <div className="flex items-center justify-between">
         <div><h4 className={editorSectionTitleCls}>Orden de la invitación</h4><p className="mt-1 text-[11px] text-[#938a80] font-outfit">Arrastra las secciones para cambiar el recorrido.</p></div>
-        {batchMode ? <button type="button" disabled={!selectedBlocks.length} onClick={() => setBatchMode(false)} className="rounded-lg bg-violet-600 px-2.5 py-1.5 text-[10px] font-outfit font-medium text-white disabled:opacity-40">Editar selección ({selectedBlocks.length})</button> : <button type="button" onClick={() => { if (confirm('¿Descartar los bloques y volver a la plantilla original?')) commit({ config: { ...latest.current.data.config, layout: undefined } }, true); }} className="text-xs text-gray-400 hover:text-red-500 font-outfit">Quitar bloques</button>}
+        {batchMode ? <button type="button" disabled={!selectedBlocks.length} onClick={() => setBatchMode(false)} className="rounded-lg bg-violet-600 px-2.5 py-1.5 text-[10px] font-outfit font-medium text-white disabled:opacity-40">Editar selección ({selectedBlocks.length})</button> : <button type="button" onClick={() => { if (currentContext() && confirm('¿Descartar los bloques y volver a la plantilla original?') && currentContext()) commit({ config: { ...currentData().config, layout: undefined } }, true); }} className="text-xs text-gray-400 hover:text-red-500 font-outfit">Quitar bloques</button>}
       </div>
       {batchMode && <p className="-mt-2 rounded-xl bg-violet-50 px-3 py-2 text-xs text-violet-600 font-outfit">Marca todas las capas que quieres organizar juntas.</p>}
 
-      <Reorder.Group axis="y" values={blocks} onReorder={setBlocks} className="space-y-2.5">
+      <Reorder.Group axis="y" values={blocks} onReorder={reorderBlocks} className="space-y-2.5">
           {blocks.map(b => (
           <Reorder.Item key={b.id} value={b} className={`group flex min-h-[54px] items-center gap-2.5 rounded-2xl border bg-white px-2.5 py-2 cursor-grab active:cursor-grabbing transition-all ${selectedId === b.id ? 'border-enkarta-gold/70 shadow-[0_8px_24px_rgba(126,95,43,0.10)] ring-1 ring-enkarta-gold/15' : 'border-[#ece7e0] hover:-translate-y-px hover:border-enkarta-gold/35 hover:shadow-sm'}`}>
             <span className="select-none text-[13px] leading-none text-[#c9c1b7] transition-colors group-hover:text-[#9d9184]">⋮⋮</span>
@@ -1360,10 +1431,10 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
                 <span className="block truncate text-[9px] text-[#a1988d] font-outfit">{blockVisual(b.type).label}</span>
               </span>
             </button>
-            <button type="button" title={b.locked ? 'Desbloquear' : 'Bloquear'} onClick={() => patchBlock(b.id, { locked: !b.locked })} className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${b.locked ? 'bg-amber-50 text-amber-600' : 'text-[#a39a90] hover:bg-gray-50 hover:text-gray-700'}`}>
+            <button type="button" title={b.locked ? 'Desbloquear' : 'Bloquear'} onClick={() => patchBlock(b.id, block => block.type === b.type ? { locked: !block.locked } : null)} className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${b.locked ? 'bg-amber-50 text-amber-600' : 'text-[#a39a90] hover:bg-gray-50 hover:text-gray-700'}`}>
               <LockGlyph locked={!!b.locked} />
             </button>
-            <button type="button" title={b.enabled === false ? 'Mostrar' : 'Ocultar'} onClick={() => patchBlock(b.id, { enabled: b.enabled === false })} className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${b.enabled === false ? 'bg-gray-100 text-gray-400' : 'text-[#a39a90] hover:bg-gray-50 hover:text-gray-700'}`}>
+            <button type="button" title={b.enabled === false ? 'Mostrar' : 'Ocultar'} onClick={() => patchBlock(b.id, block => block.type === b.type ? { enabled: block.enabled === false } : null)} className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${b.enabled === false ? 'bg-gray-100 text-gray-400' : 'text-[#a39a90] hover:bg-gray-50 hover:text-gray-700'}`}>
               <EyeGlyph hidden={b.enabled === false} />
             </button>
           </Reorder.Item>
@@ -1496,7 +1567,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
                   <span className="mt-2 block truncate text-xs font-outfit font-medium text-gray-700">{section.name}</span>
                   <span className="block text-[9px] font-outfit text-gray-400">{section.blocks.length} bloque{section.blocks.length === 1 ? '' : 's'}</span>
                 </button>
-                <button type="button" aria-label={`Eliminar ${section.name}`} onClick={() => setUserSections(deleteUserSection(section.id))} className="absolute right-2 top-2 h-6 w-6 rounded-full bg-white/90 text-[10px] text-gray-400 opacity-0 shadow group-hover:opacity-100 hover:text-red-500">✕</button>
+                <button type="button" aria-label={`Eliminar ${section.name}`} onClick={() => { if (currentContext()) { sectionLibraryRevision.current++; setUserSections(deleteUserSection(section.id)); } }} className="absolute right-2 top-2 h-6 w-6 rounded-full bg-white/90 text-[10px] text-gray-400 opacity-0 shadow group-hover:opacity-100 hover:text-red-500">✕</button>
               </div>
             ))}
           </div>
@@ -1518,7 +1589,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
         </div>
         <button
           type="button"
-          onClick={() => { const g = createOverlayGroup(); setBlocks([...blocks, g]); setLibraryView('layers'); onSelect(g.id); }}
+          onClick={() => { if (!currentContext()) return; const g = createOverlayGroup(); if (!setBlocks(current => [...current, g])) return; setLibraryView('layers'); onSelect(g.id); }}
           className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-enkarta-gold/50 py-2.5 text-xs text-gray-700 transition-colors hover:bg-enkarta-gold/5 font-outfit"
         >
           <BlockGlyph type="group" size="sm" /> Imagen + texto en capas
@@ -1538,7 +1609,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
                     <button
                       key={type}
                       type="button"
-                      onClick={() => { const nb = createBlock(type as BlockType); setBlocks([...blocks, nb]); setLibraryView('layers'); onSelect(nb.id); }}
+                      onClick={() => { if (!currentContext()) return; const nb = createBlock(type as BlockType); if (!setBlocks(current => [...current, nb])) return; setLibraryView('layers'); onSelect(nb.id); }}
                       className="flex min-h-[86px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-[#ebe6df] bg-white p-2.5 transition-all hover:-translate-y-1 hover:border-enkarta-gold/40 hover:bg-enkarta-gold/5 hover:shadow-md"
                     >
                       <BlockGlyph type={type} />

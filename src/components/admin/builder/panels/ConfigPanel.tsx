@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { BuilderConfig, InvitationParsed, InvitationTemplate } from '@/lib/types';
 import { resolveFeatures } from '@/lib/packages';
 import type { BuilderValidation } from '@/lib/builder-validation';
@@ -12,6 +12,7 @@ import ServiceAccessPanel from './ServiceAccessPanel';
 import ValidityPanel from './ValidityPanel';
 import AdditionalServicesPanel from './AdditionalServicesPanel';
 import { invitationValidity, type ValidityFields } from '@/lib/invitation-validity';
+import { useLegacyDraft } from '../useLegacyDraft';
 
 interface Props {
   data: InvitationParsed;
@@ -54,6 +55,50 @@ function LinkRow({ label, url }: { label: string; url: string }) {
 }
 
 export default function ConfigPanel({ data, onChange, onDelete, validation, onOpenBlock, onValiditySync, editingRevision, draftSource }: Props) {
+  const draft = useLegacyDraft(data, patch => { if (patch.config) observeEntry(patch.config); onChange(patch); }, undefined, editingRevision, draftSource);
+  const videoRevision = useRef(0);
+  const posterRevision = useRef(0);
+  const entryBinding = useRef<{
+    id: string; template: string; designKey: string | undefined; revision: number | undefined;
+    enabled: boolean; style: string; videoUrl: string; poster: string;
+  } | null>(null);
+  const observeEntry = (config = draft.get().config) => {
+    const current = draft.get();
+    const entry = config.entry ?? {};
+    const next = {
+      id: current.id, template: current.template, designKey: current.config?.designKey, revision: editingRevision?.current,
+      enabled: entry.enabled ?? resolveFeatures(config).entry, style: entry.style ?? 'template',
+      videoUrl: entry.videoUrl ?? '', poster: entry.poster ?? '',
+    };
+    const previous = entryBinding.current;
+    const changedContext = !!previous && (previous.id !== next.id || previous.template !== next.template || previous.designKey !== next.designKey
+      || previous.revision !== next.revision || previous.enabled !== next.enabled || previous.style !== next.style);
+    if (changedContext || (!!previous && previous.videoUrl !== next.videoUrl)) videoRevision.current += 1;
+    if (changedContext || (!!previous && previous.poster !== next.poster)) posterRevision.current += 1;
+    entryBinding.current = next;
+    return next;
+  };
+  observeEntry();
+  const videoEpoch = videoRevision.current;
+  const posterEpoch = posterRevision.current;
+  const setEntry = (change: Partial<NonNullable<BuilderConfig['entry']>> | ((entry: NonNullable<BuilderConfig['entry']>, config: BuilderConfig) => Partial<NonNullable<BuilderConfig['entry']>>), scope: 'visible' | 'cinematic' | 'toggle' = 'visible') => {
+    draft.config(config => {
+      const binding = observeEntry(config);
+      if (scope !== 'toggle' && (!binding.enabled || (scope === 'cinematic' && binding.style !== 'cinematic'))) return null;
+      const entry = config.entry ?? {};
+      const patch = typeof change === 'function' ? change(entry, config) : change;
+      if ('skipLabel' in patch && entry.showSkip === false) return null;
+      const next = { ...entry, ...patch };
+      observeEntry({ ...config, entry: next });
+      return { entry: next };
+    });
+  };
+  const setEntryMedia = (field: 'videoUrl' | 'poster', value: string) => {
+    if (!draft.isCurrent()) return;
+    const binding = observeEntry();
+    if (!binding.enabled || binding.style !== 'cinematic' || (field === 'videoUrl' ? videoRevision.current !== videoEpoch : posterRevision.current !== posterEpoch)) return;
+    setEntry({ [field]: value }, 'cinematic');
+  };
   // Calcular si está expirada
   const isExpired = invitationValidity(data).state === 'expired';
   const publicationPaused = data.status === 'disabled';
@@ -62,11 +107,11 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
     <div className="space-y-6 p-4">
 
       {/* Acceso del cliente (panel /panel) */}
-      <ServiceAccessPanel id={data.id} config={data.config} />
+      <ServiceAccessPanel key={data.id} id={data.id} config={data.config} />
 
       <div className="border-t border-gray-100 pt-5">
         <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">Checklist de Publicación</h4>
-        <PublicationAuditPanel data={data} validation={validation} onOpenBlock={onOpenBlock} />
+        <PublicationAuditPanel data={data} validation={validation} onOpenBlock={blockId => { if (draft.isCurrent()) onOpenBlock?.(blockId); }} />
       </div>
 
       {/* Estado del link */}
@@ -103,7 +148,7 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
             <p className="text-xs text-gray-400 font-outfit">Control técnico independiente del estado de publicación</p>
           </div>
           <div
-            onClick={() => onChange({ is_active: !data.is_active })}
+            onClick={() => draft.patch(current => ({ is_active: !current.is_active }))}
             className={`w-12 h-6 rounded-full transition-all cursor-pointer relative ${data.is_active ? 'bg-enkarta-gold' : 'bg-gray-300'}`}
           >
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${data.is_active ? 'left-7' : 'left-1'}`} />
@@ -115,20 +160,20 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
       <div className="border-t border-gray-100 pt-5">
         <div className="flex items-start justify-between gap-3">
           <div><h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400 font-outfit">Analítica y privacidad</h4><p className="mt-1 text-[11px] leading-relaxed text-gray-400 font-outfit">Mide el recorrido de forma agregada, sin guardar IP, teléfono, nombre ni mensajes.</p></div>
-          <button type="button" role="switch" aria-checked={data.config?.analytics?.enabled !== false} onClick={() => onChange({ config: { ...(data.config ?? {}), analytics: { ...(data.config?.analytics ?? {}), enabled: data.config?.analytics?.enabled === false } } })} className={`relative mt-0.5 h-6 w-12 shrink-0 rounded-full transition ${data.config?.analytics?.enabled === false ? 'bg-gray-300' : 'bg-emerald-500'}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all ${data.config?.analytics?.enabled === false ? 'left-1' : 'left-7'}`}/><span className="sr-only">Activar analítica</span></button>
+          <button type="button" role="switch" aria-checked={data.config?.analytics?.enabled !== false} onClick={() => draft.config(config => ({ analytics: { ...config.analytics, enabled: config.analytics?.enabled === false } }))} className={`relative mt-0.5 h-6 w-12 shrink-0 rounded-full transition ${data.config?.analytics?.enabled === false ? 'bg-gray-300' : 'bg-emerald-500'}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all ${data.config?.analytics?.enabled === false ? 'left-1' : 'left-7'}`}/><span className="sr-only">Activar analítica</span></button>
         </div>
         <div className={`mt-3 rounded-2xl border p-3 transition ${data.config?.analytics?.enabled === false ? 'border-gray-100 bg-gray-50 opacity-60' : 'border-emerald-100 bg-emerald-50/50'}`}>
           <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 font-outfit">Conservar métricas durante</label>
           <div className="mt-2 grid grid-cols-4 gap-1.5">
-            {([30, 90, 180, 365] as const).map(days => <button key={days} type="button" disabled={data.config?.analytics?.enabled === false} onClick={() => onChange({ config: { ...(data.config ?? {}), analytics: { ...(data.config?.analytics ?? {}), enabled: true, retentionDays: days } } })} className={`rounded-xl border px-1 py-2 text-[10px] font-semibold transition font-outfit ${(data.config?.analytics?.retentionDays ?? 180) === days ? 'border-emerald-300 bg-white text-emerald-700 shadow-sm' : 'border-transparent bg-white/50 text-gray-400 hover:border-emerald-100'}`}>{days === 365 ? '1 año' : `${days} días`}</button>)}
+            {([30, 90, 180, 365] as const).map(days => <button key={days} type="button" disabled={data.config?.analytics?.enabled === false} onClick={() => draft.config(config => config.analytics?.enabled === false ? null : { analytics: { ...config.analytics, enabled: true, retentionDays: days } })} className={`rounded-xl border px-1 py-2 text-[10px] font-semibold transition font-outfit ${(data.config?.analytics?.retentionDays ?? 180) === days ? 'border-emerald-300 bg-white text-emerald-700 shadow-sm' : 'border-transparent bg-white/50 text-gray-400 hover:border-emerald-100'}`}>{days === 365 ? '1 año' : `${days} días`}</button>)}
           </div>
           <p className="mt-2 text-[10px] leading-relaxed text-gray-400 font-outfit">Los eventos anteriores al periodo elegido se eliminan automáticamente. Los reportes solo muestran totales y sesiones anónimas.</p>
         </div>
       </div>
 
-      <PackageSettings config={data.config ?? {}} onChange={config => onChange({ config })} />
-      <AdditionalServicesPanel data={data} onChange={config => onChange({ config })} editingRevision={editingRevision} draftSource={draftSource} />
-      <ValidityPanel data={data} onSync={onValiditySync} />
+      <PackageSettings config={data.config ?? {}} onChange={config => draft.patch({ config })} draft={draft} />
+      <AdditionalServicesPanel data={data} onChange={config => draft.patch({ config })} editingRevision={editingRevision} draftSource={draftSource} />
+      <ValidityPanel key={data.id} data={data} onSync={fields => { if (draft.get().id === data.id) onValiditySync?.(fields); }} />
 
       {/* Pantalla de entrada / sobre */}
       {(() => {
@@ -137,8 +182,6 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
         const enabled = entry.enabled ?? resolveFeatures(cfg).entry;
         const base = `enkarta.com/i/${data.slug}`;
         const style = entry.style ?? 'template';
-        const setEntry = (patch: Partial<NonNullable<BuilderConfig['entry']>>) =>
-          onChange({ config: { ...cfg, entry: { ...entry, ...patch } } });
         return (
           <div className="border-t border-gray-100 pt-5">
             <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider mb-3">✉️ Pantalla de Entrada</h4>
@@ -149,7 +192,7 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
                 <p className="text-xs text-gray-400 font-outfit">El invitado pulsa &quot;Ver invitación&quot; para entrar</p>
               </div>
               <div
-                onClick={() => setEntry({ enabled: !enabled })}
+                onClick={() => setEntry((entry, config) => ({ enabled: !(entry.enabled ?? resolveFeatures(config).entry) }), 'toggle')}
                 className={`w-12 h-6 rounded-full transition-all cursor-pointer relative flex-shrink-0 ${enabled ? 'bg-enkarta-gold' : 'bg-gray-300'}`}
               >
                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${enabled ? 'left-7' : 'left-1'}`} />
@@ -183,7 +226,8 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
                     <ImageUploader
                       kind="video"
                       value={entry.videoUrl ?? ''}
-                      onChange={videoUrl => setEntry({ videoUrl })}
+                      onChange={videoUrl => setEntryMedia('videoUrl', videoUrl)}
+                      fieldRevision={videoRevision}
                       folder="entry"
                       ownerId={data.id}
                       aspect="portrait"
@@ -193,7 +237,8 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
                     />
                     <ImageUploader
                       value={entry.poster ?? ''}
-                      onChange={poster => setEntry({ poster })}
+                      onChange={poster => setEntryMedia('poster', poster)}
+                      fieldRevision={posterRevision}
                       folder="entry-posters"
                       ownerId={data.id}
                       aspect="portrait"
@@ -201,17 +246,17 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
                     />
                     <div>
                       <div className="mb-1 flex items-center justify-between text-[10px] font-outfit"><span className="text-gray-500">Duración máxima</span><span className="font-semibold text-enkarta-gold">{entry.duration ?? 4} s</span></div>
-                      <input type="range" min={2} max={8} step={0.5} value={entry.duration ?? 4} onChange={e => setEntry({ duration: parseFloat(e.target.value) })} className="w-full accent-enkarta-gold" />
+                      <input type="range" min={2} max={8} step={0.5} value={entry.duration ?? 4} onChange={e => setEntry({ duration: parseFloat(e.target.value) }, 'cinematic')} className="w-full accent-enkarta-gold" />
                     </div>
                     <div>
                       <div className="mb-1 flex items-center justify-between text-[10px] font-outfit"><span className="text-gray-500">Oscurecimiento</span><span className="font-semibold text-enkarta-gold">{entry.overlay ?? 42}%</span></div>
-                      <input type="range" min={0} max={80} step={1} value={entry.overlay ?? 42} onChange={e => setEntry({ overlay: parseInt(e.target.value) })} className="w-full accent-enkarta-gold" />
+                      <input type="range" min={0} max={80} step={1} value={entry.overlay ?? 42} onChange={e => setEntry({ overlay: parseInt(e.target.value) }, 'cinematic')} className="w-full accent-enkarta-gold" />
                     </div>
                     <label className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-3">
                       <span><span className="block text-xs text-gray-700 font-outfit">Permitir omitir</span><span className="block text-[10px] text-gray-400 font-outfit">El invitado puede entrar inmediatamente</span></span>
-                      <input type="checkbox" checked={entry.showSkip ?? true} onChange={e => setEntry({ showSkip: e.target.checked })} className="h-4 w-4 accent-enkarta-gold" />
+                      <input type="checkbox" checked={entry.showSkip ?? true} onChange={e => setEntry({ showSkip: e.target.checked }, 'cinematic')} className="h-4 w-4 accent-enkarta-gold" />
                     </label>
-                    {(entry.showSkip ?? true) && <input className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-enkarta-gold font-outfit" value={entry.skipLabel ?? ''} onChange={e => setEntry({ skipLabel: e.target.value })} placeholder="Omitir animación" />}
+                    {(entry.showSkip ?? true) && <input className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-enkarta-gold font-outfit" value={entry.skipLabel ?? ''} onChange={e => setEntry({ skipLabel: e.target.value }, 'cinematic')} placeholder="Omitir animación" />}
                     <a href={`/i/${data.slug}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center justify-center rounded-xl bg-[#3f382f] px-4 text-[10px] font-semibold uppercase tracking-[.12em] text-white shadow-sm transition-colors hover:bg-[#2f2923] font-outfit">Probar entrada en pantalla completa ↗</a>
                   </div>
                 )}
@@ -246,7 +291,7 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
               key={t.value}
               type="button"
               disabled={!t.available}
-              onClick={() => t.available && onChange({ template: t.value })}
+              onClick={() => { if (t.available) draft.patch({ template: t.value }); }}
               className={`p-2 rounded-xl border-2 text-center transition-all text-xs font-outfit ${
                 data.template === t.value
                   ? 'border-enkarta-gold bg-enkarta-gold/5 text-enkarta-gold font-medium'
@@ -283,7 +328,7 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
           <h4 className="text-xs font-outfit font-semibold text-red-400 uppercase tracking-wider mb-3">Zona de Peligro</h4>
           <button
             type="button"
-            onClick={onDelete}
+            onClick={() => { if (draft.isCurrent()) onDelete?.(); }}
             className="w-full py-2.5 rounded-xl border-2 border-red-200 text-red-500 text-sm font-outfit hover:bg-red-50 transition-all"
           >
             🗑️ Eliminar invitación permanentemente
