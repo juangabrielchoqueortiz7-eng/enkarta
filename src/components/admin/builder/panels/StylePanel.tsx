@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { BuilderConfig, InvitationParsed, TemplateTheme, TemplateTokens } from '@/lib/types';
 import { FONT_CATALOG, DEFAULT_FAMILY, googleFontsUrl, type FontRole } from '@/lib/fonts';
 import { themeForTemplate, tokensForTemplate } from '@/lib/template-themes';
@@ -17,10 +17,13 @@ import { auditDesignConsistency, cleanInvitationDesign } from '@/lib/design-audi
 import { hasInvitationVisualSystem } from '@/lib/marfil-visual-system';
 import DesignModeControl from '../DesignModeControl';
 import { resolveFeatures } from '@/lib/packages';
+import { useLegacyDraft } from '../useLegacyDraft';
 
 interface Props {
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
+  editingRevision?: { readonly current: number };
+  draftSource?: { readonly current: InvitationParsed };
 }
 
 const EVENT_LABEL = {
@@ -112,8 +115,9 @@ function KitCard({ kit, active, recommended, onApply, onDelete, disabled }: {
   );
 }
 
-export default function StylePanel({ data, onChange }: Props) {
+export default function StylePanel({ data, onChange, editingRevision, draftSource }: Props) {
   useCatalogFonts();
+  const draft = useLegacyDraft(data, onChange, undefined, editingRevision, draftSource);
   const cfg: BuilderConfig = data.config ?? {};
   const colorsIncluded = resolveFeatures(cfg).colorCustomization;
   const guided = cfg.designMode === 'guided' && hasInvitationVisualSystem(cfg.tokens);
@@ -127,8 +131,12 @@ export default function StylePanel({ data, onChange }: Props) {
   };
   const [customKits, setCustomKits] = useState<DesignKit[]>([]);
   const [kitName, setKitName] = useState('');
+  const kitNameRef = useRef(kitName);
+  kitNameRef.current = kitName;
   const [showAllKits, setShowAllKits] = useState(false);
-  const [confirmClean, setConfirmClean] = useState(false);
+  const [cleanDestination, setCleanDestination] = useState<string | null>(null);
+  const cleanDestinationRef = useRef<string | null>(null);
+  const confirmClean = cleanDestination === draft.destination('style:clean');
   useEffect(() => setCustomKits(listUserDesignKits()), []);
 
   const orderedKits = useMemo(() => recommendedDesignKits(data), [data]);
@@ -148,36 +156,94 @@ export default function StylePanel({ data, onChange }: Props) {
       : { background: theme.primary, color: theme.onPrimary, border: '1px solid transparent' };
 
   const setFont = (key: 'fontScript' | 'fontHeading' | 'fontBody', value: string) =>
-    onChange({ config: { ...cfg, [key]: value || undefined } });
-  const setTokens = (patch: Partial<TemplateTokens>) =>
-    onChange({ config: { ...cfg, tokens: { ...tokens, ...patch, typeScale: patch.typeScale ? { ...(tokens.typeScale ?? {}), ...patch.typeScale } : tokens.typeScale } } });
+    draft.config(current => current?.designMode === 'guided' && hasInvitationVisualSystem(current?.tokens) ? null : { [key]: value || undefined });
+  const setTokens = (patch: Partial<TemplateTokens>) => draft.patch(current => {
+    const currentCfg = current.config ?? {};
+    const defaults = tokensForTemplate(current.template);
+    const currentTokens = { ...defaults, ...(currentCfg.tokens ?? {}), typeScale: { ...(defaults.typeScale ?? {}), ...(currentCfg.tokens?.typeScale ?? {}) } };
+    return { config: { ...currentCfg, tokens: { ...currentTokens, ...patch, typeScale: patch.typeScale ? { ...currentTokens.typeScale, ...patch.typeScale } : currentTokens.typeScale } } };
+  });
   const setThemeColor = (key: keyof TemplateTheme, value: string) => {
-    if (!colorsIncluded) return;
-    const next: Partial<InvitationParsed> = { config: { ...cfg, theme: { ...theme, [key]: value } } };
-    if (key === 'primary') next.color_primary = value;
-    if (key === 'bg') next.color_secondary = value;
-    if (key === 'text') next.color_accent = value;
-    onChange(next);
+    draft.patch(current => {
+      const currentCfg = current.config ?? {};
+      if (!resolveFeatures(currentCfg).colorCustomization) return null;
+      const currentTheme = { ...themeForTemplate(current.template), ...(currentCfg.theme ?? {}) };
+      const next: Partial<InvitationParsed> = { config: { ...currentCfg, theme: { ...currentTheme, [key]: value } } };
+      if (key === 'primary') next.color_primary = value;
+      if (key === 'bg') next.color_secondary = value;
+      if (key === 'text') next.color_accent = value;
+      return next;
+    });
+  };
+  const setIconColor = (value: string) => {
+    draft.config(current => resolveFeatures(current).colorCustomization ? { iconColor: value } : null);
+  };
+  const setIconColorHex = (input: HTMLInputElement) => {
+    if (!draft.isCurrent()) return;
+    const current = draft.get();
+    const currentCfg = current.config ?? {};
+    if (!resolveFeatures(currentCfg).colorCustomization) return;
+    const value = input.value.trim();
+    if (/^#[0-9a-f]{6}$/i.test(value)) setIconColor(value);
+    else {
+      const currentTheme = { ...themeForTemplate(current.template), ...(currentCfg.theme ?? {}) };
+      input.value = currentCfg.iconColor || currentTheme.primary || '#b8975a';
+    }
+  };
+  const setDesignMode = (value: boolean) => {
+    draft.config(current => hasInvitationVisualSystem(current?.tokens) ? { designMode: value ? 'guided' : 'free' } : null);
+  };
+  const clearCleanConfirmation = () => {
+    cleanDestinationRef.current = null;
+    setCleanDestination(null);
   };
   const applyKit = (kit: DesignKit) => {
-    if (!colorsIncluded) return;
-    onChange(applyDesignKitPatch(data, kit));
-    setConfirmClean(false);
+    if (!draft.isCurrent() || !resolveFeatures(draft.get().config).colorCustomization) return;
+    clearCleanConfirmation();
+    draft.patch(current => resolveFeatures(current.config).colorCustomization ? applyDesignKitPatch(current, kit) : null);
+  };
+  const changeKitName = (value: string) => {
+    if (!draft.isCurrent()) return;
+    kitNameRef.current = value;
+    setKitName(value);
   };
   const saveCurrentKit = () => {
-    setCustomKits(saveUserDesignKit(kitName, data));
+    if (!draft.isCurrent()) return;
+    setCustomKits(saveUserDesignKit(kitNameRef.current, draft.get()));
+    kitNameRef.current = '';
     setKitName('');
   };
+  const deleteKit = (id: string) => {
+    if (!draft.isCurrent()) return;
+    setCustomKits(deleteUserDesignKit(id));
+  };
+  const toggleKits = () => {
+    if (draft.isCurrent()) setShowAllKits(value => !value);
+  };
+  const requestClean = () => {
+    if (!draft.isCurrent() || !resolveFeatures(draft.get().config).colorCustomization) return;
+    const destination = draft.destination('style:clean');
+    cleanDestinationRef.current = destination;
+    setCleanDestination(destination);
+  };
+  const cancelClean = () => {
+    if (draft.isCurrent()) clearCleanConfirmation();
+  };
   const cleanDesign = () => {
-    const kit = activeKit ?? bestKit;
-    if (kit) onChange(cleanInvitationDesign(data, kit));
-    setConfirmClean(false);
+    if (!draft.isCurrent() || cleanDestinationRef.current !== draft.destination('style:clean') || !resolveFeatures(draft.get().config).colorCustomization) return;
+    clearCleanConfirmation();
+    draft.patch(current => {
+      if (!resolveFeatures(current.config).colorCustomization) return null;
+      const currentKits = recommendedDesignKits(current);
+      const kit = [...currentKits, ...listUserDesignKits()].find(item => item.id === current.config?.designKitId) ?? currentKits[0];
+      return kit ? cleanInvitationDesign(current, kit) : null;
+    });
   };
 
   return (
     <div className="space-y-4 p-4 pb-8">
       {!colorsIncluded && <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900 font-outfit">Plus conserva la paleta del diseño elegido. Para cambiar colores o aplicar otro kit, registra Personalización de color como adicional en Configuración.</p>}
-      {hasInvitationVisualSystem(cfg.tokens) && <DesignModeControl guided={guided} onChange={value => onChange({ config: { ...cfg, designMode: value ? 'guided' : 'free' } })} />}
+      {hasInvitationVisualSystem(cfg.tokens) && <DesignModeControl guided={guided} onChange={setDesignMode} />}
       <section className={cardCls}>
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -192,7 +258,7 @@ export default function StylePanel({ data, onChange }: Props) {
           ))}
         </div>
         {orderedKits.length > 4 && (
-          <button type="button" onClick={() => setShowAllKits(value => !value)} className="mt-3 w-full rounded-xl border border-[#e9e3db] py-2 text-[11px] font-outfit font-medium text-[#746b61] hover:bg-[#faf8f5]">{showAllKits ? 'Ver recomendados' : `Ver los ${orderedKits.length} kits`}</button>
+          <button type="button" onClick={toggleKits} className="mt-3 w-full rounded-xl border border-[#e9e3db] py-2 text-[11px] font-outfit font-medium text-[#746b61] hover:bg-[#faf8f5]">{showAllKits ? 'Ver recomendados' : `Ver los ${orderedKits.length} kits`}</button>
         )}
         {activeKit && <p className="mt-3 rounded-xl bg-[#f8f5ef] px-3 py-2 text-[10px] font-outfit text-[#756c62]">Base activa: <strong>{activeKit.name}</strong>. Puedes personalizarla y guardar tu propia versión.</p>}
       </section>
@@ -203,12 +269,12 @@ export default function StylePanel({ data, onChange }: Props) {
           <span className="text-[10px] font-outfit text-[#aaa198]">{customKits.length}/30</span>
         </div>
         <div className="mt-3 flex gap-2">
-          <input value={kitName} onChange={event => setKitName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') saveCurrentKit(); }} placeholder="Ej. Boda verde elegante" className={inputCls} />
+          <input value={kitName} onChange={event => changeKitName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') saveCurrentKit(); }} placeholder="Ej. Boda verde elegante" className={inputCls} />
           <button type="button" onClick={saveCurrentKit} className="flex-none rounded-xl bg-[#3f382f] px-4 text-xs font-outfit font-semibold text-white hover:bg-[#2f2a24]">Guardar</button>
         </div>
         {customKits.length > 0 && (
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            {customKits.map(kit => <KitCard key={kit.id} kit={kit} disabled={!colorsIncluded} active={cfg.designKitId === kit.id} onApply={() => applyKit(kit)} onDelete={() => setCustomKits(deleteUserDesignKit(kit.id))} />)}
+            {customKits.map(kit => <KitCard key={kit.id} kit={kit} disabled={!colorsIncluded} active={cfg.designKitId === kit.id} onApply={() => applyKit(kit)} onDelete={() => deleteKit(kit.id)} />)}
           </div>
         )}
       </section>
@@ -291,10 +357,10 @@ export default function StylePanel({ data, onChange }: Props) {
         </div>
         <div className="mt-4 grid grid-cols-[1fr_1.4fr] gap-3 rounded-xl border border-[#eee8e1] p-3">
           <div>
-            <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Color de iconos</span><input type="color" disabled={!colorsIncluded} value={cfg.iconColor || theme.primary || '#b8975a'} onChange={event => onChange({ config: { ...cfg, iconColor: event.target.value } })} className="h-10 w-full cursor-pointer rounded-lg border border-[#e5dfd7] p-1" /></label>
-            <input disabled={!colorsIncluded} aria-label="Color de iconos HEX" key={cfg.iconColor || theme.primary} defaultValue={cfg.iconColor || theme.primary || '#b8975a'} maxLength={7} spellCheck={false} onBlur={event => { const value = event.target.value.trim(); if (/^#[0-9a-f]{6}$/i.test(value)) onChange({ config: { ...cfg, iconColor: value } }); else event.target.value = cfg.iconColor || theme.primary || '#b8975a'; }} className="mt-1 w-full rounded border border-[#e5dfd7] px-2 py-1.5 text-xs uppercase" />
+            <label><span className="mb-1 block text-[10px] font-outfit text-[#756d64]">Color de iconos</span><input type="color" disabled={!colorsIncluded} value={cfg.iconColor || theme.primary || '#b8975a'} onChange={event => setIconColor(event.target.value)} className="h-10 w-full cursor-pointer rounded-lg border border-[#e5dfd7] p-1" /></label>
+            <input disabled={!colorsIncluded} aria-label="Color de iconos HEX" key={cfg.iconColor || theme.primary} defaultValue={cfg.iconColor || theme.primary || '#b8975a'} maxLength={7} spellCheck={false} onBlur={event => setIconColorHex(event.target)} className="mt-1 w-full rounded border border-[#e5dfd7] px-2 py-1.5 text-xs uppercase" />
           </div>
-          <label><span className="mb-1 flex justify-between text-[10px] font-outfit text-[#756d64]"><span>Tamaño de iconos</span><strong>{Math.round((cfg.iconScale ?? 1) * 100)}%</strong></span><input type="range" min={0.7} max={1.4} step={0.05} value={cfg.iconScale ?? 1} onChange={event => onChange({ config: { ...cfg, iconScale: Number(event.target.value) } })} className="mt-2 w-full accent-enkarta-gold" /></label>
+          <label><span className="mb-1 flex justify-between text-[10px] font-outfit text-[#756d64]"><span>Tamaño de iconos</span><strong>{Math.round((cfg.iconScale ?? 1) * 100)}%</strong></span><input type="range" min={0.7} max={1.4} step={0.05} value={cfg.iconScale ?? 1} onChange={event => draft.config({ iconScale: Number(event.target.value) })} className="mt-2 w-full accent-enkarta-gold" /></label>
         </div>
         <div className="mt-4 overflow-hidden rounded-2xl border border-[#ebe5dd] p-4" style={{ background: theme.bg }}>
           <div className="mx-auto max-w-[260px] text-center">
@@ -339,11 +405,11 @@ export default function StylePanel({ data, onChange }: Props) {
           ))}
         </div>
         {!confirmClean ? (
-          <button type="button" disabled={!colorsIncluded} onClick={() => setConfirmClean(true)} className="mt-4 w-full rounded-xl border border-[#ded7ce] bg-white py-2.5 text-xs font-outfit font-semibold text-[#61584f] hover:border-enkarta-gold hover:text-enkarta-gold">Limpiar diseño</button>
+          <button type="button" disabled={!colorsIncluded} onClick={requestClean} className="mt-4 w-full rounded-xl border border-[#ded7ce] bg-white py-2.5 text-xs font-outfit font-semibold text-[#61584f] hover:border-enkarta-gold hover:text-enkarta-gold">Limpiar diseño</button>
         ) : (
           <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
             <p className="text-[10px] font-outfit leading-relaxed text-amber-800">Se normalizarán fuentes, colores, radios y espacios manuales usando <strong>{(activeKit ?? bestKit)?.name}</strong>. Textos, fotos, bloques e información del evento se conservan.</p>
-            <div className="mt-2 flex gap-2"><button type="button" onClick={() => setConfirmClean(false)} className="flex-1 rounded-lg border border-amber-200 bg-white py-2 text-[10px] font-outfit text-amber-800">Cancelar</button><button type="button" onClick={cleanDesign} className="flex-1 rounded-lg bg-amber-700 py-2 text-[10px] font-outfit font-semibold text-white">Sí, normalizar</button></div>
+            <div className="mt-2 flex gap-2"><button type="button" onClick={cancelClean} className="flex-1 rounded-lg border border-amber-200 bg-white py-2 text-[10px] font-outfit text-amber-800">Cancelar</button><button type="button" onClick={cleanDesign} className="flex-1 rounded-lg bg-amber-700 py-2 text-[10px] font-outfit font-semibold text-white">Sí, normalizar</button></div>
           </div>
         )}
       </section>
