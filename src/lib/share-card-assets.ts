@@ -3,6 +3,18 @@ import { SITE_URL } from './site';
 
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 
+/** Archives may have historical extensions/MIME labels; preserve bytes and identify their real encoding. */
+function rasterType(bytes: Uint8Array): 'image/png' | 'image/jpeg' | 'image/gif' | null {
+  if (bytes.length >= 24 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+    && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a
+    && String.fromCharCode(...bytes.subarray(12, 16)) === 'IHDR') return 'image/png';
+  if (bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  if (bytes.length >= 10 && ['GIF87a', 'GIF89a'].includes(String.fromCharCode(...bytes.subarray(0, 6)))) return 'image/gif';
+  // Satori in the installed Next.js cannot decode WebP. Use the existing card
+  // background if unsupported/corrupt; never relabel, rewrite or replace an original.
+  return null;
+}
+
 /** Share-card servers only fetch sources already allowed for application images. */
 export function shareCardCoverUrl(source: string | null | undefined): URL | null {
   if (!source || /[\\\u0000-\u001f\u007f]/.test(source)) return null;
@@ -59,7 +71,8 @@ export async function shareCardCover(source: string | null | undefined): Promise
     const type = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() || '';
     if (!IMAGE_TYPES.has(type)) return null;
     const bytes = await readLimitedBytes(response, 8 * 1024 * 1024);
-    return bytes?.length ? `data:${type};base64,${Buffer.from(bytes).toString('base64')}` : null;
+    const encoding = bytes && rasterType(bytes);
+    return bytes && encoding ? `data:${encoding};base64,${Buffer.from(bytes).toString('base64')}` : null;
   });
 }
 

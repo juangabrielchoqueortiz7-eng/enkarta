@@ -42,6 +42,7 @@ const { readInvitationBySlug } = require(source('lib/public-invitation-read.ts')
 const { shareCardCoverUrl, shareCardCover, shareCardFont, shareCardAsset } = require(source('lib/share-card-assets.ts'));
 const page = require(source('app/i/[slug]/page.tsx')), Og = require(source('app/i/[slug]/opengraph-image.tsx')).default;
 const props = query => ({ params: Promise.resolve({ slug: 'qa-guest' }), searchParams: Promise.resolve(query || {}) });
+const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j4s8AAAAASUVORK5CYII=', 'base64');
 const renderText = value => typeof value === 'string' ? value : Array.isArray(value) ? value.map(renderText).join(' ') : value && typeof value === 'object' ? renderText(value.props?.children) : '';
 beforeEach(() => {
   row = { id: '10000000-0000-4000-8000-000000000001', slug: 'qa-guest', status: 'ready', type: 'boda', names: 'QA PRIVATE DRAFT', builder_config: {}, expires_at: null };
@@ -157,8 +158,8 @@ test('cover fetch rejects arbitrary hosts, credentials, redirects, non-images an
 
 test('allowed original covers become an in-memory data URL with bounded bytes and no Satori network fetch', async () => {
   const requests = [];
-  global.fetch = async (url, options) => { requests.push({ url: String(url), options }); return new Response(new Uint8Array([1, 2, 3]), { headers: { 'content-type': 'image/webp' } }); };
-  assert.equal(await shareCardCover('/invitations/qa/cover.webp'), 'data:image/webp;base64,AQID');
+  global.fetch = async (url, options) => { requests.push({ url: String(url), options }); return new Response(tinyPng, { headers: { 'content-type': 'image/png' } }); };
+  assert.equal(await shareCardCover('/invitations/qa/cover.webp'), 'data:image/png;base64,' + tinyPng.toString('base64'));
   assert.equal(requests[0].url, 'https://enkarta.vercel.app/invitations/qa/cover.webp');
   assert.equal(requests[0].options.redirect, 'error'); assert.equal(requests[0].options.cache, 'no-store'); assert.equal(requests[0].options.referrerPolicy, 'no-referrer');
   assert.ok(requests[0].options.signal instanceof AbortSignal);
@@ -170,6 +171,22 @@ test('oversized covers are rejected by declared size and streaming byte limit', 
   assert.equal(await shareCardCover('/catalog/a.jpg'), null);
   global.fetch = async () => new Response(new Uint8Array(8 * 1024 * 1024 + 1), { headers: { 'content-type': 'image/png' } });
   assert.equal(await shareCardCover('/catalog/a.jpg'), null);
+});
+
+test('historical PNG archive with jpg extension and JPEG Content-Type keeps exact bytes and correct PNG data MIME', async () => {
+  const original = fs.readFileSync(path.join(root, 'public/catalog/azure.jpg'));
+  assert.equal(original.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+  global.fetch = async () => new Response(original, { headers: { 'content-type': 'image/jpeg' } });
+  const data = await shareCardCover('/catalog/azure.jpg');
+  assert.ok(data.startsWith('data:image/png;base64,'));
+  assert.deepEqual(Buffer.from(data.split(',')[1], 'base64'), original);
+});
+
+test('unsupported WebP and bytes that disagree with every supported encoding use the card background', async () => {
+  for (const bytes of [Buffer.from('RIFF\x0c\x00\x00\x00WEBPVP8 ', 'binary'), Buffer.from('not an image'), Buffer.from([0x89, 0x50, 0x4e, 0x47])]) {
+    global.fetch = async () => new Response(bytes, { headers: { 'content-type': 'image/jpeg' } });
+    assert.equal(await shareCardCover('/catalog/azure.jpg'), null);
+  }
 });
 
 test('font requests preserve the two existing families without sending names or event text to Google', async () => {
@@ -195,10 +212,10 @@ test('a stalled asset or response body releases the image after its deadline and
 
 test('OG renders only published content, resolved image bytes and private no-store headers', async () => {
   const requests = [];
-  global.fetch = async url => { requests.push(String(url)); return String(url).includes('/catalog/') ? new Response(new Uint8Array([1, 2]), { headers: { 'content-type': 'image/jpeg' } }) : new Response('', { status: 404 }); };
+  global.fetch = async url => { requests.push(String(url)); return String(url).includes('/catalog/') ? new Response(tinyPng, { headers: { 'content-type': 'image/jpeg' } }) : new Response('', { status: 404 }); };
   const result = await Og({ params: Promise.resolve({ slug: 'qa-guest' }) });
   const text = renderText(result.tree), serialized = JSON.stringify(result.tree);
-  assert.match(text, /QA Publicada/); assert.doesNotMatch(text, /QA PRIVATE/); assert.match(serialized, /data:image\/jpeg;base64/);
+  assert.match(text, /QA Publicada/); assert.doesNotMatch(text, /QA PRIVATE/); assert.match(serialized, /data:image\/png;base64/);
   assert.equal(result.options.headers['Cache-Control'], 'private, no-store'); assert.equal(result.options.headers['Referrer-Policy'], 'no-referrer');
   assert.doesNotMatch(requests.join(' '), /text=|QA PRIVATE|QA Publicada/);
 });
