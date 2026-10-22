@@ -23,6 +23,7 @@ import { validateInvitationBuilder } from '@/lib/builder-validation';
 import { activePublishedVersion, hydrateBuilderState, nextScheduledVersion, persistBuilderVersion, saveBuilderVersion, type BuilderVersion } from '@/lib/builder-versions';
 import { publicTemplateName } from '@/lib/enkarta-collections';
 import { publicationSummaryText, summarizeBuilderChanges } from '@/lib/builder-workflow';
+import { useBuilderDuplicate } from './useBuilderDuplicate';
 
 type Tab = 'content' | 'blocks' | 'elements' | 'style' | 'decor' | 'motion' | 'media' | 'guests' | 'versions' | 'quality' | 'export' | 'config';
 
@@ -773,56 +774,12 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     publicOperation.current = false; setSaving(false);
   };
 
-  const handleDuplicate = async () => {
-    if (!confirm('¿Duplicar esta invitación? Se creará una copia como borrador con el mismo diseño.')) return;
-    const payload = {
-      slug: `${data.slug}-copia-${Date.now().toString(36).slice(-4)}`,
-      status: 'draft',
-      template: data.template,
-      type: data.type,
-      names: data.names,
-      event_date: data.event_date,
-      rsvp_deadline: data.rsvp_deadline,
-      ceremony_time: data.ceremony_time,
-      ceremony_place: data.ceremony_place,
-      ceremony_address: data.ceremony_address,
-      reception_time: data.reception_time,
-      reception_place: data.reception_place,
-      reception_address: data.reception_address,
-      guest_name: data.guest_name,
-      guest_passes: data.guest_passes,
-      message: data.message,
-      dress_code: data.dress_code,
-      no_kids: data.no_kids,
-      parents_groom: data.parents_groom,
-      parents_bride: data.parents_bride,
-      sponsors: data.sponsors,
-      itinerary: data.itinerary,
-      gift_message: data.gift_message,
-      bank_account: data.bank_account,
-      cover_image_url: data.cover_image_url,
-      gallery_url: data.gallery_url,
-      color_primary: data.color_primary,
-      color_secondary: data.color_secondary,
-      color_accent: data.color_accent,
-      phone_whatsapp: data.phone_whatsapp,
-      builder_config: data.config ?? {},
-    };
-    try {
-      const res = await fetch('/api/admin/invitations', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        const nv = await res.json();
-        router.push(`${builderPath}/${nv.id}`);
-      } else {
-        const err = await res.json();
-        alert(err.error || 'Error al duplicar');
-      }
-    } catch {
-      alert('Error de conexión');
-    }
-  };
+  const { handleDuplicate, duplicate, duplicateError } = useBuilderDuplicate({
+    sourceId: initialData.id, builderPath,
+    snapshot: () => dataRef.current, sequence: () => editSequence.current, dirty: () => hasChanges.current,
+    canStart: () => !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current,
+    navigate: href => router.push(href),
+  });
 
   const handleDelete = async () => {
     if (!confirm('¿Eliminar esta invitación permanentemente? Esta acción no se puede deshacer.')) return;
@@ -929,13 +886,15 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             )}
             <button
               onClick={handleDuplicate}
-              disabled={fixtureMode}
+              disabled={fixtureMode || saving || publishOpen || !!duplicate}
               title="Duplicar invitación"
               type="button"
               aria-label="Duplicar invitación"
-              className="hidden h-11 w-11 items-center justify-center rounded-xl border border-gray-300 text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 sm:flex"
+              aria-busy={duplicate?.phase === 'pending'}
+              className="hidden min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 sm:flex"
             >
               <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7V5a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2" /></svg>
+              {duplicate?.phase === 'pending' ? 'Duplicando…' : 'Duplicar'}
             </button>
             <a
               href={`/i/${data.slug}?preview=1`}
@@ -995,6 +954,12 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
           </div>
         </div>
       </header>
+      {duplicate && <div role="status" aria-live="polite" aria-atomic="true" className={`flex min-w-0 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b px-4 py-3 font-outfit text-sm leading-6 ${duplicate.phase === 'uncertain' ? 'border-amber-200 bg-amber-50 text-amber-950' : 'border-[#e7e1d9] bg-[#f7f3ed] text-[#514735]'}`}>
+        <p className="min-w-0 break-words">{duplicate.message}</p>
+        {duplicate.href && <a href={duplicate.href} target="_blank" rel="noopener noreferrer" aria-label="Abrir copia en una pestaña nueva" className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold underline underline-offset-4 hover:bg-[#ece4d8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2">Abrir copia <span className="sr-only">en una pestaña nueva</span></a>}
+        {duplicate.phase === 'uncertain' && <a href={backHref} target="_blank" rel="noopener noreferrer" aria-label="Revisar mis invitaciones en una pestaña nueva" className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold underline underline-offset-4 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2">Revisar mis invitaciones <span className="sr-only">en una pestaña nueva</span></a>}
+      </div>}
+      {duplicateError && <p role="alert" className="shrink-0 break-words border-b border-red-200 bg-red-50 px-4 py-3 font-outfit text-sm leading-6 text-red-900">{duplicateError}</p>}
       {contractNotice && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 font-outfit"><span>{contractNotice}</span><button type="button" onClick={() => setActiveTab('config')} className="font-semibold underline">Ver paquete y adicionales</button></div>}
       {publicationNotice && <p role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 font-outfit">{publicationNotice}</p>}
       {saveError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"><span>{saveError}</span><button type="button" className="min-h-11 underline" onClick={() => {
