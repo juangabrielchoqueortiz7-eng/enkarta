@@ -38,3 +38,18 @@ La aceptación física del escritorio, consentimiento de Google, reproducción m
 Se incorporan 51 regresiones a las existentes. Las suites nuevas ejercitan persistencia y bibliotecas reales con transporte aislado, controles reales de revisión, calidad, Google y vigencia, y el panel real de Socios al salir. Las suites ampliadas comprueban coordinación con el constructor, continuidad de herramientas, rol, accesos y exportación. Se adaptaron las expectativas antiguas de reintento tras una respuesta incierta y el transporte simulado de secciones; se mantienen las comprobaciones de contenido, permisos y concurrencia.
 
 La evidencia final de commit, CI, despliegue, verificaciones ficticias y limpieza se registra en `tmp/constructor-socios-closure/RESULTADO.json` y al completar esta entrega en el apartado siguiente. Esta referencia reemplaza la secuencia de «siguiente mejora pendiente» para el cierre técnico de este bloque; el plan original de evolución del producto permanece como antecedente.
+
+## Evidencia del release del 22 de octubre de 2026
+
+- Aplicación integrada en main: `e793fb791ce9f9dfd0b9352a27638abe8700b6bf`.
+- Producción Ready: `dpl_A6xmpL8jAGgwXZ47nbbvWn42vSPc`, en [Enkarta](https://enkarta.vercel.app).
+- [CI del commit exacto](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39859487341): correcto, incluidos `npm run verify` y `npm audit --omit=dev --audit-level=high`.
+- Verificación local completa: **1.966 pruebas**, 70 ejecuciones de suites, sin fallos; lint, TypeScript y build correctos. Permanecen los avisos anteriores de imágenes nativas en la variante heredada. No se sustituyeron sus recursos para silenciarlos.
+- Entradas del despliegue: hashes de los 27 archivos críticos coincidentes con el release revisado. Marcadores del código compilado comprobados por HTTP.
+- Copia administrativa ficticia: creación, un único incremento de revisión, conservación del documento, vista privada antes y después del guardado, y ausencia de datos del borrador para visitas anónimas. Historial: alta de versión y nota, cambio de estado de nota y dos bajas confirmadas, comprobadas mediante lecturas posteriores.
+- Socio ficticio: cuenta sin suscripción activa ni pagos, creación y guardado de su propio borrador, identidad de biblioteca aislada y vista privada propia. Denegados el editor, historial y escritura del otro borrador ficticio. Eliminación del borrador y cierre de sesión confirmados. Estas siete comprobaciones no equivalen a consentimiento real de Google en un navegador.
+- Limpieza: eliminadas ambas invitaciones ficticias y la cuenta Auth/perfil del socio. Sus filas relacionadas quedaron en cero; se comprobó almacenamiento vacío y ambas URL de la copia administrativa devuelven 404 después de cerrar sesión. No se subieron ni eliminaron archivos de invitaciones existentes.
+- Conservación: **597 archivos protegidos** sin cambios y **129 recursos públicos** idénticos por SHA-256. Se comprobaron seis rutas públicas; las rutas de desarrollo continúan ocultas y la cuenta privada sin sesión devuelve 401.
+- BCP conserva `BCP_CONTRACT_REQUIRED`: cero pagos, operaciones bancarias, mensajes, correos o publicaciones durante este QA. La migración 021 local permanece intacta y excluida del release.
+
+Queda cerrado el alcance técnico conjunto de este bloque. La aceptación visual manual de escritorio permanece pendiente por acuerdo del usuario; no se declara realizada ni se convierte en un requisito de otra cadena de correcciones. Las futuras capacidades de producto y la integración BCP cuando exista su contrato oficial son alcances separados.
