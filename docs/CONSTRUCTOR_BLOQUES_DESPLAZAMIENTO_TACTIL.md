@@ -11,7 +11,7 @@ Reorder.Item escuchaba el arrastre en toda la fila. El asa de puntos era decorat
 - BlockOrderRow desactiva el arrastre implícito de la fila con dragListener=false. Solo el asa etiquetada activa useDragControls. La fila mantiene touch-action: pan-y; únicamente el asa utiliza none.
 - Flechas Subir/Bajar permiten ordenar con pulsación o teclado. Resuelven ID y tipo en el documento vigente, conservan otros cambios y no restauran filas eliminadas. Los extremos se desactivan.
 - La acción principal muestra «Editar bloque». Las acciones tienen objetivos de al menos 44 px, etiquetas accesibles y foco visible; se distribuyen en varias líneas cuando falta espacio.
-- Abrir el editor vuelve al inicio exclusivamente del contenedor de controles y enfoca su encabezado sin mover la página. Marcar filas para selección múltiple conserva el desplazamiento; «Editar selección» sí abre el inspector desde arriba.
+- Abrir el editor individual vuelve al inicio exclusivamente del contenedor de controles y enfoca su encabezado sin mover la página. Marcar filas para selección múltiple conserva el desplazamiento; pasar de esa selección al inspector de un bloque también vuelve al inicio.
 - Contenido, Diseño, Movimiento y Posición usan dos columnas en teléfonos estrechos y cuatro en pantallas mayores. El título y la categoría del bloque pueden ocupar varias líneas.
 
 ## Regresiones y evidencia
@@ -38,3 +38,15 @@ Skills aplicadas: Impeccable (Operate y adaptación móvil), Vercel React Best P
 - Navegador local Chromium: revisión de escritorio, 390 y 320 px; filas con pan-y calculado, desplazamiento de lista de 0 a 1458 px sin cambiar orden, apertura del inspector con scrollTop=0 y sin desbordamiento horizontal del panel. Esto no acredita el gesto físico del Android.
 
 La evidencia de ejecución y despliegue se conserva en tmp/builder-block-touch/. La repetición de la aceptación manual y la limpieza final del borrador quedan pendientes.
+
+## Resultado de producción
+
+La corrección de aplicación a724d4ae4085a520208fb0f51cba0fa73e66b54d está integrada en main y desplegada como dpl_45nDV2kenGhoxrw4g9zUCkEgLz7C, **READY**, con el alias [enkarta.vercel.app](https://enkarta.vercel.app). [CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39708930033) terminó correctamente, incluida la verificación completa y la auditoría de dependencias de producción.
+
+- Cuatro fuentes exactas contrastadas con sus UID de entrada en Vercel: la fila, el panel, InvitationBuilder y el bloqueo de BCP. El editor publicado contiene los nuevos marcadores compilados.
+- Lectura autenticada exclusivamente del borrador ficticio existente: HTTP 200. Su enlace público conserva la pantalla de preparación, sin nombres ni contenido de la invitación. Cookie temporal cerrada en finally.
+- **129/129 recursos originales publicados** conservan longitud y SHA-256; **6/6 rutas** responden como se esperaba. Los **597 archivos locales protegidos** permanecen intactos.
+- Cero mutaciones de negocio, fixtures nuevos, archivos subidos, pagos, llamadas bancarias o mensajes durante esta verificación remota. El único borrador previo sigue reservado para la aceptación del usuario; su limpieza se realizará al finalizar ese recorrido.
+- La ruta temporal de revisión local no está en los archivos de entrada del despliegue. No se requiere SQL. La configuración remota del proveedor no se inspecciona: se verifica que el bloqueo BCP publicado no cambió.
+
+Estos resultados acreditan código, rutas y conservación; la repetición del desplazamiento táctil en el Android físico continúa pendiente. El inspector de selección múltiple y el gesto de mover elementos dentro del lienzo son recorridos separados de la edición individual revisada aquí.
