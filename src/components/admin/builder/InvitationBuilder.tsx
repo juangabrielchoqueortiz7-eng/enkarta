@@ -121,7 +121,10 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const [mobileWorkspace, setMobileWorkspace] = useState<'edit' | 'preview'>('edit');
   const [contractNotice, setContractNotice] = useState('');
   const [publicationNotice, setPublicationNotice] = useState('');
+  const [privatePreviewNotice, setPrivatePreviewNotice] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
+  const privatePreviewContext = useRef({ id: initialData.id, fixtureMode, publishOpen, offline: saveState === 'offline' });
+  privatePreviewContext.current = { id: initialData.id, fixtureMode, publishOpen, offline: saveState === 'offline' };
   const publishDialog = useRef<HTMLDivElement | null>(null);
   const publishReturnFocus = useRef<HTMLElement | null>(null);
   const publishDialogBusy = useRef(saving);
@@ -781,6 +784,43 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     navigate: href => router.push(href),
   });
 
+  const privatePreviewIssue = useCallback((checkConnection = false) => {
+    const context = privatePreviewContext.current;
+    if (context.fixtureMode) return 'Esta muestra no guarda cambios. Revisa la invitación en el lienzo del constructor.';
+    if (context.id !== dataRef.current.id) return 'La invitación cambió. Recarga el constructor antes de abrir su vista privada.';
+    if (publicOperation.current || context.publishOpen) return 'Finaliza la revisión de publicación antes de abrir la vista privada.';
+    // Initial markup stays identical on server/client; the existing connection
+    // effect updates offline state. At activation also inspect the live browser.
+    if (context.offline || (checkConnection && typeof navigator !== 'undefined' && !navigator.onLine)) return 'Vuelve a conectarte y comprueba el guardado antes de abrir la vista privada.';
+    if (manualSavePending.current || pendingDraftSave.current) return 'Espera a que termine el guardado antes de abrir la vista privada.';
+    if (hasChanges.current || failedSaveAt.current !== null) return 'Guarda los cambios y espera «Guardado» antes de abrir la vista privada.';
+    return '';
+  }, []);
+  const handlePrivatePreview = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    if (event.defaultPrevented) return;
+    // A native click may commit inline text on blur before React paints again.
+    // Inspect current refs after that commit, including auxiliary/context clicks.
+    document.activeElement?.closest<HTMLElement>('[data-edit-key][contenteditable="true"]')?.blur();
+    if (typeof navigator !== 'undefined' && !navigator.onLine) setSaveState('offline');
+    const expected = `/i/${encodeURIComponent(dataRef.current.slug)}?preview=1`;
+    if (privatePreviewIssue(true) || event.currentTarget.getAttribute('href') !== expected) {
+      event.preventDefault(); setPrivatePreviewNotice(true); return;
+    }
+    setPrivatePreviewNotice(false);
+    // Keep native target=_blank behavior; do not save, publish or use a popup.
+  }, [privatePreviewIssue]);
+  const privatePreviewReason = privatePreviewIssue();
+  const privatePreviewProps = {
+    onClick: handlePrivatePreview, onAuxClick: handlePrivatePreview, onContextMenu: handlePrivatePreview,
+    title: privatePreviewReason || 'Abrir el último borrador guardado en una pestaña nueva. No publica la invitación.',
+    'aria-label': 'Abrir vista privada del borrador', 'aria-describedby': 'builder-private-preview-help',
+    className: 'hidden min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 sm:flex',
+  };
+  const privatePreviewContent = <><svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+  </svg>Vista privada</>;
+
   const handleDelete = async () => {
     if (!confirm('¿Eliminar esta invitación permanentemente? Esta acción no se puede deshacer.')) return;
     try {
@@ -896,19 +936,9 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
               <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7V5a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2" /></svg>
               {duplicate?.phase === 'pending' ? 'Duplicando…' : 'Duplicar'}
             </button>
-            <a
-              href={`/i/${data.slug}?preview=1`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Abrir vista privada del borrador"
-              aria-label="Abrir vista privada del borrador"
-              className="hidden h-11 w-11 items-center justify-center rounded-xl border border-gray-300 text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 sm:flex"
-            >
-              <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </a>
+            {privatePreviewReason
+              ? <button {...privatePreviewProps} type="button" aria-disabled="true" aria-busy={saving || saveState === 'saving'}>{privatePreviewContent}</button>
+              : <a {...privatePreviewProps} href={`/i/${encodeURIComponent(data.slug)}?preview=1`} target="_blank" rel="noopener noreferrer">{privatePreviewContent}</a>}
             <button
               onClick={() => handleSave()}
               disabled={saving}
@@ -932,6 +962,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
           </div>
           <div className="flex w-full min-w-0 flex-wrap items-center gap-2 border-t border-[#eee8df] pt-2">
             <span className="hidden text-xs text-gray-600 font-outfit lg:inline">Guardar: Ctrl+S / ⌘S</span>
+            <span id="builder-private-preview-help" className="hidden text-xs leading-5 text-gray-600 font-outfit sm:inline">Vista privada: muestra el último guardado; no publica.</span>
             <span className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium leading-5 ${
               validation.errors.length ? 'bg-red-50 text-red-800' : validation.warnings.length ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'
             }`}>
@@ -954,6 +985,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
           </div>
         </div>
       </header>
+      {privatePreviewNotice && <p role="status" aria-live="polite" aria-atomic="true" className="shrink-0 break-words border-b border-[#e7e1d9] bg-[#f7f3ed] px-4 py-3 font-outfit text-sm leading-6 text-[#514735]">{privatePreviewIssue(true) || 'El borrador está guardado. Pulsa «Vista privada» para abrirlo en otra pestaña.'}</p>}
       {duplicate && <div role="status" aria-live="polite" aria-atomic="true" className={`flex min-w-0 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b px-4 py-3 font-outfit text-sm leading-6 ${duplicate.phase === 'uncertain' ? 'border-amber-200 bg-amber-50 text-amber-950' : 'border-[#e7e1d9] bg-[#f7f3ed] text-[#514735]'}`}>
         <p className="min-w-0 break-words">{duplicate.message}</p>
         {duplicate.href && <a href={duplicate.href} target="_blank" rel="noopener noreferrer" aria-label="Abrir copia en una pestaña nueva" className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold underline underline-offset-4 hover:bg-[#ece4d8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2">Abrir copia <span className="sr-only">en una pestaña nueva</span></a>}
