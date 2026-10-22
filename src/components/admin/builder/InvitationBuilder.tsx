@@ -137,6 +137,8 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const [compareMode, setCompareMode] = useState(false);
   const [previewGuest, setPreviewGuest] = useState<Guest | null>(null);
   const hasChanges = useRef(false);
+  const manualSavePending = useRef(false);
+  const pendingDraftSave = useRef<{ snapshot: InvitationParsed; editedAt: number; epoch: number; promise: Promise<boolean> } | null>(null);
   const blockMediaRevision = useRef(0);
   const validation = useMemo(() => validateInvitationBuilder(data), [data]);
   const publicationChanges = useMemo(() => summarizeBuilderChanges(data, publishedVersion?.data), [data, publishedVersion]);
@@ -525,6 +527,8 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const storeDraft = useCallback(async (snapshot: InvitationParsed, options?: { requireCurrent?: number; pauseCurrent?: boolean }) => {
     if (fixtureMode) return dataRef.current === snapshot;
     const editedAt = editSequence.current, epoch = publicationEpoch.current;
+    const pending = pendingDraftSave.current;
+    if (!options && pending?.snapshot === snapshot && pending.editedAt === editedAt && pending.epoch === epoch) return pending.promise;
     const save = saveQueue.current.catch(() => {}).then(async () => {
     if (publicationEpoch.current !== epoch || (options?.requireCurrent !== undefined && editSequence.current !== options.requireCurrent)) return false;
     // Pausing changes public state only; use the latest working content when its queued PUT starts.
@@ -547,21 +551,27 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     return unchanged;
     });
     saveQueue.current = save;
-    return save.catch(error => {
+    const result = save.catch(error => {
       failedSaveAt.current = editSequence.current;
       setSaveError(error instanceof TypeError ? 'Sin conexión. Conservamos los cambios en esta pestaña; puedes descargar un respaldo.' : error instanceof Error ? error.message : 'No se pudo guardar el borrador.');
       throw error;
     });
+    const tracked = result.finally(() => {
+      if (pendingDraftSave.current?.promise === tracked) pendingDraftSave.current = null;
+    });
+    if (!options) pendingDraftSave.current = { snapshot, editedAt, epoch, promise: tracked };
+    return tracked;
   }, [payloadFrom, syncValidity, fixtureMode]);
 
   // Autoguardado silencioso con estado explícito y recuperación al reconectar.
   const silentSave = useCallback(async () => {
-    if (publicOperation.current) return;
+    if (publicOperation.current || manualSavePending.current) return;
     if (typeof navigator !== 'undefined' && !navigator.onLine) { setSaveState('offline'); return; }
     setSaveState('saving');
     try {
       const snapshot = dataRef.current;
-      if (!await storeDraft(snapshot)) { if (!publicOperation.current) setSaveState('dirty'); return; }
+      const editedAt = editSequence.current, epoch = publicationEpoch.current;
+      if (!await storeDraft(snapshot) || editSequence.current !== editedAt || publicationEpoch.current !== epoch) { if (!publicOperation.current) setSaveState('dirty'); return; }
       setSavedAt(new Date()); hasChanges.current = false;
       if (!publicOperation.current) setSaveState('saved');
       if (!fixtureMode) saveBuilderVersion(snapshot, 'Autoguardado', 'save');
@@ -581,13 +591,15 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     return () => window.removeEventListener('online', retry);
   }, [silentSave]);
 
-  const handleSave = async () => {
-    if (publicOperation.current) return;
+  const handleSave = useCallback(async () => {
+    if (publicOperation.current || manualSavePending.current) return;
+    manualSavePending.current = true;
     setSaving(true);
     setSaveState('saving');
     try {
       const snapshot = dataRef.current;
-      if (!await storeDraft(snapshot)) { if (!publicOperation.current) setSaveState('dirty'); return; }
+      const editedAt = editSequence.current, epoch = publicationEpoch.current;
+      if (!await storeDraft(snapshot) || editSequence.current !== editedAt || publicationEpoch.current !== epoch) { if (!publicOperation.current) setSaveState('dirty'); return; }
       setSavedAt(new Date()); hasChanges.current = false; if (!publicOperation.current) setSaveState('saved');
       if (!fixtureMode) saveBuilderVersion(snapshot, 'Guardado manual', 'save');
     } catch (error) {
@@ -596,9 +608,25 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
         alert(error instanceof Error ? error.message : 'Error de conexión');
       }
     } finally {
+      manualSavePending.current = false;
       if (!publicOperation.current) setSaving(false);
     }
-  };
+  }, [storeDraft, fixtureMode]);
+
+  // Saving is useful while a field is focused; native text undo/copy/paste stay untouched.
+  useEffect(() => {
+    const onSaveKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing || event.altKey || event.shiftKey || !(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+      event.preventDefault();
+      if (event.repeat || publishOpen || fixtureMode || publicOperation.current) return;
+      // Inline canvas text commits on blur, unlike the controlled sidebar fields.
+      // Commit it even during an earlier save so that the newer edit stays pending.
+      (event.target as HTMLElement | null)?.closest?.<HTMLElement>('[data-edit-key][contenteditable="true"]')?.blur();
+      void handleSave();
+    };
+    window.addEventListener('keydown', onSaveKey);
+    return () => window.removeEventListener('keydown', onSaveKey);
+  }, [handleSave, publishOpen, fixtureMode]);
 
   const openPublish = () => {
     const now = new Date();
@@ -927,6 +955,8 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
               disabled={saving}
               type="button"
               aria-busy={saving}
+              aria-keyshortcuts="Control+s Meta+s"
+              title="Guardar borrador (Ctrl+S o ⌘S)"
               className="min-h-11 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? 'Guardando…' : 'Guardar'}
@@ -942,6 +972,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             </button>
           </div>
           <div className="flex w-full min-w-0 flex-wrap items-center gap-2 border-t border-[#eee8df] pt-2">
+            <span className="hidden text-xs text-gray-600 font-outfit lg:inline">Guardar: Ctrl+S / ⌘S</span>
             <span className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium leading-5 ${
               validation.errors.length ? 'bg-red-50 text-red-800' : validation.warnings.length ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'
             }`}>
