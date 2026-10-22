@@ -33,4 +33,17 @@ La comprobación completa ejecutó **1.857 pruebas en 62 procesos**, sin fallos,
 
 El build repetido terminó correctamente (salida 0), con **65 páginas** generadas. La revisión independiente no dejó bloqueos tras añadir el veto de navegación durante guardado/publicación y las regresiones con Editable real.
 
-La verificación de producción y la limpieza se registrarán aquí tras el despliegue. Las pruebas manuales continúan pendientes.
+## Producción y limpieza
+
+El commit `5296f893d960c183f97c68b664f5d319dd6e4aed` quedó integrado en main y desplegado como `dpl_J9geTnVu1AMPNNtiaHbGcXZnSy2A`, **Ready**, con alias [enkarta.vercel.app](https://enkarta.vercel.app). El [CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39820674185) terminó correctamente, incluidos verify y la auditoría de dependencias de producción.
+
+- La distribución procede del commit, conserva los 129 originales y excluye archivos de entorno, material maestro y la modificación local de la migración 021. Los identificadores de entrada de Vercel coinciden con los bytes de tres fuentes revisadas: constructor, hook de duplicación y bloqueo BCP.
+- Se crearon únicamente dos borradores ficticios: fuente y copia. La API desplegada confirmó ambas inserciones y se compararon todos los campos del payload, incluido builder_config. Ambos editores privados respondieron 200 con estado draft y sus páginas públicas mostraron preparación sin nombres ni contenido privado. No se publicó ninguna invitación.
+- Los cuatro mensajes del nuevo flujo aparecen en el código compilado servido por producción. SWC representa la ó de «Duplicando invitación» como un escape hexadecimal: el verificador normaliza estos caracteres para comparar texto, sin ejecutar código ni relajar la comparación de fuentes.
+- Se comprobaron seis rutas públicas y **129/129 originales** por longitud y SHA-256. Los **597 archivos protegidos locales** y el hash de la migración 021 permanecen iguales.
+- La fuente y la copia se eliminaron después de comprobar nombre, etiqueta QA, propietario, estado y sus dos pares exactos UUID/slug. Las ocho tablas asociadas quedaron sin filas para cada UUID; los tres prefijos de almacenamiento de cada una están vacíos y ambas páginas devuelven 404. No se subieron ni eliminaron recursos originales. Las sesiones técnicas temporales se cerraron.
+- Cero pagos, mensajes y llamadas bancarias. BCP conserva su bloqueo; no se consultaron ni modificaron variables remotas del proveedor.
+
+Esta comprobación acredita API, HTTP, fuentes y mensajes compilados, privacidad y limpieza. El bloqueo de doble clic, texto inline y respuestas tardías se ejecuta en la regresión aislada; no se atribuyen esos gestos a un navegador autenticado de producción. La aceptación visual manual de este nuevo botón continúa pendiente.
+
+Evidencia privada final: `tmp/builder-safe-duplicate/RESULTADO.json`.
