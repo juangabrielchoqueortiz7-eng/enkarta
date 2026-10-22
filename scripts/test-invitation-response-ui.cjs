@@ -23,9 +23,11 @@ const input=(r,label)=>nodes(r.tree(),n=>n.props['aria-label']===label)[0];
 const edit=(r,label,value)=>input(r,label).props.onChange({target:{value}});
 const post=r=>r.requests.filter(q=>q.method==='POST');
 const submit=r=>{const form=nodes(r.tree(),n=>n.type==='form')[0];assert(form,'Expected RSVP form');form.props.onSubmit({preventDefault(){}});};
-async function withUI(run,{component=Form,props:extra={},reply,qrReply,pngReply}={}){
+async function withUI(run,{component=Form,props:extra={},reply,qrReply,pngReply,onModuleLoad}={}){
  const names=['useState','useRef','useMemo','useCallback','useEffect'],hooks=Object.fromEntries(names.map(n=>[n,React[n]]));
  const globalNames=['document','fetch'],globals=Object.fromEntries(globalNames.map(n=>[n,Object.getOwnPropertyDescriptor(global,n)])),urlMethods={createObjectURL:URL.createObjectURL,revokeObjectURL:URL.revokeObjectURL};
+ const moduleLoad=Module._load,loads=[];
+ Module._load=function(request,parent,...rest){const kind=request==='qrcode'?'qrcode':request==='@/lib/access-pass'?'access-pass':null;if(kind){loads.push(kind);onModuleLoad?.(kind,r);}return moduleLoad.call(this,request,parent,...rest);};
  const slots=[],requests=[],navigations=[],events=[],generations=[],pngs=[],downloads=[],urls=[],revoked=[];let cursor=0,dirty=true,tree,effects=[],unmounted=false,late=0;
  const props=component===Qr?{t:theme,accessToken:'qa-local-token',accessCode:'ENK-QATEST',guestName:'QA Familia',passes:2,...extra}:{theme,slug:'qa-event',...extra};
  const same=(a,b)=>a&&b&&a.length===b.length&&a.every((v,i)=>Object.is(v,b[i]));
@@ -41,8 +43,8 @@ async function withUI(run,{component=Form,props:extra={},reply,qrReply,pngReply}
  global.fetch=async(url,init={})=>{assert(/^\/api\/(guests\/confirm|rsvp)(\?|$)/.test(String(url)),'Only in-memory RSVP endpoints');const q={url,method:init.method??'GET',body:init.body?JSON.parse(init.body):null,signal:init.signal,cache:init.cache};requests.push(q);return reply?.(q)??Response.json(q.method==='GET'?{canRespond:true,...(props.guest?{guest:props.guest}:{})}:props.guest?{ok:true,guest:confirmed({publicId:props.guest.publicId})}:{ok:true,entry:entry()});};
  const flush=async()=>{for(let round=0;round<40;round++){if(dirty&&!unmounted){dirty=false;cursor=0;effects=[];tree=component(props);for(const effect of effects)effect();}await new Promise(done=>setImmediate(done));if(!dirty||unmounted)return tree;}throw Error('UI did not settle');};
  const unmount=()=>{if(unmounted)return;unmounted=true;for(const slot of slots)slot?.cleanup?.();};
- const r={tree:()=>tree,flush,requests,navigations,events,generations,pngs,downloads,urls,revoked,unmount,late:()=>late,update:async patch=>{Object.assign(props,patch);dirty=true;await flush();}};
- try{await flush();await run(r);}finally{unmount();for(const name of names)React[name]=hooks[name];for(const name of globalNames){if(globals[name])Object.defineProperty(global,name,globals[name]);else delete global[name];}Object.assign(URL,urlMethods);}
+ const r={tree:()=>tree,flush,requests,navigations,events,generations,pngs,downloads,urls,revoked,loads,unmount,late:()=>late,update:async patch=>{Object.assign(props,patch);dirty=true;await flush();}};
+ try{await flush();await run(r);}finally{unmount();for(const name of names)React[name]=hooks[name];for(const name of globalNames){if(globals[name])Object.defineProperty(global,name,globals[name]);else delete global[name];}Object.assign(URL,urlMethods);Module._load=moduleLoad;}
 }
 
 test('public reply validators reject missing ACKs, foreign recipients and impossible/replayed old revisions',()=>{
@@ -151,4 +153,14 @@ test('a late QR generation cannot display an older recipient code',async()=>{
 
 test('unmounted QR work cannot create object URLs, downloads or late UI state',async()=>{
  for(const stage of ['generate','download']){const wait=deferred();await withUI(async r=>{if(stage==='download'){button(r,'Descargar pase PNG').props.onClick();await r.flush();}r.unmount();wait.resolve(stage==='download'?new Blob(['QA']):'data:image/png;base64,QA');await r.flush();assert.equal(r.late(),0);assert.equal(r.downloads.length,0);assert.equal(r.urls.length,0);},{component:Qr,qrReply:stage==='generate'?()=>wait.promise:undefined,pngReply:stage==='download'?()=>wait.promise:undefined});}
+});
+
+
+test('QR libraries stay unloaded for an unconfirmed form; pass image tooling loads only on download',async()=>{
+ await withUI(async r=>{assert.deepEqual(r.loads,[]);assert.equal(r.generations.length,0);assert.equal(r.pngs.length,0);},{props:{guest:guest()}});
+ await withUI(async r=>{assert.deepEqual(r.loads,['qrcode']);assert.equal(r.generations.length,1);assert.equal(r.pngs.length,0);button(r,'Descargar pase PNG').props.onClick();await r.flush();assert.deepEqual(r.loads,['qrcode','access-pass']);assert.equal(r.downloads.length,1);},{component:Qr});
+});
+
+test('unmounting at a deferred module import skips generation and download after that import resolves',async()=>{
+ for(const stage of ['qrcode','access-pass'])await withUI(async r=>{if(stage==='access-pass'){button(r,'Descargar pase PNG').props.onClick();await r.flush();}assert.equal(r.generations.length,stage==='qrcode'?0:1);assert.equal(r.pngs.length,0);assert.equal(r.downloads.length,0);assert.equal(r.urls.length,0);assert.equal(r.late(),0);},{component:Qr,onModuleLoad:(name,r)=>{if(name===stage)r.unmount();}});
 });

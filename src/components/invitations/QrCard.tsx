@@ -6,9 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { boundedInvitationTask } from '@/lib/invitation-request';
-import QRCode from 'qrcode';
 import type { BlockTheme } from '@/components/invitations/blocks/theme';
-import { accessPassPng, passFilename } from '@/lib/access-pass';
 
 interface Props {
   t: BlockTheme;
@@ -36,7 +34,11 @@ export default function QrCard({ t, accessToken, accessCode, guestName, tableNo,
     const controller = new AbortController();
     activeDownload.current?.abort(); activeDownload.current = null;
     setImage(null); setError(''); setDownloading(false);
-    boundedInvitationTask(() => QRCode.toDataURL(accessToken, { margin: 1, width: 320, color: { dark: '#1a1a1a', light: '#ffffff' } }), { signal: controller.signal, timeout: 12000 })
+    boundedInvitationTask(async signal => {
+      const { default: QRCode } = await import('qrcode');
+      if (signal.aborted) throw new Error('QR generation canceled');
+      return QRCode.toDataURL(accessToken, { margin: 1, width: 320, color: { dark: '#1a1a1a', light: '#ffffff' } });
+    }, { signal: controller.signal, timeout: 12000 })
       .then(url => { if (alive.current && context.current === owner) setImage({ token: accessToken, url }); })
       .catch(() => { if (alive.current && context.current === owner && !controller.signal.aborted) setError('No se pudo generar el QR. Usa el ID de acceso o actualiza la página.'); });
     return () => { alive.current = false; controller.abort(); activeDownload.current?.abort(); };
@@ -49,11 +51,15 @@ export default function QrCard({ t, accessToken, accessCode, guestName, tableNo,
     const current = () => alive.current && context.current === owner && activeDownload.current === controller;
     setDownloading(true); setError('');
     try {
-      const blob = await boundedInvitationTask(() => accessPassPng({ accessToken, accessCode, guestName, tableNo, passes }), { signal: controller.signal, timeout: 15000 });
+      const { blob, filename } = await boundedInvitationTask(async signal => {
+        const { accessPassPng, passFilename } = await import('@/lib/access-pass');
+        if (signal.aborted) throw new Error('Pass download canceled');
+        return { blob: await accessPassPng({ accessToken, accessCode, guestName, tableNo, passes }), filename: passFilename(accessCode) };
+      }, { signal: controller.signal, timeout: 15000 });
       if (!current()) return;
       const url = URL.createObjectURL(blob);
       try {
-        const link = document.createElement('a'); link.href = url; link.download = passFilename(accessCode); link.click();
+        const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
       } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
     } catch { if (current()) setError('No se pudo descargar el pase. Puedes guardar una captura o volver a intentarlo.'); }
     finally { if (current()) { activeDownload.current = null; setDownloading(false); } }
