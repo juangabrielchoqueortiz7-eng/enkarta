@@ -119,5 +119,6 @@ export function useBuilderDuplicate(options: Options) {
     }
   }, []);
 
-  return { handleDuplicate, duplicate, duplicateError };
+  const isDuplicateBusy = useCallback(() => operation.current?.phase === 'pending' || operation.current?.phase === 'uncertain', []);
+  return { handleDuplicate, duplicate, duplicateError, isDuplicateBusy };
 }

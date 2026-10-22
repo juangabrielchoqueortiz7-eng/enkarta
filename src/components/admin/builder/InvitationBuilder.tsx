@@ -24,6 +24,8 @@ import { activePublishedVersion, hydrateBuilderState, nextScheduledVersion, pers
 import { publicTemplateName } from '@/lib/enkarta-collections';
 import { publicationSummaryText, summarizeBuilderChanges } from '@/lib/builder-workflow';
 import { useBuilderDuplicate } from './useBuilderDuplicate';
+import { useBuilderDelete } from './useBuilderDelete';
+import BuilderDeleteState from './BuilderDeleteState';
 
 type Tab = 'content' | 'blocks' | 'elements' | 'style' | 'decor' | 'motion' | 'media' | 'guests' | 'versions' | 'quality' | 'export' | 'config';
 
@@ -142,6 +144,8 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const [previewGuest, setPreviewGuest] = useState<Guest | null>(null);
   const hasChanges = useRef(false);
   const manualSavePending = useRef(false);
+  const deletionLock = useRef(false);
+  const [deleteBlocked, setDeleteBlocked] = useState(false);
   const pendingDraftSave = useRef<{ snapshot: InvitationParsed; editedAt: number; epoch: number; promise: Promise<boolean> } | null>(null);
   const blockMediaRevision = useRef(0);
   const validation = useMemo(() => validateInvitationBuilder(data), [data]);
@@ -264,6 +268,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   // Aplica un cambio registrando el historial. `coalesce` agrupa cambios rápidos
   // (escritura, arrastre) en un único paso de deshacer.
   const commit = useCallback((next: InvitationParsed, coalesce = false, replaceDocument = false) => {
+    if (deletionLock.current) return;
     const prev = dataRef.current;
     if (next === prev) return;
     if (changesUncontractedColors(prev, next)) {
@@ -354,6 +359,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, [commit]);
 
   const undo = useCallback(() => {
+    if (deletionLock.current) return;
     if (!past.current.length) return;
     const prev = past.current[past.current.length - 1];
     past.current = past.current.slice(0, -1);
@@ -368,6 +374,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, []);
 
   const redo = useCallback(() => {
+    if (deletionLock.current) return;
     if (!future.current.length) return;
     const next = future.current[0];
     future.current = future.current.slice(1);
@@ -519,6 +526,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   // Operational terms live outside visual undo/version snapshots.
   const syncValidity = useCallback((fields: Pick<InvitationParsed, 'expires_at' | 'validity_mode' | 'validity_extra_days' | 'validity_revision'>) => {
+    if (deletionLock.current) return;
     if ((fields.validity_revision ?? 0) < (dataRef.current.validity_revision ?? 0)) return;
     const patch = { expires_at: fields.expires_at, validity_mode: fields.validity_mode, validity_extra_days: fields.validity_extra_days, validity_revision: fields.validity_revision };
     if (Object.entries(patch).every(([key, value]) => dataRef.current[key as keyof InvitationParsed] === value)) return;
@@ -529,11 +537,13 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, []);
 
   const storeDraft = useCallback(async (snapshot: InvitationParsed, options?: { requireCurrent?: number; pauseCurrent?: boolean }) => {
+    if (deletionLock.current) return false;
     if (fixtureMode) return dataRef.current === snapshot;
     const editedAt = editSequence.current, epoch = publicationEpoch.current;
     const pending = pendingDraftSave.current;
     if (!options && pending?.snapshot === snapshot && pending.editedAt === editedAt && pending.epoch === epoch) return pending.promise;
     const save = saveQueue.current.catch(() => {}).then(async () => {
+    if (deletionLock.current) return false;
     if (publicationEpoch.current !== epoch || (options?.requireCurrent !== undefined && editSequence.current !== options.requireCurrent)) return false;
     // Pausing changes public state only; use the latest working content when its queued PUT starts.
     const attempted = options?.pauseCurrent ? withPublicationState(dataRef.current, snapshot, 'unpublish') : snapshot;
@@ -569,7 +579,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   // Autoguardado silencioso con estado explícito y recuperación al reconectar.
   const silentSave = useCallback(async () => {
-    if (publicOperation.current || manualSavePending.current) return;
+    if (deletionLock.current || publicOperation.current || manualSavePending.current) return;
     if (typeof navigator !== 'undefined' && !navigator.onLine) { setSaveState('offline'); return; }
     setSaveState('saving');
     try {
@@ -584,10 +594,10 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   // Dispara el autoguardado 2.5s después del último cambio.
   useEffect(() => {
-    if (!hasChanges.current || publicOperation.current || failedSaveAt.current === editSequence.current) return;
+    if (deletionLock.current || !hasChanges.current || publicOperation.current || failedSaveAt.current === editSequence.current) return;
     const id = setTimeout(() => { silentSave(); }, 2500);
     return () => clearTimeout(id);
-  }, [data, silentSave, saving]);
+  }, [data, silentSave, saving, deleteBlocked]);
 
   useEffect(() => {
     const retry = () => { if (hasChanges.current) void silentSave(); };
@@ -596,7 +606,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, [silentSave]);
 
   const handleSave = useCallback(async () => {
-    if (publicOperation.current || manualSavePending.current) return;
+    if (deletionLock.current || publicOperation.current || manualSavePending.current) return;
     manualSavePending.current = true;
     setSaving(true);
     setSaveState('saving');
@@ -622,7 +632,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     const onSaveKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing || event.altKey || event.shiftKey || !(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
       event.preventDefault();
-      if (event.repeat || publishOpen || fixtureMode || publicOperation.current) return;
+      if (deletionLock.current || event.repeat || publishOpen || fixtureMode || publicOperation.current) return;
       // Inline canvas text commits on blur, unlike the controlled sidebar fields.
       // Commit it even during an earlier save so that the newer edit stays pending.
       (event.target as HTMLElement | null)?.closest?.<HTMLElement>('[data-edit-key][contenteditable="true"]')?.blur();
@@ -633,6 +643,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, [handleSave, publishOpen, fixtureMode]);
 
   const openPublish = () => {
+    if (deletionLock.current) return;
     const now = new Date();
     setPublishLabel(`Publicación ${now.toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })} · ${now.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}`);
     setPublishSummary(publicationSummaryText(publicationChanges));
@@ -643,6 +654,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   };
 
   const applySnapshot = (snapshot: InvitationParsed) => {
+    if (deletionLock.current) return;
     snapshot = { ...snapshot, expires_at: dataRef.current.expires_at, validity_mode: dataRef.current.validity_mode,
       validity_extra_days: dataRef.current.validity_extra_days, validity_revision: dataRef.current.validity_revision };
     dataRef.current = snapshot;
@@ -673,7 +685,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   };
 
   const confirmPublish = async () => {
-    if (validation.errors.length || saving || publicOperation.current) return;
+    if (deletionLock.current || validation.errors.length || saving || publicOperation.current) return;
     const scheduledAt = publishMode === 'schedule' ? new Date(publishAt) : null;
     if (publishMode === 'schedule' && (!publishAt || !scheduledAt || Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() <= Date.now() + 60_000)) {
       setPublishError('Elige una fecha y hora futura, con al menos un minuto de margen.');
@@ -724,7 +736,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   };
 
   const unpublishInvitation = async () => {
-    if (publicOperation.current) return;
+    if (deletionLock.current || publicOperation.current) return;
     if (!window.confirm('¿Despublicar esta invitación? El enlace mostrará una pausa temporal y todas las versiones quedarán conservadas.')) return;
     const editedAt = editSequence.current, working = dataRef.current;
     hydrationEpoch.current += 1; publicOperation.current = true; setSaving(true); setPublicationNotice(''); setSaveState('saving');
@@ -744,7 +756,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   };
 
   const rollbackPublication = async (version: BuilderVersion) => {
-    if (publicOperation.current) return;
+    if (deletionLock.current || publicOperation.current) return;
     const editedAt = editSequence.current, working = dataRef.current;
     hydrationEpoch.current += 1; publicOperation.current = true; setSaving(true); setPublicationNotice(''); setSaveState('saving');
     try {
@@ -777,14 +789,15 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     publicOperation.current = false; setSaving(false);
   };
 
-  const { handleDuplicate, duplicate, duplicateError } = useBuilderDuplicate({
+  const { handleDuplicate, duplicate, duplicateError, isDuplicateBusy } = useBuilderDuplicate({
     sourceId: initialData.id, builderPath,
     snapshot: () => dataRef.current, sequence: () => editSequence.current, dirty: () => hasChanges.current,
-    canStart: () => !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current,
+    canStart: () => !deletionLock.current && !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current,
     navigate: href => router.push(href),
   });
 
   const privatePreviewIssue = useCallback((checkConnection = false) => {
+    if (deletionLock.current) return 'La eliminación está en curso o sin confirmar. Revisa el panel antes de continuar.';
     const context = privatePreviewContext.current;
     if (context.fixtureMode) return 'Esta muestra no guarda cambios. Revisa la invitación en el lienzo del constructor.';
     if (context.id !== dataRef.current.id) return 'La invitación cambió. Recarga el constructor antes de abrir su vista privada.';
@@ -821,16 +834,18 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
   </svg>Vista privada</>;
 
-  const handleDelete = async () => {
-    if (!confirm('¿Eliminar esta invitación permanentemente? Esta acción no se puede deshacer.')) return;
-    try {
-      const res = await fetch(`/api/admin/invitations?id=${data.id}`, { method: 'DELETE' });
-      if (res.ok) router.push(backHref);
-      else alert('Error al eliminar');
-    } catch {
-      alert('Error de conexión');
-    }
-  };
+  const { handleDelete, deletion, deleteError } = useBuilderDelete({
+    sourceId: initialData.id, backHref, snapshot: () => dataRef.current,
+    canStart: () => !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current && !pendingDraftSave.current && !isDuplicateBusy(),
+    locked: value => { deletionLock.current = value; setDeleteBlocked(value); if (value) hydrationEpoch.current += 1; },
+    confirmed: () => { hasChanges.current = false; },
+    navigate: href => router.push(href),
+  });
+
+  if (deletion) return <BuilderDeleteState deletion={deletion} backHref={backHref} onDownload={() => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(deletion.snapshot, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = `${deletion.snapshot.slug}-respaldo-local.json`; link.click(); URL.revokeObjectURL(url);
+  }} />;
 
   return (
     <div className="flex flex-col h-[100dvh] bg-gray-50">
@@ -985,6 +1000,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
           </div>
         </div>
       </header>
+      {deleteError && <p role="alert" className="shrink-0 break-words border-b border-red-200 bg-red-50 px-4 py-3 font-outfit text-sm leading-6 text-red-900">{deleteError}</p>}
       {privatePreviewNotice && <p role="status" aria-live="polite" aria-atomic="true" className="shrink-0 break-words border-b border-[#e7e1d9] bg-[#f7f3ed] px-4 py-3 font-outfit text-sm leading-6 text-[#514735]">{privatePreviewIssue(true) || 'El borrador está guardado. Pulsa «Vista privada» para abrirlo en otra pestaña.'}</p>}
       {duplicate && <div role="status" aria-live="polite" aria-atomic="true" className={`flex min-w-0 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b px-4 py-3 font-outfit text-sm leading-6 ${duplicate.phase === 'uncertain' ? 'border-amber-200 bg-amber-50 text-amber-950' : 'border-[#e7e1d9] bg-[#f7f3ed] text-[#514735]'}`}>
         <p className="min-w-0 break-words">{duplicate.message}</p>

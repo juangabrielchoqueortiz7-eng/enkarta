@@ -325,13 +325,15 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
       {/* Peligro */}
       {onDelete && (
         <div className="border-t border-red-100 pt-5">
-          <h4 className="text-xs font-outfit font-semibold text-red-400 uppercase tracking-wider mb-3">Zona de Peligro</h4>
+          <h4 className="mb-2 font-outfit text-sm font-semibold text-red-800">Zona de peligro</h4>
+          <p className="mb-3 font-outfit text-sm leading-6 text-gray-600">La eliminación es permanente. Revisa la invitación antes de confirmar.</p>
           <button
             type="button"
             onClick={() => { if (draft.isCurrent()) onDelete?.(); }}
-            className="w-full py-2.5 rounded-xl border-2 border-red-200 text-red-500 text-sm font-outfit hover:bg-red-50 transition-all"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-300 px-3 py-2.5 font-outfit text-sm font-semibold text-red-800 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
           >
-            🗑️ Eliminar invitación permanentemente
+            <svg aria-hidden="true" className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6m4-6v6" /></svg>
+            Eliminar invitación permanentemente
           </button>
         </div>
       )}
