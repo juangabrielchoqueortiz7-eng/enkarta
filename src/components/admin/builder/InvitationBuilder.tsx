@@ -124,6 +124,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const [contractNotice, setContractNotice] = useState('');
   const [publicationNotice, setPublicationNotice] = useState('');
   const [privatePreviewNotice, setPrivatePreviewNotice] = useState(false);
+  const [leaveNotice, setLeaveNotice] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const privatePreviewContext = useRef({ id: initialData.id, fixtureMode, publishOpen, offline: saveState === 'offline' });
   privatePreviewContext.current = { id: initialData.id, fixtureMode, publishOpen, offline: saveState === 'offline' };
@@ -234,7 +235,13 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
   const editSequence = useRef(0), publicationEpoch = useRef(0), hydrationEpoch = useRef(0), publicOperation = useRef(false), failedSaveAt = useRef<number | null>(null);
   useEffect(() => {
-    const protect = (event: BeforeUnloadEvent) => { if (hasChanges.current) { event.preventDefault(); event.returnValue = ''; } };
+    const protect = (event: BeforeUnloadEvent) => {
+      // Inline text is committed on blur; closing a tab need not blur it first.
+      document.activeElement?.closest<HTMLElement>('[data-edit-key][contenteditable="true"]')?.blur();
+      if (hasChanges.current || manualSavePending.current || pendingDraftSave.current || publicOperation.current) {
+        event.preventDefault(); event.returnValue = '';
+      }
+    };
     window.addEventListener('beforeunload', protect);
     return () => window.removeEventListener('beforeunload', protect);
   }, []);
@@ -834,6 +841,17 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
   </svg>Vista privada</>;
 
+  const handleBackToPanel = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    document.activeElement?.closest<HTMLElement>('[data-edit-key][contenteditable="true"]')?.blur();
+    if (manualSavePending.current || pendingDraftSave.current || publicOperation.current || deletionLock.current) {
+      event.preventDefault(); setLeaveNotice(true); return;
+    }
+    setLeaveNotice(false);
+    // This is a native full-page link. beforeunload protects pending edits;
+    // modified clicks keep their normal behavior and leave this editor open.
+  };
+
   const { handleDelete, deletion, deleteError } = useBuilderDelete({
     sourceId: initialData.id, backHref, snapshot: () => dataRef.current,
     canStart: () => !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current && !pendingDraftSave.current && !isDuplicateBusy(),
@@ -858,7 +876,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
           {/* Izquierda */}
           <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:flex-1">
-            <a href={backHref} title="Volver al panel"
+            <a href={backHref} title="Volver al panel" onClick={handleBackToPanel}
               aria-label="Volver al panel"
               className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-[#514735] transition-colors hover:bg-[#f7f3ed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2">
               <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1000,6 +1018,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
           </div>
         </div>
       </header>
+      {leaveNotice && <p role="status" aria-live="polite" className="shrink-0 break-words border-b border-[#e7e1d9] bg-[#f7f3ed] px-4 py-3 font-outfit text-sm leading-6 text-[#514735]">Espera a que termine la operación antes de volver al panel. Tus cambios siguen en este editor.</p>}
       {deleteError && <p role="alert" className="shrink-0 break-words border-b border-red-200 bg-red-50 px-4 py-3 font-outfit text-sm leading-6 text-red-900">{deleteError}</p>}
       {privatePreviewNotice && <p role="status" aria-live="polite" aria-atomic="true" className="shrink-0 break-words border-b border-[#e7e1d9] bg-[#f7f3ed] px-4 py-3 font-outfit text-sm leading-6 text-[#514735]">{privatePreviewIssue(true) || 'El borrador está guardado. Pulsa «Vista privada» para abrirlo en otra pestaña.'}</p>}
       {duplicate && <div role="status" aria-live="polite" aria-atomic="true" className={`flex min-w-0 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b px-4 py-3 font-outfit text-sm leading-6 ${duplicate.phase === 'uncertain' ? 'border-amber-200 bg-amber-50 text-amber-950' : 'border-[#e7e1d9] bg-[#f7f3ed] text-[#514735]'}`}>
