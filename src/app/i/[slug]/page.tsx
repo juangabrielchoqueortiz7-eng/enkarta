@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
 import {isCleanDesign} from '@/lib/clean-designs';
-import { Guest, Invitation, parseInvitation } from '@/lib/types';
+import { Guest, parseInvitation } from '@/lib/types';
 import PublishedTemplate from '@/components/invitations/PublishedTemplate';
 import { notFound } from 'next/navigation';
 import React from 'react';
@@ -15,7 +15,6 @@ import { partnerServesInvitation } from '@/lib/partner-session';
 import { DEFAULT_MUSIC_URL } from '@/lib/music';
 import { resolveLayoutBindings } from '@/lib/block-bindings';
 import { findGuestByPublicId } from '@/lib/guests';
-import { headers } from 'next/headers';
 import InvitationAnalytics from '@/components/invitations/InvitationAnalytics';
 import { canReviewInvitation } from '@/lib/host-session';
 import { guestForServices } from '@/lib/package-services-server';
@@ -24,6 +23,9 @@ import { latestPublishedInvitation, publicInvitationData } from '@/lib/published
 import PreviewCaptureController from '@/components/invitations/PreviewCaptureController';
 import { eventDay, hasRsvpForm } from '@/lib/rsvp-contract';
 import { activeInvitationLocale, formatInvitationDate, invitationCopy } from '@/lib/invitation-i18n';
+import { readInvitationBySlug } from '@/lib/public-invitation-read';
+import { invitationShareMetadata, validGuestLinkId } from '@/lib/invitation-sharing';
+import { publicGuest } from '@/lib/guest-metadata';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,26 +67,15 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const { slug } = await params;
   const { full, g, preview, sample, capture } = await searchParams;
 
-  const { data, error } = await supabaseAdmin
-    .from('invitations')
-    .select('*')
-    .eq('slug', slug)
-    .single();
-
-  if (error || !data) {
-    notFound();
-  }
-
-  const invitation = data as Invitation;
+  const invitation = await readInvitationBySlug(slug);
+  if (!invitation) notFound();
   const storedCopy = invitationCopy(activeInvitationLocale(parseInvitation(invitation).config));
   const privatePreview = preview === '1' && await canReviewInvitation(invitation.id);
   if (!privatePreview && invitation.validity_mode === 'automatic' && !invitation.expires_at) {
     return <StatusScreen icon={ClockIcon} title={storedCopy.preparationTitle} text={storedCopy.preparationText} />;
   }
-  const publishedVersion = privatePreview ? null : await latestPublishedInvitation(invitation);
-
-  // ── Borrador: aún no publicada ──
-  if (invitation.status === 'draft' && !privatePreview && !publishedVersion) {
+  // Estados cerrados no consultan snapshots ni datos de invitados.
+  if (invitation.status === 'draft' && !privatePreview) {
     return (
       <StatusScreen
         icon={ClockIcon}
@@ -132,6 +123,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
     }
   }
 
+  const publishedVersion = privatePreview ? null : await latestPublishedInvitation(invitation);
   if (!privatePreview && (invitation.status !== 'ready' || (invitation.publication_managed && !publishedVersion))) {
     return <StatusScreen icon={ClockIcon} title={storedCopy.preparationTitle} text={storedCopy.preparationText} />;
   }
@@ -145,7 +137,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   // El paquete contratado (config.package) apaga las funciones no incluidas.
   // El editor guarda el borrador en `invitations`; el público recibe el último
   // snapshot publicado. ?preview=1 (admin/anfitrión autenticado) ve el borrador.
-  const parsed = clientInvitation(gateInvitation(privatePreview ? parseInvitation(invitation) : (publishedVersion?.data ?? parseInvitation(invitation))));
+  const parsed = clientInvitation(gateInvitation(privatePreview ? parseInvitation(invitation) : (publishedVersion?.data ?? parseInvitation(invitation))), true);
   const config = parsed.config;
   const locale = activeInvitationLocale(config);
   const copy = invitationCopy(locale);
@@ -159,10 +151,16 @@ export default async function InvitationPage({ params, searchParams }: Props) {
 
   // ── Link único por invitado (?g=): su nombre, pases y reglas viajan a la plantilla ──
   let guest: Guest | null = null;
-  if (g && feats.guestNames) {
+  if (g !== undefined && feats.guestNames) {
+    if (!validGuestLinkId(g)) {
+      return <StatusScreen icon={ClockIcon} title="Enlace de invitado no disponible" text="Solicita a los anfitriones que te compartan nuevamente tu enlace personal." />;
+    }
     guest = await findGuestByPublicId(invitation.id, g);
+    if (!guest) {
+      return <StatusScreen icon={ClockIcon} title="Enlace de invitado no disponible" text="Solicita a los anfitriones que te compartan nuevamente tu enlace personal." />;
+    }
     if (guest) {
-      guest = guestForServices(guest, config)!;
+      guest = publicGuest(guestForServices(guest, config)!);
       config.activeGuest = guest;
       parsed.guest_name = guest.name;
       if (feats.passes) parsed.guest_passes = guest.passes;
@@ -272,47 +270,6 @@ export default async function InvitationPage({ params, searchParams }: Props) {
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-
-  const { data } = await supabaseAdmin
-    .from('invitations')
-    .select('*')
-    .eq('slug', slug)
-    .single();
-  const metaData = data ? await publicInvitationData(data as Invitation) : null;
-
-  const titles: Record<string, string> = {
-    boda: 'Boda',
-    xv: 'XV Años',
-    cumpleanos: 'Cumpleaños',
-    baby_shower: 'Baby Shower',
-    bautizo: 'Bautizo',
-  };
-
-  const title = metaData?.names
-    ? `${titles[metaData.type] || 'Invitación'} - ${metaData.names} | Enkarta`
-    : 'Invitación Digital | Enkarta';
-  const dateLine = formatInvitationDate(metaData?.event_date ?? null, activeInvitationLocale(metaData?.config));
-  const description = metaData?.names
-    ? `Estás invitado(a) a la ${titles[metaData.type]?.toLowerCase() || 'celebración'} de ${metaData.names}${dateLine ? ` · ${dateLine}` : ''}`
-    : 'Invitación digital personalizada';
-
-  // metadataBase para resolver URLs absolutas en la vista previa al compartir.
-  let metadataBase: URL | undefined;
-  try {
-    const host = (await headers()).get('host');
-    if (host) metadataBase = new URL(`${host.includes('localhost') ? 'http' : 'https'}://${host}`);
-  } catch { /* sin host */ }
-
-  // La imagen de vista previa al compartir la genera `opengraph-image.tsx`
-  // (nombres + fecha sobre la foto, con marca). Next la inyecta en og:image y
-  // twitter:image automáticamente, resolviéndola con metadataBase.
-  return {
-    title: { absolute: title },
-    description,
-    metadataBase,
-    // Las invitaciones son privadas: no indexar en buscadores.
-    robots: { index: false, follow: false },
-    openGraph: { title, description, type: 'website', siteName: 'Enkarta' },
-    twitter: { card: 'summary_large_image', title, description },
-  };
+  const invitation = await readInvitationBySlug(slug);
+  return invitationShareMetadata(slug, invitation ? await publicInvitationData(invitation) : null);
 }

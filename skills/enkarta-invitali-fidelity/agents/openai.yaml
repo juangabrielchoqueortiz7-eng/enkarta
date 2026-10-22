@@ -1,0 +1,4 @@
+interface:
+  display_name: "Enkarta · Fidelidad Invitali"
+  short_description: "Réplicas verificables de invitaciones Invitali"
+  default_prompt: "Usa $enkarta-invitali-fidelity para analizar esta muestra y reproducir su composición y recursos en una variante independiente de Enkarta."

@@ -1,0 +1,3349 @@
+{
+  "checkedAt": "2026-10-22T22:28:11.884Z",
+  "method": "Public HTTP HTML/CSS read only; no computed styles, screenshots, authenticated editor or runtime interaction.",
+  "browserAvailable": false,
+  "scope": "Home, its public navigation and publicly linked demonstrations, including category landing pages; no forms or login submitted",
+  "pages": [
+    {
+      "url": "https://invitali.com/",
+      "status": 200,
+      "htmlSha256": "03c31fb567f92ba0cbee65af2a75b81a8985d780b40a2cb8c3f6295ea6bd76ce",
+      "htmlBytes": 933509,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-756e1acb8d029da70d4c9933e1f366c5.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1",
+        "https://invitali.com/wp-content/uploads/trustindex-facebook-widget.css?1790320223"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Raleway\", Sans-serif",
+            52
+          ],
+          [
+            "\"Rische\", Sans-serif",
+            27
+          ],
+          [
+            "\"Playfair Display\", Sans-serif",
+            16
+          ],
+          [
+            "\"Italiana\", Sans-serif",
+            15
+          ],
+          [
+            "\"Roboto\", Sans-serif",
+            13
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#8C7954",
+            131
+          ],
+          [
+            "#FFFFFF",
+            128
+          ],
+          [
+            "#C19A5B",
+            98
+          ],
+          [
+            "#DED9D1",
+            90
+          ],
+          [
+            "#C19A5B30",
+            88
+          ]
+        ],
+        "imageTags": 73,
+        "lazyImageTags": 60,
+        "sizedImageTags": 55
+      },
+      "motionParameters": [
+        {
+          "element": "99524a8",
+          "reverse_animation": "yes",
+          "play_speed": {
+            "unit": "px",
+            "size": 1,
+            "sizes": []
+          }
+        },
+        {
+          "element": "8f73ee5",
+          "animation_mobile": "zoomIn",
+          "background_background": "classic"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/mis-15/",
+      "status": 200,
+      "htmlSha256": "e7fd1b9d6f0d7a9258da8e6031e3dbef87e85781a2bdb719cc5f946f5a6b45f7",
+      "htmlBytes": 383212,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-87155f6a855945cc91f92c154e52fc6d.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "'Rische'",
+            10
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Montserrat\",\"sans-serif\"",
+            6
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"Rische\", Sans-serif",
+            5
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#fff",
+            29
+          ],
+          [
+            "#FFFFFF",
+            22
+          ],
+          [
+            "#ffffff",
+            17
+          ],
+          [
+            "#000",
+            17
+          ],
+          [
+            "#897a59",
+            16
+          ]
+        ],
+        "imageTags": 27,
+        "lazyImageTags": 22,
+        "sizedImageTags": 27
+      },
+      "motionParameters": [
+        {
+          "element": "8f73ee5",
+          "animation_mobile": "zoomIn",
+          "background_background": "classic"
+        },
+        {
+          "element": "ddb642a",
+          "animation_mobile": "zoomIn"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/graduaciones/",
+      "status": 200,
+      "htmlSha256": "f6360020889849840fc7cfe12efe529860742e53c2e84d6ac98cba5cdb2e3a6b",
+      "htmlBytes": 283389,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-560600b01fd20f63f50ef6c0d9e87abf.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Montserrat\",\"sans-serif\"",
+            6
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"Poppins\", Sans-serif",
+            4
+          ],
+          [
+            "\"Roboto\"",
+            3
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#fff",
+            33
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#ffffff",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#000000",
+            13
+          ]
+        ],
+        "imageTags": 9,
+        "lazyImageTags": 4,
+        "sizedImageTags": 9
+      },
+      "motionParameters": [
+        {
+          "element": "4ad0f7b",
+          "background_background": "classic",
+          "background_motion_fx_motion_fx_scrolling": "yes",
+          "background_motion_fx_translateY_effect": "yes",
+          "background_motion_fx_translateY_direction": "negative",
+          "background_motion_fx_translateY_speed": {
+            "unit": "px",
+            "size": 4.8,
+            "sizes": []
+          },
+          "background_motion_fx_translateY_affectedRange": {
+            "unit": "%",
+            "size": "",
+            "sizes": {
+              "start": 0,
+              "end": 100
+            }
+          },
+          "background_motion_fx_devices": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        },
+        {
+          "element": "0ee5fff",
+          "animation_mobile": "zoomIn",
+          "background_background": "classic"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/login-anfitrion/",
+      "status": 200,
+      "htmlSha256": "08295ee1d34f551bdce628b024426eba6e2fc056cc072342feec30161c316fe9",
+      "htmlBytes": 150897,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-1f100eda841e0e46e07560b26b676600.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"Roboto\"",
+            3
+          ],
+          [
+            "'Playfair Display'",
+            2
+          ],
+          [
+            " ",
+            2
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#f7f6f4",
+            12
+          ],
+          [
+            "#9F8558",
+            7
+          ],
+          [
+            "#ffffff",
+            6
+          ],
+          [
+            "#000000",
+            5
+          ]
+        ],
+        "imageTags": 4,
+        "lazyImageTags": 0,
+        "sizedImageTags": 4
+      },
+      "motionParameters": []
+    },
+    {
+      "url": "https://invitali.com/bautizos/",
+      "status": 200,
+      "htmlSha256": "34b2947ee77b3907677441383223f1c78ae2b7e0a67379dfd80a9afa9484cf0d",
+      "htmlBytes": 360823,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-87155f6a855945cc91f92c154e52fc6d.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "'Rische'",
+            10
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Montserrat\",\"sans-serif\"",
+            6
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"Rische\", Sans-serif",
+            5
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#fff",
+            29
+          ],
+          [
+            "#ffffff",
+            17
+          ],
+          [
+            "#000",
+            17
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ]
+        ],
+        "imageTags": 17,
+        "lazyImageTags": 12,
+        "sizedImageTags": 17
+      },
+      "motionParameters": [
+        {
+          "element": "8f73ee5",
+          "animation_mobile": "zoomIn",
+          "background_background": "classic"
+        },
+        {
+          "element": "ddb642a",
+          "animation_mobile": "zoomIn"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/azure/",
+      "status": 200,
+      "htmlSha256": "f7179fac044266a626139a5edff62e5b96ba943ea3141fe6e99f6849cf8f1ee2",
+      "htmlBytes": 349821,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-f6c0a619aeb44335985e71c742c99889.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1",
+        "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cinzel\", Sans-serif",
+            16
+          ],
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            16
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Raleway\", Sans-serif",
+            6
+          ],
+          [
+            "inherit",
+            5
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#002D63",
+            40
+          ],
+          [
+            "#4C5B75",
+            32
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#000000",
+            13
+          ]
+        ],
+        "imageTags": 36,
+        "lazyImageTags": 31,
+        "sizedImageTags": 36
+      },
+      "motionParameters": [
+        {
+          "element": "d198f6a",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "135f9ed",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/muestra-pasport/",
+      "status": 200,
+      "htmlSha256": "b639e4cafa9d99ddd7968c65f8d3d51385c7fad1d879ab64f50abac5911ff6f3",
+      "htmlBytes": 397495,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-2874b57634453b40f4a8cce704f9a9ea.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Baskervville\", Sans-serif",
+            32
+          ],
+          [
+            "\"Nathalia\", Sans-serif",
+            12
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Georgia\", Sans-serif",
+            6
+          ],
+          [
+            "\"Roboto Flex\", Sans-serif",
+            6
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#000000",
+            44
+          ],
+          [
+            "#6C7563",
+            44
+          ],
+          [
+            "#DDCBB4",
+            33
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ]
+        ],
+        "imageTags": 12,
+        "lazyImageTags": 7,
+        "sizedImageTags": 12
+      },
+      "motionParameters": [
+        {
+          "element": "d990864",
+          "play_speed": {
+            "unit": "px",
+            "size": 1,
+            "sizes": []
+          }
+        },
+        {
+          "element": "4bb80f2",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/muestra-primicia/",
+      "status": 200,
+      "htmlSha256": "893bdc46d8e2284954b405a0e1a36233d978b9b3885b46bb5a9a20fcca03996b",
+      "htmlBytes": 347449,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-09b86fce88fcc20940e81678b94a0a2c.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1",
+        "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Old Standard TT\", Sans-serif",
+            44
+          ],
+          [
+            "\"Times New Roman\", Sans-serif",
+            12
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"Roboto\"",
+            3
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#000000",
+            57
+          ],
+          [
+            "#1B1A1C",
+            34
+          ],
+          [
+            "#FFFFFF",
+            26
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#6C7563",
+            16
+          ]
+        ],
+        "imageTags": 12,
+        "lazyImageTags": 7,
+        "sizedImageTags": 10
+      },
+      "motionParameters": [
+        {
+          "element": "8f5474f",
+          "_animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "82fd4bc",
+          "_animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/muestra-paradise/",
+      "status": 200,
+      "htmlSha256": "74c3b366b1d1be361a6312c7b1f6cf1f78bf6ea8a6a920fcb1b5915810360c3b",
+      "htmlBytes": 383760,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-748ae60433af9ec76680dc27cb1b59f4.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Poiret One\", Sans-serif",
+            37
+          ],
+          [
+            "\"Nathalia\", Sans-serif",
+            14
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Cinzel\", Sans-serif",
+            6
+          ],
+          [
+            "inherit",
+            5
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#EDE4D2",
+            57
+          ],
+          [
+            "#324D2F",
+            35
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#f7f6f4",
+            12
+          ]
+        ],
+        "imageTags": 10,
+        "lazyImageTags": 3,
+        "sizedImageTags": 8
+      },
+      "motionParameters": [
+        {
+          "element": "37a4e1f",
+          "background_background": "classic",
+          "animation": "none"
+        },
+        {
+          "element": "f0dc931",
+          "background_background": "classic",
+          "animation": "none"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/dolcevita/",
+      "status": 200,
+      "htmlSha256": "d141cd528f1d0221611818a04b649f8ca3dcb5d23d709c1d12deb3b9a490fefd",
+      "htmlBytes": 499237,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-604772cc12001453de614fb3bf460e31.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            33
+          ],
+          [
+            "\"Meow Script\", Sans-serif",
+            11
+          ],
+          [
+            "\"Cinzel\", Sans-serif",
+            10
+          ],
+          [
+            "\"Cormorant Garamond\", Sans-serif",
+            9
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#51765D",
+            42
+          ],
+          [
+            "#000000",
+            31
+          ],
+          [
+            "#FFFFFF",
+            30
+          ],
+          [
+            "#CCAD84",
+            24
+          ],
+          [
+            "#967F60",
+            24
+          ]
+        ],
+        "imageTags": 42,
+        "lazyImageTags": 25,
+        "sizedImageTags": 42
+      },
+      "motionParameters": [
+        {
+          "element": "7c8ba83",
+          "_animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "a19671f",
+          "background_background": "classic",
+          "background_motion_fx_motion_fx_scrolling": "yes",
+          "background_motion_fx_translateY_effect": "yes",
+          "background_motion_fx_translateY_speed": {
+            "unit": "px",
+            "size": 6.8,
+            "sizes": []
+          },
+          "background_motion_fx_translateY_affectedRange": {
+            "unit": "%",
+            "size": "",
+            "sizes": {
+              "start": 0,
+              "end": 100
+            }
+          },
+          "background_motion_fx_devices": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/grazia/",
+      "status": 200,
+      "htmlSha256": "9b00938bfc32b2d929d21394173db9ec009726effd97d26d4963327d5e2658da",
+      "htmlBytes": 424609,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-28706312d9c3a10ee794e383d7f8c6ed.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Poiret One\", Sans-serif",
+            47
+          ],
+          [
+            "\"Tangerine\", Sans-serif",
+            15
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"Roboto\"",
+            3
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#000000",
+            76
+          ],
+          [
+            "#FFFFFF",
+            28
+          ],
+          [
+            "#967F60",
+            24
+          ],
+          [
+            "#A88144",
+            18
+          ],
+          [
+            "#897a59",
+            16
+          ]
+        ],
+        "imageTags": 26,
+        "lazyImageTags": 21,
+        "sizedImageTags": 26
+      },
+      "motionParameters": [
+        {
+          "element": "d020d9a",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "566effa",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/obsidiana/",
+      "status": 200,
+      "htmlSha256": "1f915bbb85474c8bd550728ba46b32fe9f3133cc870e2ebbf1e7d2fd402f5953",
+      "htmlBytes": 439712,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-d8ddc071dcd17cc3d6fd125ab739a5b9.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Raleway\", Sans-serif",
+            44
+          ],
+          [
+            "\"Poiret One\", Sans-serif",
+            15
+          ],
+          [
+            "\"Romantic Lovely\", Sans-serif",
+            9
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#F7E0A5",
+            93
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#000000",
+            13
+          ],
+          [
+            "#f7f6f4",
+            12
+          ]
+        ],
+        "imageTags": 24,
+        "lazyImageTags": 15,
+        "sizedImageTags": 24
+      },
+      "motionParameters": [
+        {
+          "element": "37a4e1f",
+          "background_background": "classic",
+          "animation": "none"
+        },
+        {
+          "element": "f0dc931",
+          "background_background": "classic",
+          "animation": "none"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/euforia/",
+      "status": 200,
+      "htmlSha256": "1e58e1d1a832365e5daadd40c56d164914eadc8ec0d232fdda6170508b7d1408",
+      "htmlBytes": 451952,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-6a1ae72ec1592f562cc0e252ce378c05.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1",
+        "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            35
+          ],
+          [
+            "\"Romantic Lovely\", Sans-serif",
+            8
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Cinzel\", Sans-serif",
+            6
+          ],
+          [
+            "inherit",
+            5
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#967F60",
+            41
+          ],
+          [
+            "#E4CFC1",
+            24
+          ],
+          [
+            "#FFFFFF",
+            22
+          ],
+          [
+            "#8E6F55",
+            21
+          ],
+          [
+            "#897a59",
+            16
+          ]
+        ],
+        "imageTags": 34,
+        "lazyImageTags": 29,
+        "sizedImageTags": 32
+      },
+      "motionParameters": [
+        {
+          "element": "63825cb",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "0abe75c",
+          "background_background": "classic",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/napoli/",
+      "status": 200,
+      "htmlSha256": "954b3f3715f8c3ce4c8e9cc56a7f615a6da4ec0d867c6c1dd271f776a45f1f1d",
+      "htmlBytes": 452580,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-6cd397a1aae354d1b856ea3b4b7d457a.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1",
+        "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cinzel\", Sans-serif",
+            33
+          ],
+          [
+            "\"Cormorant Garamond\", Sans-serif",
+            19
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Great Vibes\", Sans-serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#7A695D",
+            37
+          ],
+          [
+            "#FFFFFF",
+            27
+          ],
+          [
+            "#AE9C8F",
+            27
+          ],
+          [
+            "#967F60",
+            20
+          ],
+          [
+            "#897a59",
+            16
+          ]
+        ],
+        "imageTags": 38,
+        "lazyImageTags": 29,
+        "sizedImageTags": 38
+      },
+      "motionParameters": [
+        {
+          "element": "441a443",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "0a7dcbf",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/carmesi/",
+      "status": 200,
+      "htmlSha256": "660577699bdac2fb0c34e1cfc9f541d17011930353d2d10354df2665a9155127",
+      "htmlBytes": 495784,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-857941fa4ea65b763aeb414c375142be.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            53
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "'Apple Chancery'",
+            4
+          ],
+          [
+            "\"Roboto\"",
+            3
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#7F0021",
+            63
+          ],
+          [
+            "#967F60",
+            46
+          ],
+          [
+            "#F7E0A5",
+            19
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ]
+        ],
+        "imageTags": 46,
+        "lazyImageTags": 40,
+        "sizedImageTags": 44
+      },
+      "motionParameters": [
+        {
+          "element": "d198f6a",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "135f9ed",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/invitali/terminos-y-condiciones/",
+      "status": 200,
+      "htmlSha256": "cca0f470c8bb0fea79e9d8ec4e69cd5bbb4cec277b19d0e08a42c62266fef1df",
+      "htmlBytes": 175161,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-2cb833c55f12fdb2d7015ecb87d262e3.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"Roboto\"",
+            3
+          ],
+          [
+            "'Playfair Display'",
+            2
+          ],
+          [
+            "'Open Sans'",
+            1
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#f7f6f4",
+            12
+          ],
+          [
+            "#ffffff",
+            7
+          ],
+          [
+            "#000000",
+            5
+          ],
+          [
+            "#eeeeee",
+            4
+          ]
+        ],
+        "imageTags": 2,
+        "lazyImageTags": 0,
+        "sizedImageTags": 2
+      },
+      "motionParameters": []
+    },
+    {
+      "url": "https://invitali.com/allegria/",
+      "status": 200,
+      "htmlSha256": "0444e790f9954011b9d5f42f97e890c1e27271e23194ae41f433ee95d2c16989",
+      "htmlBytes": 303709,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-cfd429759826f8775719912a197adf57.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Raleway\", Sans-serif",
+            27
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Bodoni Moda\", Sans-serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"Open Sans\", Sans-serif",
+            4
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#000000",
+            35
+          ],
+          [
+            "#FFFFFF",
+            24
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#f7f6f4",
+            12
+          ]
+        ],
+        "imageTags": 8,
+        "lazyImageTags": 3,
+        "sizedImageTags": 8
+      },
+      "motionParameters": [
+        {
+          "element": "baa11d5",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "ec81cf5",
+          "_animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/rosegold/",
+      "status": 200,
+      "htmlSha256": "831844f865f11f931c0af81e9f31179ec4824fbb4dda9500406e63697197bfa0",
+      "htmlBytes": 440956,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-036095ac71a90e552b517b6dfcc46752.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Garamond\", Sans-serif",
+            26
+          ],
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            21
+          ],
+          [
+            "\"Great Vibes\", Sans-serif",
+            10
+          ],
+          [
+            "\"Cinzel\", Sans-serif",
+            10
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#B1748B",
+            36
+          ],
+          [
+            "#A86690",
+            24
+          ],
+          [
+            "#967F60",
+            24
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ]
+        ],
+        "imageTags": 42,
+        "lazyImageTags": 31,
+        "sizedImageTags": 42
+      },
+      "motionParameters": [
+        {
+          "element": "2f1bded",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "fdfdbe9",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/muestra-fashion/",
+      "status": 200,
+      "htmlSha256": "25d9c0cc7c7499b04741ab5064f93af02fd3a835a92b89abfb44d7da547a437b",
+      "htmlBytes": 413184,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-d3117389bac55f5ee65688303326a65f.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Poiret One\", Sans-serif",
+            13
+          ],
+          [
+            "\"Rische\", Sans-serif",
+            12
+          ],
+          [
+            "'Rische'",
+            10
+          ],
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            9
+          ],
+          [
+            "\"Great Vibes\", Sans-serif",
+            8
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#FFFFFF",
+            72
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#AF148B",
+            15
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#000",
+            13
+          ]
+        ],
+        "imageTags": 18,
+        "lazyImageTags": 9,
+        "sizedImageTags": 18
+      },
+      "motionParameters": [
+        {
+          "element": "e071a17",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "ad1bd80",
+          "_animation_mobile": "fadeIn"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/rosabella/",
+      "status": 200,
+      "htmlSha256": "f7b7d5e4670970e19bdc3dffc55d239408212dbab5f59e06e89ea70eeb2cd3f8",
+      "htmlBytes": 377725,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-5aa3fba8aa3c67cdb26022666edf07c4.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            15
+          ],
+          [
+            "'Rische'",
+            10
+          ],
+          [
+            "\"Cinzel\", Sans-serif",
+            9
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Romantic Lovely\", Sans-serif",
+            7
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#A56B6A",
+            40
+          ],
+          [
+            "#E49E9D",
+            31
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#f7f6f4",
+            12
+          ]
+        ],
+        "imageTags": 20,
+        "lazyImageTags": 11,
+        "sizedImageTags": 18
+      },
+      "motionParameters": [
+        {
+          "element": "0008772",
+          "background_background": "classic",
+          "animation": "none"
+        },
+        {
+          "element": "4e9128f",
+          "background_background": "classic",
+          "animation": "none"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/splendida/",
+      "status": 200,
+      "htmlSha256": "0c677168146b7182f631cabb3287a45f2419e3eefacf8aa1dbc78391cbdd310b",
+      "htmlBytes": 407971,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-d550c6b6951e6c556a2ae0b4c08675fa.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            20
+          ],
+          [
+            "'Rische'",
+            10
+          ],
+          [
+            "\"Nathalia\", Sans-serif",
+            9
+          ],
+          [
+            "\"Cinzel\", Sans-serif",
+            8
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#E7C878",
+            95
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#000000",
+            13
+          ],
+          [
+            "#f7f6f4",
+            12
+          ]
+        ],
+        "imageTags": 26,
+        "lazyImageTags": 19,
+        "sizedImageTags": 24
+      },
+      "motionParameters": [
+        {
+          "element": "37fcfa5",
+          "background_background": "classic",
+          "background_motion_fx_motion_fx_scrolling": "yes",
+          "background_motion_fx_translateX_effect": "yes",
+          "background_motion_fx_translateX_speed": {
+            "unit": "px",
+            "size": 0,
+            "sizes": []
+          },
+          "background_motion_fx_translateX_affectedRange": {
+            "unit": "%",
+            "size": "",
+            "sizes": {
+              "start": 0,
+              "end": 100
+            }
+          },
+          "background_motion_fx_devices": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        },
+        {
+          "element": "e071a17",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/secret/",
+      "status": 200,
+      "htmlSha256": "8704cec79fd77f63275012b605f0e3feb396aa8e8efc4e88cc956b6fbe71c0ed",
+      "htmlBytes": 416105,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-c1fcc1dc14f085b424f6428023b0683f.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            19
+          ],
+          [
+            "\"Nathalia\", Sans-serif",
+            11
+          ],
+          [
+            "\"Aboreto\", Sans-serif",
+            10
+          ],
+          [
+            "\"Poiret One\", Sans-serif",
+            10
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#FFFFFF",
+            57
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#E5D2C4",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#000000",
+            13
+          ]
+        ],
+        "imageTags": 32,
+        "lazyImageTags": 23,
+        "sizedImageTags": 32
+      },
+      "motionParameters": [
+        {
+          "element": "37fcfa5",
+          "background_background": "classic",
+          "background_motion_fx_motion_fx_scrolling": "yes",
+          "background_motion_fx_translateX_effect": "yes",
+          "background_motion_fx_translateX_speed": {
+            "unit": "px",
+            "size": 0,
+            "sizes": []
+          },
+          "background_motion_fx_translateX_affectedRange": {
+            "unit": "%",
+            "size": "",
+            "sizes": {
+              "start": 0,
+              "end": 100
+            }
+          },
+          "background_motion_fx_devices": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        },
+        {
+          "element": "e071a17",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/gemma/",
+      "status": 200,
+      "htmlSha256": "a9783033a04a17bc3520f84e0d3e3af9db2fda1207889c4ea9cd6eb687343b5e",
+      "htmlBytes": 400202,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-a33b9ec29454ff30037ccbb1e016267d.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            38
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Great Vibes\", Sans-serif",
+            7
+          ],
+          [
+            "\"Cormorant Garamond\", Sans-serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#7A695D",
+            30
+          ],
+          [
+            "#E5D2C4",
+            26
+          ],
+          [
+            "#D6A299",
+            23
+          ],
+          [
+            "#967F60",
+            18
+          ],
+          [
+            "#897a59",
+            16
+          ]
+        ],
+        "imageTags": 28,
+        "lazyImageTags": 19,
+        "sizedImageTags": 28
+      },
+      "motionParameters": [
+        {
+          "element": "441a443",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "9fa0ab0",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/rossamore//",
+      "status": 200,
+      "htmlSha256": "ff2c1cd5e528a5801bf302a4e7634073f1f14cc269774640464e01bd27a587c1",
+      "htmlBytes": 382266,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-73352b9a9e0cd16e5983bc2ede700165.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cinzel\", Sans-serif",
+            29
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"youreinvited\", Sans-serif",
+            4
+          ],
+          [
+            "\"Cormorant Garamond\", Sans-serif",
+            4
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#000000",
+            37
+          ],
+          [
+            "#E08489",
+            25
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#E5D2C4",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ]
+        ],
+        "imageTags": 20,
+        "lazyImageTags": 13,
+        "sizedImageTags": 18
+      },
+      "motionParameters": [
+        {
+          "element": "0008772",
+          "background_background": "classic",
+          "animation": "none"
+        },
+        {
+          "element": "4e9128f",
+          "background_background": "classic",
+          "animation": "none"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/muestra-rosseto-mis-15/",
+      "status": 200,
+      "htmlSha256": "4e170066f1270500d5b68e3b535fddd31404c52709d7a1910f6a56df6cb06b72",
+      "htmlBytes": 386099,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-f22b57deb3386049624303624db55c58.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            37
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Great Vibes\", Sans-serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"Cormorant Garamond\", Sans-serif",
+            4
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#7A695D",
+            20
+          ],
+          [
+            "#FFFFFF",
+            18
+          ],
+          [
+            "#E5D2C4",
+            18
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ]
+        ],
+        "imageTags": 32,
+        "lazyImageTags": 24,
+        "sizedImageTags": 32
+      },
+      "motionParameters": [
+        {
+          "element": "9fa0ab0",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "f05d4bf",
+          "_animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/promo-2024/",
+      "status": 200,
+      "htmlSha256": "d96887b04f8c272e272b5f561376122d4aa84683535a5262971324c700bdfebb",
+      "htmlBytes": 387434,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-cbea1f5dd9d6d705ca2f194fb1bb7bf6.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Poiret One\", Sans-serif",
+            27
+          ],
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            17
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"Roboto\"",
+            3
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#FFFFFF",
+            47
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#A88144",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#D4A75A",
+            13
+          ]
+        ],
+        "imageTags": 40,
+        "lazyImageTags": 33,
+        "sizedImageTags": 36
+      },
+      "motionParameters": [
+        {
+          "element": "80595f2",
+          "background_background": "classic",
+          "background_motion_fx_motion_fx_scrolling": "yes",
+          "background_motion_fx_translateX_effect": "yes",
+          "background_motion_fx_translateX_speed": {
+            "unit": "px",
+            "size": 0,
+            "sizes": []
+          },
+          "background_motion_fx_translateX_affectedRange": {
+            "unit": "%",
+            "size": "",
+            "sizes": {
+              "start": 0,
+              "end": 100
+            }
+          },
+          "background_motion_fx_devices": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        },
+        {
+          "element": "2b68043",
+          "_animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/muestra-mis-xv-zafiro//",
+      "status": 200,
+      "htmlSha256": "30eb6b94a36757a77c743c8d7fc6b1dc787b8c7d23ddfa45115ef0ed7107454b",
+      "htmlBytes": 348412,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-3def152e11cac8b7aa8814b9a6fd6cb5.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cinzel\", Sans-serif",
+            9
+          ],
+          [
+            "\"Romantic Lovely\", Sans-serif",
+            8
+          ],
+          [
+            "\"Caudex\", Sans-serif",
+            8
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Cormorant Garamond\", Sans-serif",
+            7
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#A7E5FF",
+            25
+          ],
+          [
+            "#57FFEB",
+            17
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#f7f6f4",
+            12
+          ]
+        ],
+        "imageTags": 22,
+        "lazyImageTags": 15,
+        "sizedImageTags": 20
+      },
+      "motionParameters": [
+        {
+          "element": "0008772",
+          "background_background": "classic",
+          "animation": "none"
+        },
+        {
+          "element": "4e9128f",
+          "background_background": "classic",
+          "animation": "none"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/fiori-muestra-bautizo/",
+      "status": 200,
+      "htmlSha256": "d683f9087e797ce55ef676f3c4c564f82617f99ce8cffce684a1ef009850b0c2",
+      "htmlBytes": 441332,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-a1ce311786579c260669e97d4d770ab6.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            34
+          ],
+          [
+            "\"Cormorant Garamond\", Sans-serif",
+            11
+          ],
+          [
+            "\"Great Vibes\", Sans-serif",
+            10
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#51765D",
+            47
+          ],
+          [
+            "#FFFFFF",
+            20
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#000000",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ]
+        ],
+        "imageTags": 30,
+        "lazyImageTags": 22,
+        "sizedImageTags": 30
+      },
+      "motionParameters": [
+        {
+          "element": "5072c22",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "cf6261a",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/azul-muestra-bautizo/",
+      "status": 200,
+      "htmlSha256": "85f0639e2b06ecad82112f1dd837ff08569179759bf5553d6c510cc39879b6ad",
+      "htmlBytes": 389518,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-05b79cfdc07edf2eded01cdd21e8e7c6.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            35
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "\"Great Vibes\", Sans-serif",
+            6
+          ],
+          [
+            "inherit",
+            5
+          ],
+          [
+            "\"Roboto\"",
+            3
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#124F88",
+            32
+          ],
+          [
+            "#FFFFFF",
+            21
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ],
+          [
+            "#967F60",
+            14
+          ]
+        ],
+        "imageTags": 26,
+        "lazyImageTags": 19,
+        "sizedImageTags": 16
+      },
+      "motionParameters": [
+        {
+          "element": "32f781d",
+          "_animation_mobile": "zoomIn"
+        },
+        {
+          "element": "988bc3f",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    },
+    {
+      "url": "https://invitali.com/rosse-muestra-bautizo/",
+      "status": 200,
+      "htmlSha256": "cf0f113ad243b15d6bd7500f3b2fe7e512d1566d1318d1dc350ad4855fcbc6c4",
+      "htmlBytes": 403431,
+      "stylesheetUrls": [
+        "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-a051fcfae40f1d8f63438491eabb9aed.css",
+        "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1"
+      ],
+      "signals": {
+        "fontsByCssOccurrences": [
+          [
+            "\"Cormorant Infant\", Sans-serif",
+            21
+          ],
+          [
+            "\"Cormorant Garamond\", Sans-serif",
+            13
+          ],
+          [
+            "\"Alex Brush\", Sans-serif",
+            8
+          ],
+          [
+            "'Playfair Display',serif",
+            7
+          ],
+          [
+            "inherit",
+            5
+          ]
+        ],
+        "colorsByCssOccurrences": [
+          [
+            "#DFA9A9",
+            44
+          ],
+          [
+            "#FFFFFF",
+            17
+          ],
+          [
+            "#897a59",
+            16
+          ],
+          [
+            "#E5D2C4",
+            16
+          ],
+          [
+            "#5eead4",
+            15
+          ]
+        ],
+        "imageTags": 36,
+        "lazyImageTags": 28,
+        "sizedImageTags": 36
+      },
+      "motionParameters": [
+        {
+          "element": "441a443",
+          "animation_mobile": "fadeInUp"
+        },
+        {
+          "element": "0a7dcbf",
+          "animation_mobile": "fadeInUp"
+        }
+      ]
+    }
+  ],
+  "stylesheets": [
+    {
+      "url": "https://invitali.com/wp-content/uploads/elementor/css/base-mobile.min.css?ver=6ad8dbc2f40b1",
+      "status": 200,
+      "bytes": 85,
+      "sha256": "05f7b1771934a78c84b3f69e526409709af6096ff2437c3f9f7fb613464ecc78",
+      "media": [
+        "(max-width:767px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-05b79cfdc07edf2eded01cdd21e8e7c6.css",
+      "status": 200,
+      "bytes": 745733,
+      "sha256": "1e2f556172c3f722f792375dc086781ecb420095c04719ad2a61e14b5922dee4",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-036095ac71a90e552b517b6dfcc46752.css",
+      "status": 200,
+      "bytes": 739265,
+      "sha256": "b2da9b7724578496680e5dad28e289af711a1a19626edfd8cbfe75afb8fd3d86",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-09b86fce88fcc20940e81678b94a0a2c.css",
+      "status": 200,
+      "bytes": 704404,
+      "sha256": "22b6a61120a02cabe037485597ea5850c52bcb790899668cc9e0b68e8dc71852",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-28706312d9c3a10ee794e383d7f8c6ed.css",
+      "status": 200,
+      "bytes": 701854,
+      "sha256": "74f87517e4b5cc7acc7ca2eba12e0bf2b3bf90ca9e101df42b64e927fb7cd8f5",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-1f100eda841e0e46e07560b26b676600.css",
+      "status": 200,
+      "bytes": 668244,
+      "sha256": "932af68a8976c020de73d42d60070f13f6a17d43af617df866d343876e09df41",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-2874b57634453b40f4a8cce704f9a9ea.css",
+      "status": 200,
+      "bytes": 716657,
+      "sha256": "dbe732418ea8ef0dc4b7fd202a08bf924353e8c27c59a3788822a36c065952db",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-2cb833c55f12fdb2d7015ecb87d262e3.css",
+      "status": 200,
+      "bytes": 666125,
+      "sha256": "5f62fad2b7706259250a608ff0aad4d3e2b64e937d6fa86ce3a7e0bd6ef7a2ab",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-3def152e11cac8b7aa8814b9a6fd6cb5.css",
+      "status": 200,
+      "bytes": 740780,
+      "sha256": "5e0ce68a84b1d80c0d3416aa2a77c43e634654179b34a5c6935c765850f9178c",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-560600b01fd20f63f50ef6c0d9e87abf.css",
+      "status": 200,
+      "bytes": 692234,
+      "sha256": "3fe149c57270433584e8c5de1cd25c1775126af07c263503cb347465d954351e",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-5aa3fba8aa3c67cdb26022666edf07c4.css",
+      "status": 200,
+      "bytes": 746554,
+      "sha256": "62d710e2f682ed1de3cded094c642c4c885f38aba3739485e7a051e6520fce7f",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-604772cc12001453de614fb3bf460e31.css",
+      "status": 200,
+      "bytes": 751294,
+      "sha256": "bf5fbd45f499d8f592335afe5549679ae0a2afc3d0cb14fa3a9de5a5268b879b",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)",
+        "only screen and (max-width: 767px)",
+        "only screen and (max-width: 991px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-6a1ae72ec1592f562cc0e252ce378c05.css",
+      "status": 200,
+      "bytes": 739633,
+      "sha256": "50f3135c71b546da524afb4c089df859db419c5bcd47f22e7eb6ac1dc917f2b6",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-6cd397a1aae354d1b856ea3b4b7d457a.css",
+      "status": 200,
+      "bytes": 739265,
+      "sha256": "1721cc05dccc4c001f3be5e0e33059135cf10afcc7c06de963b1650485527034",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-73352b9a9e0cd16e5983bc2ede700165.css",
+      "status": 200,
+      "bytes": 715370,
+      "sha256": "13d0899acf3ae29c67a83b6654724de4667a40034ac2c341c1714a40e53e9ab2",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-748ae60433af9ec76680dc27cb1b59f4.css",
+      "status": 200,
+      "bytes": 723387,
+      "sha256": "c0edde8b012450a38710b9247d8b49c1faa82bb9ad652e450e32f46693e1b557",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-756e1acb8d029da70d4c9933e1f366c5.css",
+      "status": 200,
+      "bytes": 765206,
+      "sha256": "2b2fff62d266ef0cce6cf2524996b528a9333228a7b86c8af7c3b4cdc8ff795c",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-857941fa4ea65b763aeb414c375142be.css",
+      "status": 200,
+      "bytes": 737111,
+      "sha256": "8690cd36d54fc9af458bfe827c49a327e0034880082ae6e9de3757007181bec5",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-87155f6a855945cc91f92c154e52fc6d.css",
+      "status": 200,
+      "bytes": 742109,
+      "sha256": "5f703d0cade8752de4bbe233446812805d2bbc10323789863d75733bbf9260b5",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-a051fcfae40f1d8f63438491eabb9aed.css",
+      "status": 200,
+      "bytes": 739422,
+      "sha256": "ea3bc627a92598e20dae426f8df5d726ae359d66dc6397611effffef0ed40cdf",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-a1ce311786579c260669e97d4d770ab6.css",
+      "status": 200,
+      "bytes": 740441,
+      "sha256": "76f36c5f29607bd4a91c96938b46788b86ce1267c35afefec76397dbaed95de8",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-a33b9ec29454ff30037ccbb1e016267d.css",
+      "status": 200,
+      "bytes": 733692,
+      "sha256": "7aacf588282394305d0f0765fe97656b52f02a0d9cb9626cea72ce8c23195589",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-c1fcc1dc14f085b424f6428023b0683f.css",
+      "status": 200,
+      "bytes": 714680,
+      "sha256": "516da81cd71e1e878434a95dac51eb4cd6758509e6911d8bd1727bfc5024b16a",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-cbea1f5dd9d6d705ca2f194fb1bb7bf6.css",
+      "status": 200,
+      "bytes": 739122,
+      "sha256": "ca1a361ce52cc76c4e4fc7d2f592509d46ce642dc41a1f1bc708032fd15fd4b2",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-cfd429759826f8775719912a197adf57.css",
+      "status": 200,
+      "bytes": 826668,
+      "sha256": "86220728d9e781ea015a0d56709768be7b0ec4889ed8a8bf54d3ef329614ed0f",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-d3117389bac55f5ee65688303326a65f.css",
+      "status": 200,
+      "bytes": 739236,
+      "sha256": "dc2dea7db30e642c634e7fc3eb86846b9a23ed815f6686559eb65b7a78371c21",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-d550c6b6951e6c556a2ae0b4c08675fa.css",
+      "status": 200,
+      "bytes": 737050,
+      "sha256": "efeaa6e6ac909e078c75d2369514daf01dbaa111a6049090d7568d78ecce9f3d",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-d8ddc071dcd17cc3d6fd125ab739a5b9.css",
+      "status": 200,
+      "bytes": 698084,
+      "sha256": "3994f9c92cd603cc1d0cecfc44f5c68f94bfea4ead500877cad54c249e59ecfb",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-f22b57deb3386049624303624db55c58.css",
+      "status": 200,
+      "bytes": 733692,
+      "sha256": "919aae736eabc804c95c05c4ff264127706e4dcd364d09f3cf0921644843edf4",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/siteground-optimizer-assets/siteground-optimizer-combined-css-f6c0a619aeb44335985e71c742c99889.css",
+      "status": 200,
+      "bytes": 703604,
+      "sha256": "ba3a867302950e462d5c0e419432774b1e5764ebc750ea6d1db1401a51246075",
+      "media": [
+        "(min-width:768px) and (max-width:921px)",
+        "(min-width:769px) and (max-width:921px)",
+        "(max-width:768px)",
+        "(max-width:992px)",
+        "(min-width:768px)",
+        "(min-width:769px)",
+        "(min-width:992px)",
+        "(max-width:1200px)",
+        "(min-width:993px)",
+        "(min-width:1201px)",
+        "(min-width:421px)",
+        "(max-width:420px)",
+        "(max-width:544px)",
+        "(max-width:1024px)",
+        "(max-width:767px)",
+        "only screen and (max-width:1024px)",
+        "only screen and (max-width:767px)",
+        "(min-width:-1)",
+        "(max-width:-1)",
+        "(max-width:479px)",
+        "(min-width:768px) and (max-width:1024px)",
+        "(min-width:1025px) and (max-width:-1)",
+        "(min-width:-1) and (max-width:-1)",
+        "(min-width:-1) and (max-width:1024px)",
+        "(min-width:768px) and (max-width:-1)",
+        "(min-width:1025px)",
+        "(prefers-reduced-motion:no-preference)",
+        "screen and (max-width:1024px)",
+        "screen and (max-width:767px)",
+        "(prefers-reduced-motion:reduce)",
+        "(min-width:1025px) and (max-width:99999px)"
+      ]
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/trustindex-facebook-widget.css?1790320223",
+      "status": 200,
+      "bytes": 74734,
+      "sha256": "788470af85ed6db2a7d910ded25bc9f9a5ba2c3b1e2cbac392c688bcb0d0f785",
+      "media": [
+        "(max-width:479px)",
+        "(min-width:1024px)",
+        "(min-width:480px)",
+        "(max-width:1160px)",
+        "(max-width:1160px) and (orientation:landscape)",
+        "(max-width:767px) and (orientation:portrait)",
+        "(max-width:767px)"
+      ]
+    }
+  ]
+}

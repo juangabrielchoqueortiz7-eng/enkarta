@@ -72,3 +72,9 @@ BCP permanece desactivado. La configuración de skills no cambia proveedores de 
 - No se ejecutó un build ni la suite de la aplicación porque no cambió su código. No se desplegó ni se hicieron operaciones de base de datos o bancarias.
 
 Evidencia resumida y versiones: `docs/skills-lock.json`. Las skills estarán disponibles para los siguientes mensajes de Codex.
+
+## Skill de fidelidad Invitali · 22 de octubre de 2026
+
+La skill adicional `enkarta-invitali-fidelity` vive en `skills/enkarta-invitali-fidelity/` dentro del repositorio y se instala también en la carpeta de skills del usuario. Se usa para analizar o reproducir una muestra específica, conservando las otras variantes. Su procedencia es el análisis público de 30 páginas y 31 hojas CSS enlazadas de Invitali; el inventario de URLs y hashes está en sus referencias.
+
+No añade WordPress ni Elementor a Enkarta, no cambia precios ni recursos y no demuestra equivalencia visual. Distingue CSS declarado, estilo computado y comportamiento observado. El navegador automatizado está deshabilitado en esta sesión: el análisis no acredita «idéntico sin diferencias» ni un constructor privado. Para replicar una muestra, compara recursos completos y composición en ambos tamaños cuando exista acceso visual.

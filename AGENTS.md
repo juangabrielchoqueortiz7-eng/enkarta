@@ -15,6 +15,7 @@ Antes de trabajar en la interfaz, leer `PRODUCT.md`, `DESIGN.md` y la sección p
 Elegir las skills según el cambio, sin cargar todas para una corrección pequeña:
 
 - `impeccable`: dirección visual, jerarquía, refinamiento de interfaces existentes y documentación del sistema de diseño.
+- `enkarta-invitali-fidelity`: reproducción de una muestra concreta de Invitali; referencia versionada en `skills/enkarta-invitali-fidelity/`. No certifica identidad visual con lecturas de HTML/CSS ni modifica las demás variantes.
 - `ui-ux-pro-max`: consultar patrones, tipografía o alternativas cuando la tarea requiera exploración. Las recomendaciones del catálogo no sustituyen decisiones existentes ni autorizan un rediseño.
 - `web-design-guidelines`: revisar accesibilidad, interacción, formularios y adaptación móvil de los archivos afectados.
 - `vercel-react-best-practices`: rendimiento de React/Next.js, consultas y tamaño del código del cliente.

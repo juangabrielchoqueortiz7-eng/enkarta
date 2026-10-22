@@ -51,6 +51,7 @@ export default function EntryGate({
   const reducedMotion = useReducedMotion();
   const contentRef = useRef<HTMLDivElement>(null);
   const gateRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef(false);
   useEffect(() => {
     const content = contentRef.current;
     if (!content) return;
@@ -66,13 +67,18 @@ export default function EntryGate({
 
   // Bloquea el scroll del fondo mientras la portada está visible.
   useEffect(() => {
-    if (gone) { document.body.style.overflow = ''; return; }
+    if (gone) return;
+    const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    return () => { document.body.style.overflow = previous; };
   }, [gone]);
 
-  useEffect(() => () => {
-    if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+  useEffect(() => {
+    activeRef.current = true;
+    return () => {
+      activeRef.current = false;
+      if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+    };
   }, []);
 
   const base = themeFor(template);
@@ -122,7 +128,15 @@ export default function EntryGate({
     // no estaba montado en el primer frame.
     const playAudio = () => {
       const audio = contentRef.current?.querySelector<HTMLAudioElement>('audio[data-invitation-music], audio');
-      if (withMusic) audio?.play().catch(() => window.dispatchEvent(new Event('enkarta:audio-error')));
+      const source = audio?.getAttribute('src');
+      const reportAudioError = () => {
+        if (activeRef.current && audio && audio === contentRef.current?.querySelector('audio[data-invitation-music], audio') && audio.getAttribute('src') === source) {
+          window.dispatchEvent(new CustomEvent('enkarta:audio-error', { detail: { audio } }));
+        }
+      };
+      if (withMusic && audio) {
+        try { Promise.resolve(audio.play()).catch(reportAudioError); } catch { reportAudioError(); }
+      }
       else audio?.pause();
       return !!audio;
     };

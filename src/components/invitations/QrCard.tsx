@@ -4,7 +4,8 @@
 // SmartRsvp tras confirmar. El QR codifica el access_token del invitado; el
 // personal de puerta lo escanea para cargar al grupo y hacer el check-in.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { boundedInvitationTask } from '@/lib/invitation-request';
 import QRCode from 'qrcode';
 import type { BlockTheme } from '@/components/invitations/blocks/theme';
 import { accessPassPng, passFilename } from '@/lib/access-pass';
@@ -19,43 +20,57 @@ interface Props {
 }
 
 export default function QrCard({ t, accessToken, accessCode, guestName, tableNo, passes }: Props) {
-  const [qr, setQr] = useState<string>('');
+  const [image, setImage] = useState<{ token: string; url: string } | null>(null);
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
+  const activeDownload = useRef<AbortController | null>(null);
+  const details = JSON.stringify([accessToken, accessCode, guestName, tableNo, passes]);
+  const context = useRef({ details });
+  if (context.current.details !== details) context.current = { details };
+  const owner = context.current;
+  const qr = image?.token === accessToken ? image.url : '';
+  const alive = useRef(true);
 
   useEffect(() => {
-    let active = true;
-    setQr(''); setError('');
-    QRCode.toDataURL(accessToken, { margin: 1, width: 320, color: { dark: '#1a1a1a', light: '#ffffff' } })
-      .then(value => { if (active) setQr(value); })
-      .catch(() => { if (active) setError('No se pudo generar el QR. Usa el ID de acceso o actualiza la página.'); });
-    return () => { active = false; };
-  }, [accessToken]);
+    alive.current = true;
+    const controller = new AbortController();
+    activeDownload.current?.abort(); activeDownload.current = null;
+    setImage(null); setError(''); setDownloading(false);
+    boundedInvitationTask(() => QRCode.toDataURL(accessToken, { margin: 1, width: 320, color: { dark: '#1a1a1a', light: '#ffffff' } }), { signal: controller.signal, timeout: 12000 })
+      .then(url => { if (alive.current && context.current === owner) setImage({ token: accessToken, url }); })
+      .catch(() => { if (alive.current && context.current === owner && !controller.signal.aborted) setError('No se pudo generar el QR. Usa el ID de acceso o actualiza la página.'); });
+    return () => { alive.current = false; controller.abort(); activeDownload.current?.abort(); };
+  }, [accessToken, owner]);
 
   const download = async () => {
-    if (downloading) return;
+    if (!alive.current || context.current !== owner || activeDownload.current || !qr) return;
+    const controller = new AbortController();
+    activeDownload.current = controller;
+    const current = () => alive.current && context.current === owner && activeDownload.current === controller;
     setDownloading(true); setError('');
     try {
-      const blob = await accessPassPng({ accessToken, accessCode, guestName, tableNo, passes });
+      const blob = await boundedInvitationTask(() => accessPassPng({ accessToken, accessCode, guestName, tableNo, passes }), { signal: controller.signal, timeout: 15000 });
+      if (!current()) return;
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a'); link.href = url; link.download = passFilename(accessCode); link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (failure) { setError(failure instanceof Error ? failure.message : 'No se pudo descargar el pase. Puedes guardar una captura.'); }
-    finally { setDownloading(false); }
+      try {
+        const link = document.createElement('a'); link.href = url; link.download = passFilename(accessCode); link.click();
+      } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+    } catch { if (current()) setError('No se pudo descargar el pase. Puedes guardar una captura o volver a intentarlo.'); }
+    finally { if (current()) { activeDownload.current = null; setDownloading(false); } }
   };
 
   return (
     <div className="mx-auto mt-6 rounded-2xl overflow-hidden" style={{ maxWidth: 320, background: '#fff', border: `1px solid ${t.line}`, boxShadow: '0 18px 44px rgba(0,0,0,0.12)' }}>
       <div className="px-5 py-4 text-center" style={{ background: t.primary, color: t.onPrimary }}>
         <p className="font-cinzel uppercase tracking-[0.18em] text-[11px] opacity-90">Pase de acceso</p>
-        <p className="font-great text-3xl leading-tight">{guestName}</p>
+        <p className="font-great text-3xl leading-tight break-words">{guestName}</p>
       </div>
 
       <div className="p-5 text-center">
         {qr ? (
           // Data-URL generado en el cliente: next/image no puede optimizarlo.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={qr} alt="Código QR de acceso" className="mx-auto w-44 h-44" />
+          <img src={qr} alt="Código QR de acceso" width={176} height={176} className="mx-auto w-44 h-44" />
         ) : (
           <div role="status" className="mx-auto w-44 h-44 flex items-center justify-center text-xs text-gray-400 font-outfit">{error ? 'Usa el ID de acceso' : 'Generando…'}</div>
         )}
@@ -72,7 +87,7 @@ export default function QrCard({ t, accessToken, accessCode, guestName, tableNo,
           </div>
           {tableNo && (
             <div>
-              <p className="font-playfair font-bold text-xl" style={{ color: t.primary }}>{tableNo}</p>
+              <p className="font-playfair font-bold text-xl break-words" style={{ color: t.primary }}>{tableNo}</p>
               <p className="font-outfit text-[10px] uppercase tracking-wide" style={{ color: t.muted }}>Mesa</p>
             </div>
           )}
@@ -81,7 +96,7 @@ export default function QrCard({ t, accessToken, accessCode, guestName, tableNo,
         <p className="font-cormorant italic mt-4 text-sm" style={{ color: t.muted }}>
           Presenta este código en la entrada del evento.
         </p>
-        <button type="button" disabled={downloading || !qr} onClick={() => void download()} className="mt-4 min-h-11 w-full rounded-xl border px-3 py-2 text-sm font-outfit disabled:opacity-50" style={{ borderColor: t.line, color: t.text }}>{downloading ? 'Preparando imagen…' : 'Descargar pase PNG'}</button>
+        <button type="button" disabled={downloading || !qr} aria-busy={downloading} onClick={() => void download()} className="mt-4 min-h-11 w-full rounded-xl border px-3 py-2 text-sm font-outfit disabled:opacity-50" style={{ borderColor: t.line, color: t.text }}>{downloading ? 'Preparando imagen…' : 'Descargar pase PNG'}</button>
         <p className="mt-2 text-xs" style={{ color: t.muted }}>Guárdalo en tu galería para mostrarlo sin conexión.</p>
         {error && <p role="alert" className="mt-3 text-xs text-red-700">{error}</p>}
       </div>

@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
-import { supabaseAdmin } from '@/lib/supabase/server';
-import type { Invitation } from '@/lib/types';
 import { publicInvitationData } from '@/lib/published-invitation';
+import { readInvitationBySlug } from '@/lib/public-invitation-read';
+import { shareCardCover, shareCardFont } from '@/lib/share-card-assets';
 
 // Imagen de vista previa al compartir (WhatsApp / redes) generada al vuelo:
 // la foto de portada con un velo oscuro + los nombres en script y la fecha, con
@@ -31,45 +31,21 @@ const TAGLINE: Record<string, string> = {
   bautizo: 'Bautizo',
 };
 
-// Carga una fuente de Google como TTF para Satori (no soporta woff2). Sin
-// User-Agent moderno, Google sirve truetype; si algo falla, devolvemos null y
-// ImageResponse usa su fuente por defecto.
-async function loadGoogleFont(family: string, text: string, weight?: number): Promise<ArrayBuffer | null> {
-  const fam = family.replace(/ /g, '+') + (weight ? `:wght@${weight}` : '');
-  const url = `https://fonts.googleapis.com/css2?family=${fam}&text=${encodeURIComponent(text)}`;
-  try {
-    const css = await (await fetch(url)).text();
-    const src = css.match(/src: url\((.+?)\) format\('(?:opentype|truetype)'\)/);
-    if (!src) return null;
-    const res = await fetch(src[1]);
-    return res.ok ? await res.arrayBuffer() : null;
-  } catch {
-    return null;
-  }
-}
-
 export default async function OgImage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-
-  const { data } = await supabaseAdmin
-    .from('invitations')
-    .select('*')
-    .eq('slug', slug)
-    .single();
-  const published = data ? await publicInvitationData(data as Invitation) : null;
+  const invitation = await readInvitationBySlug(slug);
+  const published = invitation ? await publicInvitationData(invitation) : null;
 
   const names = published?.names || 'Nuestra Boda';
   const dateLine = dateLineOf(published?.event_date ?? null);
   const tagline = TAGLINE[published?.type ?? 'boda'] ?? 'Te invitamos';
-  const cover = published?.cover_image_url || undefined;
   const primary = published?.color_primary || '#b3924f';
   const secondary = published?.color_secondary || '#2c2519';
 
-  const scriptText = names;
-  const serifText = `${tagline}${dateLine}·&ABCDEFGHIJKLMNÑOPQRSTUVWXYZáéíóúÁÉÍÓÚ`;
-  const [scriptFont, serifFont] = await Promise.all([
-    loadGoogleFont('Great Vibes', scriptText),
-    loadGoogleFont('Cormorant Garamond', serifText, 600),
+  const [scriptFont, serifFont, cover] = await Promise.all([
+    shareCardFont('Great Vibes'),
+    shareCardFont('Cormorant Garamond', 600),
+    shareCardCover(published?.cover_image_url),
   ]);
 
   const fonts: { name: string; data: ArrayBuffer; weight?: 400 | 600; style?: 'normal' }[] = [];
@@ -143,6 +119,6 @@ export default async function OgImage({ params }: { params: Promise<{ slug: stri
         </div>
       </div>
     ),
-    { ...size, fonts: fonts.length ? fonts : undefined },
+    { ...size, fonts: fonts.length ? fonts : undefined, headers: { 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex, nofollow, noimageindex', 'Referrer-Policy': 'no-referrer' } },
   );
 }

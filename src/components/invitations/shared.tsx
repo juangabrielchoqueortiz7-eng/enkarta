@@ -389,27 +389,33 @@ export function Lightbox({
   onClose: () => void;
   onIndex: (i: number) => void;
 }) {
-  const touch = useRef<{ x: number; y: number } | null>(null);
+  const touch = useRef<{ id: number; x: number; y: number } | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const total = images.length;
+  const safeIndex = Math.max(0, Math.min(Number.isFinite(index) ? Math.trunc(index) : 0, total - 1));
+  const currentIndex = useRef(safeIndex);
+  currentIndex.current = safeIndex;
   const [mounted, setMounted] = useState(false);
 
   const go = useCallback((dir: number) => {
-    onIndex((index + dir + total) % total);
-  }, [index, total, onIndex]);
+    if (!total) return;
+    currentIndex.current = (currentIndex.current + dir + total) % total;
+    onIndex(currentIndex.current);
+  }, [total, onIndex]);
 
   // Solo portamos en cliente (document existe tras montar).
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || !total) return;
     const previous = document.activeElement as HTMLElement | null;
     dialogRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
-    return () => previous?.focus();
-  }, [mounted]);
+    return () => { if (previous?.isConnected) previous.focus(); };
+  }, [mounted, total]);
 
   // Teclado: ←/→ navega, Esc cierra.
   useEffect(() => {
+    if (!total) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { e.preventDefault(); onClose(); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
@@ -426,19 +432,26 @@ export function Lightbox({
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
-  }, [go, onClose]);
+  }, [go, onClose, total]);
 
-  const onTouchStart = (e: React.TouchEvent) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
+  const onTouchStart = (e: React.TouchEvent) => {
+    const point = e.touches.length === 1 ? e.touches[0] : null;
+    touch.current = point ? { id: point.identifier, x: point.clientX, y: point.clientY } : null;
+  };
   const onTouchEnd = (e: React.TouchEvent) => {
-    if (!touch.current) return;
-    const dx = e.changedTouches[0].clientX - touch.current.x;
-    const dy = e.changedTouches[0].clientY - touch.current.y;
+    const start = touch.current;
+    touch.current = null;
+    // Un pellizco o un gesto cancelado nunca avanza ni cierra el visor.
+    if (!start || e.touches.length) return;
+    const end = Array.from(e.changedTouches).find(point => point.identifier === start.id);
+    if (!end) return;
+    const dx = end.clientX - start.x;
+    const dy = end.clientY - start.y;
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
     else if (dy > 80) onClose(); // deslizar hacia abajo cierra
-    touch.current = null;
   };
 
-  if (!mounted) return null;
+  if (!mounted || !total) return null;
 
   // Portal a <body>: evita que un ancestro con `transform` (ScrollReveal/3D)
   // capture el position:fixed y descoloque el visor.
@@ -449,6 +462,7 @@ export function Lightbox({
       style={{ background: 'rgba(12,10,8,0.94)', backdropFilter: 'blur(4px)', animation: 'ekLbFade .25s ease' }}
       onClick={onClose}
       onTouchStart={onTouchStart}
+      onTouchCancel={() => { touch.current = null; }}
       onTouchEnd={onTouchEnd}
       role="dialog"
       aria-modal="true"
@@ -464,7 +478,8 @@ export function Lightbox({
 
       {/* Cerrar */}
       <button
-        onClick={onClose}
+        type="button"
+        onClick={event => { event.stopPropagation(); onClose(); }}
         aria-label="Cerrar"
         className="absolute top-4 right-4 z-10 flex h-11 w-11 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10"
       >
@@ -474,13 +489,14 @@ export function Lightbox({
       {/* Contador */}
       {total > 1 && (
         <span className="absolute top-5 left-1/2 -translate-x-1/2 font-outfit text-[13px] tracking-[0.2em] text-white/70">
-          {index + 1} / {total}
+          {safeIndex + 1} / {total}
         </span>
       )}
 
       {/* Flecha anterior */}
       {total > 1 && (
         <button
+          type="button"
           onClick={e => { e.stopPropagation(); go(-1); }}
           aria-label="Anterior"
           className="absolute left-2 invite-sm:left-5 z-10 flex h-12 w-12 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
@@ -491,21 +507,22 @@ export function Lightbox({
 
       {/* Imagen + relato editorial opcional. */}
       <figure
-        key={index}
+        key={safeIndex}
         onClick={e => e.stopPropagation()}
         className="ek-lightbox-figure flex max-h-[calc(100dvh-160px)] max-w-[92vw] flex-col items-center"
         style={{ animation: 'ekLbZoom .3s cubic-bezier(0.22,1,0.36,1)' }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={images[index]}
-          alt={captions?.[index]?.alt || captions?.[index]?.title || ''}
+          src={images[safeIndex]}
+          alt={captions?.[safeIndex]?.alt || captions?.[safeIndex]?.title || `Fotografía ${safeIndex + 1}`}
+          decoding="async"
           className="min-h-0 max-h-[calc(100dvh-240px)] max-w-full rounded-lg object-contain shadow-2xl"
         />
-        {(captions?.[index]?.title || captions?.[index]?.caption) && (
+        {(captions?.[safeIndex]?.title || captions?.[safeIndex]?.caption) && (
           <figcaption className="mt-4 max-w-xl px-4 text-center text-white">
-            {captions[index]?.title && <span className="block font-playfair text-lg">{captions[index]?.title}</span>}
-            {captions[index]?.caption && <span className="mt-1 block font-outfit text-xs leading-relaxed text-white/70">{captions[index]?.caption}</span>}
+            {captions[safeIndex]?.title && <span className="block font-playfair text-lg">{captions[safeIndex]?.title}</span>}
+            {captions[safeIndex]?.caption && <span className="mt-1 block font-outfit text-xs leading-relaxed text-white/70">{captions[safeIndex]?.caption}</span>}
           </figcaption>
         )}
       </figure>
@@ -513,6 +530,7 @@ export function Lightbox({
       {/* Flecha siguiente */}
       {total > 1 && (
         <button
+          type="button"
           onClick={e => { e.stopPropagation(); go(1); }}
           aria-label="Siguiente"
           className="absolute right-2 invite-sm:right-5 z-10 flex h-12 w-12 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
@@ -526,10 +544,10 @@ export function Lightbox({
         <div className="absolute bottom-4 left-1/2 flex max-w-[80vw] -translate-x-1/2 gap-2 overflow-x-auto p-1">
           {images.map((src, i) => (
             <button
-              type="button" key={`${src}-${i}`} aria-label={`Ver foto ${i + 1}`} aria-current={i === index ? 'true' : undefined}
+              type="button" key={`${src}-${i}`} aria-label={`Ver foto ${i + 1}`} aria-current={i === safeIndex ? 'true' : undefined}
               onClick={e => { e.stopPropagation(); onIndex(i); }}
               className="h-12 w-12 shrink-0 overflow-hidden rounded transition-all"
-              style={{ outline: i === index ? '2px solid #fff' : '2px solid transparent', opacity: i === index ? 1 : 0.5 }}
+              style={{ outline: i === safeIndex ? '2px solid #fff' : '2px solid transparent', opacity: i === safeIndex ? 1 : 0.5 }}
             >
               <Image src={src} alt="" width={48} height={48} sizes="48px" className="h-full w-full object-cover" />
             </button>
@@ -543,17 +561,21 @@ export function Lightbox({
 
 // Imagen con aparición progresiva: arranca transparente y se funde al cargar
 // (placeholder suave en el contenedor). Evita el "salto" brusco de las fotos.
-export function FadeImg({ className, style, ...rest }: React.ImgHTMLAttributes<HTMLImageElement>) {
+export function FadeImg({ className, style, src, onLoad, onError, ...rest }: React.ImgHTMLAttributes<HTMLImageElement>) {
   const ref = useRef<HTMLImageElement>(null);
-  const [loaded, setLoaded] = useState(false);
-  useEffect(() => { if (ref.current?.complete) setLoaded(true); }, []);
+  const [loadedSource, setLoadedSource] = useState<string | undefined | null>(null);
+  const loaded = loadedSource === src;
+  useEffect(() => { if (ref.current?.complete) setLoadedSource(src); }, [src]);
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       ref={ref}
+      src={src}
       alt=""
       loading="lazy"
-      onLoad={() => setLoaded(true)}
+      onLoad={event => { setLoadedSource(src); onLoad?.(event); }}
+      onError={event => { setLoadedSource(src); onError?.(event); }}
+      decoding="async"
       className={className}
       style={{ ...style, opacity: loaded ? 1 : 0, transition: 'opacity .6s ease, transform .5s ease', filter: loaded ? 'none' : 'blur(8px)' }}
       {...rest}
@@ -697,7 +719,7 @@ export function MasonryGallery({
       <>
         <div className={`grid grid-cols-2 gap-3 invite-sm:grid-cols-3 ${className}`}>
           {images.map((src, i) => (
-            <figure key={`${src}-${i}`} onClick={() => lb.openAt(i)} className={`group relative overflow-hidden rounded-2xl ${i % 3 === 1 ? 'invite-sm:translate-y-6' : ''}`} style={{ aspectRatio: aspect, cursor: 'zoom-in' }}>
+            <figure key={`${src}-${i}`} onClick={() => lb.openAt(i)} role="button" tabIndex={0} aria-label={`Abrir foto ${i + 1}`} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); lb.openAt(i); } }} className={`group relative overflow-hidden rounded-2xl ${i % 3 === 1 ? 'invite-sm:translate-y-6' : ''}`} style={{ aspectRatio: aspect, cursor: 'zoom-in' }}>
               <FadeImg src={src} alt={captions[i]?.alt || captions[i]?.title || ''} className="h-full w-full object-cover group-hover:scale-105" />
               {story(i)}
               <ZoomHint />
@@ -717,6 +739,8 @@ export function MasonryGallery({
           <figure
             key={`${src}-${i}`}
             onClick={() => lb.openAt(i)}
+            role="button" tabIndex={0} aria-label={`Abrir foto ${i + 1}`}
+            onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); lb.openAt(i); } }}
             className={`group mb-4 inline-block w-full shadow-md ${polaroid ? 'bg-white p-2 pb-4' : 'overflow-hidden rounded-2xl'}`}
             style={{ transform: `rotate(${(i % 3 - 1) * (polaroid ? 2.2 : 2)}deg)`, cursor: 'zoom-in' }}
           >
