@@ -27,6 +27,7 @@ import { useBuilderDuplicate } from './useBuilderDuplicate';
 import { useBuilderDelete } from './useBuilderDelete';
 import BuilderDeleteState from './BuilderDeleteState';
 import { acknowledgesBuilderSave } from '@/lib/builder-save-ack';
+import { BuilderSaveTimeoutError, requestBuilderSave } from '@/lib/builder-save-request';
 
 type Tab = 'content' | 'blocks' | 'elements' | 'style' | 'decor' | 'motion' | 'media' | 'guests' | 'versions' | 'quality' | 'export' | 'config';
 
@@ -120,6 +121,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saveState, setSaveState] = useState<'clean' | 'dirty' | 'saving' | 'saved' | 'offline' | 'error'>('clean');
   const [saveError, setSaveError] = useState('');
+  const saveUncertain = useRef(false);
   const [advancedTools, setAdvancedTools] = useState(false);
   const [mobileWorkspace, setMobileWorkspace] = useState<'edit' | 'preview'>('edit');
   const [contractNotice, setContractNotice] = useState('');
@@ -222,7 +224,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, [initialData.id, fixtureMode]);
 
   useEffect(() => {
-    const online = () => setSaveState(hasChanges.current ? 'dirty' : 'saved');
+    const online = () => setSaveState(saveUncertain.current ? 'error' : hasChanges.current ? 'dirty' : 'saved');
     const offline = () => setSaveState('offline');
     window.addEventListener('online', online);
     window.addEventListener('offline', offline);
@@ -239,7 +241,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     const protect = (event: BeforeUnloadEvent) => {
       // Inline text is committed on blur; closing a tab need not blur it first.
       document.activeElement?.closest<HTMLElement>('[data-edit-key][contenteditable="true"]')?.blur();
-      if (hasChanges.current || manualSavePending.current || pendingDraftSave.current || publicOperation.current) {
+      if (saveUncertain.current || hasChanges.current || manualSavePending.current || pendingDraftSave.current || publicOperation.current) {
         event.preventDefault(); event.returnValue = '';
       }
     };
@@ -545,12 +547,14 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, []);
 
   const storeDraft = useCallback(async (snapshot: InvitationParsed, options?: { requireCurrent?: number; pauseCurrent?: boolean }) => {
+    if (saveUncertain.current) throw new BuilderSaveTimeoutError();
     if (deletionLock.current) return false;
     if (fixtureMode) return dataRef.current === snapshot;
     const editedAt = editSequence.current, epoch = publicationEpoch.current;
     const pending = pendingDraftSave.current;
     if (!options && pending?.snapshot === snapshot && pending.editedAt === editedAt && pending.epoch === epoch) return pending.promise;
     const save = saveQueue.current.catch(() => {}).then(async () => {
+    if (saveUncertain.current) throw new BuilderSaveTimeoutError();
     if (deletionLock.current) return false;
     if (publicationEpoch.current !== epoch || (options?.requireCurrent !== undefined && editSequence.current !== options.requireCurrent)) return false;
     // Pausing changes public state only; use the latest working content when its queued PUT starts.
@@ -558,15 +562,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     const attemptedAt = options?.pauseCurrent ? editSequence.current : editedAt;
     const expectedRevision = draftRevision.current;
     const attemptedPayload = payloadFrom(attempted);
-    const response = await fetch('/api/admin/invitations', {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...attemptedPayload, expectedDraftRevision: expectedRevision }),
-    });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      setSaveError(payload.error || 'No se pudo guardar. Conservamos los cambios en esta pestaña.');
-      throw new Error(payload.error || 'No se pudo guardar el borrador');
-    }
-    const stored = await response.json();
+    const stored = await requestBuilderSave({ ...attemptedPayload, expectedDraftRevision: expectedRevision });
     // A 200 alone cannot acknowledge this queued write. Never adopt its revision
     // or operational fields until it confirms the conditional save (including
     // a complete matching echo when SQL leaves an unchanged revision intact).
@@ -582,6 +578,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     });
     saveQueue.current = save;
     const result = save.catch(error => {
+      if (error instanceof BuilderSaveTimeoutError) saveUncertain.current = true;
       failedSaveAt.current = editSequence.current;
       setSaveError(error instanceof TypeError ? 'Sin conexión. Conservamos los cambios en esta pestaña; puedes descargar un respaldo.' : error instanceof Error ? error.message : 'No se pudo guardar el borrador.');
       throw error;
@@ -595,6 +592,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   // Autoguardado silencioso con estado explícito y recuperación al reconectar.
   const silentSave = useCallback(async () => {
+    if (saveUncertain.current) return;
     if (deletionLock.current || publicOperation.current || manualSavePending.current) return;
     if (typeof navigator !== 'undefined' && !navigator.onLine) { setSaveState('offline'); return; }
     setSaveState('saving');
@@ -610,7 +608,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   // Dispara el autoguardado 2.5s después del último cambio.
   useEffect(() => {
-    if (deletionLock.current || !hasChanges.current || publicOperation.current || failedSaveAt.current === editSequence.current) return;
+    if (saveUncertain.current || deletionLock.current || !hasChanges.current || publicOperation.current || failedSaveAt.current === editSequence.current) return;
     const id = setTimeout(() => { silentSave(); }, 2500);
     return () => clearTimeout(id);
   }, [data, silentSave, saving, deleteBlocked]);
@@ -622,6 +620,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, [silentSave]);
 
   const handleSave = useCallback(async () => {
+    if (saveUncertain.current) return;
     if (deletionLock.current || publicOperation.current || manualSavePending.current) return;
     manualSavePending.current = true;
     setSaving(true);
@@ -659,6 +658,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, [handleSave, publishOpen, fixtureMode]);
 
   const openPublish = () => {
+    if (saveUncertain.current) return;
     if (deletionLock.current) return;
     const now = new Date();
     setPublishLabel(`Publicación ${now.toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })} · ${now.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}`);
@@ -701,6 +701,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   };
 
   const confirmPublish = async () => {
+    if (saveUncertain.current) return;
     if (deletionLock.current || validation.errors.length || saving || publicOperation.current) return;
     const scheduledAt = publishMode === 'schedule' ? new Date(publishAt) : null;
     if (publishMode === 'schedule' && (!publishAt || !scheduledAt || Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() <= Date.now() + 60_000)) {
@@ -752,6 +753,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   };
 
   const unpublishInvitation = async () => {
+    if (saveUncertain.current) return;
     if (deletionLock.current || publicOperation.current) return;
     if (!window.confirm('¿Despublicar esta invitación? El enlace mostrará una pausa temporal y todas las versiones quedarán conservadas.')) return;
     const editedAt = editSequence.current, working = dataRef.current;
@@ -772,6 +774,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   };
 
   const rollbackPublication = async (version: BuilderVersion) => {
+    if (saveUncertain.current) return;
     if (deletionLock.current || publicOperation.current) return;
     const editedAt = editSequence.current, working = dataRef.current;
     hydrationEpoch.current += 1; publicOperation.current = true; setSaving(true); setPublicationNotice(''); setSaveState('saving');
@@ -808,11 +811,12 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const { handleDuplicate, duplicate, duplicateError, isDuplicateBusy } = useBuilderDuplicate({
     sourceId: initialData.id, builderPath,
     snapshot: () => dataRef.current, sequence: () => editSequence.current, dirty: () => hasChanges.current,
-    canStart: () => !deletionLock.current && !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current,
+    canStart: () => !saveUncertain.current && !deletionLock.current && !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current,
     navigate: href => router.push(href),
   });
 
   const privatePreviewIssue = useCallback((checkConnection = false) => {
+    if (saveUncertain.current) return 'El guardado quedó sin confirmar. Descarga un respaldo y recarga para comprobar el borrador antes de abrir la vista privada.';
     if (deletionLock.current) return 'La eliminación está en curso o sin confirmar. Revisa el panel antes de continuar.';
     const context = privatePreviewContext.current;
     if (context.fixtureMode) return 'Esta muestra no guarda cambios. Revisa la invitación en el lienzo del constructor.';
@@ -863,7 +867,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   const { handleDelete, deletion, deleteError } = useBuilderDelete({
     sourceId: initialData.id, backHref, snapshot: () => dataRef.current,
-    canStart: () => !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current && !pendingDraftSave.current && !isDuplicateBusy(),
+    canStart: () => !saveUncertain.current && !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current && !pendingDraftSave.current && !isDuplicateBusy(),
     locked: value => { deletionLock.current = value; setDeleteBlocked(value); if (value) hydrationEpoch.current += 1; },
     confirmed: () => { hasChanges.current = false; },
     navigate: href => router.push(href),
@@ -874,6 +878,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     const link = document.createElement('a'); link.href = url; link.download = `${deletion.snapshot.slug}-respaldo-local.json`; link.click(); URL.revokeObjectURL(url);
   }} />;
 
+  const saveStateMeta = SAVE_STATE_META[saveUncertain.current ? 'error' : saveState];
   return (
     <div className="flex flex-col h-[100dvh] bg-gray-50">
 
@@ -968,7 +973,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             )}
             <button
               onClick={handleDuplicate}
-              disabled={fixtureMode || saving || publishOpen || !!duplicate}
+              disabled={saveUncertain.current || fixtureMode || saving || publishOpen || !!duplicate}
               title="Duplicar invitación"
               type="button"
               aria-label="Duplicar invitación"
@@ -983,7 +988,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
               : <a {...privatePreviewProps} href={`/i/${encodeURIComponent(data.slug)}?preview=1`} target="_blank" rel="noopener noreferrer">{privatePreviewContent}</a>}
             <button
               onClick={() => handleSave()}
-              disabled={saving}
+              disabled={saveUncertain.current || saving}
               type="button"
               aria-busy={saving}
               aria-keyshortcuts="Control+s Meta+s"
@@ -994,7 +999,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             </button>
             <button
               onClick={openPublish}
-              disabled={saving || fixtureMode}
+              disabled={saveUncertain.current || saving || fixtureMode}
               type="button"
               className="flex min-h-11 items-center gap-1.5 rounded-xl bg-[#514735] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#3f382b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -1006,21 +1011,21 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             <span className="hidden text-xs text-gray-600 font-outfit lg:inline">Guardar: Ctrl+S / ⌘S</span>
             <span id="builder-private-preview-help" className="hidden text-xs leading-5 text-gray-600 font-outfit sm:inline">Vista privada: muestra el último guardado; no publica.</span>
             <span className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium leading-5 ${
-              validation.errors.length ? 'bg-red-50 text-red-800' : validation.warnings.length ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'
+              saveUncertain.current ? 'bg-amber-50 text-amber-800' : validation.errors.length ? 'bg-red-50 text-red-800' : validation.warnings.length ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'
             }`}>
-              <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${validation.errors.length ? 'bg-red-600' : validation.warnings.length ? 'bg-amber-600' : 'bg-emerald-600'}`} />
-              {validation.errors.length ? `${validation.errors.length} error(es)` : validation.warnings.length ? `${validation.warnings.length} advertencia(s)` : 'Lista para publicar'}
+              <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${saveUncertain.current ? 'bg-amber-600' : validation.errors.length ? 'bg-red-600' : validation.warnings.length ? 'bg-amber-600' : 'bg-emerald-600'}`} />
+              {saveUncertain.current ? 'Guardado sin confirmar' : validation.errors.length ? `${validation.errors.length} error(es)` : validation.warnings.length ? `${validation.warnings.length} advertencia(s)` : 'Lista para publicar'}
             </span>
             <div role="status" aria-live="polite" aria-atomic="true" className="min-w-0">
-              {(saveState === 'error' || saveState === 'offline') ? (
-                <button type="button" onClick={() => void silentSave()} title={savedAt ? `Último guardado ${savedAt.toLocaleTimeString('es-ES')}` : SAVE_STATE_META[saveState].label} className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium leading-5 underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 ${SAVE_STATE_META[saveState].cls}`}>
-                  <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${SAVE_STATE_META[saveState].dot}`} />
-                  {SAVE_STATE_META[saveState].label}
+              {(!saveUncertain.current && (saveState === 'error' || saveState === 'offline')) ? (
+                <button type="button" onClick={() => void silentSave()} title={savedAt ? `Último guardado ${savedAt.toLocaleTimeString('es-ES')}` : saveStateMeta.label} className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium leading-5 underline underline-offset-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 ${saveStateMeta.cls}`}>
+                  <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${saveStateMeta.dot}`} />
+                  {saveStateMeta.label}
                 </button>
               ) : (
-                <span title={savedAt ? `Último guardado ${savedAt.toLocaleTimeString('es-ES')}` : SAVE_STATE_META[saveState].label} className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium leading-5 ${SAVE_STATE_META[saveState].cls}`}>
-                  <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${SAVE_STATE_META[saveState].dot}`} />
-                  {SAVE_STATE_META[saveState].label}
+                <span title={savedAt ? `Último guardado ${savedAt.toLocaleTimeString('es-ES')}` : saveStateMeta.label} className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium leading-5 ${saveStateMeta.cls}`}>
+                  <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${saveStateMeta.dot}`} />
+                  {saveStateMeta.label}
                 </span>
               )}
             </div>
@@ -1171,7 +1176,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
               {!!validation.errors.length && <div className="rounded-xl border border-red-100 bg-red-50 p-3"><p className="text-sm font-semibold text-red-800 font-outfit">No se puede publicar todavía</p>{validation.errors.map(issue => <p key={issue.title} className="mt-1 text-sm leading-5 text-red-800 font-outfit">• {issue.title}</p>)}</div>}
               {!!validation.warnings.length && !validation.errors.length && <div className="rounded-xl border border-amber-100 bg-amber-50 p-3"><p className="text-sm font-semibold text-amber-800 font-outfit">Revisa estas advertencias</p>{validation.warnings.map(issue => <p key={issue.title} className="mt-1 text-sm leading-5 text-amber-800 font-outfit">• {issue.title}</p>)}</div>}
               {publishError && <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-800 font-outfit"><p>{publishError}</p>{backHref === '/socios/panel' && <a href="/socios/panel?tab=suscripcion" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center underline underline-offset-4">Revisar suscripción y pagos en otra pestaña</a>}</div>}
-              <div className="flex flex-col gap-2 pt-1 sm:flex-row"><button type="button" onClick={() => setPublishOpen(false)} disabled={saving} className="min-h-11 flex-1 rounded-xl border border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6a527f] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-outfit">Seguir editando</button><button type="button" onClick={confirmPublish} disabled={saving || !!validation.errors.length || !publishLabel.trim()} aria-busy={saving} className="min-h-11 flex-[1.35] rounded-xl bg-[linear-gradient(90deg,#75548f,#6a527f)] px-3 py-2.5 text-sm font-semibold text-white shadow-lg transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6a527f] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 font-outfit">{saving ? (publishMode === 'schedule' ? 'Programando…' : 'Publicando…') : (publishMode === 'schedule' ? 'Programar publicación' : 'Publicar esta versión')}</button></div>
+              <div className="flex flex-col gap-2 pt-1 sm:flex-row"><button type="button" onClick={() => setPublishOpen(false)} disabled={saving} className="min-h-11 flex-1 rounded-xl border border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6a527f] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-outfit">Seguir editando</button><button type="button" onClick={confirmPublish} disabled={saveUncertain.current || saving || !!validation.errors.length || !publishLabel.trim()} aria-busy={saving} className="min-h-11 flex-[1.35] rounded-xl bg-[linear-gradient(90deg,#75548f,#6a527f)] px-3 py-2.5 text-sm font-semibold text-white shadow-lg transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6a527f] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 font-outfit">{saving ? (publishMode === 'schedule' ? 'Programando…' : 'Publicando…') : (publishMode === 'schedule' ? 'Programar publicación' : 'Publicar esta versión')}</button></div>
             </div>
           </div>
         </div>
