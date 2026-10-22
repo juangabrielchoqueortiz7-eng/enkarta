@@ -41,6 +41,8 @@ async function withBuilder(t,scenario,{initial,reply}={}){
   const record={url,method:init.method??'GET',body:init.body?JSON.parse(init.body):null};requests.push(record);
   const allowed=(record.method==='GET'&&String(url).startsWith('/api/admin/builder-state?'))||(record.method==='POST'&&url==='/api/admin/builder-state')||(record.method==='PUT'&&url==='/api/admin/invitations');if(!allowed){unexpected.push(record);throw Error('Unexpected isolated builder request');}
   if(reply){const response=reply(record,{requests,stored});if(response!==undefined)return response;}
+  // Deferred test acknowledgements may already have advanced the server revision.
+  if(record.method==='PUT')revision=Math.max(revision,record.body.expectedDraftRevision);
   return record.method==='GET'?Response.json({versions:[],notes:[]}):record.method==='PUT'?stored():Response.json({success:true});
  };
  const flush=async()=>{for(let round=0;round<40;round++){if(dirty&&!unmounted){dirty=false;cursor=0;effects=[];tree=Builder({initialData,backHref:'/socios/panel',builderPath:'/socios/constructor'});snapshots.push(tree);for(const effect of effects)effect();}await new Promise(resolve=>setImmediate(resolve));if(!dirty||unmounted)return tree;}throw Error('Builder effects did not settle');};

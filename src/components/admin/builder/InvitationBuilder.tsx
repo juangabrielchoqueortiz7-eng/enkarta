@@ -26,6 +26,7 @@ import { publicationSummaryText, summarizeBuilderChanges } from '@/lib/builder-w
 import { useBuilderDuplicate } from './useBuilderDuplicate';
 import { useBuilderDelete } from './useBuilderDelete';
 import BuilderDeleteState from './BuilderDeleteState';
+import { acknowledgesBuilderSave } from '@/lib/builder-save-ack';
 
 type Tab = 'content' | 'blocks' | 'elements' | 'style' | 'decor' | 'motion' | 'media' | 'guests' | 'versions' | 'quality' | 'export' | 'config';
 
@@ -555,8 +556,10 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     // Pausing changes public state only; use the latest working content when its queued PUT starts.
     const attempted = options?.pauseCurrent ? withPublicationState(dataRef.current, snapshot, 'unpublish') : snapshot;
     const attemptedAt = options?.pauseCurrent ? editSequence.current : editedAt;
+    const expectedRevision = draftRevision.current;
+    const attemptedPayload = payloadFrom(attempted);
     const response = await fetch('/api/admin/invitations', {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payloadFrom(attempted), expectedDraftRevision: draftRevision.current }),
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...attemptedPayload, expectedDraftRevision: expectedRevision }),
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
@@ -564,9 +567,15 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
       throw new Error(payload.error || 'No se pudo guardar el borrador');
     }
     const stored = await response.json();
+    // A 200 alone cannot acknowledge this queued write. Never adopt its revision
+    // or operational fields until it confirms the conditional save (including
+    // a complete matching echo when SQL leaves an unchanged revision intact).
+    if (!acknowledgesBuilderSave(stored, attemptedPayload, expectedRevision)) {
+      throw new Error('No pudimos verificar el guardado. Conservamos tus cambios; descarga un respaldo antes de recargar para comprobar el estado.');
+    }
     setSaveError('');
     failedSaveAt.current = null;
-    draftRevision.current = stored.draft_revision ?? draftRevision.current;
+    draftRevision.current = stored.draft_revision;
     const unchanged = editSequence.current === attemptedAt && publicationEpoch.current === epoch;
     syncValidity(stored);
     return unchanged;
