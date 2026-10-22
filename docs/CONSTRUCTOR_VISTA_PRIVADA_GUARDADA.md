@@ -32,4 +32,17 @@ No hay dependencias nuevas ni SQL. La modificación preexistente de la migració
 
 `npm run verify` terminó con salida 0: **1.874 pruebas correctas en 63 ejecuciones**, lint, TypeScript y build de **65 páginas**. Se conservan las advertencias previas de imágenes heredadas, sin supresiones nuevas. La revisión independiente y el detector no dejaron bloqueantes en el cambio.
 
-Los resultados de producción se registrarán aquí una vez finalizada la verificación y limpieza ficticia.
+## Producción y limpieza
+
+El commit `21698ca13e14249007aa5ab7bb84ce02e36675f6` quedó integrado en main y desplegado como `dpl_8GAtCQWt1w5nBcA211W1dAifK7Lr`, **Ready**, con alias [enkarta.vercel.app](https://enkarta.vercel.app). El [CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39823636551) terminó correctamente, incluidos verify y la auditoría de dependencias de producción.
+
+- La distribución procede del commit, conserva los 129 originales y excluye archivos de entorno, material maestro y la modificación local de la migración 021. Los identificadores de entrada de Vercel coinciden con los bytes revisados del constructor y el bloqueo BCP; los tres mensajes nuevos aparecen en los scripts compilados servidos por producción.
+- Se creó un único borrador ficticio. Su vista privada autenticada mostró el contenido inicial. Se envió un único PUT de mensaje y texto de entrada, con revisión condicional y journal previo; la revisión aumentó exactamente en uno. Después, tanto la fila como el editor y la vista privada devolvieron los textos nuevos. El resto del contenido, incluidas galería, música y configuración del preset, coincidió con el payload planificado.
+- La misma URL con preview=1, sin sesión, mostró preparación sin nombre ni textos privados. La URL pública normal también los ocultó. No se publicó la invitación ni se modificó ninguna invitación de clientes.
+- Pasaron seis rutas públicas. Se verificaron **129/129 originales publicados** por longitud y SHA-256: 127 en descarga completa y los dos audios grandes restantes mediante todos sus rangos HTTP, recompuestos íntegramente y contrastados con el hash original. Las dos lecturas completas de esos audios habían recibido 200 y agotado los límites de 45/55 segundos; los 34 fragmentos devolvieron 206 con Content-Range exacto y ETag consistente. También coincidieron sus archivos de entrada en Vercel. Se conserva la evidencia de esos timeouts: la comprobación por fragmentos acredita integridad, no un tiempo de descarga completa ni una prueba de reproducción.
+- Tras verificar la vista, se eliminó únicamente el borrador ficticio, usando su UUID/slug revisados y comparando propietario, nombre, estado, etiqueta QA y contenido. Las ocho tablas asociadas quedaron sin filas para ese UUID y sus tres prefijos de almacenamiento estaban vacíos. Después del cierre de la sesión técnica, tanto la URL normal como preview=1 devolvieron 404.
+- Los **597 archivos protegidos locales** y el hash de la migración 021 permanecen iguales. Cero archivos subidos, pagos, llamadas bancarias o mensajes. BCP conserva su bloqueo; no se consultaron ni modificaron variables remotas del proveedor.
+
+Esta comprobación acredita API, HTTP, fuentes y textos compilados, privacidad y limpieza. Las carreras de eventos y texto inline se ejecutan en memoria; no se atribuyen esos gestos a un navegador autenticado de producción. La aceptación visual manual de «Vista privada» continúa pendiente.
+
+Evidencia privada final: `tmp/builder-private-preview/RESULTADO.json`.
