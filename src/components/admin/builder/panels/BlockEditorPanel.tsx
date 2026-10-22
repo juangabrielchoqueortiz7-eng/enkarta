@@ -20,6 +20,7 @@ import RolyYelianaFields from './RolyYelianaFields';
 import AnnieMickyFields from './AnnieMickyFields';
 import LauraAndresFields from './LauraAndresFields';
 import { Reorder } from 'framer-motion';
+import BlockOrderRow from '../BlockOrderRow';
 import { InvitationParsed, BuilderConfig, Block, BlockType, BlockLayout, BlockViewportLayout, ScrollPreset, LAYOUT_VERSION } from '@/lib/types';
 import DesignModeControl from '../DesignModeControl';
 import { hasInvitationVisualSystem } from '@/lib/marfil-visual-system';
@@ -342,10 +343,15 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
   const [batchMode, setBatchMode] = useState(false);
   const [libraryView, setLibraryView] = useState<'layers' | 'library'>('layers');
   const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'motion' | 'layout'>('content');
+  const panelRoot = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (selectedId) setInspectorTab('content');
-  }, [selectedId]);
+    if (!selectedId || batchMode) return;
+    setInspectorTab('content');
+    const scrollContainer = panelRoot.current?.closest<HTMLElement>('[data-builder-panel-scroll]');
+    if (scrollContainer) scrollContainer.scrollTop = 0;
+    panelRoot.current?.querySelector<HTMLElement>('[data-block-inspector-heading]')?.focus({ preventScroll: true });
+  }, [selectedId, batchMode]);
 
   // Galería de secciones: filtros narrativos, estilo y vista previa ampliada.
   const [sectionMoment, setSectionMoment] = useState<'Todas' | SectionMoment>('Todas');
@@ -424,6 +430,13 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
     const live = new Map(current.filter(block => known.get(block.id) === block.type).map(block => [block.id, block]));
     const reordered = ids.filter(id => live.has(id)).map(id => live.get(id)!);
     return current.map(block => live.get(block.id) === block ? reordered.shift()! : block);
+  });
+  const moveBlock = (source: Block, direction: -1 | 1) => setBlocks(current => {
+    const from = current.findIndex(block => block.id === source.id && block.type === source.type), to = from + direction;
+    if (from < 0 || to < 0 || to >= current.length) return null;
+    const next = [...current];
+    [next[from], next[to]] = [next[to], next[from]];
+    return next;
   });
 
   const patchBlock = (id: string, patch: Partial<Block> | ((block: Block, current: InvitationParsed) => Partial<Block> | null)) => {
@@ -853,32 +866,33 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
     ];
 
     return (
-      <div className="space-y-4 bg-[#fcfbf9] p-4">
+      <div ref={panelRoot} className="space-y-4 bg-[#fcfbf9] p-4">
         <button type="button" onClick={() => onSelect('')} className="flex items-center gap-1.5 text-[11px] font-medium text-[#7b7267] transition-colors hover:text-[#332d27] font-outfit">
           <span aria-hidden>←</span> Todas las capas
         </button>
 
         <div className="overflow-hidden rounded-[20px] border border-[#e8e0d6] bg-white shadow-[0_14px_45px_rgba(61,48,31,0.07)]">
-          <div className="flex items-center gap-3 bg-[linear-gradient(135deg,#fff_0%,#f7f0e6_100%)] p-4">
+          <div className="flex items-start gap-3 bg-[linear-gradient(135deg,#fff_0%,#f7f0e6_100%)] p-3 sm:p-4">
             <BlockGlyph type={selected.type} size="lg" />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="truncate font-playfair text-[18px] text-[#332d27]">{def?.label}</h3>
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <h3 data-block-inspector-heading tabIndex={-1} className="min-w-0 break-words font-playfair text-lg text-[#332d27] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#514735]">{def?.label}</h3>
                 <span className="rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] font-outfit" style={{ color: selectedVisual.ink, background: selectedVisual.bg }}>{selectedVisual.label}</span>
               </div>
               <p className="mt-0.5 text-[10px] text-[#94897d] font-outfit">Edita el bloque y comprueba el cambio directamente en el lienzo.</p>
             </div>
-            <span className={`h-2.5 w-2.5 rounded-full ${selected.enabled === false ? 'bg-gray-300' : 'bg-emerald-400'}`} title={selected.enabled === false ? 'Oculto' : 'Visible'} />
+            <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${selected.enabled === false ? 'bg-gray-300' : 'bg-emerald-400'}`} title={selected.enabled === false ? 'Oculto' : 'Visible'} />
           </div>
-          <div className="grid grid-cols-4 border-t border-[#eee8df] bg-[#fbfaf8] p-1.5">
+          <div className="grid grid-cols-2 border-t border-[#eee8df] bg-[#fbfaf8] p-1.5 sm:grid-cols-4">
             {inspectorTabs.map(tab => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setInspectorTab(tab.id)}
-                className={`rounded-xl px-1 py-2 text-center transition-all ${inspectorTab === tab.id ? 'bg-white text-[#9a762f] shadow-sm ring-1 ring-black/5' : 'text-[#8b8278] hover:bg-white/70'}`}
+                aria-pressed={inspectorTab === tab.id}
+                className={`min-h-11 rounded-xl px-1 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 ${inspectorTab === tab.id ? 'bg-white text-[#725625] shadow-sm ring-1 ring-black/5' : 'text-[#65594b] hover:bg-white/70'}`}
               >
-                <span className="block text-[10px] font-semibold leading-tight font-outfit">{tab.label}</span>
+                <span className="block text-xs font-semibold leading-tight font-outfit">{tab.label}</span>
                 <span className="mt-0.5 hidden text-[8px] leading-tight opacity-65 2xl:block font-outfit">{tab.hint}</span>
               </button>
             ))}
@@ -1402,7 +1416,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
 
   // ── Lista de bloques + paleta ──
   return (
-    <div className="min-h-full space-y-4 bg-[#fcfbf9] p-4">
+    <div ref={panelRoot} className="min-h-full space-y-4 bg-[#fcfbf9] p-4">
       <div className="grid grid-cols-2 rounded-2xl border border-[#e8e1d8] bg-[#f2eee8] p-1 shadow-inner">
         <button type="button" onClick={() => setLibraryView('layers')} className={`rounded-xl px-3 py-2.5 text-xs font-semibold transition-all font-outfit ${libraryView === 'layers' ? 'bg-white text-[#3a332c] shadow-sm' : 'text-[#8a8177] hover:text-[#4e463e]'}`}>
           Capas <span className="ml-1 text-[9px] opacity-55">{blocks.length}</span>
@@ -1414,30 +1428,14 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
 
       {libraryView === 'layers' ? <>
       <div className="flex items-center justify-between">
-        <div><h4 className={editorSectionTitleCls}>Orden de la invitación</h4><p className="mt-1 text-[11px] text-[#938a80] font-outfit">Arrastra las secciones para cambiar el recorrido.</p></div>
+        <div><h4 className={editorSectionTitleCls}>Orden de la invitación</h4><p id="block-order-help" className="mt-1 text-xs leading-relaxed text-[#65594b] font-outfit">Pulsa «Editar bloque» para ver Contenido, Diseño, Movimiento y Posición. Para ordenar, usa las flechas o arrastra solo el asa de puntos.</p></div>
         {batchMode ? <button type="button" disabled={!selectedBlocks.length} onClick={() => setBatchMode(false)} className="rounded-lg bg-violet-600 px-2.5 py-1.5 text-[10px] font-outfit font-medium text-white disabled:opacity-40">Editar selección ({selectedBlocks.length})</button> : <button type="button" onClick={() => { if (currentContext() && confirm('¿Descartar los bloques y volver a la plantilla original?') && currentContext()) commit({ config: { ...currentData().config, layout: undefined } }, true); }} className="text-xs text-gray-400 hover:text-red-500 font-outfit">Quitar bloques</button>}
       </div>
       {batchMode && <p className="-mt-2 rounded-xl bg-violet-50 px-3 py-2 text-xs text-violet-600 font-outfit">Marca todas las capas que quieres organizar juntas.</p>}
 
       <Reorder.Group axis="y" values={blocks} onReorder={reorderBlocks} className="space-y-2.5">
-          {blocks.map(b => (
-          <Reorder.Item key={b.id} value={b} className={`group flex min-h-[54px] items-center gap-2.5 rounded-2xl border bg-white px-2.5 py-2 cursor-grab active:cursor-grabbing transition-all ${selectedId === b.id ? 'border-enkarta-gold/70 shadow-[0_8px_24px_rgba(126,95,43,0.10)] ring-1 ring-enkarta-gold/15' : 'border-[#ece7e0] hover:-translate-y-px hover:border-enkarta-gold/35 hover:shadow-sm'}`}>
-            <span className="select-none text-[13px] leading-none text-[#c9c1b7] transition-colors group-hover:text-[#9d9184]">⋮⋮</span>
-            <button type="button" onPointerDown={e => e.stopPropagation()} onClick={() => { setBatchMode(true); onSelect(b.id, true); }} aria-label={`Seleccionar ${BLOCKS[b.type]?.label}`} className={`h-4 w-4 flex-shrink-0 rounded border transition-colors ${selectedIds.includes(b.id) ? 'border-violet-500 bg-violet-500 text-white' : 'border-gray-300 bg-white'}`}><span className="block text-[9px] leading-none">{selectedIds.includes(b.id) ? '✓' : ''}</span></button>
-            <button type="button" onClick={e => batchMode ? onSelect(b.id, true) : onSelect(b.id, e.shiftKey)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
-              <BlockGlyph type={b.type} size="sm" />
-              <span className="min-w-0 flex-1">
-                <span className={`block truncate text-[13px] font-outfit ${b.enabled === false ? 'text-gray-300 line-through' : selectedId === b.id ? 'font-semibold text-[#9a762f]' : 'font-medium text-[#4a433b]'}`}>{BLOCKS[b.type]?.label}</span>
-                <span className="block truncate text-[9px] text-[#a1988d] font-outfit">{blockVisual(b.type).label}</span>
-              </span>
-            </button>
-            <button type="button" title={b.locked ? 'Desbloquear' : 'Bloquear'} onClick={() => patchBlock(b.id, block => block.type === b.type ? { locked: !block.locked } : null)} className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${b.locked ? 'bg-amber-50 text-amber-600' : 'text-[#a39a90] hover:bg-gray-50 hover:text-gray-700'}`}>
-              <LockGlyph locked={!!b.locked} />
-            </button>
-            <button type="button" title={b.enabled === false ? 'Mostrar' : 'Ocultar'} onClick={() => patchBlock(b.id, block => block.type === b.type ? { enabled: block.enabled === false } : null)} className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${b.enabled === false ? 'bg-gray-100 text-gray-400' : 'text-[#a39a90] hover:bg-gray-50 hover:text-gray-700'}`}>
-              <EyeGlyph hidden={b.enabled === false} />
-            </button>
-          </Reorder.Item>
+          {blocks.map((b, index) => (
+          <BlockOrderRow key={b.id} block={b} label={BLOCKS[b.type]?.label ?? b.type} detail={blockVisual(b.type).label} icon={<BlockGlyph type={b.type} size="sm" />} lockIcon={<LockGlyph locked={!!b.locked} />} visibilityIcon={<EyeGlyph hidden={b.enabled === false} />} selected={selectedId === b.id} multiSelected={selectedIds.includes(b.id)} selecting={batchMode} index={index} total={blocks.length} onEdit={event => batchMode ? onSelect(b.id, true) : onSelect(b.id, event.shiftKey)} onSelect={() => { setBatchMode(true); onSelect(b.id, true); }} onMove={direction => moveBlock(b, direction)} onToggleLock={() => patchBlock(b.id, block => block.type === b.type ? { locked: !block.locked } : null)} onToggleVisibility={() => patchBlock(b.id, block => block.type === b.type ? { enabled: block.enabled === false } : null)} />
         ))}
       </Reorder.Group>
       <button type="button" onClick={() => setLibraryView('library')} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-enkarta-gold/45 bg-enkarta-gold/5 py-3 text-xs font-semibold text-enkarta-gold transition-all hover:bg-enkarta-gold/10 font-outfit">
