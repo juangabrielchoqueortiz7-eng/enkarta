@@ -33,4 +33,15 @@ No se modifican invitaciones, presets, estilos globales, fuentes, fotografías, 
 - Revisión independiente final sin bloqueantes, incluidos el `Editable` original y las dos regresiones de texto sin confirmar. No se modifica ese renderer ni sus estilos.
 - **597/597 archivos protegidos** iguales por SHA-256 y modificación local de la migración 021 preservada. La ruta de muestra existente y los recursos originales no cambian.
 
-La comprobación de producción se realiza después del despliegue Ready. Sus resultados y límites se registrarán al cerrar la entrega; la validación local no acredita por sí sola un despliegue ni una aceptación física del atajo.
+## Producción y limpieza
+
+El commit `a53244dfbdf40c1f113c91dd1b64d112d6b386fd` quedó integrado en main y desplegado como `dpl_5PD8V4Aua1HTm463FCYV6DJ5rfyR`, **Ready** con alias [enkarta.vercel.app](https://enkarta.vercel.app). La [ejecución de CI del mismo commit](https://github.com/juangabrielchoqueortiz7-eng/enkarta/actions/runs/39816050707) terminó correctamente, incluida la suite completa y la auditoría de dependencias de producción.
+
+- La copia de despliegue procede del commit y conserva los 129 originales de distribución. No incluye archivos de entorno, el material maestro ni la modificación preexistente de la migración 021. Se contrastan los bytes de las dos fuentes críticas del release con sus identificadores de entrada en Vercel: el constructor y el bloqueo BCP.
+- El editor de una única invitación ficticia respondió 200 y entregó los marcadores compilados del atajo, la ayuda accesible y el texto visible. Su enlace público siguió mostrando preparación sin contenido privado. Se verificaron además seis rutas públicas y **129/129 originales publicados** por longitud y SHA-256.
+- La copia ficticia se eliminó al terminar. Las ocho tablas asociadas y las tres carpetas de almacenamiento de su UUID quedaron vacías; el enlace devuelve 404. No hubo archivos subidos ni datos de clientes modificados. Las sesiones técnicas temporales se cerraron.
+- **597/597 archivos protegidos** locales permanecen iguales y la migración 021 preexistente conserva su hash. Cero pagos, llamadas bancarias o mensajes; BCP conserva su bloqueo y no se consultaron ni cambiaron variables remotas del proveedor.
+
+La verificación de producción acredita fuentes, marcadores compilados, respuestas HTTP, privacidad del borrador y conservación de recursos. No ejecuta Ctrl/Cmd+S en un editor autenticado del navegador de producción: la concurrencia y el texto inline se validan en las regresiones aisladas. La aceptación anterior de entrada, galería, música y vista privada en computadora permanece cerrada en su propio alcance; no se usa para afirmar una aceptación manual del nuevo atajo.
+
+Evidencia privada final: `tmp/builder-desktop-save/RESULTADO.json`.
