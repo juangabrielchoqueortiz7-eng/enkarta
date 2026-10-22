@@ -39,7 +39,7 @@ async function withExport(scenario,{data=fixture(),get,qr,zip,image,canvas}={}){
  React.useEffect=React.useLayoutEffect=(effect,deps)=>{const key=cursor++,previous=fiber.slots[key];if(!previous||!same(previous.deps,deps)){const owner=fiber,slot={deps,cleanup:previous?.cleanup};fiber.slots[key]=slot;effects.push(()=>{if(!owner.active)return;slot.cleanup?.();slot.cleanup=effect();});}};
  const install=(name,value)=>Object.defineProperty(global,name,{configurable:true,writable:true,value});
  const deny=reason=>{env.forbidden.push(reason);throw Error('Fictional export boundary: '+reason);};
- const timer=(fn)=>{const record={fn,active:true};env.timers.push(record);return record;};
+ const timer=(fn,delay)=>{const record={fn,delay,active:true};env.timers.push(record);return record;};
  install('setTimeout',timer);install('clearTimeout',record=>{if(record)record.active=false;});
  install('alert',value=>env.alerts.push(String(value)));
  install('window',{location:{origin:'https://example.invalid'},open:()=>deny('unexpected window.open'),setTimeout:timer,clearTimeout:record=>{if(record)record.active=false;}});
@@ -140,4 +140,8 @@ test('unmounted PNG and PDF exports consume delayed ZIP completions without down
 });
 test('same-turn duplicate and competing async guest exports share one operation until it finishes',async()=>{
  for(const title of ['Tarjetas por invitado','Tarjetas personales']){const wait=deferred();await withExport(async r=>{const start=r.button(title).props.onClick,competing=r.button(title==='Tarjetas personales'?'Tarjetas por invitado':'Tarjetas personales').props.onClick;start();start();competing();await r.settle();assert.equal(r.zipCalls.length,1);assert.equal(r.downloads.length,0);assert.equal(r.card(title).busy,true);wait.resolve();await r.settle();assert.equal(r.downloads.length,1);assert.equal(r.zipCalls.length,1);assert.equal(r.card(title).busy,false);const entries=await unzip(r.downloads[0].blob);assert.equal(entries.size,title==='Tarjetas personales'?3:2);},{zip:()=>wait.promise});}
+});
+
+test('a stalled artifact generator releases its export after 90 seconds and a late result cannot download',async t=>{
+ const wait=deferred();await withExport(async r=>{const first=r.button('Tarjetas por invitado').props.onClick();await r.settle();const deadline=r.timers.find(timer=>timer.active&&timer.delay===90000);assert.ok(deadline);deadline.active=false;deadline.fn();await r.settle();assert.equal(r.button('Tarjetas por invitado').props.disabled,false);assert.equal(r.downloads.length,0);wait.resolve('data:image/png;base64,UUE=');await first;await r.settle();assert.equal(r.downloads.length,0);assert.equal(r.button('Tarjetas por invitado').props.disabled,false);},{qr:()=>wait.promise});
 });

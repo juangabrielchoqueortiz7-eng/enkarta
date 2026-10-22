@@ -34,7 +34,7 @@ const historyButton=(runner,title)=>nodes(runner.current(),node=>node.type==='bu
 const base=()=>({...marfilVivoDemo(),id:'30000000-0000-4000-8000-000000000002',slug:'qa-builder-desktop-save',names:'QA desktop original',draft_revision:0,validity_mode:'automatic',validity_extra_days:0,validity_revision:0});
 const oldVersion=data=>({id:'qa-desktop-historical',invitationId:data.id,label:'QA desktop historical',source:'publish',createdAt:1,publicationState:'published',data:{...copy(data),names:'QA desktop previous publication'}});
 
-async function withBuilder(t,scenario,{initial=base(),reply,fixtureMode=false}={}){
+async function withBuilder(t,scenario,{initial=base(),reply,fixtureMode=false,libraryScope='admin'}={}){
  if(!initialized.has(t)){t.mock.timers.enable({apis:['setTimeout']});initialized.add(t);}
  assert.deepEqual(validateInvitationBuilder(initial).errors,[],'The fictional preset copy must pass real validation');
  const hookNames=['useState','useRef','useEffect','useMemo','useCallback'],hooks=Object.fromEntries(hookNames.map(name=>[name,React[name]]));
@@ -59,7 +59,7 @@ async function withBuilder(t,scenario,{initial=base(),reply,fixtureMode=false}={
   return request.method==='GET'?Response.json({versions:[],notes:[]}):request.method==='PUT'?stored():Response.json({success:true});
  });
  const drain=async()=>{for(let round=0;round<4;round++)await new Promise(done=>setImmediate(done));};
- const flush=async()=>{for(let round=0;round<45;round++){if(dirty&&!unmounted){dirty=false;cursor=0;effects=[];tree=Builder({initialData:initial,backHref:'/socios/panel',builderPath:'/socios/constructor',fixtureMode});for(const effect of effects)effect();}await new Promise(done=>setImmediate(done));if(!dirty||unmounted)return tree;}throw Error('Desktop-save hooks did not settle');};
+ const flush=async()=>{for(let round=0;round<45;round++){if(dirty&&!unmounted){dirty=false;cursor=0;effects=[];tree=Builder({initialData:initial,backHref:'/socios/panel',builderPath:'/socios/constructor',fixtureMode,libraryScope});for(const effect of effects)effect();}await new Promise(done=>setImmediate(done));if(!dirty||unmounted)return tree;}throw Error('Desktop-save hooks did not settle');};
  const dispatch=(name,event)=>{for(const callback of [...(events.get(name)??[])])callback(event);};
  const unmount=()=>{if(unmounted)return;unmounted=true;for(const slot of slots)slot?.cleanup?.();};
  const runner={flush,drain,current:()=>tree,initialData:initial,requests,alerts,local,stored,unmount,dispatch,listenerCount:name=>events.get(name)?.size??0,puts:()=>requests.filter(request=>request.method==='PUT'),publications:()=>requests.filter(request=>request.method==='POST'&&['publish','schedule'].includes(request.body?.action)),advance:async milliseconds=>{t.mock.timers.tick(milliseconds);await flush();},beforeUnload:()=>{const event={prevented:false,preventDefault(){this.prevented=true;},returnValue:undefined};dispatch('beforeunload',event);return event;},key:(options={})=>{const event={key:'s',ctrlKey:true,metaKey:false,altKey:false,shiftKey:false,isComposing:false,repeat:false,defaultPrevented:false,target:{tagName:'DIV',isContentEditable:false},preventCalls:0,preventDefault(){this.defaultPrevented=true;this.preventCalls++;},...options};dispatch('keydown',event);return event;}};
@@ -185,4 +185,18 @@ test('inline B commits through real Editable while manual A is pending and autos
   const saved=inlineBlock({config:runner.puts()[1].body.builder_config});assert.equal(saved.props.text,'QA inline B typed without blur');assert.deepEqual(saved.bindings,{untouched:'couple.groom'});
   assert.equal(current(runner).names,'QA inline manual A');assert.equal(runner.beforeUnload().prevented,false);
  },{initial:inlineFixture(true),reply:request=>request.method==='PUT'&&hold?(hold=false,wait.promise):undefined});
+});
+
+test('history operations exclude manual/autosave, publication, preview and leaving until completion',async t=>{
+ await withBuilder(t,async r=>{await edit(r,'QA history boundary');const oldSave=button(r,'Guardar').props.onClick,oldPublish=button(r,'Publicar').props.onClick;await click(r,'4. Revisar');const history=panel(r,'VersionsPanel').props;assert.equal(history.canMutate(),true);history.onMutationState('pending');await r.flush();await oldSave();oldPublish();r.key();await r.advance(5000);assert.equal(r.puts().length,0);assert.equal(history.canMutate(),false);assert.equal(r.beforeUnload().prevented,true);assert.equal(button(r,'Guardando…').props.disabled,true);history.onMutationState('done');await r.flush();assert.equal(button(r,'Guardar').props.disabled,false);assert.equal(panel(r,'VersionsPanel').props.canMutate(),true);});
+});
+test('uncertain history locks the constructor after its waiting state releases and permits a local backup',async t=>{
+ await withBuilder(t,async r=>{await click(r,'4. Revisar');const history=panel(r,'VersionsPanel').props;history.onMutationState('pending');history.onMutationState('uncertain');history.onMutationState('done');await r.flush();assert.equal(button(r,'Guardar').props.disabled,true);assert.equal(button(r,'Publicar').props.disabled,true);assert.ok(button(r,'Descargar respaldo de mis cambios'));assert.equal(r.beforeUnload().prevented,true);assert.match(text(r.current()),/No pudimos confirmar el cambio del historial/);r.key();await r.advance(30000);assert.equal(r.puts().length,0);});
+});
+test('switching tools keeps the visited history component mounted under the same invitation key',async t=>{
+ await withBuilder(t,async r=>{await click(r,'4. Revisar');const first=panel(r,'VersionsPanel');assert.ok(String(first.key).endsWith(r.initialData.id));await click(r,'1. Datos');const hidden=nodes(r.current(),n=>n.type==='div'&&n.props.hidden===true&&nodes(n,x=>x.type===panels.VersionsPanel).length>0)[0];assert.ok(hidden);assert.equal(panel(r,'VersionsPanel').key,first.key);await click(r,'4. Revisar');assert.equal(nodes(r.current(),n=>n.type==='div'&&n.props.hidden===true&&nodes(n,x=>x.type===panels.VersionsPanel).length>0).length,0);});
+});
+
+test('the partner editor passes its private library scope and hides team-only quality and contract controls',async t=>{
+ const scope='partner:30000000-0000-4000-8000-000000000002';await withBuilder(t,async r=>{await click(r,'Más herramientas');assert.equal(nodes(r.current(),n=>n.type==='button'&&text(n).includes('Calidad')).length,0);const config=nodes(r.current(),n=>n.type==='button'&&n.props.title==='Accesos, vigencia y pantalla de entrada')[0];if(config){config.props.onClick();await r.flush();}else{const nav=nodes(r.current(),n=>n.type==='button'&&nodes(n,c=>c.type==='span'&&text(c)==='Config').length)[0];assert.ok(nav);nav.props.onClick();await r.flush();}assert.equal(panel(r,'ConfigPanel').props.contractAccess,'partner');await click(r,'3. Estilo');assert.equal(panel(r,'StylePanel').props.libraryScope,scope);},{libraryScope:scope});
 });

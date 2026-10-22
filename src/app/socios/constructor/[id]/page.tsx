@@ -33,7 +33,7 @@ export default async function PartnerBuilderPage({ params }: Props) {
     phone_whatsapp: raw.phone_whatsapp ?? null,
   };
 
-  return <InvitationBuilder initialData={editorInvitation(withDefaults)} backHref="/socios/panel" builderPath="/socios/constructor" />;
+  return <InvitationBuilder key={id} libraryScope={`partner:${context.partner.id}`} initialData={editorInvitation(withDefaults)} backHref="/socios/panel" builderPath="/socios/constructor" />;
 }
 
 export async function generateMetadata({ params }: Props) {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Block, InvitationParsed, ReviewStatus } from '@/lib/types';
 import { hydrateBuilderState, persistReviewNote, type BuilderVersion, type ReviewNote } from '@/lib/builder-versions';
 import { ROLE_META } from '@/lib/builder-workflow';
+import { BuilderRequestError } from '@/lib/builder-request';
 
 interface Props { invitation: InvitationParsed }
 
@@ -28,31 +29,40 @@ export default function ClientReviewPanel({ invitation }: Props) {
   const [blockId, setBlockId] = useState('');
   const [status, setStatus] = useState<ReviewStatus>('changes');
   const [state, setState] = useState<'loading' | 'ready' | 'sending' | 'sent' | 'error'>('loading');
+  const [error, setError] = useState('');
+  const pending = useRef(false), uncertain = useRef(false), mounted = useRef(false), generation = useRef(0);
+  const form = useRef({ text, author, blockId, status }); form.current = { text, author, blockId, status };
   const blocks = useMemo(() => flattenBlocks(invitation.config?.layout?.blocks ?? []), [invitation.config?.layout?.blocks]);
 
   useEffect(() => {
     let active = true;
+    mounted.current = true; const cycle = ++generation.current;
     hydrateBuilderState(invitation.id).then(result => {
-      if (!active) return;
+      if (!active || cycle !== generation.current) return;
       setNotes(result.notes);
       setPublished(result.versions.find(version => version.source === 'publish') ?? null);
       setState('ready');
     });
-    return () => { active = false; };
+    return () => { active = false; mounted.current = false; generation.current = cycle + 1; };
   }, [invitation.id]);
 
   const submit = async (nextStatus = status) => {
-    const message = text.trim() || (nextStatus === 'approved' ? 'La versión fue aprobada por el cliente.' : 'El cliente solicita una nueva revisión.');
-    setState('sending');
+    if (!mounted.current || pending.current || uncertain.current) return;
+    const cycle = generation.current, submitted = { ...form.current };
+    const message = submitted.text.trim() || (nextStatus === 'approved' ? 'La versión fue aprobada por el cliente.' : 'El cliente solicita una nueva revisión.');
+    pending.current = true; setState('sending'); setError('');
     try {
-      const next = await persistReviewNote(invitation.id, message, author, blockId || undefined, 'client', nextStatus);
+      const next = await persistReviewNote(invitation.id, message, submitted.author, submitted.blockId || undefined, 'client', nextStatus);
+      if (!mounted.current || cycle !== generation.current) return;
       setNotes(next);
-      setText('');
+      if (form.current.text === submitted.text) setText('');
       setStatus(nextStatus);
       setState('sent');
-    } catch {
-      setState('error');
-    }
+    } catch (failure) {
+      if (!mounted.current || cycle !== generation.current) return;
+      uncertain.current = failure instanceof BuilderRequestError && failure.uncertain;
+      setState('error'); setError(uncertain.current ? 'No pudimos confirmar la observación. Conserva su texto y recarga para comprobar el historial antes de repetir.' : 'No se pudo enviar. Conservamos tu texto para corregirlo.');
+    } finally { if (cycle === generation.current) pending.current = false; }
   };
 
   return (
@@ -76,16 +86,16 @@ export default function ClientReviewPanel({ invitation }: Props) {
       <div className="grid gap-5 p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,.9fr)]">
         <div>
           <div className="grid grid-cols-2 gap-2">
-            <label className="block"><span className="mb-1 block font-outfit text-[10px] font-semibold uppercase tracking-wider text-gray-400">Tu nombre</span><input value={author} onChange={event => setAuthor(event.target.value)} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 font-outfit text-sm outline-none focus:border-[#9a7cab]" /></label>
-            <label className="block"><span className="mb-1 block font-outfit text-[10px] font-semibold uppercase tracking-wider text-gray-400">Sección</span><select value={blockId} onChange={event => setBlockId(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-outfit text-sm text-gray-600 outline-none focus:border-[#9a7cab]"><option value="">Toda la invitación</option>{blocks.map(block => <option key={block.id} value={block.id}>{block.name}</option>)}</select></label>
+            <label className="block"><span className="mb-1 block font-outfit text-[10px] font-semibold uppercase tracking-wider text-gray-400">Tu nombre</span><input value={author} onChange={event => { form.current.author = event.target.value; setAuthor(event.target.value); }} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 font-outfit text-sm outline-none focus:border-[#9a7cab]" /></label>
+            <label className="block"><span className="mb-1 block font-outfit text-[10px] font-semibold uppercase tracking-wider text-gray-400">Sección</span><select value={blockId} onChange={event => { form.current.blockId = event.target.value; setBlockId(event.target.value); }} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-outfit text-sm text-gray-600 outline-none focus:border-[#9a7cab]"><option value="">Toda la invitación</option>{blocks.map(block => <option key={block.id} value={block.id}>{block.name}</option>)}</select></label>
           </div>
-          <label className="mt-3 block"><span className="mb-1 block font-outfit text-[10px] font-semibold uppercase tracking-wider text-gray-400">Observación</span><textarea value={text} onChange={event => setText(event.target.value)} rows={4} placeholder="Ej: cambiar esta foto, aumentar el texto o probar otro color…" className="w-full rounded-2xl border border-gray-200 px-3 py-3 font-outfit text-sm leading-relaxed outline-none focus:border-[#9a7cab]" /></label>
+          <label className="mt-3 block"><span className="mb-1 block font-outfit text-[10px] font-semibold uppercase tracking-wider text-gray-400">Observación</span><textarea maxLength={1200} value={text} onChange={event => { form.current.text = event.target.value; setText(event.target.value); }} rows={4} placeholder="Ej: cambiar esta foto, aumentar el texto o probar otro color…" className="w-full rounded-2xl border border-gray-200 px-3 py-3 font-outfit text-sm leading-relaxed outline-none focus:border-[#9a7cab]" /></label>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => { setStatus('changes'); void submit('changes'); }} disabled={state === 'sending'} className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2.5 font-outfit text-xs font-semibold text-rose-700 disabled:opacity-50">Solicitar cambios</button>
-            <button type="button" onClick={() => { setStatus('approved'); void submit('approved'); }} disabled={state === 'sending'} className="rounded-xl bg-emerald-600 px-3 py-2.5 font-outfit text-xs font-semibold text-white shadow-sm disabled:opacity-50">Aprobar versión</button>
+            <button type="button" onClick={() => { setStatus('changes'); void submit('changes'); }} disabled={state === 'sending' || uncertain.current} className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2.5 font-outfit text-xs font-semibold text-rose-700 disabled:opacity-50">Solicitar cambios</button>
+            <button type="button" onClick={() => { setStatus('approved'); void submit('approved'); }} disabled={state === 'sending' || uncertain.current} className="rounded-xl bg-emerald-600 px-3 py-2.5 font-outfit text-xs font-semibold text-white shadow-sm disabled:opacity-50">Aprobar versión</button>
           </div>
           {state === 'sent' && <p className="mt-2 rounded-xl bg-emerald-50 p-2.5 font-outfit text-xs text-emerald-700">Tu respuesta quedó guardada y ya es visible para el equipo.</p>}
-          {state === 'error' && <p className="mt-2 rounded-xl bg-red-50 p-2.5 font-outfit text-xs text-red-600">No pudimos enviar la observación. Revisa tu conexión e inténtalo de nuevo.</p>}
+          {state === 'error' && <p role="alert" className="mt-2 rounded-xl bg-red-50 p-2.5 font-outfit text-xs text-red-600">{error}</p>}
         </div>
 
         <div className="min-h-[220px] rounded-2xl bg-[#f8f6f2] p-3">

@@ -1,4 +1,5 @@
 import type { BuilderRole, InvitationParsed, ReviewStatus } from './types';
+import { builderRequest } from './builder-request';
 
 export interface BuilderVersion {
   id: string;
@@ -46,7 +47,7 @@ function replaceInvitationItems<T extends { invitationId: string }>(key: string,
 
 function queueCloud(body: object) {
   if (typeof window === 'undefined') return;
-  void fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
+  void builderRequest<{ success: boolean }>(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, value => value?.success === true).catch(() => {});
 }
 
 function mergeById<T extends { id: string }>(local: T[], cloud: T[]) {
@@ -66,12 +67,12 @@ export function listBuilderVersions(invitationId: string): BuilderVersion[] {
 
 type PublicationVersionOptions = Pick<BuilderVersion, 'publicationState' | 'publishAt'>;
 
-function createBuilderVersion(data: InvitationParsed, label: string, source: BuilderVersion['source'], summary = '', role: BuilderRole = 'admin', publication?: PublicationVersionOptions) {
+function createBuilderVersion(data: InvitationParsed, label: string, source: BuilderVersion['source'], summary = '', role: BuilderRole = 'admin', publication?: PublicationVersionOptions, local = true) {
   const all = read<BuilderVersion>(VERSION_KEY);
   const current = all.filter(version => version.invitationId === data.id);
   const latest = current.sort((a, b) => b.createdAt - a.createdAt)[0];
-  const signature = JSON.stringify(data.config?.layout ?? data.config);
-  if (source === 'save' && latest && JSON.stringify(latest.data.config?.layout ?? latest.data.config) === signature && Date.now() - latest.createdAt < 60_000) {
+  const signature = JSON.stringify(data); // Text, gallery metadata and music are part of the checkpoint too.
+  if (source === 'save' && latest && JSON.stringify(latest.data) === signature && Date.now() - latest.createdAt < 60_000) {
     return { versions: listBuilderVersions(data.id), version: null as BuilderVersion | null };
   }
   const clean = JSON.parse(JSON.stringify(data)) as InvitationParsed;
@@ -80,7 +81,7 @@ function createBuilderVersion(data: InvitationParsed, label: string, source: Bui
   const version: BuilderVersion = { id: `version-${createdAt.toString(36)}-${Math.random().toString(36).slice(2, 7)}`, invitationId: data.id, label: label.trim() || 'Versión sin nombre', createdAt, source, summary: summary.trim() || undefined, role, ...publication, data: clean };
   const other = all.filter(item => item.invitationId !== data.id);
   const nextForInvitation = retainVersions([version, ...current]);
-  write(VERSION_KEY, [...other, ...nextForInvitation]);
+  if (local) write(VERSION_KEY, [...other, ...nextForInvitation]);
   return { versions: nextForInvitation, version };
 }
 
@@ -92,20 +93,12 @@ export function saveBuilderVersion(data: InvitationParsed, label: string, source
 
 /** Publicaciones y rollbacks esperan a que la copia compartida exista antes de continuar. */
 export async function persistBuilderVersion(data: InvitationParsed, label: string, source: BuilderVersion['source'], summary = '', role: BuilderRole = 'admin', action?: 'publish' | 'schedule', publication?: PublicationVersionOptions): Promise<{ versions: BuilderVersion[]; version: BuilderVersion }> {
-  const created = createBuilderVersion(data, label, source, summary, role, publication);
+  const created = createBuilderVersion(data, label, source, summary, role, publication, false);
   if (!created.version) throw new Error('No se pudo crear la versión');
-  try {
-    const response = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invitationId: data.id, version: created.version, action }) });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      throw new Error(payload.error || 'No se pudo sincronizar la versión');
-    }
-    return { versions: created.versions, version: created.version };
-  } catch (error) {
-    // Una publicación fallida no debe aparecer localmente como si hubiera quedado en línea.
-    write(VERSION_KEY, read<BuilderVersion>(VERSION_KEY).filter(version => version.id !== created.version!.id));
-    throw error;
-  }
+  await builderRequest<{ success: boolean }>(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invitationId: data.id, version: created.version, action }) }, value => value?.success === true);
+  const versions = retainVersions(mergeById(listBuilderVersions(data.id), [created.version]));
+  replaceInvitationItems(VERSION_KEY, data.id, versions);
+  return { versions, version: created.version };
 }
 
 export function deleteBuilderVersion(invitationId: string, id: string): BuilderVersion[] {
@@ -122,13 +115,13 @@ export function listReviewNotes(invitationId: string): ReviewNote[] {
   return Array.from(new Map(notes.map(note => [note.id, note])).values()).sort((a, b) => b.createdAt - a.createdAt);
 }
 
-function createReviewNote(invitationId: string, text: string, author: string, blockId?: string, role: BuilderRole = 'admin', status: ReviewStatus = 'pending') {
+function createReviewNote(invitationId: string, text: string, author: string, blockId?: string, role: BuilderRole = 'admin', status: ReviewStatus = 'pending', local = true) {
   const all = read<ReviewNote>(NOTE_KEY);
   const latestAt = all.filter(note => note.invitationId === invitationId).reduce((value, note) => Math.max(value, note.createdAt), 0);
   const createdAt = Math.max(Date.now(), latestAt + 1);
   const note = { id: `note-${createdAt.toString(36)}-${Math.random().toString(36).slice(2, 7)}`, invitationId, text: text.trim(), author: author.trim() || 'Equipo', createdAt, resolved: status === 'approved', status, role, blockId: blockId || undefined } satisfies ReviewNote;
   all.push(note);
-  write(NOTE_KEY, all);
+  if (local) write(NOTE_KEY, all);
   return { note, notes: listReviewNotes(invitationId) };
 }
 
@@ -140,18 +133,29 @@ export function addReviewNote(invitationId: string, text: string, author: string
 
 /** Los comentarios del cliente esperan confirmación del servidor para mostrar un estado fiable. */
 export async function persistReviewNote(invitationId: string, text: string, author: string, blockId?: string, role: BuilderRole = 'client', status: ReviewStatus = 'pending'): Promise<ReviewNote[]> {
-  const created = createReviewNote(invitationId, text, author, blockId, role, status);
-  try {
-    const response = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invitationId, note: created.note }) });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      throw new Error(payload.error || 'No se pudo enviar la observación');
-    }
-    return created.notes;
-  } catch (error) {
-    write(NOTE_KEY, read<ReviewNote>(NOTE_KEY).filter(note => note.id !== created.note.id));
-    throw error;
-  }
+  const created = createReviewNote(invitationId, text, author, blockId, role, status, false);
+  await builderRequest<{ success: boolean }>(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invitationId, note: created.note }) }, value => value?.success === true);
+  const notes = mergeById(listReviewNotes(invitationId), [created.note]).sort((a, b) => b.createdAt - a.createdAt);
+  replaceInvitationItems(NOTE_KEY, invitationId, notes);
+  return notes;
+}
+
+export async function persistDeleteBuilderVersion(invitationId: string, id: string): Promise<BuilderVersion[]> {
+  await builderRequest<{ success: boolean }>(`${API}?invitationId=${encodeURIComponent(invitationId)}&entity=version&id=${encodeURIComponent(id)}`, { method: 'DELETE' }, value => value?.success === true);
+  const next = listBuilderVersions(invitationId).filter(version => version.id !== id);
+  replaceInvitationItems(VERSION_KEY, invitationId, next); return next;
+}
+
+export async function persistDeleteReviewNote(invitationId: string, id: string): Promise<ReviewNote[]> {
+  await builderRequest<{ success: boolean }>(`${API}?invitationId=${encodeURIComponent(invitationId)}&entity=note&id=${encodeURIComponent(id)}`, { method: 'DELETE' }, value => value?.success === true);
+  const next = listReviewNotes(invitationId).filter(note => note.id !== id);
+  replaceInvitationItems(NOTE_KEY, invitationId, next); return next;
+}
+
+export async function persistPatchReviewNote(invitationId: string, id: string, patch: Pick<ReviewNote, 'status'>): Promise<ReviewNote[]> {
+  await builderRequest<{ success: boolean }>(API, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invitationId, id, status: patch.status }) }, value => value?.success === true);
+  const next = listReviewNotes(invitationId).map(note => note.id === id ? { ...note, status: patch.status, resolved: patch.status === 'approved' } : note);
+  replaceInvitationItems(NOTE_KEY, invitationId, next); return next;
 }
 
 export function patchReviewNote(invitationId: string, id: string, patch: Partial<ReviewNote>): ReviewNote[] {
@@ -231,19 +235,27 @@ export async function hydrateBuilderState(invitationId: string): Promise<{ versi
   const startedWith = JSON.stringify({ versions: localVersions, notes: localNotes });
   const current = () => ({ versions: listBuilderVersions(invitationId), notes: listReviewNotes(invitationId) });
   try {
-    const response = await fetch(`${API}?invitationId=${encodeURIComponent(invitationId)}`, { cache: 'no-store' });
-    if (!response.ok) throw new Error('cloud-unavailable');
-    const payload = await response.json() as { versions?: BuilderVersion[]; notes?: ReviewNote[] };
+    const payload = await builderRequest<{ versions: BuilderVersion[]; notes: ReviewNote[] }>(`${API}?invitationId=${encodeURIComponent(invitationId)}`, {}, value => Array.isArray(value?.versions) && Array.isArray(value?.notes)
+      && value.versions.every(version => version?.invitationId === invitationId && !!version.data && version.data.id === invitationId && typeof version.id === 'string' && Number.isFinite(version.createdAt) && ['manual', 'save', 'publish', 'restore'].includes(version.source))
+      && value.notes.every(note => note?.invitationId === invitationId && typeof note.id === 'string' && typeof note.text === 'string' && typeof note.author === 'string' && Number.isFinite(note.createdAt) && ['admin', 'designer', 'client'].includes(note.role) && ['pending', 'approved', 'changes'].includes(note.status)));
     // A publication, note edit or deletion can finish while this read is pending.
     // Keep that newer mirror; an old response must neither replace it nor migrate
     // the local records captured before the user's intervening operation.
     const latest = current();
     if (JSON.stringify(latest) !== startedWith) return { ...latest, cloud: false };
     const versions = retainVersions(mergeById(localVersions.filter(version => version.source !== 'publish'), Array.isArray(payload.versions) ? payload.versions : []));
-    const notes = mergeById(localNotes, Array.isArray(payload.notes) ? payload.notes : []).sort((a, b) => b.createdAt - a.createdAt);
+    // Notes and approval decisions are authoritative in the shared history.
+    // Preserve legacy local-only notes separately, without displaying a deleted
+    // or revoked local approval as a current server decision.
+    if (localNotes.some(note => !payload.notes.some(shared => shared.id === note.id))) {
+      const legacyKey = `${NOTE_KEY}:legacy:${invitationId}`;
+      write(legacyKey, mergeById(read<ReviewNote>(legacyKey), localNotes));
+    }
+    const notes = payload.notes.sort((a, b) => b.createdAt - a.createdAt);
     replaceInvitationItems(VERSION_KEY, invitationId, versions);
     replaceInvitationItems(NOTE_KEY, invitationId, notes);
-    if (localVersions.length || localNotes.length) queueCloud({ invitationId, versions: localVersions.filter(version => version.source !== 'publish'), notes: localNotes });
+    // Reading must never resurrect a record deleted by another browser. Local
+    // nonpublic checkpoints remain backups; only explicit edits send mutations.
     return { versions, notes, cloud: true };
   } catch {
     return { ...current(), cloud: false };

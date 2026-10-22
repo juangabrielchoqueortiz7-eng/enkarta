@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { authBrowserClient } from '@/lib/supabase/browser';
+import { boundedBuilderTask } from '@/lib/builder-request';
 
 const GoogleMark = () => (
   <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" aria-hidden>
@@ -21,20 +22,30 @@ export default function GoogleSignIn({ next = '/socios/panel', label = 'Continua
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const mounted = useRef(false), pending = useRef<AbortController | null>(null);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; pending.current?.abort(); }; }, []);
 
   const signIn = async () => {
+    if (!mounted.current || pending.current) return;
+    const controller = new AbortController(); pending.current = controller;
     setLoading(true);
     setError('');
     try {
       const redirect = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-      const { error: oauthError } = await authBrowserClient().auth.signInWithOAuth({
+      const { data, error: oauthError } = await boundedBuilderTask<{ data: { url: string | null }; error: unknown }>(() => authBrowserClient().auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: redirect },
-      });
+        options: { redirectTo: redirect, skipBrowserRedirect: true },
+      }), { signal: controller.signal });
       if (oauthError) throw oauthError;
+      if (!mounted.current || pending.current !== controller || controller.signal.aborted) return;
+      const url = new URL(data.url || '');
+      const authOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).origin;
+      if (url.origin !== authOrigin || url.pathname !== '/auth/v1/authorize') throw new Error('Acceso inválido');
+      window.location.assign(url.href);
     } catch {
-      setError('No se pudo abrir el acceso de Google. Intenta de nuevo.');
-      setLoading(false);
+      if (mounted.current && pending.current === controller) setError('No se pudo abrir el acceso de Google. Intenta de nuevo.');
+    } finally {
+      if (pending.current === controller) { pending.current = null; if (mounted.current) setLoading(false); }
     }
   };
 
@@ -44,12 +55,13 @@ export default function GoogleSignIn({ next = '/socios/panel', label = 'Continua
         type="button"
         onClick={signIn}
         disabled={loading}
+        aria-busy={loading}
         className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-[#2C2519]/12 bg-white px-7 py-3.5 font-outfit text-[14px] font-medium text-[#2C2519] shadow-[0_10px_30px_-18px_rgba(44,37,25,0.55)] transition hover:border-[#B8975A]/50 hover:shadow-[0_16px_40px_-20px_rgba(44,37,25,0.5)] disabled:cursor-wait disabled:opacity-60 sm:w-auto"
       >
         {loading ? <span className="h-[18px] w-[18px] animate-spin rounded-full border-2 border-[#B8975A] border-t-transparent" /> : <GoogleMark />}
         {loading ? 'Abriendo Google…' : label}
       </button>
-      {error && <p className="mt-3 font-outfit text-[12px] text-red-600">{error}</p>}
+      {error && <p role="alert" className="mt-3 font-outfit text-[12px] text-red-600">{error}</p>}
     </div>
   );
 }

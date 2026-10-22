@@ -12,11 +12,12 @@ import { useRef, useState } from 'react';
 import { InvitationParsed, BuilderConfig, Block, BlockLayout, LAYOUT_VERSION } from '@/lib/types';
 import { createElementBlock, createCornerSet, cloneBlock, DECOR_PACKS } from '@/components/invitations/blocks/registry';
 import { ELEMENTS, ELEMENT_PALETTE_PRESETS, getElement, paletteFromPrimary, renderElement, type ElementPalette } from '@/components/invitations/blocks/elements-library';
-import { listUserPacks, saveUserPack, deleteUserPack, type UserDecorPack } from '@/lib/user-decor-packs';
+import { listUserPacks as readUserPacks, saveUserPack as storeUserPack, deleteUserPack as dropUserPack, type UserDecorPack } from '@/lib/user-decor-packs';
 import ElementPicker from '../ElementPicker';
 import { useLegacyDraft } from '../useLegacyDraft';
 
 interface Props {
+  libraryScope?: string;
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
   selectedId: string;
@@ -40,7 +41,11 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
   return <div><label className="block text-xs text-gray-500 font-outfit mb-1">{label}</label>{children}</div>;
 }
 
-export default function ElementsPanel({ data, onChange, selectedId, onSelect, editingRevision, draftSource }: Props) {
+export default function ElementsPanel({ libraryScope = 'admin', data, onChange, selectedId, onSelect, editingRevision, draftSource }: Props) {
+
+  const listUserPacks = () => readUserPacks(libraryScope);
+  const saveUserPack = (name: string, blocks: Block[]) => storeUserPack(name, blocks, libraryScope);
+  const deleteUserPack = (id: string) => dropUserPack(id, libraryScope);
   const draft = useLegacyDraft(data, onChange, undefined, editingRevision, draftSource);
   const cfg: BuilderConfig = data.config ?? {};
   const layout = cfg.layout;
@@ -432,7 +437,7 @@ export default function ElementsPanel({ data, onChange, selectedId, onSelect, ed
       {/* Añadir un elemento suelto */}
       <div className="space-y-2">
         <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Añadir un elemento</h4>
-        <ElementPicker color={defaultColor} palette={activePalette} ownerId={data.id} onPick={addElement} isCurrent={draft.isCurrent} editingRevision={editingRevision} />
+        <ElementPicker libraryScope={libraryScope} color={defaultColor} palette={activePalette} ownerId={data.id} onPick={addElement} isCurrent={draft.isCurrent} editingRevision={editingRevision} />
       </div>
 
       {/* Mis packs guardados */}

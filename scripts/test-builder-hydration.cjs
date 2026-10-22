@@ -62,15 +62,14 @@ test('a newer local checkpoint is preserved when a stale body finishes after its
   }, { localVersions: [version()], reply: request => request.method === 'GET' ? { ok: true, json: () => body.promise } : Response.json({ success: true }) });
 });
 
-test('an unchanged mirror accepts fresh cloud data and migrates only the current nonpublication drafts and notes', async () => {
+test('an unchanged mirror accepts fresh cloud data without migrating local backups during a read', async () => {
   const local = version(), oldPublished = version(id, { id: 'version-qa-old-publication', source: 'publish' }), localNote = note();
   const confirmed = version(id, { id: 'version-qa-cloud-publication', source: 'publish', publicationState: 'published', createdAt: 3 });
   await isolated(async scope => {
     const result = await versions.hydrateBuilderState(id);
-    assert.equal(result.cloud, true); assert.deepEqual(result.versions.map(value => value.id), [confirmed.id, local.id]); assert.deepEqual(result.notes, [localNote]);
+    assert.equal(result.cloud, true); assert.deepEqual(result.versions.map(value => value.id), [confirmed.id, local.id]); assert.deepEqual(result.notes, []); assert.deepEqual(JSON.parse(scope.values.get(NOTE_KEY+':legacy:'+id)),[localNote]);
     assert.deepEqual(versions.listBuilderVersions(id), result.versions); assert.deepEqual(versions.listReviewNotes(id), result.notes);
-    const writes = scope.requests.filter(value => value.method === 'POST'); assert.equal(writes.length, 1);
-    assert.deepEqual(writes[0].body, { invitationId: id, versions: [local], notes: [localNote] });
+    const writes = scope.requests.filter(value => value.method === 'POST'); assert.equal(writes.length, 0, 'A read must not resurrect rows removed on another browser');
     assert.equal(scope.requests[0].cache, 'no-store'); assert.equal(JSON.stringify(scope.requests).includes('SUPABASE'), false);
   }, { localVersions: [local, oldPublished], localNotes: [localNote], reply: request => Response.json(request.method === 'GET' ? { versions: [confirmed], notes: [] } : { success: true }) });
 });

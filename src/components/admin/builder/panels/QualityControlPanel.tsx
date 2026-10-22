@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { InvitationPackage, InvitationParsed, QualityCheckResult, QualityControlConfig } from '@/lib/types';
+import { useLegacyDraft } from '../useLegacyDraft';
 import { PACKAGE_LABELS } from '@/lib/packages';
 import { privacyReady, qualityChecksFor, qualityControl, qualityProgress, qualityReport, releaseReady, supportReady, updateQualityCheck } from '@/lib/quality-assurance';
 
@@ -14,21 +15,32 @@ const results: { value: QualityCheckResult; label: string; cls: string }[] = [
   { value: 'not_applicable', label: 'No aplica', cls: 'bg-violet-100 text-violet-700' },
 ];
 
-export default function QualityControlPanel({ data, onChange }: { data: InvitationParsed; onChange: (config: InvitationParsed['config']) => void }) {
+export default function QualityControlPanel({ data, onChange, editingRevision, draftSource }: { data: InvitationParsed; onChange: (config: InvitationParsed['config']) => void; editingRevision?: { readonly current: number }; draftSource?: { readonly current: InvitationParsed } }) {
+  const draft = useLegacyDraft(data, patch => { if (patch.config) onChange(patch.config); }, undefined, editingRevision, draftSource);
   const contracted = data.config.package ?? 'exclusive';
   const [pkg, setPkg] = useState<InvitationPackage>(contracted);
+  const packageView = useRef(pkg); packageView.current = pkg;
   const control = qualityControl(data.config.qualityControl);
   const run = control.runs?.[pkg] ?? {};
   const progress = qualityProgress(control, pkg);
   const ready = releaseReady(control, contracted);
-  const save = (next: QualityControlConfig) => onChange({ ...data.config, qualityControl: next });
-  const updateRun = (patch: Partial<NonNullable<QualityControlConfig['runs']>[InvitationPackage]>) => save({ ...control, runs: { ...(control.runs ?? {}), [pkg]: { ...run, ...patch, updatedAt: new Date().toISOString() } } });
-  const updateSupport = (patch: Partial<NonNullable<QualityControlConfig['support']>>) => save({ ...control, support: { ...(control.support ?? {}), ...patch } });
-  const updatePrivacy = (patch: Partial<NonNullable<QualityControlConfig['privacy']>>) => save({ ...control, privacy: { ...(control.privacy ?? {}), ...patch } });
-  const updateRelease = (patch: Partial<NonNullable<QualityControlConfig['release']>>) => save({ ...control, release: { ...(control.release ?? {}), ...patch } });
+  const save = (change: (current: QualityControlConfig) => QualityControlConfig) => {
+    if (packageView.current !== pkg) return;
+    draft.config(current => ({ qualityControl: change(qualityControl(current.qualityControl)) }));
+  };
+  const updateRun = (patch: Partial<NonNullable<QualityControlConfig['runs']>[InvitationPackage]>) => save(current => ({ ...current, runs: { ...(current.runs ?? {}), [pkg]: { ...(current.runs?.[pkg] ?? {}), ...patch, updatedAt: new Date().toISOString() } } }));
+  const updateSupport = (patch: Partial<NonNullable<QualityControlConfig['support']>>) => save(current => ({ ...current, support: { ...(current.support ?? {}), ...patch } }));
+  const updatePrivacy = (patch: Partial<NonNullable<QualityControlConfig['privacy']>>) => save(current => ({ ...current, privacy: { ...(current.privacy ?? {}), ...patch } }));
+  const updateRelease = (patch: Partial<NonNullable<QualityControlConfig['release']>>) => save(current => {
+    if ((patch.stage === 'approved' || patch.stage === 'production') && (!releaseReady(current, draft.get().config.package ?? 'exclusive') || !current.release?.approvedBy?.trim())) return current;
+    if (patch.stage === 'production' && current.release?.stage !== 'approved' && current.release?.stage !== 'production') return current;
+    return { ...current, release: { ...(current.release ?? {}), ...patch } };
+  });
   const downloadReport = () => {
-    const blob = new Blob([JSON.stringify(qualityReport(data), null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${data.slug}-aceptacion.json`; anchor.click(); URL.revokeObjectURL(url);
+    if (!draft.isCurrent()) return;
+    const current = draft.get();
+    const blob = new Blob([JSON.stringify(qualityReport(current), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${current.slug}-aceptacion.json`; anchor.click(); URL.revokeObjectURL(url);
   };
 
   return <div className="space-y-5 p-4 font-outfit">
@@ -42,13 +54,13 @@ export default function QualityControlPanel({ data, onChange }: { data: Invitati
 
     <section className="space-y-3">
       <div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold text-gray-800">Recorridos por paquete</h3><p className="text-[10px] text-gray-400">La invitación actual está contratada como {PACKAGE_LABELS[contracted]}.</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${progress.failed ? 'bg-red-100 text-red-700' : progress.percent === 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{progress.passed}/{progress.total}</span></div>
-      <div className="grid grid-cols-3 gap-1.5 rounded-2xl bg-gray-100 p-1.5">{packages.map(item => <button key={item} type="button" onClick={() => setPkg(item)} className={`min-h-9 rounded-xl px-2 py-2 text-[10px] font-semibold ${pkg === item ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}>{PACKAGE_LABELS[item]} · {qualityProgress(control, item).percent}%</button>)}</div>
+      <div className="grid grid-cols-3 gap-1.5 rounded-2xl bg-gray-100 p-1.5">{packages.map(item => <button key={item} type="button" onClick={() => { if (draft.isCurrent()) { packageView.current = item; setPkg(item); } }} className={`min-h-9 rounded-xl px-2 py-2 text-[10px] font-semibold ${pkg === item ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}>{PACKAGE_LABELS[item]} · {qualityProgress(control, item).percent}%</button>)}</div>
       <div className="grid grid-cols-2 gap-2"><label className="text-[10px] uppercase tracking-wider text-gray-400">Entorno<select className={input} value={run.environment ?? 'local'} onChange={event => updateRun({ environment: event.target.value as 'local' | 'preview' | 'production' })}><option value="local">Local</option><option value="preview">Vista previa</option><option value="production">Producción</option></select></label><label className="text-[10px] uppercase tracking-wider text-gray-400">URL comprobada<input className={input} value={run.url ?? ''} onChange={event => updateRun({ url: event.target.value })} placeholder="https://…" /></label></div>
       {qualityChecksFor(pkg).map(definition => {
         const record = run.checks?.[definition.id] ?? { result: 'pending' as const };
         return <details key={definition.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
           <summary className="flex cursor-pointer list-none items-center gap-3 p-3"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs ${record.result === 'passed' ? 'bg-emerald-100 text-emerald-700' : record.result === 'failed' ? 'bg-red-100 text-red-700' : record.result === 'not_applicable' ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-400'}`}>{record.result === 'passed' ? '✓' : record.result === 'failed' ? '!' : '○'}</span><span className="min-w-0 flex-1"><span className="block text-xs font-semibold text-gray-700">{definition.label}</span><span className="block truncate text-[10px] text-gray-400">{definition.detail}</span></span><span className="text-[9px] uppercase text-gray-300">{definition.category}</span></summary>
-          <div className="space-y-3 border-t border-gray-100 p-3"><div className="grid grid-cols-4 gap-1">{results.map(option => <button key={option.value} type="button" onClick={() => save(updateQualityCheck(control, pkg, definition.id, { ...record, result: option.value, checkedAt: option.value === 'pending' ? undefined : new Date().toISOString() }))} className={`min-h-9 rounded-lg px-1 py-2 text-[9px] font-semibold ${record.result === option.value ? option.cls : 'bg-gray-50 text-gray-300'}`}>{option.label}</button>)}</div><label className="block text-[10px] uppercase tracking-wider text-gray-400">Evidencia o incidencia<input className={input} value={record.evidence ?? ''} onChange={event => save(updateQualityCheck(control, pkg, definition.id, { ...record, evidence: event.target.value.slice(0, 500) }))} placeholder="Dispositivo, resultado, ticket o captura…" /></label>{record.checkedAt && <p className="text-[9px] text-gray-400">Comprobado: {new Date(record.checkedAt).toLocaleString('es-BO')}</p>}</div>
+          <div className="space-y-3 border-t border-gray-100 p-3"><div className="grid grid-cols-4 gap-1">{results.map(option => <button key={option.value} type="button" onClick={() => save(current => updateQualityCheck(current, pkg, definition.id, { ...(current.runs?.[pkg]?.checks?.[definition.id] ?? { result: 'pending' }), result: option.value, checkedAt: option.value === 'pending' ? undefined : new Date().toISOString() }))} className={`min-h-9 rounded-lg px-1 py-2 text-[9px] font-semibold ${record.result === option.value ? option.cls : 'bg-gray-50 text-gray-300'}`}>{option.label}</button>)}</div><label className="block text-[10px] uppercase tracking-wider text-gray-400">Evidencia o incidencia<input className={input} value={record.evidence ?? ''} onChange={event => save(current => updateQualityCheck(current, pkg, definition.id, { ...(current.runs?.[pkg]?.checks?.[definition.id] ?? { result: 'pending' }), evidence: event.target.value.slice(0, 500) }))} placeholder="Dispositivo, resultado, ticket o captura…" /></label>{record.checkedAt && <p className="text-[9px] text-gray-400">Comprobado: {new Date(record.checkedAt).toLocaleString('es-BO')}</p>}</div>
         </details>;
       })}
     </section>

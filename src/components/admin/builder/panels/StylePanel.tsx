@@ -12,7 +12,7 @@ import {
   recommendedDesignKits,
   type DesignKit,
 } from '@/lib/design-kits';
-import { deleteUserDesignKit, listUserDesignKits, saveUserDesignKit } from '@/lib/user-design-kits';
+import { deleteUserDesignKit as dropUserDesignKit, listUserDesignKits as readUserDesignKits, saveUserDesignKit as storeUserDesignKit } from '@/lib/user-design-kits';
 import { auditDesignConsistency, cleanInvitationDesign } from '@/lib/design-audit';
 import { hasInvitationVisualSystem } from '@/lib/marfil-visual-system';
 import DesignModeControl from '../DesignModeControl';
@@ -20,6 +20,7 @@ import { resolveFeatures } from '@/lib/packages';
 import { useLegacyDraft } from '../useLegacyDraft';
 
 interface Props {
+  libraryScope?: string;
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
   editingRevision?: { readonly current: number };
@@ -115,8 +116,12 @@ function KitCard({ kit, active, recommended, onApply, onDelete, disabled }: {
   );
 }
 
-export default function StylePanel({ data, onChange, editingRevision, draftSource }: Props) {
+export default function StylePanel({ libraryScope = 'admin', data, onChange, editingRevision, draftSource }: Props) {
   useCatalogFonts();
+
+  const listUserDesignKits = () => readUserDesignKits(libraryScope);
+  const saveUserDesignKit = (name: string, value: InvitationParsed) => storeUserDesignKit(name, value, libraryScope);
+  const deleteUserDesignKit = (id: string) => dropUserDesignKit(id, libraryScope);
   const draft = useLegacyDraft(data, onChange, undefined, editingRevision, draftSource);
   const cfg: BuilderConfig = data.config ?? {};
   const colorsIncluded = resolveFeatures(cfg).colorCustomization;
@@ -137,7 +142,7 @@ export default function StylePanel({ data, onChange, editingRevision, draftSourc
   const [cleanDestination, setCleanDestination] = useState<string | null>(null);
   const cleanDestinationRef = useRef<string | null>(null);
   const confirmClean = cleanDestination === draft.destination('style:clean');
-  useEffect(() => setCustomKits(listUserDesignKits()), []);
+  useEffect(() => setCustomKits(readUserDesignKits(libraryScope)), [libraryScope]);
 
   const orderedKits = useMemo(() => recommendedDesignKits(data), [data]);
   const visibleKits = showAllKits ? orderedKits : orderedKits.slice(0, 4);

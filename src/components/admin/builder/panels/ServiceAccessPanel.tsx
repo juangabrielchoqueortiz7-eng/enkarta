@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { BuilderConfig } from '@/lib/types';
+import { BuilderRequestError, builderRequest } from '@/lib/builder-request';
 import { allowsService } from '@/lib/packages';
 
 const UNCONFIRMED_SAVE_MESSAGE = 'No pudimos confirmar si el acceso se guardó. Conservamos los datos del editor; la solicitud puede haberse recibido y no se reintentó automáticamente.';
@@ -16,6 +17,8 @@ function AccessForm({ id, scope, operational }: { id: string; scope: 'review' | 
   const [loadError, setLoadError] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const unconfirmed = useRef(false);
+  const saveController = useRef<AbortController | null>(null);
   const [acknowledged, setAcknowledged] = useState<{ email: string; deadline: string; passwordRevision: number } | null>(null);
   const draft = useRef({ email: '', password: '', deadline: '', passwordRevision: 0 });
   const persistedPassword = useRef(false);
@@ -31,9 +34,9 @@ function AccessForm({ id, scope, operational }: { id: string; scope: 'review' | 
     mounted.current = true; ready.current = false; operation.current = null;
     setLoading(true); setLoadError(''); setSaving(false); setMessage(''); setError(''); setAcknowledged(null);
     const current = () => active && mounted.current && generation.current === cycle;
-    fetch(`/api/admin/host-credentials?id=${encodeURIComponent(id)}&scope=${scope}`).then(async response => {
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'No se pudo cargar el acceso');
+    const controller = new AbortController();
+    unconfirmed.current = false;
+    builderRequest<{ email?: string; hasPassword?: boolean; rsvpDeadline?: string }>(`/api/admin/host-credentials?id=${encodeURIComponent(id)}&scope=${scope}`, { signal: controller.signal }, value => !!value && typeof value === 'object' && !Array.isArray(value)).then(data => {
       if (current()) {
         draft.current = { email: data.email || '', password: '', deadline: String(data.rsvpDeadline || '').slice(0, 10), passwordRevision: 0 };
         persistedPassword.current = !!data.hasPassword;
@@ -42,7 +45,7 @@ function AccessForm({ id, scope, operational }: { id: string; scope: 'review' | 
       }
     }).catch(e => { if (current()) setLoadError(e instanceof Error ? e.message : 'No se pudo cargar el acceso'); }).finally(() => { if (current()) setLoading(false); });
     return () => {
-      active = false;
+      active = false; controller.abort(); saveController.current?.abort();
       if (generation.current === cycle) { mounted.current = false; ready.current = false; operation.current = null; }
     };
   }, [id, scope]);
@@ -54,25 +57,23 @@ function AccessForm({ id, scope, operational }: { id: string; scope: 'review' | 
     else setDeadline(value);
   };
   const save = async () => {
-    if (!mounted.current || !ready.current || generation.current !== contextGeneration || operation.current) return;
+    if (!mounted.current || !ready.current || generation.current !== contextGeneration || operation.current || unconfirmed.current) return;
     const attempt = { generation: generation.current };
+    const controller = new AbortController(); saveController.current = controller;
     const submitted = { ...draft.current, hasPassword: persistedPassword.current };
     operation.current = attempt;
     const current = () => mounted.current && ready.current && generation.current === attempt.generation && operation.current === attempt;
     setSaving(true); setError(''); setMessage('');
     try {
-      const response = await fetch('/api/admin/host-credentials', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, scope, email: submitted.email, password: submitted.password || undefined, ...(scope === 'host' ? { rsvpDeadline: submitted.deadline } : {}) }) });
-      const data = await response.json();
+      await builderRequest<{ ok: boolean }>('/api/admin/host-credentials', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal, body: JSON.stringify({ id, scope, email: submitted.email, password: submitted.password || undefined, ...(scope === 'host' ? { rsvpDeadline: submitted.deadline } : {}) }) }, value => value?.ok === true);
       if (!current()) return;
-      if (!response.ok) { setError(typeof data?.error === 'string' && data.error ? data.error : 'No se pudo guardar'); return; }
-      if (data?.ok !== true) { setError(UNCONFIRMED_SAVE_MESSAGE); return; }
       persistedPassword.current = submitted.email.trim() ? !!submitted.password || submitted.hasPassword : false;
       setHasPassword(persistedPassword.current);
       if (draft.current.passwordRevision === submitted.passwordRevision) { draft.current = { ...draft.current, password: '' }; setPassword(''); }
       setAcknowledged({ email: submitted.email, deadline: submitted.deadline, passwordRevision: submitted.passwordRevision });
       setMessage(submitted.email.trim() ? 'Acceso guardado. Comparte estas credenciales por un canal seguro.' : 'Acceso deshabilitado.');
-    } catch {
-      if (current()) setError(UNCONFIRMED_SAVE_MESSAGE);
+    } catch (failure) {
+      if (current()) { unconfirmed.current = failure instanceof BuilderRequestError && failure.uncertain; setError(unconfirmed.current ? UNCONFIRMED_SAVE_MESSAGE + ' Recarga para comprobar el acceso antes de volver a guardar.' : failure instanceof Error ? failure.message : UNCONFIRMED_SAVE_MESSAGE); }
     } finally {
       if (current()) { operation.current = null; setSaving(false); }
     }
@@ -86,7 +87,7 @@ function AccessForm({ id, scope, operational }: { id: string; scope: 'review' | 
       <label className="block text-xs text-gray-600">Contraseña · {title}{hasPassword && <span className="text-green-700"> · configurada</span>}<input type="password" autoComplete="new-password" minLength={8} maxLength={200} value={password} onChange={e => edit('password', e.target.value)} placeholder={hasPassword ? 'Vacío para conservarla' : 'Mínimo 8 caracteres'} className="mt-1 w-full rounded-xl border p-2 text-sm" /></label>
       {scope === 'host' && <label className="block text-xs text-gray-600">Fecha límite de confirmación<input type="date" value={deadline} onChange={e => edit('deadline', e.target.value)} className="mt-1 w-full rounded-xl border p-2 text-sm" /></label>}
       <p className="text-[11px] text-gray-500">Borra el correo y guarda para deshabilitar este acceso. Cambiar la contraseña también cierra sus sesiones anteriores. Cada acceso es independiente.</p>
-      <button type="button" onClick={save} disabled={saving} aria-busy={saving || undefined} className="w-full rounded-xl bg-enkarta-dark p-2.5 text-xs text-white disabled:opacity-50">{saving ? 'Guardando…' : `Guardar ${title.toLowerCase()}`}</button>
+      <button type="button" onClick={save} disabled={saving || unconfirmed.current} aria-busy={saving || undefined} className="w-full rounded-xl bg-enkarta-dark p-2.5 text-xs text-white disabled:opacity-50">{saving ? 'Guardando…' : `Guardar ${title.toLowerCase()}`}</button>
       {message && <p role="status" className="text-xs text-green-700">{message}{laterChanges && ' Hay cambios posteriores sin guardar.'}</p>}{error && <p role="alert" className="text-xs text-red-700">{error}</p>}
     </div>}
   </details>;

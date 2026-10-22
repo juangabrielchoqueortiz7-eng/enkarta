@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
+import { boundedBuilderTask } from '@/lib/builder-request';
 import type { Guest, InvitationParsed } from '@/lib/types';
 import { collectPublicationResources } from '@/lib/publication-audit';
 import { createStoredZip, createTextPdf, type PdfPage, type ZipEntryInput } from '@/lib/export-artifacts';
@@ -35,6 +36,8 @@ interface ExportSnapshot {
   error: string;
 }
 interface ExportAttempt {
+  controller: AbortController;
+  timer?: ReturnType<typeof setTimeout>;
   query: ExportQuery;
   data: InvitationParsed;
   kind: string;
@@ -204,7 +207,7 @@ export default function ExportPanel({ data }: Props) {
   const copyOperation = useRef<object | null>(null);
   const currentData = () => mounted.current && latestData.current === data && queryRef.current === query;
   const currentExport = (attempt: ExportAttempt) => mounted.current && operation.current === attempt
-    && latestData.current === attempt.data && queryRef.current === attempt.query
+    && !attempt.controller.signal.aborted && latestData.current === attempt.data && queryRef.current === attempt.query
     && (!attempt.snapshot || result.current === attempt.snapshot);
   const currentSnapshot = snapshot?.query === query ? snapshot : null;
   const analytics = currentSnapshot?.analytics ?? null;
@@ -246,7 +249,7 @@ export default function ExportPanel({ data }: Props) {
       result.current = next; setSnapshot(next);
     }).finally(() => { if (read.current === request) read.current = null; });
     return () => {
-      mounted.current = false; result.current = null; operation.current = null; copyOperation.current = null;
+      mounted.current = false; if (operation.current) { clearTimeout(operation.current.timer); operation.current.controller.abort(); } result.current = null; operation.current = null; copyOperation.current = null;
       if (read.current === request) read.current = null;
       request.controller.abort();
     };
@@ -262,16 +265,31 @@ export default function ExportPanel({ data }: Props) {
     if (operation.current && currentExport(operation.current)) return null;
     const ready = result.current?.query === query && !result.current.error ? result.current : null;
     if (needsGuests && !ready) return null;
-    const attempt: ExportAttempt = { query, data, kind, ...(needsGuests ? { snapshot: ready! } : {}) };
+    if (operation.current) { clearTimeout(operation.current.timer); operation.current.controller.abort(); }
+    const attempt: ExportAttempt = { controller: new AbortController(), query, data, kind, ...(needsGuests ? { snapshot: ready! } : {}) };
     operation.current = attempt; setActivity({ attempt, progress: '' });
+    attempt.timer = setTimeout(() => {
+      if (operation.current !== attempt) return;
+      const visible = currentExport(attempt); operation.current = null; attempt.controller.abort();
+      if (mounted.current) setActivity(null);
+      if (visible) alert('La exportación no terminó en 90 segundos. No se descargaron archivos incompletos; puedes volver a prepararla.');
+    }, 90_000);
     return attempt;
   };
   const exportProgress = (attempt: ExportAttempt, value: string) => {
     if (currentExport(attempt)) setActivity(previous => previous?.attempt === attempt ? { attempt, progress: value } : previous);
   };
   const finishExport = (attempt: ExportAttempt) => {
-    if (currentExport(attempt)) { operation.current = null; setActivity(null); }
+    clearTimeout(attempt.timer);
+    if (operation.current === attempt) { operation.current = null; if (mounted.current) setActivity(null); }
+    attempt.controller.abort();
   };
+
+  const exportBlob = (attempt: ExportAttempt, url: string) => boundedBuilderTask(async signal => {
+    const response = await fetch(url, { cache: 'no-store', signal });
+    if (!response.ok) throw new Error('No se pudo descargar el recurso.');
+    return response.blob();
+  }, { signal: attempt.controller.signal });
 
   const downloadQr = async () => {
     const attempt = startExport('qr'); if (!attempt) return;
@@ -289,13 +307,10 @@ export default function ExportPanel({ data }: Props) {
   const downloadCover = async () => {
     const attempt = startExport('cover'); if (!attempt) return;
     try {
-      const res = await fetch(`/i/${data.slug}/opengraph-image`);
-      if (!currentExport(attempt)) return;
-      if (!res.ok) throw new Error('No se pudo crear la portada');
-      const blob = await res.blob();
+      const blob = await exportBlob(attempt, `/i/${data.slug}/opengraph-image`);
       if (currentExport(attempt)) downloadBlob(blob, `${file}-portada.png`);
     } catch {
-      if (currentExport(attempt)) window.open(`/i/${data.slug}/opengraph-image`, '_blank', 'noopener,noreferrer');
+      if (currentExport(attempt)) alert('No se pudo descargar la portada. Comprueba la conexión y vuelve a prepararla.');
     } finally { finishExport(attempt); }
   };
 
@@ -365,9 +380,7 @@ export default function ExportPanel({ data }: Props) {
       const entries: ZipEntryInput[] = [];
       const qr = await QRCode.toDataURL(publicUrl, { width: 1200, margin: 4, color: { dark: data.config?.theme?.primaryDeep || '#211b14', light: '#ffffff' } });
       if (!currentExport(attempt)) return;
-      const qrResponse = await fetch(qr);
-      if (!currentExport(attempt)) return;
-      const qrBlob = await qrResponse.blob();
+      const qrBlob = await exportBlob(attempt, qr);
       if (!currentExport(attempt)) return;
       entries.push({ name: '01-compartir/codigo-qr.png', data: qrBlob });
       entries.push({ name: '02-calendario/evento.ics', data: calendarFile(data) });
@@ -377,10 +390,9 @@ export default function ExportPanel({ data }: Props) {
       entries.push({ name: 'LEEME.txt', data: `Paquete Enkarta · ${data.names || data.slug}\r\nGenerado: ${new Date().toLocaleString('es-BO')}\r\nURL: ${publicUrl}\r\n\r\nIncluye QR, calendario, PDF estático, textos, respaldo y recursos visuales disponibles.` });
 
       try {
-        const cover = await fetch(`/i/${data.slug}/opengraph-image`);
+        const coverBlob = await exportBlob(attempt, `/i/${data.slug}/opengraph-image`);
         if (!currentExport(attempt)) return;
-        if (cover.ok) {
-          const coverBlob = await cover.blob();
+        {
           if (!currentExport(attempt)) return;
           entries.push({ name: '01-compartir/portada.png', data: coverBlob });
         }
@@ -393,10 +405,7 @@ export default function ExportPanel({ data }: Props) {
         const resource = photos[index];
         exportProgress(attempt, `Descargando imagen ${index + 1} de ${photos.length}`);
         try {
-          const response = await fetch(resource.url, { cache: 'no-store' });
-          if (!currentExport(attempt)) return;
-          if (!response.ok) throw new Error('download-failed');
-          const blob = await response.blob();
+          const blob = await exportBlob(attempt, resource.url);
           if (!currentExport(attempt)) return;
           if (blob.size > 12_000_000) throw new Error('too-heavy');
           entries.push({ name: `05-fotos/foto-${String(index + 1).padStart(2, '0')}.${extensionFor(blob.type, resource.url)}`, data: blob });

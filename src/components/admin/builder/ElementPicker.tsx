@@ -4,9 +4,10 @@
 import { useEffect, useRef, useState } from 'react';
 import ImageUploader from './ImageUploader';
 import { ELEMENTS, ELEMENT_CATEGORIES, paletteFromPrimary, type ElementCategory, type ElementPalette } from '@/components/invitations/blocks/elements-library';
-import { listUserElements, addUserElement, removeUserElement, type UserElement } from '@/lib/user-elements';
+import { listUserElements as readUserElements, addUserElement as storeUserElement, removeUserElement as dropUserElement, type UserElement } from '@/lib/user-elements';
 
 interface Props {
+  libraryScope?: string;
   /** Color de previsualización (tema de la invitación). */
   color: string;
   palette?: ElementPalette;
@@ -33,7 +34,11 @@ function loadKeys(key: string): string[] {
   try { return JSON.parse(window.localStorage.getItem(key) || '[]') as string[]; } catch { return []; }
 }
 
-export default function ElementPicker({ color, palette, ownerId, onPick, isCurrent, editingRevision }: Props) {
+export default function ElementPicker({ libraryScope = 'admin', color, palette, ownerId, onPick, isCurrent, editingRevision }: Props) {
+
+  const listUserElements = () => readUserElements(libraryScope);
+  const addUserElement = (url: string) => storeUserElement(url, libraryScope);
+  const removeUserElement = (url: string) => dropUserElement(url, libraryScope);
   const [tab, setTab] = useState<'lib' | 'upload' | 'mine'>('lib');
   const [cat, setCat] = useState<ElementCategory>('corner');
   const [view, setView] = useState<'category' | 'favorites' | 'recent'>('category');

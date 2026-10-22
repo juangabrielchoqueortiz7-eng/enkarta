@@ -1,4 +1,5 @@
 'use client';
+import { BuilderRequestError } from '@/lib/builder-request';
 import CleanDesignFields from './CleanDesignFields';
 import {isCleanDesign} from '@/lib/clean-designs';
 import MariaMarioFields from './MariaMarioFields';
@@ -28,8 +29,8 @@ import { restoreBlockCollectionStyle } from '@/lib/collection-design';
 import { BLOCKS, PALETTE_GROUPS, SECTION_PRESETS, CHILD_PALETTE, createBlock, createOverlayGroup, cloneBlock, FONT_OPTIONS, type FieldDef, type SectionPreset } from '@/components/invitations/blocks/registry';
 import { layoutForTemplate } from '@/lib/layout-presets';
 import { themeForTemplate, motionForTemplate, tokensForTemplate } from '@/lib/template-themes';
-import { listUserTemplates, saveUserTemplate, deleteUserTemplate, type UserTemplate } from '@/lib/user-templates';
-import { deleteUserSection, hydrateUserSections, listUserSections, saveUserSection, type UserSection } from '@/lib/user-sections';
+import { listUserTemplates as readUserTemplates, saveUserTemplate as storeUserTemplate, deleteUserTemplate as dropUserTemplate, type UserTemplate } from '@/lib/user-templates';
+import { persistDeleteUserSection as dropUserSection, hydrateUserSections as loadUserSections, listUserSections as readUserSections, persistUserSection as storeUserSection, type UserSection } from '@/lib/user-sections';
 import { useEffect, useRef, useState } from 'react';
 import ImageUploader from '../ImageUploader';
 import MultiImageUploader from '../MultiImageUploader';
@@ -44,6 +45,7 @@ import SectionPresetCard, { SectionPreview } from '../SectionPresetCard';
 import { isSectionRecommended, sectionCatalogMeta, SECTION_MOMENTS, SECTION_STYLES, transferSectionContent, type SectionMoment, type SectionStyle } from '@/lib/section-catalog';
 
 interface Props {
+  libraryScope?: string;
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
   selectedId: string;
@@ -290,7 +292,13 @@ function imageMediaLibrary(data: InvitationParsed, cfg: BuilderConfig, blocks: B
   return Array.from(found);
 }
 
-export default function BlockEditorPanel({ data, onChange: notifyChange, selectedId, selectedIds, onSelect: notifySelect, previewMode, previewWidth, editingRevision, draftSource }: Props) {
+export default function BlockEditorPanel({ libraryScope = 'admin', data, onChange: notifyChange, selectedId, selectedIds, onSelect: notifySelect, previewMode, previewWidth, editingRevision, draftSource }: Props) {
+
+  const saveUserTemplate = (name: string, value: Parameters<typeof storeUserTemplate>[1]) => storeUserTemplate(name, value, libraryScope);
+  const deleteUserTemplate = (id: string) => dropUserTemplate(id, libraryScope);
+  const listUserSections = () => readUserSections(libraryScope);
+  const saveUserSection = (name: string, blocks: Block[]) => storeUserSection(name, blocks, libraryScope);
+  const deleteUserSection = (id: string) => dropUserSection(id, libraryScope);
   const mounted = useRef(true);
   const lists = useRef<BuilderListState | null>(null);
   if (!lists.current) lists.current = new BuilderListState();
@@ -360,6 +368,8 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
   const [previewPresetKey, setPreviewPresetKey] = useState<string | null>(null);
 
   // ── Plantillas guardadas (galería) ──
+  const sectionBusy = useRef(false), sectionUncertain = useRef(false);
+  const [libraryError, setLibraryError] = useState('');
   const [templates, setTemplates] = useState<UserTemplate[]>([]);
   const templatesRef = useRef(templates);
   templatesRef.current = templates;
@@ -370,9 +380,9 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
   const sectionLibraryRevision = useRef(0);
   useEffect(() => {
     const templateObserved = templateLibraryRevision.current, sectionObserved = sectionLibraryRevision.current;
-    listUserTemplates().then(items => { if (mounted.current && templateObserved === templateLibraryApplied.current) { templatesRef.current = items; setTemplates(items); } });
-    hydrateUserSections().then(state => { if (mounted.current && sectionObserved === sectionLibraryRevision.current) { setUserSections(state.sections); setSectionsCloud(state.cloud); } });
-  }, []);
+    readUserTemplates(libraryScope).then(items => { if (mounted.current && templateObserved === templateLibraryApplied.current) { templatesRef.current = items; setTemplates(items); } });
+    loadUserSections(libraryScope).then(state => { if (mounted.current && sectionObserved === sectionLibraryRevision.current) { setUserSections(state.sections); setSectionsCloud(state.cloud); } });
+  }, [libraryScope]);
   const applyTemplate = (t: UserTemplate) => {
     if (!currentContext()) return;
     const template = templatesRef.current.find(item => item.id === t.id);
@@ -388,7 +398,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
     if (!current.layout) return;
     const operation = ++templateLibraryRevision.current;
     void saveUserTemplate(name, { layout: current.layout, theme: current.theme, motion: current.motion, tokens: current.tokens })
-      .then(items => { if (currentContext() && operation === templateLibraryRevision.current) { templateLibraryApplied.current = operation; templatesRef.current = items; setTemplates(items); } });
+      .then(items => { if (currentContext() && operation === templateLibraryRevision.current) { templateLibraryApplied.current = operation; templatesRef.current = items; setTemplates(items); } }).catch(() => { if (currentContext()) setLibraryError('No se pudo completar la biblioteca. Conservamos el diseño actual.'); });
   };
   const removeTemplate = (id: string) => {
     if (!currentContext() || !templatesRef.current.some(item => item.id === id)) return;
@@ -398,10 +408,12 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
 
   const renderTemplates = (canSave: boolean) => (
     <div className="space-y-2 border-t border-gray-100 pt-4">
+      {libraryError && <p role="alert" className="text-sm text-red-800">{libraryError}</p>}
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-outfit font-semibold text-gray-400 uppercase tracking-wider">Mis plantillas</h4>
         {canSave && <button type="button" onClick={saveAsTemplate} className="text-xs text-enkarta-gold hover:underline font-outfit">+ Guardar actual</button>}
       </div>
+      <p className="text-xs text-gray-500 font-outfit">Las plantillas conservan un respaldo en este navegador si no se confirma la nube.</p>
       {templates.length === 0
         ? <p className="text-xs text-gray-400 font-outfit">Aún no has guardado plantillas. Diseña una y pulsa &quot;Guardar actual&quot;.</p>
         : templates.map(t => (
@@ -449,7 +461,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
     setBlocks(currentBlocks.map(item => item.id === id ? { ...item, ...update } : item));
   };
   const saveBlocksAsSection = (items: Block[]) => {
-    if (!items.length || !selectionCurrent()) return;
+    if (sectionBusy.current || sectionUncertain.current || !items.length || !selectionCurrent()) return;
     const suggested = items.length === 1 ? (BLOCKS[items[0].type]?.label ?? 'Mi sección') : `Composición de ${items.length} bloques`;
     const name = window.prompt('Nombre de la sección reutilizable:', suggested);
     if (name == null || !selectionCurrent()) return;
@@ -457,7 +469,10 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
     const live = items.map(item => current.find(block => block.id === item.id && block.type === item.type));
     if (live.some(item => !item)) return;
     sectionLibraryRevision.current++;
-    setUserSections(saveUserSection(name, live as Block[]));
+    sectionBusy.current = true; setLibraryError('');
+    void saveUserSection(name, live as Block[]).then(items => { if (currentContext()) { setUserSections(items); setSectionsCloud(true); } })
+      .catch(error => { sectionUncertain.current = error instanceof BuilderRequestError && error.uncertain; if (currentContext()) setLibraryError('No se confirmó la sección reutilizable. Actualiza el constructor antes de repetir; el diseño actual sigue intacto.'); })
+      .finally(() => { sectionBusy.current = false; });
   };
   const insertUserSection = (section: UserSection) => {
     if (!currentContext()) return;
@@ -1565,7 +1580,7 @@ export default function BlockEditorPanel({ data, onChange: notifyChange, selecte
                   <span className="mt-2 block truncate text-xs font-outfit font-medium text-gray-700">{section.name}</span>
                   <span className="block text-[9px] font-outfit text-gray-400">{section.blocks.length} bloque{section.blocks.length === 1 ? '' : 's'}</span>
                 </button>
-                <button type="button" aria-label={`Eliminar ${section.name}`} onClick={() => { if (currentContext()) { sectionLibraryRevision.current++; setUserSections(deleteUserSection(section.id)); } }} className="absolute right-2 top-2 h-6 w-6 rounded-full bg-white/90 text-[10px] text-gray-400 opacity-0 shadow group-hover:opacity-100 hover:text-red-500">✕</button>
+                <button type="button" aria-label={`Eliminar ${section.name}`} onClick={() => { if (currentContext() && !sectionBusy.current && !sectionUncertain.current) { sectionLibraryRevision.current++; sectionBusy.current = true; setLibraryError(''); void deleteUserSection(section.id).then(items => { if (currentContext()) setUserSections(items); }).catch(error => { sectionUncertain.current = error instanceof BuilderRequestError && error.uncertain; if (currentContext()) setLibraryError('No se confirmó la eliminación de la sección. Actualiza el constructor para comprobarla.'); }).finally(() => { sectionBusy.current = false; }); } }} className="absolute right-2 top-2 h-6 w-6 rounded-full bg-white/90 text-[10px] text-gray-400 opacity-0 shadow group-hover:opacity-100 hover:text-red-500">✕</button>
               </div>
             ))}
           </div>

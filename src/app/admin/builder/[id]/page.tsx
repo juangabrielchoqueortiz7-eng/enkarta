@@ -40,7 +40,7 @@ export default async function BuilderPage({ params }: Props) {
     phone_whatsapp: raw.phone_whatsapp ?? null,
   };
 
-  return <InvitationBuilder initialData={editorInvitation(withDefaults)} />;
+  return <InvitationBuilder key={id} initialData={editorInvitation(withDefaults)} />;
 }
 
 export async function generateMetadata({ params }: Props) {

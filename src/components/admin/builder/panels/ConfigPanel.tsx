@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { BuilderConfig, InvitationParsed, InvitationTemplate } from '@/lib/types';
-import { resolveFeatures } from '@/lib/packages';
+import { PACKAGE_LABELS, resolveFeatures } from '@/lib/packages';
 import type { BuilderValidation } from '@/lib/builder-validation';
 import { ENKARTA_COLLECTIONS } from '@/lib/enkarta-collections';
 import PublicationAuditPanel from '../PublicationAuditPanel';
@@ -15,6 +15,7 @@ import { invitationValidity, type ValidityFields } from '@/lib/invitation-validi
 import { useLegacyDraft } from '../useLegacyDraft';
 
 interface Props {
+  contractAccess?: 'team' | 'partner';
   data: InvitationParsed;
   onChange: (patch: Partial<InvitationParsed>) => void;
   onDelete?: () => void;
@@ -54,7 +55,7 @@ function LinkRow({ label, url }: { label: string; url: string }) {
   );
 }
 
-export default function ConfigPanel({ data, onChange, onDelete, validation, onOpenBlock, onValiditySync, editingRevision, draftSource }: Props) {
+export default function ConfigPanel({ data, onChange, onDelete, validation, onOpenBlock, onValiditySync, editingRevision, draftSource, contractAccess = 'team' }: Props) {
   const draft = useLegacyDraft(data, patch => { if (patch.config) observeEntry(patch.config); onChange(patch); }, undefined, editingRevision, draftSource);
   const videoRevision = useRef(0);
   const posterRevision = useRef(0);
@@ -171,9 +172,14 @@ export default function ConfigPanel({ data, onChange, onDelete, validation, onOp
         </div>
       </div>
 
-      <PackageSettings config={data.config ?? {}} onChange={config => draft.patch({ config })} draft={draft} />
-      <AdditionalServicesPanel data={data} onChange={config => draft.patch({ config })} editingRevision={editingRevision} draftSource={draftSource} />
-      <ValidityPanel key={data.id} data={data} onSync={fields => { if (draft.get().id === data.id) onValiditySync?.(fields); }} />
+      {contractAccess === 'team' ? <>
+        <PackageSettings config={data.config ?? {}} onChange={config => draft.patch({ config })} draft={draft} />
+        <AdditionalServicesPanel data={data} onChange={config => draft.patch({ config })} editingRevision={editingRevision} draftSource={draftSource} />
+        <ValidityPanel key={data.id} data={data} onSync={fields => { if (draft.get().id === data.id) onValiditySync?.(fields); }} />
+      </> : <section aria-label="Servicios del plan de Socios" className="space-y-2 border-t border-gray-100 pt-5 font-outfit text-sm text-gray-700">
+        <h4 className="font-semibold">Servicios de esta invitación · {PACKAGE_LABELS[data.config?.package ?? 'plus']}</h4>
+        <p>El paquete, los adicionales y los acuerdos de vigencia los administra el equipo Enkarta. Revisa tu suscripción en el panel de Socios para conocer tu plan y cupo.</p>
+      </section>}
 
       {/* Pantalla de entrada / sobre */}
       {(() => {

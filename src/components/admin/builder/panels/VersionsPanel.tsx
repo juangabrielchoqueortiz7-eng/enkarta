@@ -1,22 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Block, BuilderRole, InvitationParsed, ReviewStatus } from '@/lib/types';
 import {
-  addReviewNote,
-  deleteBuilderVersion,
-  deleteReviewNote,
+  persistReviewNote,
+  persistDeleteBuilderVersion,
+  persistDeleteReviewNote,
   hydrateBuilderState,
   listBuilderVersions,
   listReviewNotes,
-  patchReviewNote,
-  saveBuilderVersion,
+  persistPatchReviewNote,
+  persistBuilderVersion,
   activePublishedVersion,
   effectivePublicationTime,
   nextScheduledVersion,
   type BuilderVersion,
 } from '@/lib/builder-versions';
 import { ROLE_META } from '@/lib/builder-workflow';
+import { BuilderRequestError } from '@/lib/builder-request';
 
 interface Props {
   data: InvitationParsed;
@@ -28,6 +29,9 @@ interface Props {
   onRollback: (version: BuilderVersion) => Promise<void>;
   onWorkflowChange: (status: ReviewStatus) => void;
   onOpenBlock?: (blockId: string) => void;
+  draftSource?: { readonly current: InvitationParsed };
+  canMutate?: () => boolean;
+  onMutationState?: (state: 'pending' | 'done' | 'uncertain') => void;
 }
 
 const SOURCE_META = {
@@ -56,7 +60,7 @@ function blockName(blocks: Block[], id?: string): string {
   return 'Elemento del diseño';
 }
 
-export default function VersionsPanel({ data, selectedBlockId, publishedVersionId, onUnpublish, onCancelSchedule, onRestore, onRollback, onWorkflowChange, onOpenBlock }: Props) {
+export default function VersionsPanel({ data, selectedBlockId, publishedVersionId, onUnpublish, onCancelSchedule, onRestore, onRollback, onWorkflowChange, onOpenBlock, draftSource, canMutate, onMutationState }: Props) {
   const [versions, setVersions] = useState(() => listBuilderVersions(data.id));
   const [notes, setNotes] = useState(() => listReviewNotes(data.id));
   const [note, setNote] = useState('');
@@ -68,30 +72,77 @@ export default function VersionsPanel({ data, selectedBlockId, publishedVersionI
   const [namingVersion, setNamingVersion] = useState(false);
   const [rollingBack, setRollingBack] = useState(false);
   const [cloudState, setCloudState] = useState<'loading' | 'connected' | 'local'>('loading');
+  const [busy, setBusy] = useState(false), [failure, setFailure] = useState('');
+  const mounted = useRef(false), operation = useRef(false), uncertain = useRef(false), readSequence = useRef(0);
+  const invalidateRead = useCallback(() => { readSequence.current += 1; }, []);
+  const currentId = useRef(data.id); currentId.current = data.id;
+  const form = useRef({ note, author, role, noteStatus, versionName });
+  form.current = { note, author, role, noteStatus, versionName };
+  const current = () => mounted.current && currentId.current === data.id;
+  const working = () => draftSource?.current ?? data;
 
   const refresh = async () => {
+    if (!current() || operation.current) return;
+    const sequence = ++readSequence.current;
     setCloudState('loading');
     const state = await hydrateBuilderState(data.id);
+    if (!current() || sequence !== readSequence.current) return;
     setVersions(state.versions);
     setNotes(state.notes);
     setCloudState(state.cloud ? 'connected' : 'local');
+    if (state.cloud && !uncertain.current) setFailure('');
   };
 
   useEffect(() => {
     let active = true;
+    mounted.current = true;
+    const sequence = ++readSequence.current;
     setCloudState('loading');
     hydrateBuilderState(data.id).then(state => {
-      if (!active) return;
+      if (!active || sequence !== readSequence.current) return;
       setVersions(state.versions);
       setNotes(state.notes);
       setCloudState(state.cloud ? 'connected' : 'local');
     });
     return () => { active = false; };
   }, [data.id, publishedVersionId]);
+  useEffect(() => {
+    mounted.current = true;
+    const protect = (event: BeforeUnloadEvent) => {
+      if (operation.current || uncertain.current || form.current.note.trim() || form.current.versionName.trim()) { event.preventDefault(); event.returnValue = ''; }
+    };
+    window.addEventListener('beforeunload', protect);
+    return () => { mounted.current = false; invalidateRead(); window.removeEventListener('beforeunload', protect); };
+  }, [data.id, invalidateRead]);
+
+  const perform = async (action: () => Promise<void>) => {
+    if (!current() || operation.current || uncertain.current) return;
+    if (canMutate?.() === false) { setFailure('Espera a que termine la operación del constructor antes de cambiar el historial.'); return; }
+    operation.current = true; readSequence.current++; setBusy(true); setFailure(''); onMutationState?.('pending');
+    try { await action(); }
+    catch (error) {
+      const unconfirmed = error instanceof BuilderRequestError && error.uncertain;
+      if (unconfirmed) { uncertain.current = true; onMutationState?.('uncertain'); }
+      if (current()) setFailure((error instanceof Error ? error.message : 'No se pudo completar la operación.') + (unconfirmed ? ' Conserva tus textos y recarga para comprobar el historial antes de repetir.' : ''));
+    } finally { operation.current = false; if (current()) setBusy(false); onMutationState?.('done'); }
+  };
+  const removeVersion = (version: BuilderVersion, scheduled: boolean) => perform(async () => {
+    if (!window.confirm(scheduled ? `¿Cancelar la publicación programada “${version.label}”?` : `¿Eliminar la versión “${version.label}”?`)) return;
+    const next = await persistDeleteBuilderVersion(data.id, version.id);
+    if (scheduled) onCancelSchedule?.(version.id);
+    if (current()) { setVersions(next); setCloudState('connected'); }
+  });
+  const changeNote = (id: string, status: ReviewStatus) => perform(async () => {
+    const next = await persistPatchReviewNote(data.id, id, { status }); if (current()) setNotes(next);
+  });
+  const removeNote = (id: string) => perform(async () => {
+    if (!window.confirm('¿Eliminar esta nota?')) return;
+    const next = await persistDeleteReviewNote(data.id, id); if (current()) setNotes(next);
+  });
 
   const workflow = data.config?.workflow;
   const workflowDecisionAt = Math.max(Date.parse(workflow?.draftUpdatedAt || '') || 0, Date.parse(workflow?.reviewUpdatedAt || '') || 0);
-  const clientDecision = notes.find(item => item.role === 'client' && item.status !== 'pending' && item.createdAt > workflowDecisionAt);
+  const clientDecision = cloudState === 'connected' ? notes.find(item => item.role === 'client' && item.status !== 'pending' && item.createdAt > workflowDecisionAt) : undefined;
   const currentStatus = clientDecision?.status ?? workflow?.reviewStatus ?? 'pending';
   const activePublication = activePublishedVersion(versions);
   const scheduledPublication = nextScheduledVersion(versions);
@@ -109,39 +160,50 @@ export default function VersionsPanel({ data, selectedBlockId, publishedVersionI
     approved: notes.filter(item => item.status === 'approved').length,
   }), [notes]);
 
-  const createVersion = () => {
-    const label = versionName.trim();
+  const createVersion = () => perform(async () => {
+    const label = form.current.versionName.trim();
     if (!label) return;
-    setVersions(saveBuilderVersion(data, label, 'manual', 'Punto de control creado manualmente', role));
-    setVersionName('');
-    setNamingVersion(false);
-  };
+    const next = await persistBuilderVersion(working(), label, 'manual', 'Punto de control creado manualmente', form.current.role);
+    if (!current()) return;
+    setVersions(next.versions); setCloudState('connected');
+    if (form.current.versionName.trim() === label) { form.current.versionName = ''; setVersionName(''); setNamingVersion(false); }
+  });
 
-  const addNote = () => {
-    if (!note.trim()) return;
-    setNotes(addReviewNote(data.id, note, author, selectedBlockId, role, noteStatus));
-    setNote('');
-  };
+  const addNote = () => perform(async () => {
+    const submitted = { ...form.current }; if (!submitted.note.trim()) return;
+    const next = await persistReviewNote(data.id, submitted.note, submitted.author, selectedBlockId, submitted.role, submitted.noteStatus);
+    if (!current()) return;
+    setNotes(next); setCloudState('connected');
+    if (form.current.note === submitted.note) { form.current.note = ''; setNote(''); }
+  });
 
-  const restore = (version: BuilderVersion) => {
+  const restore = (version: BuilderVersion) => perform(async () => {
     if (!window.confirm(`¿Restaurar “${version.label}”? Guardaremos el estado actual antes de volver a esa versión.`)) return;
-    setVersions(saveBuilderVersion(data, 'Antes de restaurar', 'restore', `Respaldo previo a restaurar ${version.label}`, 'admin'));
+    const before = working();
+    const next = await persistBuilderVersion(before, 'Antes de restaurar', 'restore', `Respaldo previo a restaurar ${version.label}`, 'admin');
+    if (!current()) return;
+    setVersions(next.versions);
+    if (working() !== before) { setFailure('El respaldo se guardó, pero hay cambios posteriores. Revisa el borrador antes de restaurar.'); return; }
     onRestore(version.data);
-  };
+  });
 
   const rollback = async () => {
+    if (!current() || operation.current || uncertain.current || canMutate?.() === false) return;
     if (!previousPublish || !window.confirm(`¿Volver a la publicación “${previousPublish.label}”? La publicación actual quedará guardada en el historial.`)) return;
-    setRollingBack(true);
+    operation.current = true; setRollingBack(true);
     try {
       await onRollback(previousPublish);
-      await refresh();
+      operation.current = false; await refresh();
     } finally {
-      setRollingBack(false);
+      operation.current = false; if (current()) setRollingBack(false);
     }
   };
 
   return (
-    <div className="space-y-5 p-4">
+    <div className="space-y-5 p-4" aria-busy={busy || rollingBack}>
+      <div className="flex flex-wrap items-center gap-3 text-sm font-outfit"><button type="button" disabled={busy || rollingBack || cloudState === 'loading'} onClick={() => void refresh()} className="min-h-11 rounded-xl border border-gray-300 px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50">Actualizar historial</button><span role="status">{busy ? 'Confirmando cambios en el servidor…' : 'Las acciones del historial esperan confirmación del servidor.'}</span></div>
+      {failure && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{failure}</p>}
+      <fieldset disabled={busy || rollingBack || uncertain.current} className="min-w-0 space-y-5">
       <section className="overflow-hidden rounded-[22px] border border-[#e9e1f1] bg-white shadow-sm">
         <div className="bg-gradient-to-br from-[#29243f] via-[#4f416a] to-[#8a6ca0] p-4 text-white">
           <div className="flex items-start justify-between gap-3">
@@ -153,10 +215,10 @@ export default function VersionsPanel({ data, selectedBlockId, publishedVersionI
               {cloudState === 'connected' ? '● Nube activa' : cloudState === 'loading' ? 'Sincronizando…' : '● Respaldo local'}
             </span>
           </div>
-          <p className="mt-2 max-w-sm text-xs font-outfit leading-relaxed text-white/65">Borrador, vista privada y versión pública están separados. Restaurar nunca borra tu trabajo actual.</p>
+          <p className="mt-2 max-w-sm text-xs font-outfit leading-relaxed text-white/65">La vista privada muestra el último borrador guardado. Antes de restaurar confirmamos un respaldo del estado actual.</p>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center font-outfit">
             <div className="rounded-xl bg-white/10 px-2 py-2"><p className="text-[9px] uppercase tracking-wider text-white/45">Borrador</p><p className="mt-0.5 text-[11px] font-semibold">Editable</p></div>
-            <div className="rounded-xl bg-white/10 px-2 py-2"><p className="text-[9px] uppercase tracking-wider text-white/45">Vista privada</p><p className="mt-0.5 text-[11px] font-semibold">En vivo</p></div>
+            <div className="rounded-xl bg-white/10 px-2 py-2"><p className="text-[9px] uppercase tracking-wider text-white/45">Vista privada</p><p className="mt-0.5 text-[11px] font-semibold">Último guardado</p></div>
             <div className={`rounded-xl px-2 py-2 ${publicationPaused ? 'bg-amber-300/15' : 'bg-emerald-300/15'}`}><p className={`text-[9px] uppercase tracking-wider ${publicationPaused ? 'text-amber-100/60' : 'text-emerald-100/60'}`}>Pública</p><p className="mt-0.5 text-[11px] font-semibold">{publicationPaused ? 'Pausada' : activePublication ? 'Protegida' : 'Sin publicar'}</p></div>
           </div>
         </div>
@@ -191,7 +253,7 @@ export default function VersionsPanel({ data, selectedBlockId, publishedVersionI
             <div className="flex items-center gap-3 rounded-2xl border border-sky-100 bg-sky-50 p-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-sky-600 shadow-sm">◷</span>
               <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-sky-900 font-outfit">{scheduledPublication.label}</p><p className="mt-0.5 text-[10px] text-sky-700 font-outfit">Programada para {new Date(scheduledPublication.publishAt || scheduledPublication.createdAt).toLocaleString('es-BO')}</p></div>
-              <button type="button" onClick={() => { if (window.confirm(`¿Cancelar la publicación programada “${scheduledPublication.label}”?`)) { setVersions(deleteBuilderVersion(data.id, scheduledPublication.id)); onCancelSchedule?.(scheduledPublication.id); } }} className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 text-[9px] font-semibold text-sky-700 shadow-sm font-outfit">Cancelar</button>
+              <button type="button" onClick={() => void removeVersion(scheduledPublication, true)} className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 text-[9px] font-semibold text-sky-700 shadow-sm font-outfit">Cancelar</button>
             </div>
           )}
         </section>
@@ -207,7 +269,7 @@ export default function VersionsPanel({ data, selectedBlockId, publishedVersionI
           <div className="rounded-2xl border border-violet-100 bg-violet-50/60 p-3">
             <label className="text-[10px] font-outfit font-semibold uppercase tracking-wider text-violet-600">Nombre fácil de reconocer</label>
             <div className="mt-2 flex gap-2">
-              <input autoFocus value={versionName} onChange={event => setVersionName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') createVersion(); }} placeholder="Ej: Portada aprobada" className="min-w-0 flex-1 rounded-xl border border-violet-100 bg-white px-3 py-2 text-xs font-outfit outline-none focus:border-violet-400" />
+              <input autoFocus aria-label="Nombre de la versión" value={versionName} onChange={event => { form.current.versionName = event.target.value; setVersionName(event.target.value); }} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void createVersion(); } }} placeholder="Ej: Portada aprobada" className="min-w-0 flex-1 rounded-xl border border-violet-100 bg-white px-3 py-2 text-xs font-outfit outline-none focus:border-violet-400" />
               <button type="button" onClick={createVersion} disabled={!versionName.trim()} className="rounded-xl bg-violet-600 px-3 text-[11px] font-outfit font-semibold text-white disabled:opacity-40">Guardar</button>
             </div>
           </div>
@@ -241,7 +303,7 @@ export default function VersionsPanel({ data, selectedBlockId, publishedVersionI
               {version.summary && <p className="mt-2 rounded-xl bg-gray-50 px-2.5 py-2 text-[10px] font-outfit leading-relaxed text-gray-500">{version.summary}</p>}
               <div className="mt-2 flex gap-2">
                 <button type="button" onClick={() => restore(version)} className="flex-1 rounded-xl bg-violet-50 py-2 text-[11px] font-outfit font-semibold text-violet-700">Restaurar al borrador</button>
-                {!isPublished && <button type="button" onClick={() => { if (window.confirm(isScheduled ? `¿Cancelar la publicación programada “${version.label}”?` : `¿Eliminar la versión “${version.label}”?`)) { setVersions(deleteBuilderVersion(data.id, version.id)); if (isScheduled) onCancelSchedule?.(version.id); } }} className="rounded-xl border border-gray-200 px-3 py-2 text-[11px] font-outfit text-gray-400 hover:border-red-100 hover:text-red-500">{isScheduled ? 'Cancelar' : 'Eliminar'}</button>}
+                {!isPublished && <button type="button" onClick={() => void removeVersion(version, isScheduled)} className="rounded-xl border border-gray-200 px-3 py-2 text-[11px] font-outfit text-gray-400 hover:border-red-100 hover:text-red-500">{isScheduled ? 'Cancelar' : 'Eliminar'}</button>}
               </div>
             </article>
           );
@@ -256,14 +318,14 @@ export default function VersionsPanel({ data, selectedBlockId, publishedVersionI
 
         <div className="rounded-2xl border border-gray-100 bg-[#faf9fb] p-3">
           <div className="grid grid-cols-2 gap-2">
-            <input value={author} onChange={event => setAuthor(event.target.value)} placeholder="Nombre del revisor" className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-outfit outline-none focus:border-violet-400" />
-            <select value={role} onChange={event => setRole(event.target.value as BuilderRole)} className="rounded-xl border border-gray-200 bg-white px-2 py-2 text-xs font-outfit text-gray-600 outline-none focus:border-violet-400">
+            <input aria-label="Nombre del revisor" value={author} onChange={event => { form.current.author = event.target.value; setAuthor(event.target.value); }} placeholder="Nombre del revisor" className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-outfit outline-none focus:border-violet-400" />
+            <select aria-label="Rol del revisor" value={role} onChange={event => { form.current.role = event.target.value as BuilderRole; setRole(event.target.value as BuilderRole); }} className="rounded-xl border border-gray-200 bg-white px-2 py-2 text-xs font-outfit text-gray-600 outline-none focus:border-violet-400">
               <option value="admin">Administrador</option><option value="designer">Diseñador</option>
             </select>
           </div>
-          <textarea value={note} onChange={event => setNote(event.target.value)} rows={3} placeholder="Describe el cambio con claridad…" className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-outfit outline-none focus:border-violet-400" />
+          <textarea aria-label="Observación del diseño" maxLength={1200} value={note} onChange={event => { form.current.note = event.target.value; setNote(event.target.value); }} rows={3} placeholder="Describe el cambio con claridad…" className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-outfit outline-none focus:border-violet-400" />
           <div className="mt-2 flex gap-2">
-            <select value={noteStatus} onChange={event => setNoteStatus(event.target.value as ReviewStatus)} className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-2 py-2 text-[11px] font-outfit text-gray-600 outline-none"><option value="pending">Pendiente</option><option value="changes">Solicita cambios</option><option value="approved">Aprobación</option></select>
+            <select aria-label="Estado de la observación" value={noteStatus} onChange={event => { form.current.noteStatus = event.target.value as ReviewStatus; setNoteStatus(event.target.value as ReviewStatus); }} className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-2 py-2 text-[11px] font-outfit text-gray-600 outline-none"><option value="pending">Pendiente</option><option value="changes">Solicita cambios</option><option value="approved">Aprobación</option></select>
             <button type="button" onClick={addNote} disabled={!note.trim()} className="rounded-xl bg-gray-900 px-4 py-2 text-[11px] font-outfit font-semibold text-white disabled:opacity-40">Añadir nota</button>
           </div>
         </div>
@@ -291,8 +353,8 @@ export default function VersionsPanel({ data, selectedBlockId, publishedVersionI
                 <p className="mt-2 text-xs font-outfit leading-relaxed text-gray-600">{item.text}</p>
                 {item.blockId && <button type="button" onClick={() => onOpenBlock?.(item.blockId!)} className="mt-2 rounded-lg bg-white px-2 py-1 text-[9px] font-outfit font-semibold text-violet-600 shadow-sm">◎ Ver {blockName(blocks, item.blockId)}</button>}
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {(Object.keys(STATUS_META) as ReviewStatus[]).map(status => <button key={status} type="button" onClick={() => setNotes(patchReviewNote(data.id, item.id, { status }))} className={`rounded-lg px-2 py-1 text-[9px] font-outfit ${item.status === status ? STATUS_META[status].cls : 'bg-white text-gray-500'}`}>{STATUS_META[status].label}</button>)}
-                  <button type="button" onClick={() => { if (window.confirm('¿Eliminar esta nota?')) setNotes(deleteReviewNote(data.id, item.id)); }} className="ml-auto px-1 py-1 text-[9px] font-outfit text-red-400">Eliminar</button>
+                  {(Object.keys(STATUS_META) as ReviewStatus[]).map(status => <button key={status} type="button" onClick={() => void changeNote(item.id, status)} className={`rounded-lg px-2 py-1 text-[9px] font-outfit ${item.status === status ? STATUS_META[status].cls : 'bg-white text-gray-500'}`}>{STATUS_META[status].label}</button>)}
+                  <button type="button" onClick={() => void removeNote(item.id)} className="ml-auto px-1 py-1 text-[9px] font-outfit text-red-400">Eliminar</button>
                 </div>
               </article>
             );
@@ -306,6 +368,7 @@ export default function VersionsPanel({ data, selectedBlockId, publishedVersionI
           {(Object.keys(ROLE_META) as BuilderRole[]).map(item => <div key={item} className="flex gap-2.5 rounded-xl bg-gray-50 p-2.5"><span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: ROLE_META[item].color }} /><div><p className="text-[11px] font-outfit font-semibold text-gray-700">{ROLE_META[item].label}</p><p className="mt-0.5 text-[10px] font-outfit leading-relaxed text-gray-400">{ROLE_META[item].description}</p></div></div>)}
         </div>
       </details>
+      </fieldset>
     </div>
   );
 }

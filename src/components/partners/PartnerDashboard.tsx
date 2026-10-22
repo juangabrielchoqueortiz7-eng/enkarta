@@ -1,4 +1,5 @@
 'use client';
+import { builderRequest } from '@/lib/builder-request';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -339,10 +340,19 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
     catch { say('error', 'No se pudo copiar el enlace. Abre la invitación y copia su dirección.'); }
   };
 
+  const logout = useRef<AbortController | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+  useEffect(() => () => logout.current?.abort(), []);
   const signOut = async () => {
-    await fetch('/api/auth/signout', { method: 'POST' });
-    router.replace('/socios');
-    router.refresh();
+    if (!mounted.current || logout.current) return;
+    if (invitationOperation.current || paymentOperation.current || profileSave.current?.busy) { say('error', 'Espera a que termine la operación antes de salir.'); return; }
+    const controller = new AbortController(); logout.current = controller; setSigningOut(true);
+    try {
+      await builderRequest<{ success: boolean }>('/api/auth/signout', { method: 'POST', signal: controller.signal }, value => value?.success === true);
+      if (!mounted.current || controller.signal.aborted) return;
+      invalidateAccountRead(); invalidateInvitationRead(); router.replace('/socios'); router.refresh();
+    } catch { if (mounted.current) say('error', 'No pudimos confirmar el cierre de sesión. Recarga para comprobar tu acceso antes de salir.'); }
+    finally { if (logout.current === controller) { logout.current = null; if (mounted.current) setSigningOut(false); } }
   };
 
   return (
@@ -363,7 +373,7 @@ export default function PartnerDashboard({ initialAccount, initialTab = 'invitac
               // eslint-disable-next-line @next/next/no-img-element
               ? <img src={account.profile.avatar} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full border border-[#2C2519]/10 object-cover" />
               : <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#B8975A]/12 font-outfit text-sm font-medium text-[#6A522A]">{(account.profile.name || account.profile.email || '?').charAt(0).toUpperCase()}</span>}
-            <button type="button" onClick={signOut} className={`min-h-11 shrink-0 rounded-lg px-2 font-outfit text-sm text-[#655B4A] underline-offset-4 hover:text-[#2C2519] hover:underline ${CONTROL_FOCUS}`}>Salir</button>
+            <button type="button" onClick={signOut} disabled={signingOut} aria-busy={signingOut} className={`min-h-11 shrink-0 rounded-lg px-2 font-outfit text-sm text-[#655B4A] underline-offset-4 hover:text-[#2C2519] hover:underline ${CONTROL_FOCUS}`}>{signingOut ? 'Cerrando sesión…' : 'Salir'}</button>
           </div>
         </div>
       </header>

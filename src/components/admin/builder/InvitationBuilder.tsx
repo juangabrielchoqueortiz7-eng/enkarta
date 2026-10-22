@@ -26,6 +26,7 @@ import { publicationSummaryText, summarizeBuilderChanges } from '@/lib/builder-w
 import { useBuilderDuplicate } from './useBuilderDuplicate';
 import { useBuilderDelete } from './useBuilderDelete';
 import BuilderDeleteState from './BuilderDeleteState';
+import { BuilderRequestError } from '@/lib/builder-request';
 import { acknowledgesBuilderSave } from '@/lib/builder-save-ack';
 import { BuilderSaveTimeoutError, requestBuilderSave } from '@/lib/builder-save-request';
 
@@ -109,19 +110,22 @@ interface Props {
   builderPath?: string;
   /** Development-only visual fixture: never persists or publishes documents. */
   fixtureMode?: boolean;
+  libraryScope?: string;
 }
 
-export default function InvitationBuilder({ initialData, backHref = '/admin', builderPath = '/admin/builder', fixtureMode = false }: Props) {
+export default function InvitationBuilder({ initialData, backHref = '/admin', builderPath = '/admin/builder', fixtureMode = false, libraryScope = 'admin' }: Props) {
   const router = useRouter();
   const [data, setData] = useState<InvitationParsed>(initialData);
   const [activeTab, setActiveTab] = useState<Tab>('content');
+  const visitedVersions = useRef(false);
+  if (activeTab === 'versions') visitedVersions.current = true;
   const [selectedBlockId, setSelectedBlockId] = useState<string>('');
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saveState, setSaveState] = useState<'clean' | 'dirty' | 'saving' | 'saved' | 'offline' | 'error'>('clean');
   const [saveError, setSaveError] = useState('');
-  const saveUncertain = useRef(false);
+  const saveUncertain = useRef(false), historyOperation = useRef(false);
   const [advancedTools, setAdvancedTools] = useState(false);
   const [mobileWorkspace, setMobileWorkspace] = useState<'edit' | 'preview'>('edit');
   const [contractNotice, setContractNotice] = useState('');
@@ -241,7 +245,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
     const protect = (event: BeforeUnloadEvent) => {
       // Inline text is committed on blur; closing a tab need not blur it first.
       document.activeElement?.closest<HTMLElement>('[data-edit-key][contenteditable="true"]')?.blur();
-      if (saveUncertain.current || hasChanges.current || manualSavePending.current || pendingDraftSave.current || publicOperation.current) {
+      if (saveUncertain.current || historyOperation.current || hasChanges.current || manualSavePending.current || pendingDraftSave.current || publicOperation.current) {
         event.preventDefault(); event.returnValue = '';
       }
     };
@@ -592,7 +596,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   // Autoguardado silencioso con estado explícito y recuperación al reconectar.
   const silentSave = useCallback(async () => {
-    if (saveUncertain.current) return;
+    if (saveUncertain.current || historyOperation.current) return;
     if (deletionLock.current || publicOperation.current || manualSavePending.current) return;
     if (typeof navigator !== 'undefined' && !navigator.onLine) { setSaveState('offline'); return; }
     setSaveState('saving');
@@ -608,7 +612,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   // Dispara el autoguardado 2.5s después del último cambio.
   useEffect(() => {
-    if (saveUncertain.current || deletionLock.current || !hasChanges.current || publicOperation.current || failedSaveAt.current === editSequence.current) return;
+    if (saveUncertain.current || historyOperation.current || deletionLock.current || !hasChanges.current || publicOperation.current || failedSaveAt.current === editSequence.current) return;
     const id = setTimeout(() => { silentSave(); }, 2500);
     return () => clearTimeout(id);
   }, [data, silentSave, saving, deleteBlocked]);
@@ -620,7 +624,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, [silentSave]);
 
   const handleSave = useCallback(async () => {
-    if (saveUncertain.current) return;
+    if (saveUncertain.current || historyOperation.current) return;
     if (deletionLock.current || publicOperation.current || manualSavePending.current) return;
     manualSavePending.current = true;
     setSaving(true);
@@ -658,7 +662,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   }, [handleSave, publishOpen, fixtureMode]);
 
   const openPublish = () => {
-    if (saveUncertain.current) return;
+    if (saveUncertain.current || historyOperation.current) return;
     if (deletionLock.current) return;
     const now = new Date();
     setPublishLabel(`Publicación ${now.toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })} · ${now.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}`);
@@ -701,7 +705,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   };
 
   const confirmPublish = async () => {
-    if (saveUncertain.current) return;
+    if (saveUncertain.current || historyOperation.current) return;
     if (deletionLock.current || validation.errors.length || saving || publicOperation.current) return;
     const scheduledAt = publishMode === 'schedule' ? new Date(publishAt) : null;
     if (publishMode === 'schedule' && (!publishAt || !scheduledAt || Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() <= Date.now() + 60_000)) {
@@ -745,6 +749,10 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
         alert(`${isSchedule ? 'La programación quedó guardada' : 'La invitación quedó publicada'}, pero el borrador no terminó de sincronizar. Pulsa “Guardar” para reintentarlo.`);
       }
     } catch (error) {
+      if (error instanceof BuilderRequestError && error.uncertain) {
+        saveUncertain.current = true;
+        setSaveError('No pudimos confirmar el resultado de la operación pública. El servidor puede haberla recibido. Descarga un respaldo y recarga para comprobar el estado antes de continuar.');
+      }
       failedSaveAt.current = editSequence.current;
       setPublishError(error instanceof Error ? error.message : 'No se pudo publicar');
       setSaveState('error');
@@ -753,7 +761,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   };
 
   const unpublishInvitation = async () => {
-    if (saveUncertain.current) return;
+    if (saveUncertain.current || historyOperation.current) return;
     if (deletionLock.current || publicOperation.current) return;
     if (!window.confirm('¿Despublicar esta invitación? El enlace mostrará una pausa temporal y todas las versiones quedarán conservadas.')) return;
     const editedAt = editSequence.current, working = dataRef.current;
@@ -766,6 +774,10 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
       await storeDraft(snapshot, { pauseCurrent: true });
       retainLaterEdits(snapshot, editedAt, 'unpublish', 'El enlace quedó pausado. Tus cambios posteriores siguen en el borrador.');
     } catch (error) {
+      if (error instanceof BuilderRequestError && error.uncertain) {
+        saveUncertain.current = true;
+        setSaveError('No pudimos confirmar el resultado de la operación pública. El servidor puede haberla recibido. Descarga un respaldo y recarga para comprobar el estado antes de continuar.');
+      }
       failedSaveAt.current = editSequence.current;
       setSaveState('error');
       alert(error instanceof Error ? error.message : 'No se pudo despublicar la invitación');
@@ -774,7 +786,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   };
 
   const rollbackPublication = async (version: BuilderVersion) => {
-    if (saveUncertain.current) return;
+    if (saveUncertain.current || historyOperation.current) return;
     if (deletionLock.current || publicOperation.current) return;
     const editedAt = editSequence.current, working = dataRef.current;
     hydrationEpoch.current += 1; publicOperation.current = true; setSaving(true); setPublicationNotice(''); setSaveState('saving');
@@ -801,6 +813,10 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
         alert('El rollback quedó publicado, pero el borrador no terminó de sincronizar. Pulsa “Guardar” para reintentarlo.');
       }
     } catch (error) {
+      if (error instanceof BuilderRequestError && error.uncertain) {
+        saveUncertain.current = true;
+        setSaveError('No pudimos confirmar el resultado de la operación pública. El servidor puede haberla recibido. Descarga un respaldo y recarga para comprobar el estado antes de continuar.');
+      }
       failedSaveAt.current = editSequence.current;
       setSaveState('error');
       alert(error instanceof Error ? error.message : 'No se pudo completar el rollback');
@@ -811,12 +827,13 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const { handleDuplicate, duplicate, duplicateError, isDuplicateBusy } = useBuilderDuplicate({
     sourceId: initialData.id, builderPath,
     snapshot: () => dataRef.current, sequence: () => editSequence.current, dirty: () => hasChanges.current,
-    canStart: () => !saveUncertain.current && !deletionLock.current && !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current,
+    canStart: () => !saveUncertain.current && !historyOperation.current && !deletionLock.current && !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current,
     navigate: href => router.push(href),
   });
 
   const privatePreviewIssue = useCallback((checkConnection = false) => {
     if (saveUncertain.current) return 'El guardado quedó sin confirmar. Descarga un respaldo y recarga para comprobar el borrador antes de abrir la vista privada.';
+    if (historyOperation.current) return 'Espera la confirmación de la operación del historial antes de abrir la vista privada.';
     if (deletionLock.current) return 'La eliminación está en curso o sin confirmar. Revisa el panel antes de continuar.';
     const context = privatePreviewContext.current;
     if (context.fixtureMode) return 'Esta muestra no guarda cambios. Revisa la invitación en el lienzo del constructor.';
@@ -857,7 +874,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
   const handleBackToPanel = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
     document.activeElement?.closest<HTMLElement>('[data-edit-key][contenteditable="true"]')?.blur();
-    if (manualSavePending.current || pendingDraftSave.current || publicOperation.current || deletionLock.current) {
+    if (historyOperation.current || manualSavePending.current || pendingDraftSave.current || publicOperation.current || deletionLock.current) {
       event.preventDefault(); setLeaveNotice(true); return;
     }
     setLeaveNotice(false);
@@ -867,7 +884,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
 
   const { handleDelete, deletion, deleteError } = useBuilderDelete({
     sourceId: initialData.id, backHref, snapshot: () => dataRef.current,
-    canStart: () => !saveUncertain.current && !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current && !pendingDraftSave.current && !isDuplicateBusy(),
+    canStart: () => !saveUncertain.current && !historyOperation.current && !fixtureMode && !publishOpen && !publicOperation.current && !manualSavePending.current && !pendingDraftSave.current && !isDuplicateBusy(),
     locked: value => { deletionLock.current = value; setDeleteBlocked(value); if (value) hydrationEpoch.current += 1; },
     confirmed: () => { hasChanges.current = false; },
     navigate: href => router.push(href),
@@ -973,7 +990,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             )}
             <button
               onClick={handleDuplicate}
-              disabled={saveUncertain.current || fixtureMode || saving || publishOpen || !!duplicate}
+              disabled={saveUncertain.current || historyOperation.current || fixtureMode || saving || publishOpen || !!duplicate}
               title="Duplicar invitación"
               type="button"
               aria-label="Duplicar invitación"
@@ -988,7 +1005,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
               : <a {...privatePreviewProps} href={`/i/${encodeURIComponent(data.slug)}?preview=1`} target="_blank" rel="noopener noreferrer">{privatePreviewContent}</a>}
             <button
               onClick={() => handleSave()}
-              disabled={saveUncertain.current || saving}
+              disabled={saveUncertain.current || historyOperation.current || saving}
               type="button"
               aria-busy={saving}
               aria-keyshortcuts="Control+s Meta+s"
@@ -999,7 +1016,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             </button>
             <button
               onClick={openPublish}
-              disabled={saveUncertain.current || saving || fixtureMode}
+              disabled={saveUncertain.current || historyOperation.current || saving || fixtureMode}
               type="button"
               className="flex min-h-11 items-center gap-1.5 rounded-xl bg-[#514735] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#3f382b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#514735] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -1059,7 +1076,7 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
         {/* Panel izquierdo: navegación clara + inspector */}
         <div id="builder-editor" className={`${mobileWorkspace === 'edit' ? 'flex' : 'hidden'} w-full flex-shrink-0 border-r border-[#e7e1d9] bg-white lg:flex lg:w-[430px] xl:w-[500px] 2xl:w-[540px]`}>
           <nav id="builder-tools" className="flex w-[88px] flex-shrink-0 flex-col gap-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#8f8272_transparent] border-r border-[#e8e1d6] bg-[#faf7f2] px-1.5 py-2" aria-label="Herramientas del constructor">
-            {TABS.filter(tab => advancedTools || ['content', 'media', 'style', 'versions', 'guests', 'config'].includes(tab.id) || tab.id === activeTab).map(tab => {
+            {TABS.filter(tab => (libraryScope === 'admin' || tab.id !== 'quality') && (advancedTools || ['content', 'media', 'style', 'versions', 'guests', 'config'].includes(tab.id) || tab.id === activeTab)).map(tab => {
               const active = activeTab === tab.id;
               return (
                 <button
@@ -1086,27 +1103,34 @@ export default function InvitationBuilder({ initialData, backHref = '/admin', bu
             {/* Contenido del panel (scrollable) */}
             <div data-builder-panel-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {activeTab === 'content' && <ContentPanel data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
-              {activeTab === 'blocks'  && <BlockEditorPanel data={data} onChange={handleChange} selectedId={selectedBlockId} selectedIds={selectedBlockIds} onSelect={selectBlock} previewMode={previewMode} previewWidth={previewWidth} editingRevision={blockMediaRevision} draftSource={dataRef} />}
-              {activeTab === 'elements' && <ElementsPanel data={data} onChange={handleChange} selectedId={selectedBlockId} onSelect={id => selectBlock(id)} editingRevision={blockMediaRevision} draftSource={dataRef} />}
-              {activeTab === 'style'   && <StylePanel   data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
+              {activeTab === 'blocks'  && <BlockEditorPanel key={libraryScope} libraryScope={libraryScope} data={data} onChange={handleChange} selectedId={selectedBlockId} selectedIds={selectedBlockIds} onSelect={selectBlock} previewMode={previewMode} previewWidth={previewWidth} editingRevision={blockMediaRevision} draftSource={dataRef} />}
+              {activeTab === 'elements' && <ElementsPanel key={libraryScope} libraryScope={libraryScope} data={data} onChange={handleChange} selectedId={selectedBlockId} onSelect={id => selectBlock(id)} editingRevision={blockMediaRevision} draftSource={dataRef} />}
+              {activeTab === 'style'   && <StylePanel key={libraryScope} libraryScope={libraryScope}   data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
               {activeTab === 'decor'   && <DecorPanel   data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
               {activeTab === 'motion'  && <MotionPanel  data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
               {activeTab === 'media'   && <MediaPanel   data={data} onChange={handleChange} editingRevision={blockMediaRevision} draftSource={dataRef} />}
               {activeTab === 'guests'  && <GuestsPanel data={data} onChange={handleChange} onPreview={setPreviewGuest} previewGuestId={previewGuest?.id} />}
-              {activeTab === 'versions' && <VersionsPanel
+              {visitedVersions.current && <div hidden={activeTab !== 'versions'}><VersionsPanel key={data.id}
+                draftSource={dataRef}
+                canMutate={() => !fixtureMode && !saveUncertain.current && !historyOperation.current && !deletionLock.current && !publicOperation.current && !manualSavePending.current && !pendingDraftSave.current}
+                onMutationState={state => {
+                  if (state === 'pending') { historyOperation.current = true; setSaving(true); }
+                  if (state === 'uncertain') { saveUncertain.current = true; setSaveState('error'); setSaveError('No pudimos confirmar el cambio del historial. Conservamos el borrador; descarga un respaldo y recarga para comprobar el historial antes de continuar.'); }
+                  if (state === 'done') { historyOperation.current = false; setSaving(false); }
+                }}
                 data={data}
                 selectedBlockId={selectedBlockId}
                 publishedVersionId={publishedVersion?.id}
                 onUnpublish={unpublishInvitation}
                 onCancelSchedule={versionId => { if (scheduledVersion?.id === versionId) setScheduledVersion(null); }}
-                onRestore={snapshot => { commit({ ...snapshot, id: data.id, slug: data.slug, status: data.status }, false, true); selectBlock(''); }}
+                onRestore={snapshot => { if (saveUncertain.current || deletionLock.current) return; commit({ ...snapshot, id: data.id, slug: data.slug, status: data.status }, false, true); selectBlock(''); }}
                 onRollback={rollbackPublication}
-                onWorkflowChange={(status: ReviewStatus) => handleChange({ config: { ...(data.config ?? {}), workflow: { ...(data.config?.workflow ?? {}), reviewStatus: status, reviewUpdatedAt: new Date().toISOString() } } })}
+                onWorkflowChange={(status: ReviewStatus) => { const current = dataRef.current; handleChange({ config: { ...(current.config ?? {}), workflow: { ...(current.config?.workflow ?? {}), reviewStatus: status, reviewUpdatedAt: new Date().toISOString() } } }); }}
                 onOpenBlock={blockId => { selectBlock(blockId); setActiveTab('blocks'); }}
-              />}
-              {activeTab === 'quality' && <QualityControlPanel data={data} onChange={config => handleChange({ config })} />}
+              /></div>}
+              {activeTab === 'quality' && libraryScope === 'admin' && <QualityControlPanel key={data.id} editingRevision={blockMediaRevision} draftSource={dataRef} data={data} onChange={config => handleChange({ config })} />}
               {activeTab === 'export'  && <ExportPanel  data={data} />}
-              {activeTab === 'config'  && <ConfigPanel data={data} onChange={handleChange} onValiditySync={syncValidity} onDelete={handleDelete} validation={validation} onOpenBlock={blockId => { selectBlock(blockId); setActiveTab('blocks'); }} editingRevision={blockMediaRevision} draftSource={dataRef} />}
+              {activeTab === 'config'  && <ConfigPanel contractAccess={libraryScope === 'admin' ? 'team' : 'partner'} data={data} onChange={handleChange} onValiditySync={syncValidity} onDelete={handleDelete} validation={validation} onOpenBlock={blockId => { selectBlock(blockId); setActiveTab('blocks'); }} editingRevision={blockMediaRevision} draftSource={dataRef} />}
             </div>
           </div>
         </div>

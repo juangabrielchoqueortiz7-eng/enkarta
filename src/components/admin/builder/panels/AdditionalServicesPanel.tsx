@@ -14,6 +14,7 @@ import {
   type AdditionalServiceKey,
 } from '@/lib/additional-services';
 import ImageUploader from '../ImageUploader';
+import { builderRequest } from '@/lib/builder-request';
 import { useLegacyDraft } from '../useLegacyDraft';
 
 const STATUS: { value: AdditionalServiceStatus; label: string }[] = [
@@ -36,12 +37,11 @@ function SaveDateSummary({ id, enabled }: { id: string; enabled: boolean }) {
   const [error, setError] = useState('');
   useEffect(() => {
     if (!enabled) return;
-    let active = true;
-    fetch(`/api/save-the-date?id=${encodeURIComponent(id)}`, { cache: 'no-store' }).then(async response => {
-      const body = await response.json(); if (!response.ok) throw new Error(body.code === 'MIGRATION_REQUIRED' ? 'Activa la migración 011 para recibir preconfirmaciones.' : body.error || 'No se pudieron cargar las preconfirmaciones.');
+    let active = true; const controller = new AbortController(); setState(null); setError('');
+    builderRequest<{ responses: SaveDateResponse[]; metrics: { total: number; interested: number; maybe: number; unavailable: number; estimatedGuests: number } }>(`/api/save-the-date?id=${encodeURIComponent(id)}`, { signal: controller.signal }, value => Array.isArray(value?.responses) && !!value.metrics).then(body => {
       if (active) setState(body);
     }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'No se pudieron cargar las preconfirmaciones.'); });
-    return () => { active = false; };
+    return () => { active = false; controller.abort(); };
   }, [id, enabled]);
   if (!enabled) return null;
   if (error) return <p className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-[10px] text-amber-700">{error}</p>;

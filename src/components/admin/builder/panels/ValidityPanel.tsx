@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { InvitationParsed } from '@/lib/types';
 import { addDays, daysBetween, formatValidityDate, invitationValidity, packageDays, parseValidityCommand, validDay, type ValidityCommand, type ValidityFields, type ValiditySnapshot } from '@/lib/invitation-validity';
+import { boundedBuilderTask } from '@/lib/builder-request';
 import ValidityNotice from '../../ValidityNotice';
 import { eventDay } from '@/lib/rsvp-contract';
 
@@ -23,13 +24,17 @@ export default function ValidityPanel({ data, onSync, endpoint = '/api/admin/inv
   const [confirmChange, setConfirmChange] = useState(false);
   const [action, setAction] = useState<ValidityCommand['action']>('extend');
   const pending = useRef<ValidityCommand | null>(null);
+  const mounted = useRef(false), operation = useRef<object | null>(null), reads = useRef(0), context = useRef(data.id); context.current = data.id;
+  const invalidateRead = useCallback(() => { reads.current += 1; }, []);
+  useEffect(() => { mounted.current = true; operation.current = null; setBusy(false); return () => { mounted.current = false; invalidateRead(); }; }, [data.id, invalidateRead]);
   const storageKey = `ek-validity-pending:${data.id}`;
   useEffect(() => {
+    pending.current = null; setUncertain(false);
     try {
       const stored = sessionStorage.getItem(storageKey);
-      if (stored) { pending.current = parseValidityCommand(JSON.parse(stored)); setUncertain(true); setError('Hay un cambio pendiente de verificar de esta sesión.'); }
+      if (stored) { const parsed = parseValidityCommand(JSON.parse(stored)); pending.current = parsed?.id === data.id ? parsed : null; setUncertain(!!pending.current); setError('Hay un cambio pendiente de verificar de esta sesión.'); }
     } catch { /* No operation is inferred from invalid/unavailable browser storage. */ }
-  }, [storageKey]);
+  }, [storageKey, data.id]);
   const syncRef = useRef(onSync); syncRef.current = onSync;
   const accept = useCallback((next: ValiditySnapshot) => {
     setSnapshot(previous => previous && previous.validity.revision > next.validity.revision ? previous : next);
@@ -37,18 +42,20 @@ export default function ValidityPanel({ data, onSync, endpoint = '/api/admin/inv
     syncRef.current?.({ expires_at: v.expiresAt, validity_mode: v.mode, validity_extra_days: v.extraDays, validity_revision: v.revision });
   }, []);
   const load = useCallback(async (signal?: AbortSignal) => {
+    const serial = ++reads.current;
+    const current = () => mounted.current && context.current === data.id && serial === reads.current && !signal?.aborted;
     setLoading(true); setError('');
     const controller = new AbortController();
     const abort = () => controller.abort();
     signal?.addEventListener('abort', abort, { once: true });
     const timeout = setTimeout(abort, 12000);
     try {
-      const res = await fetch(`${endpoint}?id=${encodeURIComponent(data.id)}`, { cache: 'no-store', signal: controller.signal });
-      const next = await res.json();
+      const { res, next } = await boundedBuilderTask(async signal => { const res = await fetch(`${endpoint}?id=${encodeURIComponent(data.id)}`, { cache: 'no-store', signal }); return { res, next: await res.json() }; }, { signal: controller.signal, timeout: 12000 });
       if (!res.ok) throw new Error(next.error || 'No se pudo consultar la vigencia.');
-      if (!signal?.aborted) accept(next);
-    } catch (e) { if (!signal?.aborted) setError(e instanceof Error ? e.message : 'No hay conexión.'); }
-    finally { clearTimeout(timeout); signal?.removeEventListener('abort', abort); if (!signal?.aborted) setLoading(false); }
+      if (!next?.validity || !Array.isArray(next.history) || !Number.isSafeInteger(next.validity.revision)) throw new Error('Respuesta de vigencia inválida.');
+      if (current()) accept(next);
+    } catch (e) { if (current()) setError(e instanceof Error ? e.message : 'No hay conexión.'); }
+    finally { clearTimeout(timeout); signal?.removeEventListener('abort', abort); if (current()) setLoading(false); }
   }, [data.id, endpoint, accept]);
   useEffect(() => {
     const controller = new AbortController();
@@ -72,25 +79,29 @@ export default function ValidityPanel({ data, onSync, endpoint = '/api/admin/inv
   const canSave = !busy && !loading && !unsaved && !error && validAction && reason.trim().length >= 3 && confirmChange;
 
   async function submit() {
-    if (!saved || (!pending.current && !canSave)) return;
+    if (!mounted.current || operation.current || context.current !== data.id || !saved || (!pending.current && !canSave)) return;
+    const attempt = {}; operation.current = attempt; reads.current++;
+    const current = () => mounted.current && context.current === data.id && operation.current === attempt;
     pending.current ??= { id: data.id, action, days: action === 'extend' ? amount : null,
       expiresAt: action === 'set_expiry' ? nextDate : null, reason: reason.trim(), expectedRevision: saved.revision, requestId: crypto.randomUUID() };
     try { sessionStorage.setItem(storageKey, JSON.stringify(pending.current)); } catch { /* Retry UUID also stays in memory. */ }
     setBusy(true); setError(''); setNotice('');
     try {
-      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pending.current), signal: AbortSignal.timeout(12000) });
-      const next = await res.json();
+      const { res, next } = await boundedBuilderTask(async signal => { const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pending.current), signal }); return { res, next: await res.json() }; }, { timeout: 12000, mutation: true });
+      if (!current()) return;
       if (!res.ok) {
         // Definite rejection may start a new command after refresh; uncertain errors keep its UUID.
         if (res.status < 500) { pending.current = null; try { sessionStorage.removeItem(storageKey); } catch {} setUncertain(false); setConfirmChange(false); await load(); }
         throw new Error(next.error || 'No se pudo registrar el cambio.');
       }
+      if (!next?.validity || !Array.isArray(next.history) || !Number.isSafeInteger(next.validity.revision)) throw new Error('No se pudo verificar la vigencia.');
       pending.current = null; try { sessionStorage.removeItem(storageKey); } catch {} setUncertain(false); setConfirmChange(false); setReason('');
       accept(next); setAction('extend'); setNotice(next.replayed ? 'La operación ya estaba registrada. No se duplicaron días.' : 'Vigencia guardada. El diseño y las confirmaciones se conservaron.');
     } catch (e) {
+      if (!current()) return;
       setUncertain(!!pending.current);
       setError(e instanceof Error ? e.message : 'No pudimos verificar el resultado.');
-    } finally { setBusy(false); }
+    } finally { if (current()) setBusy(false); if (operation.current === attempt) operation.current = null; }
   }
   return <section className="space-y-4 border-t border-gray-100 pt-5 font-outfit" aria-label="Vigencia y renovaciones">
     <div className="flex items-start justify-between gap-3"><div><h4 className="text-sm font-semibold text-gray-800">Vigencia y renovaciones</h4><p className="mt-1 text-xs leading-relaxed text-gray-500">Plazos del servicio, independientes del diseño.</p></div><button type="button" disabled={loading || busy} onClick={() => void load()} className="shrink-0 rounded-lg border px-2 py-2 text-xs disabled:opacity-40">Actualizar</button></div>
