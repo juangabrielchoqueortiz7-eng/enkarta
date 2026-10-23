@@ -36,3 +36,11 @@ La ruta independiente es `/muestra/capitulo`, sin indexación. `?full=1` omite l
 - Protección de recursos del despliegue: 5 pruebas.
 
 **73 pruebas pertinentes aprobadas**, además de TypeScript. La guardia real confirmó los 166 originales sin diferencias. Revisión local a 1440×900 y 390×844: entrada, jerarquía, historia, imágenes, cierre y acción RSVP de muestra; foco al H1 al abrir, sin desbordamiento horizontal, tres imágenes cargadas y ninguna canción no seleccionada. Capturas en `tmp/capitulo-release-20261023/visual/`. No sustituyen aceptación manual en dispositivos físicos.
+
+## Entrega en producción · 23 de octubre de 2026
+
+[Ver Capítulo](https://enkarta.vercel.app/muestra/capitulo). Código de aplicación `50bb45977a3f6203d2215eb5f9f8e5bbccefbefe`, despliegue `dpl_8JGfRHdA5byomo1PDczvaBuWyfis`, Ready y confirmado desde el dominio canónico. Vercel completó compilación, lint y tipos; permanecen las advertencias existentes de imágenes. Se comprobaron 54 archivos críticos, los 166 originales, las tres imágenes nuevas y las imágenes anteriores de Travesía; los PNG maestros permanecen excluidos de la publicación.
+
+La verificación de lectura cubrió entrada, muestra completa, `preview=1` y parámetros falsificados sin efecto; las tres imágenes devolvieron WebP con los bytes y SHA-256 previstos. El navegador de producción confirmó apertura, foco al H1, carga de las imágenes y ausencia de desbordamiento a 1440×900 y 390×844. El RSVP de muestra informó que no envió confirmaciones, sin errores de consola observados.
+
+No se crearon cuentas, eventos, pagos ni mensajes: no quedaron datos ficticios que eliminar. Se cerraron las pestañas de revisión local, se detuvo el servidor local y se restauró el viewport. Áurea/Primicia, Atlas, Verdealma, Lunaria, Paradise, Azure y Travesía conservan sus fuentes y recursos. BCP sigue bloqueado. Evidencia: [capitulo-production-2026-10-23.json](evidence/capitulo-production-2026-10-23.json).

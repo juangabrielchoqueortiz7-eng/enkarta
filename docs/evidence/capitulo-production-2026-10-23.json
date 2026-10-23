@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "checkedAt": "2026-10-23T21:32:07.717Z",
+  "sourceSha": "50bb45977a3f6203d2215eb5f9f8e5bbccefbefe",
+  "deploymentId": "dpl_8JGfRHdA5byomo1PDczvaBuWyfis",
+  "ready": true,
+  "canonical": "https://enkarta.vercel.app",
+  "sample": "https://enkarta.vercel.app/muestra/capitulo",
+  "referenceStructure": "https://invitali.com/muestra-primicia/",
+  "independentArtDirection": true,
+  "automated": {
+    "profile": 8,
+    "guestSharing": 30,
+    "builderFields": 30,
+    "deploymentGuard": 5,
+    "total": 73,
+    "typeScript": true
+  },
+  "criticalFiles": 54,
+  "generatedImages": {
+    "tool": "OpenAI image_gen built-in",
+    "count": 3,
+    "manifest": "docs/assets/capitulo-images.json",
+    "manifestSha256": "1520611fcfaa14c35fa6ae76632989c30fef5879e271f9113ce747288791d31d",
+    "mastersRetainedUnchanged": true,
+    "mastersExcludedFromUpload": true,
+    "publicWebpBytes": 637786,
+    "publicHttpHashesVerified": true
+  },
+  "preservation": {
+    "method": "uploaded-filehash",
+    "originals": 166,
+    "inheritedOriginalsUnchanged": 166,
+    "legacySources": 28,
+    "atlasUnchanged": true,
+    "aureaUnchanged": true,
+    "verdealmaUnchanged": true,
+    "lunariaUnchanged": true,
+    "azureReferenceUnchanged": true,
+    "paradiseReferenceUnchanged": true,
+    "travesiaUnchanged": true,
+    "bcpDisabled": true
+  },
+  "production": {
+    "method": "read-only public GET",
+    "routeChecks": [
+      {
+        "route": "/muestra/capitulo",
+        "passed": true
+      },
+      {
+        "route": "/muestra/capitulo?full=1",
+        "passed": true
+      },
+      {
+        "route": "/muestra/capitulo?preview=1",
+        "passed": true
+      },
+      {
+        "route": "/muestra/capitulo?full=1&n=50&m=QA%20Forged%20Family",
+        "passed": true
+      }
+    ],
+    "generatedImageChecks": [
+      {
+        "path": "/invitations/capitulo/hero.webp",
+        "bytes": 202028,
+        "sha256": "63c15dc5760178cfa75a6b812557f41af1cadbee36f3605ab49864adae1abe9d",
+        "passed": true
+      },
+      {
+        "path": "/invitations/capitulo/detail.webp",
+        "bytes": 91706,
+        "sha256": "3c23b3d4af8adadbd68d0d23550be3679fec7714042b642fe8d489523a75fc04",
+        "passed": true
+      },
+      {
+        "path": "/invitations/capitulo/celebration.webp",
+        "bytes": 344052,
+        "sha256": "196c3dc353a888797a64854ff3d2e5d230173c63ddb5221dabd0bb33c9e63a7c",
+        "passed": true
+      }
+    ],
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "eventsCreated": 0,
+    "cleanupRequired": false
+  },
+  "visual": {
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "entryOpens": true,
+    "focusAfterEntry": "H1",
+    "inertRemoved": true,
+    "noHorizontalOverflow": true,
+    "allThreeNewImagesLoaded": true,
+    "unselectedMusicAbsent": true,
+    "demoRsvpExplainsNoConfirmationSent": "Esta es una vista de muestra. No se envió ninguna confirmación.",
+    "syntheticImageNoticeShown": true,
+    "consoleErrorsObserved": 0,
+    "physicalDeviceTest": false,
+    "screenshots": [
+      {
+        "file": "tmp/capitulo-release-20261023/visual/production-desktop-entry.png",
+        "bytes": 116563,
+        "sha256": "cbd2e7b7255e77cf8458ae892125b1b5758538a5f4bce6590c49d2b762d99a4c"
+      },
+      {
+        "file": "tmp/capitulo-release-20261023/visual/production-desktop-hero.png",
+        "bytes": 138028,
+        "sha256": "101969555e78f1eb2eef578a3d7af0e4f383c44098a680e071e55493736f754e"
+      },
+      {
+        "file": "tmp/capitulo-release-20261023/visual/production-mobile-entry.png",
+        "bytes": 42103,
+        "sha256": "8908a16d0296da75f2957ab0a1b0c44b9bdffd163e8eebfa967cdcc37eded4c8"
+      },
+      {
+        "file": "tmp/capitulo-release-20261023/visual/production-mobile-hero.png",
+        "bytes": 53300,
+        "sha256": "261bd615db155f6a2e75ce6eb6305958c2d243d6cbbeeecf75dfc4abb14d4c20"
+      },
+      {
+        "file": "tmp/capitulo-release-20261023/visual/production-mobile-rsvp.png",
+        "bytes": 36798,
+        "sha256": "a298afdc8c592cea1866ff9fa63c3493c815ef51860fbabb6aa8b231c483083f"
+      },
+      {
+        "file": "tmp/capitulo-release-20261023/visual/production-mobile-story.png",
+        "bytes": 54683,
+        "sha256": "24f2dc1cfef90be8df304a59d746f44870c40b808301bde8d5091f4d6c84cf55"
+      }
+    ]
+  }
+}
