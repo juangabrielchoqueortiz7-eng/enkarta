@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "variant": "capitulo",
+  "synthetic": true,
+  "assets": [
+    {
+      "id": "hero",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Generate a completely new black-and-white editorial wedding photograph for an original invitation design named Capítulo. Landscape 3:2 image, premium analog magazine photography with fine grain, luminous whites, rich charcoal midtones and gentle natural contrast. Two entirely fictional adults in their early thirties, a woman with dark wavy shoulder-length hair in a clean contemporary ivory wedding dress and a man with short dark hair in a dark tailored suit without a tie, walking hand in hand along a quiet invented old stone city street. Capture spontaneous affectionate body language, smiling at one another rather than posing for the camera, full or three-quarter bodies, candid movement. Pale textured architecture, morning side light, no recognizable landmark, no existing celebrity or person. Timeless but alive, subtle luxury, natural anatomy and hands. No text, no logos, no watermark, no frame, no mockup or interface. Original photograph composition for the website hero; do not refer to or reproduce another invitation.",
+      "generatedMaster": {
+        "file": "assets/generated/capitulo/2026-10/hero.png",
+        "sha256": "26b0d52bea645a8b661300a0c81d169f38ab3ab9561d3ba4c2a3c1d2d65e04ad",
+        "bytes": 2512626
+      },
+      "distribution": {
+        "path": "/invitations/capitulo/hero.webp",
+        "sha256": "63c15dc5760178cfa75a6b812557f41af1cadbee36f3605ab49864adae1abe9d",
+        "bytes": 202028,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "detail",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Generate a completely new black-and-white editorial detail photograph for the wedding invitation Capítulo. Landscape 3:2. Close view of two fictional adults' hands, a woman in a simple ivory dress and a man with a dark suit sleeve, gently holding a small completely blank linen-bound vow notebook together. One understated wedding band, natural believable hands with five fingers each, tender candid gesture. Stone windowsill softly out of focus in the background, morning directional light, tactile fabric and matte paper, elegant analog magazine photography with fine grain, generous breathing room. The notebook must have no writing, monogram, graphic, logo or stamp anywhere. No people identifiable, no text, no watermark, no ornamental border, no UI, not based on an existing photograph. This is a standalone original image asset.",
+      "generatedMaster": {
+        "file": "assets/generated/capitulo/2026-10/detail.png",
+        "sha256": "51ce15dd391b1491cd214a00820b7c1f1da48e224a8b38c6355aba5d01317faa",
+        "bytes": 2205298
+      },
+      "distribution": {
+        "path": "/invitations/capitulo/detail.webp",
+        "sha256": "3c23b3d4af8adadbd68d0d23550be3679fec7714042b642fe8d489523a75fc04",
+        "bytes": 91706,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "celebration",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Generate a completely new black-and-white editorial architectural wedding photograph for Capítulo. Landscape 3:2. An imaginary intimate enclosed courtyard with pale old stone walls, a large arched passageway off center, a long linen-draped wedding dinner table, slim candles, wild white flowers and tall leafy branches, a few beautifully irregular chairs. Bright sky and late afternoon shadows, subtle dark foliage, quiet anticipation before guests arrive. Art-directed medium-format analog magazine photography, authentic texture and soft fine grain, refined high contrast but preserved detail, architectural geometry offset by organic flowers. No people, no identifiable real venue, no text, no signage, no logos, no watermark, no decorative frame, no UI mockup. A new original photographic composition, not a recreation of any existing invitation imagery.",
+      "generatedMaster": {
+        "file": "assets/generated/capitulo/2026-10/celebration.png",
+        "sha256": "150462ed895dfd8197580150a8aaae11d7db3d93ce8f100f7fed38d46e8c41db",
+        "bytes": 3206753
+      },
+      "distribution": {
+        "path": "/invitations/capitulo/celebration.webp",
+        "sha256": "196c3dc353a888797a64854ff3d2e5d230173c63ddb5221dabd0bb33c9e63a7c",
+        "bytes": 344052,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    }
+  ]
+}

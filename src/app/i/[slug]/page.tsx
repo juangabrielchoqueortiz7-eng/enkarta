@@ -10,6 +10,7 @@ import { ParadiseReferenceEntry } from '@/components/invitations/ParadiseReferen
 import { ParadiseReferenceRsvpProvider } from '@/components/invitations/ParadiseReferenceRsvp';
 import { AzureReferenceEntry, AzureReferenceRsvpProvider } from '@/components/invitations/AzureReference';
 import { TravesiaEntry, TravesiaRsvpProvider } from '@/components/invitations/Travesia';
+import { CapituloEntry, CapituloRsvpProvider } from '@/components/invitations/Capitulo';
 import BlockRenderer from '@/components/invitations/BlockRenderer';
 import FontScope from '@/components/invitations/FontScope';
 import SmartRsvp from '@/components/invitations/SmartRsvp';
@@ -151,7 +152,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   // Toda invitación con música activa suena al abrirse: si el cliente no
   // eligió canción en el builder, se usa la pista por defecto. (Después del
   // gating: si el paquete apaga la música, no se re-añade.)
-  if (feats.music && !config.musicUrl && config.designKey !== 'travesia') config.musicUrl = DEFAULT_MUSIC_URL;
+  if (feats.music && !config.musicUrl && !['travesia', 'capitulo'].includes(config.designKey ?? '')) config.musicUrl = DEFAULT_MUSIC_URL;
 
   // ── Link único por invitado (?g=): su nombre, pases y reglas viajan a la plantilla ──
   let guest: Guest | null = null;
@@ -199,7 +200,8 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const nativeParadiseReference = config.designKey === 'paradise-referencia' && !hasBlocks;
   const nativeAzureReference = config.designKey === 'azure-referencia' && !hasBlocks;
   const nativeTravesia = config.designKey === 'travesia' && !hasBlocks;
-  const nativeReference = nativeParadiseReference || nativeAzureReference || nativeTravesia;
+  const nativeCapitulo = config.designKey === 'capitulo' && !hasBlocks;
+  const nativeReference = nativeParadiseReference || nativeAzureReference || nativeTravesia || nativeCapitulo;
   const nativeEntry = nativeLaura || nativeReference;
   const customCinematic = nativeEntry && config.entry?.style === 'cinematic';
   let templateEl: React.ReactNode;
@@ -242,7 +244,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
         <BlockRenderer layout={resolvedLayout!} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} guest={guest ?? undefined} demo={privatePreview} deadlinePassed={deadlinePassed} gated={entryEnabled} navigation={config.additionalServices?.navigation} locale={locale} />
       ) : (
         <PageMotionProvider value={config.motion} gated={entryEnabled || referenceEntryEnabled}>
-          {nativeParadiseReference ? <ParadiseReferenceRsvpProvider form={smartRsvp}>{templateEl}</ParadiseReferenceRsvpProvider> : nativeAzureReference ? <AzureReferenceRsvpProvider form={smartRsvp}>{templateEl}</AzureReferenceRsvpProvider> : nativeTravesia ? <TravesiaRsvpProvider form={smartRsvp}>{templateEl}</TravesiaRsvpProvider> : templateEl}
+          {nativeParadiseReference ? <ParadiseReferenceRsvpProvider form={smartRsvp}>{templateEl}</ParadiseReferenceRsvpProvider> : nativeAzureReference ? <AzureReferenceRsvpProvider form={smartRsvp}>{templateEl}</AzureReferenceRsvpProvider> : nativeTravesia ? <TravesiaRsvpProvider form={smartRsvp}>{templateEl}</TravesiaRsvpProvider> : nativeCapitulo ? <CapituloRsvpProvider form={smartRsvp}>{templateEl}</CapituloRsvpProvider> : templateEl}
         </PageMotionProvider>
       )}
       {!nativeReference && smartRsvp}
@@ -251,6 +253,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
 
   // The native entry owns the entire public content, including external RSVP.
   // One inert boundary and one focus trap protect the invitation while closed.
+  if (referenceEntryEnabled && nativeCapitulo) return <FontScope config={config}><CapituloEntry data={parsed} label={config.entry?.label ?? 'Abrir este capítulo'}>{content}</CapituloEntry></FontScope>;
   if (referenceEntryEnabled && nativeTravesia) return <FontScope config={config}><TravesiaEntry data={parsed} label={config.entry?.label ?? 'Comenzar el viaje'}>{content}</TravesiaEntry></FontScope>;
   if (referenceEntryEnabled && nativeAzureReference) return <FontScope config={config}><AzureReferenceEntry data={parsed} label={config.entry?.label ?? copy.enter}>{content}</AzureReferenceEntry></FontScope>;
   if (referenceEntryEnabled) return <FontScope config={config}><ParadiseReferenceEntry label={config.entry?.label ?? copy.enter}>{content}</ParadiseReferenceEntry></FontScope>;
