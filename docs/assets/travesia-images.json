@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "variant": "travesia",
+  "synthetic": true,
+  "assets": [
+    {
+      "id": "hero",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Create a new original editorial photograph for a premium wedding invitation website named Travesía. Landscape 3:2 composition. A completely imaginary quiet coast, pale limestone terrace in the lower left, a single windswept olive tree and delicate wild grasses, translucent deep lagoon sea receding to a hazy headland, warm low late-afternoon sun. Rich natural stone and water textures, elegant analog medium-format photography, subtle film grain, restrained chalk ivory/deep teal/sage palette. The coast must be invented, no recognizable landmark, no reference to another invitation or artist. The right half has open sea and sky, suited to a large responsive image; no lettering, no typography, no logos, no watermark, no people, no ornamental frame. This is a usable photographic background asset, not a UI mockup. High quality, photorealistic, calm and romantic, not a stock wedding collage.",
+      "generatedMaster": {
+        "file": "assets/generated/travesia/2026-10/hero.png",
+        "sha256": "5eaa2fb139db9300ed674164eb46ad2b02a99fc368438f93a0c8576849d303f4",
+        "bytes": 3403984
+      },
+      "distribution": {
+        "path": "/invitations/travesia/hero.webp",
+        "sha256": "a0307a180656a211d91757e285bbd3e6c1c50581133fa58ff1a450d9e3252142",
+        "bytes": 420258,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "story",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Create a new original editorial still-life photograph for a wedding travel invitation called Travesía. Landscape 3:2 composition. Overhead close-up of a linen-covered wooden travel desk: two blank unbranded ivory ticket-shaped pieces of thick paper with perforated edges, an open blank small notebook, an antique brass compass, a sprig of olive and one pale shell. Side sunlight creates long warm real shadows, slight human imperfection, tactile matte paper and linen. Restrained chalk, sage, deep lagoon teal and aged brass. All objects arranged with generous negative space rather than a collage. Absolutely no legible text, no logos, no passport emblems, no currency, no map text, no reference to any existing designer or webpage, no people, no watermark. High end medium format editorial photography, honest natural texture. Asset photograph, not a page mockup.",
+      "generatedMaster": {
+        "file": "assets/generated/travesia/2026-10/story.png",
+        "sha256": "76f58b5e38ad6df7fc54cdb01a30cbfdb833ecfad79dcaa61de4adb97ddd12fe",
+        "bytes": 3412989
+      },
+      "distribution": {
+        "path": "/invitations/travesia/story.webp",
+        "sha256": "3ea77730bcee1a46d2f179df60363ab203434cf87c9c07570bdd95a2c9b3130f",
+        "bytes": 387074,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "celebration",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Create a new original editorial photograph for Travesía, a premium wedding invitation. Landscape 3:2 composition. A dreamy invented Mediterranean-style courtyard garden at blue hour, one intimate long table set for a wedding celebration with white linen, tiny warm candles in clear glass, delicate white flowers and abundant airy olive foliage, mellow limestone walls and a glimpse of dark lagoon sea beyond a simple stone opening. Cinematic but physically believable, realistic unretouched textures, warm candle light contrasting deep teal evening, soft sage and chalk ivory. No people, no recognizable actual venue, no readable text, no signage, no logos, no watermark, no border, no UI. Photographic asset only, original composition, not based on an existing invitation.",
+      "generatedMaster": {
+        "file": "assets/generated/travesia/2026-10/celebration.png",
+        "sha256": "6e49488de81de3f8d4b2a1bd656c75aefcab375830282b361947a274c71bca08",
+        "bytes": 2885754
+      },
+      "distribution": {
+        "path": "/invitations/travesia/celebration.webp",
+        "sha256": "bcf020942a3b9ad517bf4dfdb583fb99d52b32ad704db3f65f1b91f9f23d4d32",
+        "bytes": 347944,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    }
+  ]
+}

@@ -23,6 +23,7 @@ for (const name of ['PublishedTemplate', 'EntryGate', 'BlockRenderer', 'FontScop
 replace(source('components/invitations/ParadiseReference.tsx'), { __esModule: true, default: fakeComponent('ParadiseReference'), ParadiseReferenceEntry: fakeComponent('ParadiseReferenceEntry') });
 replace(source('components/invitations/ParadiseReferenceRsvp.tsx'), { __esModule: true, default: fakeComponent('ParadiseReferenceRsvp'), ParadiseReferenceRsvpProvider: fakeComponent('ParadiseReferenceRsvpProvider') });
 replace(source('components/invitations/AzureReference.tsx'), { __esModule: true, default: fakeComponent('AzureReference'), AzureReferenceEntry: fakeComponent('AzureReferenceEntry'), AzureReferenceRsvpProvider: fakeComponent('AzureReferenceRsvpProvider') });
+replace(source('components/invitations/Travesia.tsx'), { __esModule: true, default: fakeComponent('Travesia'), TravesiaEntry: fakeComponent('TravesiaEntry'), TravesiaRsvpProvider: fakeComponent('TravesiaRsvpProvider') });
 replace(source('lib/scroll-motion.tsx'), { PageMotionProvider: fakeComponent('PageMotionProvider') });
 replace('next/navigation', { notFound() { throw new Error('NEXT_NOT_FOUND'); } });
 replace('next/headers', { async headers() { headerReads++; return new Headers({ host: 'attacker.example', 'x-forwarded-host': 'attacker.example' }); } });
@@ -43,6 +44,7 @@ replace(source('lib/published-invitation.ts'), {
 const { invitationShareMetadata, invitationShareUrl, validGuestLinkId, validInvitationSlug } = require(source('lib/invitation-sharing.ts'));
 const { readInvitationBySlug } = require(source('lib/public-invitation-read.ts'));
 const { shareCardCoverUrl, shareCardCover, shareCardFont, shareCardAsset } = require(source('lib/share-card-assets.ts'));
+const { DEFAULT_MUSIC_URL } = require(source('lib/music.ts'));
 const page = require(source('app/i/[slug]/page.tsx')), Og = require(source('app/i/[slug]/opengraph-image.tsx')).default;
 const props = query => ({ params: Promise.resolve({ slug: 'qa-guest' }), searchParams: Promise.resolve(query || {}) });
 const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j4s8AAAAASUVORK5CYII=', 'base64');
@@ -249,6 +251,80 @@ test('a cinematic override delegates entry once while Azure retains the authoriz
   assert.equal(componentNodes(providers[0].props.form, 'SmartRsvp').length, 1);
   assert.equal(componentNodes(result, 'SmartRsvp').length, 0);
   assert.equal(componentNodes(entries[0].props.children, 'PageMotionProvider')[0].props.gated, true);
+});
+
+test('Travesia places one server-verified RSVP in its native interior and ignores forged travel-pass details', async () => {
+  snapshot.template = 'passport';
+  snapshot.config = {
+    designKey: 'travesia', entry: { enabled: true },
+    guestMeta: { OTHERGROUP: { phone: '59170000000', group: 'QA PRIVATE GROUP' } },
+    activeGuest: { name: 'QA SAVED PREVIEW GUEST', publicId: 'OTHERGROUP', passes: 99 },
+  };
+  features = { guestNames: true, smartRsvp: true, passes: true, entry: true, music: false };
+  guest = { id: 'qa-guest', publicId: 'TEST0001', name: 'QA Verified Family', passes: 2, allowKids: true, phone: '59171111111', group: 'QA PRIVATE GROUP', metadataStored: true };
+  for (const full of [undefined, '1']) {
+    const result = await page.default(props({ g: 'TEST0001', full, n: '99 pases', m: 'QA FORGED FAMILY', passes: '99', guestName: 'QA FORGED FAMILY' }));
+    assert.equal(componentNodes(result, 'EntryGate').length, 0, 'The shared gate does not cover the native passport');
+    const templates = componentNodes(result, 'PublishedTemplate'); assert.equal(templates.length, 1);
+    assert.equal(templates[0].props.invitation.template, 'passport');
+    assert.equal(templates[0].props.invitation.config.designKey, 'travesia');
+    assert.equal(templates[0].props.skipEntry, true, 'The interior cannot mount a second passport entry');
+    const providers = componentNodes(result, 'TravesiaRsvpProvider'); assert.equal(providers.length, 1);
+    const forms = componentNodes(providers[0].props.form, 'SmartRsvp'); assert.equal(forms.length, 1);
+    assert.equal(forms[0].props.slug, row.slug); assert.equal(forms[0].props.viewport, 'both');
+    assert.equal(forms[0].props.guestName, 'QA Verified Family'); assert.equal(forms[0].props.maxPasses, 2); assert.equal(forms[0].props.publicId, 'TEST0001');
+    assert.equal(componentNodes(result, 'SmartRsvp').length, 0, 'No duplicate form appears outside the travel composition');
+    assert.equal(componentNodes(providers[0].props.children, 'PublishedTemplate').length, 1);
+    assert.equal(componentNodes(result, 'PageMotionProvider')[0].props.gated, full !== '1');
+    const entries = componentNodes(result, 'TravesiaEntry'); assert.equal(entries.length, full === '1' ? 0 : 1);
+    if (full !== '1') assert.equal(componentNodes(entries[0].props.children, 'PublishedTemplate').length, 1);
+    assert.doesNotMatch(JSON.stringify(result), /OTHERGROUP|QA SAVED PREVIEW GUEST|QA FORGED FAMILY|QA PRIVATE GROUP|59170000000|59171111111|guestMeta|metadataStored/);
+  }
+  snapshot.config.entry.enabled = false;
+  assert.equal(componentNodes(await page.default(props()), 'TravesiaEntry').length, 0);
+  snapshot.config.entry = {}; features.entry = false;
+  const unavailable = await page.default(props());
+  assert.equal(componentNodes(unavailable, 'TravesiaEntry').length, 0, 'An omitted entry toggle follows the entitlement');
+  assert.equal(componentNodes(unavailable, 'PublishedTemplate')[0].props.skipEntry, true);
+  assert.equal(componentNodes(unavailable, 'PageMotionProvider')[0].props.gated, false);
+  features.smartRsvp = false;
+  const uncontracted = await page.default(props());
+  assert.equal(componentNodes(uncontracted, 'TravesiaRsvpProvider')[0].props.form, null, 'A visual variant never grants uncontracted RSVP');
+  assert.equal(componentNodes(uncontracted, 'SmartRsvp').length, 0);
+});
+
+test('Travesia delegates a cinematic override once and preserves its authorized RSVP context', async () => {
+  snapshot.template = 'passport';
+  snapshot.config = { designKey: 'travesia', entry: { enabled: true, style: 'cinematic', videoUrl: '/qa-original-entry.mp4' } };
+  features = { guestNames: true, smartRsvp: true, passes: true, entry: true, music: false };
+  const result = await page.default(props()), entries = componentNodes(result, 'EntryGate');
+  assert.equal(entries.length, 1); assert.equal(entries[0].props.scene, 'cinematic');
+  assert.equal(entries[0].props.entryVideoUrl, '/qa-original-entry.mp4');
+  assert.equal(componentNodes(result, 'TravesiaEntry').length, 0);
+  assert.equal(componentNodes(result, 'PublishedTemplate')[0].props.skipEntry, true);
+  const providers = componentNodes(result, 'TravesiaRsvpProvider'); assert.equal(providers.length, 1);
+  assert.equal(componentNodes(providers[0].props.form, 'SmartRsvp').length, 1);
+  assert.equal(componentNodes(result, 'SmartRsvp').length, 0);
+  assert.equal(componentNodes(entries[0].props.children, 'PageMotionProvider')[0].props.gated, true);
+});
+
+test('Travesia stays silent without a selected song while existing invitations retain their authorized default', async () => {
+  snapshot.template = 'passport'; snapshot.config = { designKey: 'travesia', musicUrl: '' };
+  features = { guestNames: true, smartRsvp: false, passes: true, entry: false, music: true };
+  const blank = await page.default(props({ full: '1' }));
+  assert.equal(componentNodes(blank, 'PublishedTemplate')[0].props.invitation.config.musicUrl, '', 'Opening the travel design cannot choose a song for its owner');
+  snapshot.config.musicUrl = '/musica/qa-selected-song.mp3';
+  const selected = await page.default(props({ full: '1' }));
+  assert.equal(componentNodes(selected, 'PublishedTemplate')[0].props.invitation.config.musicUrl, '/musica/qa-selected-song.mp3');
+  features.music = false; snapshot.config.musicUrl = '';
+  assert.equal(componentNodes(await page.default(props({ full: '1' })), 'PublishedTemplate')[0].props.invitation.config.musicUrl, '', 'A disabled music feature never receives a replacement song');
+  features.music = true;
+  for (const [template, designKey] of [['passport', undefined], ['azure', 'azure-referencia'], ['paradise', 'paradise-referencia']]) {
+    snapshot.template = template; snapshot.config = { ...(designKey ? { designKey } : {}), musicUrl: '' };
+    assert.equal(componentNodes(await page.default(props({ full: '1' })), 'PublishedTemplate')[0].props.invitation.config.musicUrl, DEFAULT_MUSIC_URL, 'Existing profile fallback remains unchanged: ' + (designKey ?? 'Atlas'));
+  }
+  features.music = false; snapshot.config = { musicUrl: '' };
+  assert.equal(componentNodes(await page.default(props({ full: '1' })), 'PublishedTemplate')[0].props.invitation.config.musicUrl, '', 'Legacy fallback also respects a disabled music feature');
 });
 
 test('closed and unpublished pages skip publication history and personalized guest queries', async () => {

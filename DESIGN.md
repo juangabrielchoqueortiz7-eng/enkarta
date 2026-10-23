@@ -57,6 +57,8 @@ Los controles, tarjetas y diálogos del portal usan radios distintos; no se impo
 
 ## Components
 
+Travesía (`designKey: travesia`) mantiene una identidad propia de viaje: laguna `#153e45`, papel `#f4f1e8`, bruma `#dce8e3` y arcilla `#af6550`, con Baskervville/Raleway locales y tres fotografías generadas para esta edición. Su entrada, portada asimétrica y secciones se aíslan en `Travesia.module.css`; no son tokens del portal ni reemplazan Atlas. Composición y procedencia: `docs/TRAVESIA.md` y `docs/assets/travesia-images.json`.
+
 - Constructor: `src/components/admin/builder/InvitationBuilder.tsx`; conservar edición, vista previa y separación de borrador/publicación.
 - Invitados: `src/components/admin/host/HostRoster.tsx`; mantener validaciones, revisiones, recuperación de conflictos y significado de las acciones de WhatsApp.
 - Recepción: `src/components/admin/scanner/`; separar búsqueda, lectura del pase y registro de ingreso. Encontrar un invitado no registra su acceso.
