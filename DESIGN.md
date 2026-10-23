@@ -57,7 +57,7 @@ Los controles, tarjetas y diálogos del portal usan radios distintos; no se impo
 
 ## Components
 
-Capítulo (`designKey: capitulo`) es una edición editorial independiente: papel `#f8f7f3`, tinta `#242825`, piedra `#e4e1d9` y acento `#8c453b`, con tres fotografías nuevas en blanco y negro. Por revisión del usuario usa sobre de papel con apertura, composición centrada, fecha apilada, cuerpo móvil de 16 px y un itinerario aireado sin separadores, aislados en `Capitulo.module.css`. Conserva Áurea/Primicia y las demás invitaciones. Dirección y procedencia: `docs/CAPITULO.md` y `docs/assets/capitulo-images.json`.
+Capítulo (`designKey: capitulo`) es una edición editorial independiente: papel `#f8f7f3`, tinta `#242825`, piedra `#e4e1d9` y acento `#8c453b`, con tres fotografías nuevas en blanco y negro. Su entrada usa las dos hojas originales de Paradise a pantalla completa y el lacre verde floral real, sin sobre geométrico, monograma ni tarjeta. Conserva composición centrada, fecha apilada, cuerpo móvil de 16 px e itinerario sin separadores; las familias muestran únicamente etiquetas y nombres, sin avatares. Todo se aísla en `Capitulo.module.css`. Conserva Áurea/Primicia y las demás invitaciones. Dirección y procedencia: `docs/CAPITULO.md`, `docs/assets/capitulo-images.json` y `docs/assets/capitulo-entry-originals.json`.
 
 Travesía (`designKey: travesia`) mantiene una identidad propia de viaje: laguna `#153e45`, papel `#f4f1e8`, bruma `#dce8e3` y arcilla `#af6550`, con Baskervville/Raleway locales y tres fotografías generadas para esta edición. Su entrada, portada asimétrica y secciones se aíslan en `Travesia.module.css`; no son tokens del portal ni reemplazan Atlas. Composición y procedencia: `docs/TRAVESIA.md` y `docs/assets/travesia-images.json`.
 

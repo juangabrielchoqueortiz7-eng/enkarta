@@ -25,3 +25,10 @@ export const CAPITULO_MUSIC = {
   source: source + '2025/05/Ed-Sheran-Perfect-Violin.mp3',
   localPath: '/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3',
 } as const;
+
+/** Existing paper and real wax-seal artwork observed in Paradise's public entry. */
+export const CAPITULO_ENTRY_ASSETS = {
+  left: '/invitations/mariana-y-jesus/Recurso-1Sobres-copia-scaled.webp',
+  right: '/invitations/mariana-y-jesus/Recurso-2Sobres-copia-scaled.webp',
+  seal: '/invitations/laura-andres/SELLO-VERDE-copia_2.webp',
+} as const;

@@ -93,18 +93,17 @@ test('Capitulo exposes its exact section originals and composes simultaneous ico
   await withEditor(async runner => {
     const pickers = runner.pickers();
     assert.deepEqual(pickers.map(picker => picker.props.defaultIcon), [
-      CAPITULO_ORIGINALS.groom.localPath, CAPITULO_ORIGINALS.groom.localPath,
       CAPITULO_ORIGINALS.location.localPath, CAPITULO_ORIGINALS.location.localPath,
       CAPITULO_ORIGINALS.suit.localPath, CAPITULO_ORIGINALS.dress.localPath,
       CAPITULO_ORIGINALS.adults.localPath, CAPITULO_ORIGINALS.reception.localPath, CAPITULO_ORIGINALS.gift.localPath,
     ]);
     pickers[0].props.onChange('', {}, 1);
-    pickers[7].props.onChange(CAPITULO_ORIGINALS.reception.localPath, { __tint: '#314529' }, 1.5);
-    assert.equal(runner.data().config.sectionIcons.parentsBride, '');
+    pickers[5].props.onChange(CAPITULO_ORIGINALS.reception.localPath, { __tint: '#314529' }, 1.5);
+    assert.equal(runner.data().config.sectionIcons.ceremony, '');
     assert.equal(runner.data().config.sectionIcons.rsvp, CAPITULO_ORIGINALS.reception.localPath);
     assert.deepEqual(runner.data().config.sectionIconColors.rsvp, { __tint: '#314529' });
     assert.equal(runner.data().config.sectionIconSpeeds.rsvp, 1.5);
-    assert.equal(runner.data().config.sectionIcons.ceremony, initial.config.sectionIcons.ceremony);
+    assert.equal(runner.data().config.sectionIcons.reception, initial.config.sectionIcons.reception);
     assert.deepEqual(runner.data().itinerary, initial.itinerary);
     assert.equal(runner.requests.length, 0);
   }, { data: initial, sectionOnly: true });

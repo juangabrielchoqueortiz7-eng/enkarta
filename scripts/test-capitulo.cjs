@@ -87,6 +87,37 @@ test('the native entry is one modal over an inert invitation with an editable la
   if (data.config.entry?.label) assert.equal(cleared.includes(data.config.entry.label), false, 'An explicitly cleared label cannot restore the sample button text');
 });
 
+test('the entry uses the archived paper and wax-seal originals with protected bytes and image dimensions', async () => {
+  const { CAPITULO_ENTRY_ASSETS } = require('../src/lib/capitulo-assets.ts');
+  const manifest = JSON.parse(read('docs/assets/capitulo-entry-originals.json'));
+  assert.match(manifest.reference, /^https:\/\/invitali\.com\//);
+  const expected = {
+    left: '/invitations/mariana-y-jesus/Recurso-1Sobres-copia-scaled.webp',
+    right: '/invitations/mariana-y-jesus/Recurso-2Sobres-copia-scaled.webp',
+    seal: '/invitations/laura-andres/SELLO-VERDE-copia_2.webp',
+  };
+  assert.deepEqual(CAPITULO_ENTRY_ASSETS, expected);
+  assert.ok(Array.isArray(manifest.assets)); assert.equal(manifest.assets.length, 3);
+  const lock = JSON.parse(read('scripts/original-distribution-lock.json')).resources;
+  const entry = renderToStaticMarkup(React.createElement(Entry, { data: capituloDemo() }, React.createElement('h1', null, 'QA interior')));
+  const sharp = require('sharp');
+  for (const [role, localPath] of Object.entries(expected)) {
+    const rows = manifest.assets.filter(asset => asset.role === role); assert.equal(rows.length, 1, `One original for ${role}`);
+    const asset = rows[0], protection = lock.find(item => item.path === localPath);
+    assert.equal(asset.localPath, localPath); assert.ok(protection, `Original protected for ${role}`);
+    assert.match(asset.source, /^https:\/\/invitali\.com\/wp-content\/uploads\/\d{4}\/\d{2}\/.+/);
+    assert.equal(asset.sha256, protection.sha256); assert.equal(asset.bytes, protection.bytes);
+    const bytes = fs.readFileSync(path.join(root, 'public', localPath));
+    assert.equal(bytes.length, asset.bytes); assert.equal(sha(bytes), asset.sha256, `Original bytes remain unchanged for ${role}`);
+    const dimensions = await sharp(bytes).metadata(); assert.equal(dimensions.width, asset.width); assert.equal(dimensions.height, asset.height);
+    // The two paper leaves may be backgrounds; requiring <img> would impose a
+    // rendering implementation unrelated to their visible original content.
+    assert.ok(entry.includes(localPath), `SSR selects the documented ${role} original`);
+  }
+  assert.match(entry, /data-capitulo-envelope/);
+  assert.ok(entry.includes(expected.seal), 'The wax seal is a real archived image, not a CSS circle');
+});
+
 test('the native interior receives only the server-supplied RSVP node and never fabricates a guest form', () => {
   const html = renderToStaticMarkup(React.createElement(RsvpProvider, { form: React.createElement('form', { 'data-qa-authorized-rsvp': 'true' }, 'QA formulario autorizado') }, React.createElement(Invitation, { data: capituloDemo(), demo: false, skipEntry: true })));
   assert.equal((html.match(/data-qa-authorized-rsvp="true"/g) ?? []).length, 1);
@@ -189,17 +220,24 @@ test('the demo has six editable itinerary rows with original icons and its three
   assert.deepEqual(data, before, 'Rendering cannot rewrite the editable source lists');
 });
 
-test('both family groups use the archived parent portrait, preserving independent editable section keys', () => {
+test('family groups preserve their names and labels without duplicated people or inherited avatar illustrations', () => {
   const { CAPITULO_ORIGINALS } = require('../src/lib/capitulo-assets.ts');
   const data = capituloDemo(), html = markup(data);
-  const parents = html.match(/<section\b[^>]*data-capitulo-section="parents"[^>]*>[\s\S]*?<\/section>/)?.[0];
+  const familySection = content => content.match(/<section\b[^>]*data-capitulo-section="parents"[^>]*>[\s\S]*?<\/section>/)?.[0];
+  const parents = familySection(html);
   assert.ok(parents);
   for (const family of [...data.parents_bride, ...data.parents_groom]) assert.ok(parents.includes(family));
-  assert.equal(parents.includes(CAPITULO_ORIGINALS.bride.localPath), false, 'A family label must not receive a bride illustration');
-  assert.equal(parents.split(`data-capitulo-original-icon="${CAPITULO_ORIGINALS.groom.localPath}"`).length - 1, 2);
+  for (const label of ['Familia de la novia', 'Familia del novio']) assert.ok(parents.includes(label), label);
+  assert.doesNotMatch(parents, /data-capitulo-original-icon=/, 'Family names cannot be represented by an unrelated person animation');
+  for (const portrait of [CAPITULO_ORIGINALS.bride.localPath, CAPITULO_ORIGINALS.groom.localPath]) assert.equal(parents.includes(portrait), false);
   data.config = { ...data.config, sectionIcons: { parentsBride: '/qa-first-family.svg', parentsGroom: '/qa-second-family.svg' } };
-  const customized = markup(data);
-  assert.ok(customized.includes('/qa-first-family.svg')); assert.ok(customized.includes('/qa-second-family.svg'));
+  const before = structuredClone(data), customized = familySection(markup(data));
+  assert.ok(customized); assert.doesNotMatch(customized, /qa-(?:first|second)-family\.svg|data-capitulo-original-icon=/, 'Old avatar configuration cannot revive the rejected presentation');
+  assert.deepEqual(data, before, 'Rendering cannot remove legacy configuration or edit the stored family names');
+  data.parents_bride = [];
+  const remaining = familySection(markup(data));
+  assert.ok(remaining); assert.ok(remaining.includes(data.parents_groom[0]));
+  assert.equal(remaining.includes(before.parents_bride[0]), false); assert.equal(remaining.includes('Familia de la novia'), false);
 });
 
 test('the selected archived music is available without autoplay and explicitly clearing it remains silent after persistence', () => {

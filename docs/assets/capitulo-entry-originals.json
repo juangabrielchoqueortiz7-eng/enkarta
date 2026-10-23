@@ -1,0 +1,33 @@
+{
+  "variant": "capitulo",
+  "reference": "https://invitali.com/muestra-paradise/",
+  "assets": [
+    {
+      "role": "left",
+      "source": "https://invitali.com/wp-content/uploads/2025/03/Recurso-1Sobres-copia-scaled.webp",
+      "localPath": "/invitations/mariana-y-jesus/Recurso-1Sobres-copia-scaled.webp",
+      "sha256": "c35f6beb5df9fa5dd225e40d66bd9920760aa1fcd37e086e5e2800540ff14302",
+      "bytes": 42994,
+      "width": 2389,
+      "height": 2560
+    },
+    {
+      "role": "right",
+      "source": "https://invitali.com/wp-content/uploads/2025/03/Recurso-2Sobres-copia-scaled.webp",
+      "localPath": "/invitations/mariana-y-jesus/Recurso-2Sobres-copia-scaled.webp",
+      "sha256": "342fa0b0ec8a97eba90d53a6936f4e8395e5b6c2cb0c2955c8e3e5521ecae003",
+      "bytes": 31730,
+      "width": 2560,
+      "height": 2411
+    },
+    {
+      "role": "seal",
+      "source": "https://invitali.com/wp-content/uploads/2025/11/SELLO-VERDE-copia_2.webp",
+      "localPath": "/invitations/laura-andres/SELLO-VERDE-copia_2.webp",
+      "sha256": "9a192bff5eb9ec437398adaadb9bcb56be54393a2bc30b85091068f7781c7e31",
+      "bytes": 17814,
+      "width": 344,
+      "height": 344
+    }
+  ]
+}

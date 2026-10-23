@@ -24,7 +24,7 @@ export function capituloStarter() {
     rsvpMessage: 'Nos hará felices saber que estarás allí.',
     noKidsMessage: 'Esta celebración está preparada para adultos. Gracias por acompañarnos y disfrutar de la noche.',
     theme: { primary: '#242825', primaryDeep: '#242825', bg: '#f8f7f3', text: '#242825', onPrimary: '#ffffff' },
-    entry: { enabled: true, label: 'Abrir este capítulo' },
+    entry: { enabled: true, label: 'Ver invitación' },
     motion: { preset: 'elegant' }, musicUrl: CAPITULO_MUSIC.localPath, analytics: { enabled: false },
     sectionImages: { capituloDetail: CAPITULO_ASSETS.detail, capituloCelebration: CAPITULO_ASSETS.celebration },
     galleryImages: [CAPITULO_ASSETS.hero, CAPITULO_ASSETS.detail, CAPITULO_ASSETS.celebration],

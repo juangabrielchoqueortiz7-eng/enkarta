@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useRef, useState, type CSSPropert
 import Link from 'next/link';
 import type { InvitationParsed } from '@/lib/types';
 import { CAPITULO_ASSETS as A, capituloDate, capituloNames } from '@/lib/capitulo';
+import { CAPITULO_ENTRY_ASSETS } from '@/lib/capitulo-assets';
 import { resolveFeatures } from '@/lib/packages';
 import { useMediaPreferences } from '@/lib/use-media-preferences';
 import { paradiseReferenceClock, paradiseReferenceMaps } from '@/lib/paradise-reference';
@@ -33,16 +34,14 @@ function RsvpAction({ demo }: { demo: boolean }) {
   return <p className={styles.notice}>Solicita a los anfitriones el enlace de confirmación de tu invitación.</p>;
 }
 
-/** Paper envelope: its opening gesture also owns the guest's audio choice. */
+/** Archived paper and wax seal; the opening gesture owns the guest's audio choice. */
 export function CapituloEntry({ data, children, label }: { data: InvitationParsed; children: ReactNode; label?: string }) {
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open'>('closed');
   const active = useRef(false), opening = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const content = useRef<HTMLDivElement>(null), gate = useRef<HTMLDivElement>(null);
-  const names = capituloNames(data.names), date = capituloDate(data.event_date);
-  const buttonLabel = label ?? data.config.entry?.label ?? 'Abrir este capítulo';
+  const buttonLabel = label ?? data.config.entry?.label ?? 'Ver invitación';
   const hasMusic = resolveFeatures(data.config).music && !!paradiseReferenceHref(data.config.musicUrl);
-  const monogram = [names.first, names.second].filter(Boolean).map(name => Array.from(name.trim())[0]).join(' · ');
   const opened = phase === 'open';
   useEffect(() => {
     active.current = true;
@@ -93,26 +92,16 @@ export function CapituloEntry({ data, children, label }: { data: InvitationParse
       }
       if (event.key === 'Escape') { event.preventDefault(); enter(false); }
     }}>
-      <div className={styles.entryFrame}>
-        <p className={styles.entryMasthead}>Capítulo</p>
-        <p className={styles.entryHeadline}>Nuestra próxima página<br />empieza contigo.</p>
-        <div className={styles.envelope} data-capitulo-envelope aria-hidden="true">
-          <div className={styles.envelopeBack} />
-          <div className={styles.envelopeLetter}>
-            <p className={styles.letterHeading}>Nos casamos</p>
-            <p className={styles.entryNames}>{[names.first, names.second].filter(Boolean).join(' & ')}</p>
-            {date && <time dateTime={date.iso}>{date.entryLine}</time>}
-          </div>
-          <div className={styles.envelopePocket} />
-          <div className={styles.envelopeFlap} />
-          <span className={styles.envelopeSeal}>{monogram}</span>
-        </div>
-        <div className={styles.entryAccessibleNames}><p>{[names.first, names.second].filter(Boolean).join(' y ')}</p>{date && <time dateTime={date.iso}>{date.entryLine}</time>}</div>
-        <div className={styles.entryActions}>
-          <button className={styles.entryButton} type="button" onClick={() => enter(true)} aria-label={buttonLabel || 'Abrir invitación'} aria-disabled={phase === 'opening'}><span>{phase === 'opening' ? 'Abriendo invitación…' : buttonLabel}{hasMusic && phase === 'closed' && <small>Con música</small>}</span><Arrow /></button>
-          {hasMusic && <button className={styles.entrySilent} type="button" onClick={() => enter(false)} aria-disabled={phase === 'opening'}>Abrir sin música</button>}
-        </div>
+      <div className={styles.envelope} data-capitulo-envelope aria-hidden="true">
+        <div className={styles.envelopeLeft} data-capitulo-entry-panel="left" style={{ backgroundImage: `url("${CAPITULO_ENTRY_ASSETS.left}")` }} />
+        <div className={styles.envelopeRight} data-capitulo-entry-panel="right" style={{ backgroundImage: `url("${CAPITULO_ENTRY_ASSETS.right}")` }} />
       </div>
+      <button className={styles.sealButton} type="button" onClick={() => enter(true)} aria-label={buttonLabel || 'Abrir invitación'} aria-disabled={phase === 'opening'}>
+        <span className={styles.entryLabel}>{phase === 'opening' ? 'Abriendo invitación…' : buttonLabel}</span>
+        <svg className={styles.entryArrow} viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m3 2 5 5 5-5M3 8l5 5 5-5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <img src={CAPITULO_ENTRY_ASSETS.seal} width={344} height={344} alt="" loading="eager" decoding="async" draggable={false} data-capitulo-entry-seal />
+      </button>
+      {hasMusic && <button className={styles.entrySilent} type="button" onClick={() => enter(false)} aria-disabled={phase === 'opening'}>Abrir sin música</button>}
     </div>}
   </>;
 }
@@ -237,7 +226,7 @@ export default function Capitulo({ data, preview = false, skipEntry = false, dem
     {date && <section className={styles.dateSection} data-capitulo-section="date"><div className={styles.dateEditorial}><h2>Una fecha para recordar</h2><time dateTime={date.iso}><span>{date.day}</span><span>{date.month}<br />{date.year}</span></time><p>{date.weekday}</p></div><div className={styles.countdownSide}><p>Nos separa de este nuevo capítulo</p><Countdown data={data} /></div></section>}
 
     {(storyTitle || storyMessage || detail) && <section className={`${styles.story} ${!detail || !(storyTitle || storyMessage) ? styles.singleColumn : ''}`} data-capitulo-section="story"><div className={styles.storyCopy}>{storyTitle && <h2>{storyTitle}</h2>}{storyMessage && <p>{storyMessage}</p>}{storyMessage && c.verseRef && c.storyMessage == null && <small>{c.verseRef}</small>}</div>{detail && <img src={detail} alt={detail === A.detail ? 'Manos de una pareja ficticia sosteniendo un cuaderno de votos en blanco, imagen creada con IA' : 'Fotografía de nuestra historia'} width={1536} height={1024} loading="lazy" decoding="async" />}</section>}
-    {hasParents && <section className={styles.parents} data-capitulo-section="parents">{c.blessing && <h2>{c.blessing}</h2>}<div>{[data.parents_bride, data.parents_groom].map((list, index) => list.length > 0 && <div className={styles.parentFamily} key={index}><CapituloOriginalIcon role="groom" sectionKey={index === 0 ? 'parentsBride' : 'parentsGroom'} config={c} size={100} className={styles.originalIcon} /><h3>{index === 0 ? 'Familia de la novia' : 'Familia del novio'}</h3><p>{list.map((name, i) => <span key={i}>{name}</span>)}</p></div>)}</div></section>}
+    {hasParents && <section className={styles.parents} data-capitulo-section="parents">{c.blessing && <h2>{c.blessing}</h2>}<div>{[data.parents_bride, data.parents_groom].map((list, index) => list.length > 0 && <div className={styles.parentFamily} key={index}><h3>{index === 0 ? 'Familia de la novia' : 'Familia del novio'}</h3><p>{list.map((name, i) => <span key={i}>{name}</span>)}</p></div>)}</div></section>}
     {celebration && <figure className={styles.celebration} data-capitulo-section="celebration"><img src={celebration} alt={celebration === A.celebration ? 'Patio imaginario preparado para una boda, fotografía en blanco y negro creada con IA' : 'Fotografía de nuestra celebración'} width={1536} height={1024} loading="lazy" decoding="async" /><figcaption>El escenario es especial. La compañía lo hará inolvidable.</figcaption></figure>}
 
     {(data.itinerary.length > 0 || data.dress_code) && <section className={styles.dayPlan} data-capitulo-section="itinerary">{data.itinerary.length > 0 && <div className={styles.itinerary}><h2>Itinerario</h2><p className={styles.itineraryIntro}>Así se escribe el día</p><ol>{data.itinerary.map((item, index) => <li key={index} data-capitulo-itinerary-item><CapituloOriginalIcon role={itineraryRoles[index] ?? 'reception'} sectionKey={`itinerary-${index}`} config={c} src={item.icon} colors={item.iconColors} speed={item.iconSpeed} size={80} className={styles.itineraryIcon} /><time>{paradiseReferenceClock(item.time)}</time><div><h3>{item.label}</h3>{item.place && <p>{item.place}</p>}{item.note && <p>{item.note}</p>}{item.duration && <p>{item.duration}</p>}</div></li>)}</ol></div>}{data.dress_code && <aside className={styles.dress}><div className={styles.dressIcons}><CapituloOriginalIcon role="suit" sectionKey="dressGroom" config={c} size={94} /><CapituloOriginalIcon role="dress" sectionKey="dressBride" config={c} size={94} /></div>{dressTitle && <h2>{dressTitle}</h2>}<p>{data.dress_code}</p></aside>}</section>}
