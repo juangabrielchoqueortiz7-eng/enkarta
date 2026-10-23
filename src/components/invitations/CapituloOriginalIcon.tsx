@@ -6,8 +6,9 @@ import dynamic from 'next/dynamic';
 import type { LottieRefCurrentProps } from 'lottie-react';
 import type { BuilderConfig } from '@/lib/types';
 import { CAPITULO_ORIGINALS } from '@/lib/capitulo-assets';
+import { colorCapituloIcon } from '@/lib/capitulo-icon-palette';
 import { originalInvitationAsset } from '@/lib/invitation-assets';
-import { applyIconColors, loadLottieByPath, tintLottie } from '@/lib/lottie-utils';
+import { loadLottieByPath } from '@/lib/lottie-utils';
 import { useMediaPreferences } from '@/lib/use-media-preferences';
 import { usePageMotion } from '@/lib/scroll-motion';
 import { paradiseReferenceHref } from './ParadiseReferenceSections';
@@ -55,8 +56,7 @@ export default function CapituloOriginalIcon({ role, config, sectionKey = role, 
   const animate = active && visible && armed && ready && !reducedMotion && !saveData && pageVisible;
   const rendered = useMemo(() => {
     if (!animation) return null;
-    if (palette && Object.keys(palette).length) return applyIconColors(animation, palette);
-    return config.iconColor ? tintLottie(animation, config.iconColor) : animation;
+    return colorCapituloIcon(animation, { iconColor: config.iconColor, colors: palette });
   }, [animation, palette, config.iconColor]);
 
   useEffect(() => {

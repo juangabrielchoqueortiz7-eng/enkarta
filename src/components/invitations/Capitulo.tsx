@@ -1,13 +1,14 @@
 'use client';
 
 /* eslint-disable @next/next/no-img-element */
-import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { InvitationParsed } from '@/lib/types';
 import { CAPITULO_ASSETS as A, capituloDate, capituloNames } from '@/lib/capitulo';
 import { CAPITULO_ENTRY_ASSETS } from '@/lib/capitulo-assets';
 import { resolveFeatures } from '@/lib/packages';
 import { useMediaPreferences } from '@/lib/use-media-preferences';
+import { useCapituloReveals } from '@/lib/use-capitulo-reveals';
 import { paradiseReferenceClock, paradiseReferenceMaps } from '@/lib/paradise-reference';
 import { ParadiseReferenceCarousel, paradiseReferenceHref } from './ParadiseReferenceSections';
 import { emitInvitationAnalytics } from './InvitationAnalytics';
@@ -53,6 +54,8 @@ export function CapituloEntry({ data, children, label }: { data: InvitationParse
       node?.removeAttribute('inert');
       const target = node?.querySelector<HTMLElement>('h1') ?? node;
       if (target) { target.tabIndex = -1; target.focus({ preventScroll: true }); }
+      // Notify motion only after React committed the open, interactive document.
+      window.dispatchEvent(new CustomEvent('enkarta:enter'));
     } else {
       node?.setAttribute('inert', '');
       gate.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
@@ -77,7 +80,6 @@ export function CapituloEntry({ data, children, label }: { data: InvitationParse
       timer.current = null;
       if (!active.current) return;
       setPhase('open');
-      window.dispatchEvent(new CustomEvent('enkarta:enter'));
     }, reduced ? 0 : 800);
   };
   return <>
@@ -104,39 +106,6 @@ export function CapituloEntry({ data, children, label }: { data: InvitationParse
       {hasMusic && <button className={styles.entrySilent} type="button" onClick={() => enter(false)} aria-disabled={phase === 'opening'}>Abrir sin música</button>}
     </div>}
   </>;
-}
-
-/** The document is visible by default; effects only run once it is actually open. */
-function useCapituloReveals(root: RefObject<HTMLDivElement>, preview: boolean, disabled: boolean) {
-  const media = useMediaPreferences();
-  useEffect(() => {
-    const node = root.current;
-    if (!node || preview || disabled || !media.ready || media.reducedMotion || media.saveData || !media.pageVisible || typeof IntersectionObserver === 'undefined') return;
-    let observer: IntersectionObserver | null = null;
-    let frame: number | null = null;
-    const animations = new Set<Animation>();
-    const seen = new WeakSet<Element>();
-    const connect = () => {
-      if (node.closest('[inert], [aria-hidden="true"]') || node.querySelector('[data-capitulo-entry]')) return;
-      observer?.disconnect();
-      observer = new IntersectionObserver(entries => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting || seen.has(entry.target) || entry.target.closest('[inert], [aria-hidden="true"]')) continue;
-          seen.add(entry.target); observer?.unobserve(entry.target);
-          const element = entry.target as HTMLElement;
-          if (typeof element.animate !== 'function') continue;
-          const animation = element.animate([{ opacity: .65, transform: 'translateY(14px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 650, easing: 'cubic-bezier(.16,1,.3,1)' });
-          animations.add(animation);
-          animation.onfinish = () => animations.delete(animation);
-        }
-      }, { threshold: .12 });
-      node.querySelectorAll('[data-capitulo-section]').forEach(section => observer?.observe(section));
-    };
-    connect();
-    const afterEntry = () => { if (frame !== null) cancelAnimationFrame(frame); frame = requestAnimationFrame(connect); };
-    window.addEventListener('enkarta:enter', afterEntry);
-    return () => { if (frame !== null) cancelAnimationFrame(frame); observer?.disconnect(); animations.forEach(animation => animation.cancel()); window.removeEventListener('enkarta:enter', afterEntry); };
-  }, [root, preview, disabled, media.ready, media.reducedMotion, media.saveData, media.pageVisible]);
 }
 
 function Countdown({ data }: { data: InvitationParsed }) {
@@ -193,7 +162,7 @@ function Gifts({ data }: { data: InvitationParsed }) {
 
 export default function Capitulo({ data, preview = false, skipEntry = false, demo = false }: { data: InvitationParsed; preview?: boolean; skipEntry?: boolean; demo?: boolean; deadlinePassed?: boolean }) {
   const profile = useRef<HTMLDivElement>(null);
-  useCapituloReveals(profile, preview, data.config.motion?.preset === 'none');
+  const motionMode = useCapituloReveals(profile, preview, data.config.motion?.preset === 'none');
   const c = data.config, features = resolveFeatures(c);
   const names = capituloNames(data.names), date = capituloDate(data.event_date);
   const hero = paradiseReferenceHref(data.cover_image_url ?? A.hero);
@@ -216,7 +185,7 @@ export default function Capitulo({ data, preview = false, skipEntry = false, dem
       <div className={styles.edition}>{date && <time dateTime={date.iso}>{date.entryLine}</time>}{c.city && <span>{c.city}</span>}<span>Edición de nuestra boda</span></div>
       <h1 aria-label={[names.first, names.second].filter(Boolean).join(' y ')}><span>{names.first}</span>{names.second && <><i aria-hidden="true">&amp;</i><span>{names.second}</span></>}</h1>
       <div className={`${styles.heroGrid} ${!hero ? styles.withoutPhoto : ''}`}>
-        {hero && <figure className={styles.heroFigure}><img src={hero} alt={hero === A.hero ? 'Pareja ficticia caminando por una calle de ciudad, fotografía editorial en blanco y negro creada con IA' : 'Fotografía de portada de la invitación'} width={1536} height={1024} loading="eager" decoding="async" /><figcaption>Hay días que merecen una edición especial.</figcaption></figure>}
+        {hero && <figure className={styles.heroFigure}><img data-capitulo-photo src={hero} alt={hero === A.hero ? 'Pareja ficticia caminando por una calle de ciudad, fotografía editorial en blanco y negro creada con IA' : 'Fotografía de portada de la invitación'} width={1536} height={1024} loading="eager" decoding="async" /><figcaption>Hay días que merecen una edición especial.</figcaption></figure>}
         <div className={styles.heroDeck}><p className={styles.headline}>Nos elegimos.<br />Y volvemos a elegirnos.</p><p>La próxima página de nuestra historia empieza con un sí. Queremos escribirla cerca de quienes más queremos.</p><a className={styles.textLink} href="#capitulo-bienvenida">Leer nuestra invitación <Arrow /></a></div>
       </div>
     </header>
@@ -225,9 +194,9 @@ export default function Capitulo({ data, preview = false, skipEntry = false, dem
     <Guest data={data} />
     {date && <section className={styles.dateSection} data-capitulo-section="date"><div className={styles.dateEditorial}><h2>Una fecha para recordar</h2><time dateTime={date.iso}><span>{date.day}</span><span>{date.month}<br />{date.year}</span></time><p>{date.weekday}</p></div><div className={styles.countdownSide}><p>Nos separa de este nuevo capítulo</p><Countdown data={data} /></div></section>}
 
-    {(storyTitle || storyMessage || detail) && <section className={`${styles.story} ${!detail || !(storyTitle || storyMessage) ? styles.singleColumn : ''}`} data-capitulo-section="story"><div className={styles.storyCopy}>{storyTitle && <h2>{storyTitle}</h2>}{storyMessage && <p>{storyMessage}</p>}{storyMessage && c.verseRef && c.storyMessage == null && <small>{c.verseRef}</small>}</div>{detail && <img src={detail} alt={detail === A.detail ? 'Manos de una pareja ficticia sosteniendo un cuaderno de votos en blanco, imagen creada con IA' : 'Fotografía de nuestra historia'} width={1536} height={1024} loading="lazy" decoding="async" />}</section>}
+    {(storyTitle || storyMessage || detail) && <section className={`${styles.story} ${!detail || !(storyTitle || storyMessage) ? styles.singleColumn : ''}`} data-capitulo-section="story"><div className={styles.storyCopy}>{storyTitle && <h2>{storyTitle}</h2>}{storyMessage && <p>{storyMessage}</p>}{storyMessage && c.verseRef && c.storyMessage == null && <small>{c.verseRef}</small>}</div>{detail && <img data-capitulo-photo src={detail} alt={detail === A.detail ? 'Manos de una pareja ficticia sosteniendo un cuaderno de votos en blanco, imagen creada con IA' : 'Fotografía de nuestra historia'} width={1536} height={1024} loading="lazy" decoding="async" />}</section>}
     {hasParents && <section className={styles.parents} data-capitulo-section="parents">{c.blessing && <h2>{c.blessing}</h2>}<div>{[data.parents_bride, data.parents_groom].map((list, index) => list.length > 0 && <div className={styles.parentFamily} key={index}><h3>{index === 0 ? 'Familia de la novia' : 'Familia del novio'}</h3><p>{list.map((name, i) => <span key={i}>{name}</span>)}</p></div>)}</div></section>}
-    {celebration && <figure className={styles.celebration} data-capitulo-section="celebration"><img src={celebration} alt={celebration === A.celebration ? 'Patio imaginario preparado para una boda, fotografía en blanco y negro creada con IA' : 'Fotografía de nuestra celebración'} width={1536} height={1024} loading="lazy" decoding="async" /><figcaption>El escenario es especial. La compañía lo hará inolvidable.</figcaption></figure>}
+    {celebration && <figure className={styles.celebration} data-capitulo-section="celebration"><img data-capitulo-photo src={celebration} alt={celebration === A.celebration ? 'Patio imaginario preparado para una boda, fotografía en blanco y negro creada con IA' : 'Fotografía de nuestra celebración'} width={1536} height={1024} loading="lazy" decoding="async" /><figcaption>El escenario es especial. La compañía lo hará inolvidable.</figcaption></figure>}
 
     {(data.itinerary.length > 0 || data.dress_code) && <section className={styles.dayPlan} data-capitulo-section="itinerary">{data.itinerary.length > 0 && <div className={styles.itinerary}><h2>Itinerario</h2><p className={styles.itineraryIntro}>Así se escribe el día</p><ol>{data.itinerary.map((item, index) => <li key={index} data-capitulo-itinerary-item><CapituloOriginalIcon role={itineraryRoles[index] ?? 'reception'} sectionKey={`itinerary-${index}`} config={c} src={item.icon} colors={item.iconColors} speed={item.iconSpeed} size={80} className={styles.itineraryIcon} /><time>{paradiseReferenceClock(item.time)}</time><div><h3>{item.label}</h3>{item.place && <p>{item.place}</p>}{item.note && <p>{item.note}</p>}{item.duration && <p>{item.duration}</p>}</div></li>)}</ol></div>}{data.dress_code && <aside className={styles.dress}><div className={styles.dressIcons}><CapituloOriginalIcon role="suit" sectionKey="dressGroom" config={c} size={94} /><CapituloOriginalIcon role="dress" sectionKey="dressBride" config={c} size={94} /></div>{dressTitle && <h2>{dressTitle}</h2>}<p>{data.dress_code}</p></aside>}</section>}
     {hasVenue && <section className={styles.venues} data-capitulo-section="venues"><h2>El lugar de los acontecimientos</h2><div><Venue data={data} /><Venue data={data} reception /></div></section>}
@@ -241,5 +210,5 @@ export default function Capitulo({ data, preview = false, skipEntry = false, dem
     {!preview && features.music && paradiseReferenceHref(c.musicUrl) && <ParadiseReferenceMusic src={paradiseReferenceHref(c.musicUrl)!} color="#f8f7f3" iconSize={29} className={styles.musicButton} statusClassName={styles.musicStatus} />}
   </>;
   const entryEnabled = c.entry?.enabled ?? features.entry;
-  return <div ref={profile} className={styles.profile} style={theme} data-capitulo data-preview={preview ? '' : undefined}>{preview || skipEntry || !entryEnabled ? page : <CapituloEntry data={data} label={c.entry?.label ?? 'Abrir este capítulo'}>{page}</CapituloEntry>}</div>;
+  return <div ref={profile} className={styles.profile} style={theme} data-capitulo data-capitulo-motion={motionMode} data-preview={preview ? '' : undefined}>{preview || skipEntry || !entryEnabled ? page : <CapituloEntry data={data} label={c.entry?.label ?? 'Abrir este capítulo'}>{page}</CapituloEntry>}</div>;
 }

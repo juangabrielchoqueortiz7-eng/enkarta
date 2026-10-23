@@ -90,7 +90,7 @@
     "test:paradise-icon": "node scripts/test-paradise-icon.cjs",
     "test:azure-reference": "node scripts/test-azure-reference.cjs",
     "test:travesia": "node scripts/test-travesia.cjs",
-    "test:capitulo": "node scripts/test-capitulo.cjs && node scripts/test-capitulo-motion.cjs && node scripts/test-capitulo-entry.cjs"
+    "test:capitulo": "node scripts/test-capitulo.cjs && node scripts/test-capitulo-motion.cjs && node scripts/test-capitulo-entry.cjs && node scripts/test-capitulo-reveals.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

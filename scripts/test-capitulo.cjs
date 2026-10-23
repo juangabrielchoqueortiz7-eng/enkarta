@@ -71,6 +71,9 @@ test('the public demo uses the new artwork without foreign RSVP forms, personal 
     assert.equal(CAPITULO_ASSETS[role], `/invitations/capitulo/${role}.webp`);
     assert.ok(html.includes(CAPITULO_ASSETS[role]), `generated ${role} is rendered`);
   }
+  const revealPhotos = html.match(/<img\b[^>]*data-capitulo-photo[^>]*>/g) ?? [];
+  assert.equal(revealPhotos.length, 3, 'Only the hero and two editorial photographs enter the independent scroll reveal');
+  for (const local of Object.values(CAPITULO_ASSETS)) assert.ok(revealPhotos.some(image => image.includes(local)), `Marked editorial photograph: ${local}`);
   assert.equal(data.bank_account, null); assert.equal(data.phone_whatsapp, null);
   assert.doesNotMatch(html, /invitali\.com|>Invitali<|BANCOLOMBIA|4432324355|652342346667|forms\.gle|docs\.google\.com\/forms|action="https?:|wa\.me\/\d/i);
   assert.doesNotMatch(html, /<form\b|<iframe\b/i, 'A visual sample cannot submit attendance or embed a third-party form');

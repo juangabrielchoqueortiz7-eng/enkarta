@@ -21,7 +21,7 @@ async function withEntry(scenario, { reducedMotion = false, saveData = false, da
   const globalNames = ['window', 'document', 'navigator', 'CustomEvent', 'setTimeout', 'clearTimeout', 'fetch'], saved = Object.fromEntries(globalNames.map(name => [name, Object.getOwnPropertyDescriptor(global, name)]));
   const install = (name, value) => Object.defineProperty(global, name, { configurable: true, writable: true, value });
   let cursor = 0, dirty = true, unmounted = false, late = 0, tree, effects = [], clock = 0, timerId = 0;
-  const slots = [], timers = new Map(), scheduled = [], events = [], focusCalls = [], attrs = new Map(), controls = [];
+  const slots = [], timers = new Map(), scheduled = [], events = [], eventSnapshots = [], focusCalls = [], attrs = new Map(), controls = [];
   musicRequests = []; analytics = [];
   const same = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   React.useState = initial => { const i = cursor++; if (!slots[i]) { const slot = slots[i] = { value: typeof initial === 'function' ? initial() : initial }; slot.set = value => { if (unmounted) { late++; return; } const next = typeof value === 'function' ? value(slot.value) : value; if (!Object.is(next, slot.value)) { slot.value = next; dirty = true; } }; } return [slots[i].value, slots[i].set]; };
@@ -32,7 +32,11 @@ async function withEntry(scenario, { reducedMotion = false, saveData = false, da
   const gate = { querySelector: selector => selector.includes('button') ? controls[0] : null, querySelectorAll: selector => selector.includes('button') ? controls.filter(button => !button.props.disabled) : [], contains: node => controls.includes(node) };
   install('document', { body: { style: { overflow: 'clip' } }, activeElement: null });
   install('navigator', { connection: { saveData } });
-  install('window', { matchMedia: () => ({ matches: reducedMotion }), dispatchEvent: event => { events.push(event.type); return true; } });
+  install('window', { matchMedia: () => ({ matches: reducedMotion }), dispatchEvent: event => {
+    events.push(event.type);
+    eventSnapshots.push({ type: event.type, dialogRendered: nodes(tree, el => el.props['data-capitulo-entry']).length > 0, inert: attrs.has('inert'), focused: document.activeElement });
+    return true;
+  } });
   install('CustomEvent', class { constructor(type, options) { this.type = type; this.detail = options?.detail; } });
   install('setTimeout', (callback, delay) => { const id = ++timerId, timer = { id, callback, delay, due: clock + delay }; timers.set(id, timer); scheduled.push(timer); return id; });
   install('clearTimeout', id => timers.delete(id));
@@ -54,7 +58,7 @@ async function withEntry(scenario, { reducedMotion = false, saveData = false, da
   };
   const unmount = () => { if (unmounted) return; unmounted = true; for (const slot of slots) slot?.cleanup?.(); };
   const runner = {
-    tree: () => tree, controls, attrs, heading, content, events, focusCalls, scheduled,
+    tree: () => tree, controls, attrs, heading, content, events, eventSnapshots, focusCalls, scheduled,
     musicRequests: () => musicRequests, analytics: () => analytics, late: () => late, pending: () => timers.size,
     dialog: () => nodes(tree, el => el.props['data-capitulo-entry'])[0], flush, unmount,
     click: async index => { assert.ok(controls[index], `Control ${index}`); controls[index].props.onClick(); await flush(); },
@@ -96,6 +100,20 @@ test('opening without music still opens the envelope but never requests playback
     await r.click(0); await r.advance(r.scheduled[0].delay);
     assert.deepEqual(r.musicRequests(), []); assert.equal(r.dialog(), undefined); assert.deepEqual(r.events, ['enkarta:enter']);
   });
+});
+
+test('the opening event reaches scroll effects only after the committed gate is gone and the interior is usable', async () => {
+  for (const reducedMotion of [false, true]) await withEntry(async r => {
+    await r.click(1);
+    assert.deepEqual(r.eventSnapshots, [], 'Beginning the envelope transition cannot arm hidden content');
+    await r.advance(r.scheduled[0].delay);
+    assert.equal(r.eventSnapshots.length, 1);
+    const snapshot = r.eventSnapshots[0];
+    assert.equal(snapshot.type, 'enkarta:enter');
+    assert.equal(snapshot.dialogRendered, false, 'The opening listener must see the committed render without the gate');
+    assert.equal(snapshot.inert, false, 'The opening listener must not see an inert invitation');
+    assert.equal(snapshot.focused, r.heading, 'The heading is focused before observers are armed');
+  }, { reducedMotion });
 });
 
 test('disposing a pending opening restores the page, cancels its timer and ignores a late callback', async () => {
