@@ -6,6 +6,9 @@ import type { InvitationParsed } from '@/lib/types';
 import { paradiseReferenceHeading } from '@/lib/paradise-reference';
 import { resolveFeatures } from '@/lib/packages';
 import { emitInvitationAnalytics } from './InvitationAnalytics';
+import ParadiseReferenceMusic, { startParadiseReferenceMusic } from './ParadiseReferenceMusic';
+import { ParadiseReferenceSections } from './ParadiseReferenceSections';
+import interiorStyles from './ParadiseReferenceSections.module.css';
 import styles from './ParadiseReference.module.css';
 
 const ENVELOPE_LEFT = '/invitations/mariana-y-jesus/Recurso-1Sobres-copia-scaled.webp';
@@ -56,6 +59,8 @@ export function ParadiseReferenceEntry({ children, label = 'Ver invitación' }: 
   const enter = () => {
     if (opening.current || !active.current) return;
     opening.current = true;
+    // Start within this trusted gesture, before the decorative opening delay.
+    startParadiseReferenceMusic(contentRef.current);
     setPhase('opening');
     emitInvitationAnalytics('entry_open');
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -129,14 +134,19 @@ export function ParadiseReferenceHero({ data }: { data: InvitationParsed }) {
   </section>;
 }
 
-export default function ParadiseReference({ data, preview = false, skipEntry = false }: {
+export default function ParadiseReference({ data, preview = false, skipEntry = false, demo = false }: {
   data: InvitationParsed;
   preview?: boolean;
   demo?: boolean;
   skipEntry?: boolean;
   deadlinePassed?: boolean;
 }) {
-  const hero = <ParadiseReferenceHero data={data} />;
+  const features = resolveFeatures(data.config);
+  const hero = <>
+    <ParadiseReferenceHero data={data} />
+    <ParadiseReferenceSections data={data} demo={demo} preview={preview} />
+    {!preview && features.music && data.config.musicUrl && <ParadiseReferenceMusic src={data.config.musicUrl} className={interiorStyles.musicButton} statusClassName={interiorStyles.musicStatus} iconSize={40} />}
+  </>;
   const entryEnabled = data.config.entry?.enabled ?? resolveFeatures(data.config).entry;
   return <div className={styles.profile} data-paradise-reference data-paradise-reference-page={preview ? undefined : ''}>
     {preview || skipEntry || !entryEnabled ? hero : <ParadiseReferenceEntry label={data.config.entry?.label ?? 'Ver invitación'}>{hero}</ParadiseReferenceEntry>}

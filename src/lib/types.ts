@@ -204,7 +204,7 @@ export interface BuilderConfig {
   giftRegistryLabel?: string;
   giftQrUrl?: string;
   lodgingTitle?: string;
-  lodging?: { name: string; image: string; desc?: string }[];
+  lodging?: { name: string; image: string; desc?: string; url?: string }[];
   secondaryImage?: string;
   footerImage?: string;
   // ── Obsidiana ──

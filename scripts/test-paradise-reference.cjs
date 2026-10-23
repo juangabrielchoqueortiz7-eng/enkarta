@@ -165,6 +165,8 @@ test('preview, full/skip, an explicitly disabled entrance and missing entry enti
     const props = { data, ...(['disabled', 'featureOff'].includes(mode) ? {} : { [mode]: true }) };
     const html = renderToStaticMarkup(React.createElement(Invitation, props));
     assert.doesNotMatch(html, /role="dialog"/); assert.match(html, /Laura/); assert.match(html, /Elvis/);
-    assert.doesNotMatch(html, /<audio|autoplay|autoPlay/);
+    assert.doesNotMatch(html, /autoplay|autoPlay/, 'Skipping the envelope never auto-starts music');
+    if (mode === 'preview') assert.doesNotMatch(html, /<audio/);
+    else assert.match(html, /<audio[^>]*preload="none"/, 'The public view retains explicit manual music controls');
   }
 });

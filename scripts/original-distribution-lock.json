@@ -12,6 +12,11 @@
       "bytes": 3264398
     },
     {
+      "path": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+      "sha256": "3c620d851139ead919cb446cff2a646661325e50507d3cdfbf662cb75d0d8c8c",
+      "bytes": 1287764
+    },
+    {
       "path": "/audio/invitali-originales/2026-01-JVKE-golden-hour-Traducida-al-Espanol-Lyrics-Infinite-Letters.mp3",
       "sha256": "442598b3e7ab0346e01639acccba190f229b42be653d07db11df8bbc4819f3e2",
       "bytes": 8388615
@@ -397,6 +402,46 @@
       "bytes": 20354
     },
     {
+      "path": "/invitations/paradise-referencia/2025-06-Logo-Falabella-1024x400.webp",
+      "sha256": "8fbc34e6adba9ccda9c4dcd3d0c884738fd36842308619366c34be0056326458",
+      "bytes": 15394
+    },
+    {
+      "path": "/invitations/paradise-referencia/2025-09-Hotel-MAdison-copia.webp",
+      "sha256": "25cb4c9ac6eb75bba4c3fcfe19a421305f03dfd0c0c804086083323a7acfb819",
+      "bytes": 80680
+    },
+    {
+      "path": "/invitations/paradise-referencia/2025-09-Hotel-Sheraton-copia.webp",
+      "sha256": "bb3547679e33301060b20f4e7a8e0a17e372c87ac2ebbf27d16289ee9558c60b",
+      "bytes": 77088
+    },
+    {
+      "path": "/invitations/paradise-referencia/2025-12-muestras-PARADISE1.webp",
+      "sha256": "aa35a3a19c9f9a2dea5900ba7f28dedf6c29ac2267cb9a7874bcbdb94201b959",
+      "bytes": 244722
+    },
+    {
+      "path": "/invitations/paradise-referencia/2025-12-muestras-PARADISE2.webp",
+      "sha256": "e922ad3e07ad434393187feea46b62cafe46075c03417e0824cbce39cd2e2bd6",
+      "bytes": 233554
+    },
+    {
+      "path": "/invitations/paradise-referencia/2025-12-paradise-muestras3.webp",
+      "sha256": "3de7a8f7ad7b2a5c1f3779058669a6942155ba33efe7f7f3a1454dafeb352b06",
+      "bytes": 167832
+    },
+    {
+      "path": "/invitations/paradise-referencia/2025-12-paradise-muestras5.webp",
+      "sha256": "2af96aeebdbe0a05100f0f8ba747689388f44599211a5cd6cff7e9aa9d0876f0",
+      "bytes": 147124
+    },
+    {
+      "path": "/invitations/paradise-referencia/2025-12-paradise-muestras6.webp",
+      "sha256": "e51ec2b7cec547287e77114880f7c02a2b954ce3777607c7069b62e3ca887118",
+      "bytes": 124032
+    },
+    {
       "path": "/invitations/paradise-referencia/2025-12-pasport.webp",
       "sha256": "2618d55d5a0635b3e8e0c2086847ef5f5cc57d5879c063c0d392176edefefc97",
       "bytes": 309402
@@ -557,6 +602,11 @@
       "bytes": 21402
     },
     {
+      "path": "/lottie/boda/invitali-sin-ninos-original.json",
+      "sha256": "1a1dc78dcffc96b4f1bca344c791d533cde5e4070780041b8384ff9a45f0c713",
+      "bytes": 31986
+    },
+    {
       "path": "/lottie/invitali-originales/2025-02-Animation-1740029697999.json",
       "sha256": "248eb569d73481cc7e35e755f4854528edfbd0c9c8d17b8c8798f10d4e55514f",
       "bytes": 42508
@@ -605,6 +655,11 @@
       "path": "/lottie/invitali-originales/2025-05-baile.json",
       "sha256": "2f67597c05d464dbf9728c0b4d8f0fde7c96b7adccfd507955e1d0a4cf5519e0",
       "bytes": 43579
+    },
+    {
+      "path": "/lottie/invitali-originales/2025-05-biblia.json",
+      "sha256": "1be4d70cbd1e4f91750801d8233bd1eb060528ee769fdb796167c4dad11ee8ea",
+      "bytes": 43964
     },
     {
       "path": "/lottie/invitali-originales/2025-05-camara-fotos.json",

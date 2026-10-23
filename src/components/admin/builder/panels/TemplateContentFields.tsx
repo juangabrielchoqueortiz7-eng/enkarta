@@ -75,9 +75,10 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
     setCfg({ [key]: v.split('\n').map(s => s.trim()).filter(Boolean) } as Partial<BuilderConfig>);
 
   if (cfg.designKey === 'paradise-referencia') {
+    const hotels = draft.list<NonNullable<BuilderConfig['lodging']>[number]>('template:lodging', current => current.config.lodging ?? [], (current, next) => ({ config: { ...current.config, lodging: next } }));
     return (
-      <Wrapper title="Paradise · entrada y cabecera">
-        <p className="font-outfit text-sm leading-6 text-[#62594d]">Este estudio incluye la entrada y la cabecera. Edita los nombres y la fecha en Datos, la fotografía en Fotos y música, y el texto de entrada en Config.</p>
+      <Wrapper title="Paradise · contenido de la invitación">
+        <p className="font-outfit text-sm leading-6 text-[#62594d]">Edita nombres, fechas, padres y cronograma en Datos; galería y música en Fotos y música; el texto de entrada en Config. Estos ajustes pertenecen únicamente a esta invitación.</p>
         <div className="grid min-w-0 grid-cols-1 gap-3 min-[1200px]:grid-cols-2">
           <Field label="Apellido de la novia">
             <input type="text" name="paradise-reference-bride-last" autoComplete="off" className={inputCls} value={cfg.brideLast ?? ''} onChange={e => setCfg({ brideLast: e.target.value })} />
@@ -89,6 +90,24 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
         <Field label="Ciudad">
           <input type="text" name="paradise-reference-city" autoComplete="off" className={inputCls} value={cfg.city ?? ''} onChange={e => setCfg({ city: e.target.value })} />
         </Field>
+        {([
+          ['introMessage', 'Mensaje de bienvenida'], ['verse', 'Versículo o frase'], ['verseRef', 'Referencia de la frase'],
+          ['blessing', 'Encabezado de padres'], ['ceremonyDesc', 'Título de la ceremonia'], ['receptionDesc', 'Título de la recepción'],
+          ['noKidsMessage', 'Mensaje Solo adultos'], ['galleryMessage', 'Mensaje para compartir fotos'],
+          ['rsvpMessage', 'Mensaje de confirmación'], ['rsvpClosing', 'Mensaje final'], ['lodgingTitle', 'Título de hospedaje'],
+        ] as const).map(([key, label]) => <Field key={key} label={label}><textarea name={`paradise-${key}`} autoComplete="off" className={textareaCls} rows={2} value={cfg[key] ?? ''} onChange={e => setCfg({ [key]: e.target.value })} /></Field>)}
+        <details className="space-y-4"><summary className="min-h-11 cursor-pointer font-outfit font-semibold">Fotografías del cierre y regalos</summary>
+          {([['footerImage', 'Primera foto del cierre'], ['giftRegistryUrl', 'Enlace de la mesa de regalos'], ['giftRegistryLabel', 'Texto del botón de regalos'], ['giftQrUrl', 'Imagen del QR de regalos']] as const).map(([key, label]) => <Field key={key} label={label}><input name={`paradise-${key}`} autoComplete="off" className={inputCls} value={cfg[key] ?? ''} onChange={e => setCfg({ [key]: e.target.value })} /></Field>)}
+          <Field label="Segunda foto del cierre (URL o recurso local)"><input name="paradise-closing-second" autoComplete="off" className={inputCls} value={cfg.sectionImages?.paradiseClosingSecond ?? ''} onChange={e => draft.config(current => ({ sectionImages: { ...current.sectionImages, paradiseClosingSecond: e.target.value } }))} /></Field>
+          <p className="text-sm text-[#62594d]">Usa únicamente enlaces y QR proporcionados por los anfitriones. BCP permanece desactivado.</p>
+        </details>
+        <details className="space-y-4"><summary className="min-h-11 cursor-pointer font-outfit font-semibold">Hospedajes</summary>
+          {hotels.rows.map(({ key, item: hotel }, index) => <fieldset key={key} className="min-w-0 space-y-3 rounded-xl border border-[#d4c5b9] p-4"><legend className="px-2 font-outfit text-sm">Hospedaje {index + 1}</legend>
+            {([['name', 'Nombre del hotel'], ['image', 'Imagen del hotel (URL o recurso local)'], ['desc', 'Descripción del hotel'], ['url', 'Sitio web del hotel']] as const).map(([field, label]) => <Field key={field} label={label}><input className={inputCls} name={`paradise-hotel-${key}-${field}`} value={hotel[field] ?? ''} onChange={e => hotels.patch(key, { [field]: e.target.value })} /></Field>)}
+            <div className="flex flex-wrap gap-2"><button type="button" className={addCls} disabled={index === 0} aria-label={`Subir hospedaje ${index + 1}`} onClick={() => hotels.move(key, -1)}>Subir</button><button type="button" className={addCls} disabled={index === hotels.rows.length - 1} aria-label={`Bajar hospedaje ${index + 1}`} onClick={() => hotels.move(key, 1)}>Bajar</button><button type="button" className={addCls} onClick={() => hotels.remove(key)}>Quitar hospedaje {index + 1}</button></div>
+          </fieldset>)}
+          <button type="button" className={addCls} onClick={() => hotels.add({ name: '', image: '', desc: '', url: '' })}>Añadir hospedaje</button>
+        </details>
       </Wrapper>
     );
   }

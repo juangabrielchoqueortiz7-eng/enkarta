@@ -1,5 +1,7 @@
 # Paradise de referencia: entrada y cabecera
 
+Continuación del mismo perfil: [secciones interiores y música](PARADISE_REFERENCIA_INTERIOR.md). Este documento conserva la evidencia histórica del primer incremento; el nuevo documento registra su ampliación y verificación.
+
 Incremento del 22 de octubre de 2026. Referencia pública: [Paradise de Invitali](https://invitali.com/muestra-paradise/?n=2%20pases&m=Daniel%20Martinez). Se aplica la skill del proyecto `.agents/skills/enkarta-invitali-fidelity/SKILL.md` y la comparación previa [COMPARACION_VISUAL_INVITALI_PARADISE.md](COMPARACION_VISUAL_INVITALI_PARADISE.md).
 
 ## Alcance y aislamiento

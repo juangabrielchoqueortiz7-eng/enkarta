@@ -3,8 +3,8 @@ import ParadiseReference from '@/components/invitations/ParadiseReference';
 import { paradiseReferenceDemo } from '@/lib/paradise-reference';
 
 export const metadata: Metadata = {
-  title: { absolute: 'Paradise · estudio de entrada y cabecera — Enkarta' },
-  description: 'Muestra incremental de la entrada y cabecera de Paradise. El recorrido completo de la invitación todavía está en construcción.',
+  title: { absolute: 'Paradise · muestra independiente — Enkarta' },
+  description: 'Muestra independiente de Paradise con entrada, música, fotografías y secciones editables. La confirmación y los regalos de esta muestra son demostraciones sin envíos ni pagos.',
   robots: { index: false, follow: false },
   alternates: { canonical: '/muestra/paradise-referencia' },
 };

@@ -7,6 +7,7 @@ import React from 'react';
 // Legacy
 import EntryGate from '@/components/invitations/EntryGate';
 import { ParadiseReferenceEntry } from '@/components/invitations/ParadiseReference';
+import { ParadiseReferenceRsvpProvider } from '@/components/invitations/ParadiseReferenceRsvp';
 import BlockRenderer from '@/components/invitations/BlockRenderer';
 import FontScope from '@/components/invitations/FontScope';
 import SmartRsvp from '@/components/invitations/SmartRsvp';
@@ -236,10 +237,10 @@ export default async function InvitationPage({ params, searchParams }: Props) {
         <BlockRenderer layout={resolvedLayout!} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} guest={guest ?? undefined} demo={privatePreview} deadlinePassed={deadlinePassed} gated={entryEnabled} navigation={config.additionalServices?.navigation} locale={locale} />
       ) : (
         <PageMotionProvider value={config.motion} gated={entryEnabled || paradiseEntryEnabled}>
-          {templateEl}
+          {nativeParadiseReference ? <ParadiseReferenceRsvpProvider form={smartRsvp}>{templateEl}</ParadiseReferenceRsvpProvider> : templateEl}
         </PageMotionProvider>
       )}
-      {smartRsvp}
+      {!nativeParadiseReference && smartRsvp}
     </>
   );
 

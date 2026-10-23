@@ -286,14 +286,22 @@ export async function loadLottieById(id: string): Promise<any | null> {
 
 /** Load a Lottie JSON directly by path */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function loadLottieByPath(filePath: string): Promise<any | null> {
+export async function loadLottieByPath(filePath: string, options?: { fallback?: boolean }): Promise<any | null> {
   try {
     const res = await fetch(filePath);
     if (!res.ok) {
+      if (options?.fallback === false) return null;
       const ph = await fetch('/lottie/_placeholder.json');
       return ph.ok ? ph.json() : null;
     }
-    return res.json();
+    if (options?.fallback !== false) return res.json();
+    const json = await res.json();
+    // Reference profiles must never replace an absent/invalid original with a
+    // generic animation. The default contract remains unchanged for old callers.
+    if (!json || typeof json !== 'object' || typeof json.v !== 'string'
+      || !Array.isArray(json.layers) || !Number.isFinite(json.w) || json.w <= 0 || !Number.isFinite(json.h) || json.h <= 0
+      || !Number.isFinite(json.fr) || json.fr <= 0 || !Number.isFinite(json.ip) || !Number.isFinite(json.op) || json.op <= json.ip) return null;
+    return json;
   } catch {
     return null;
   }

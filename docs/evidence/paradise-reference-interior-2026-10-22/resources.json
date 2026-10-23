@@ -1,0 +1,377 @@
+{
+  "observedLocalDate": "2026-10-22",
+  "sourceSample": "https://invitali.com/muestra-paradise/?n=2%20pases&m=Daniel%20Martinez",
+  "sourceHtmlArchive": "tmp/guest-experience/invitali/muestra-paradise.html",
+  "baseline": {
+    "commit": "9505d9ac636aa3f8aff3d8fd78c06146b069d2a5",
+    "protectedResources": 137,
+    "allPreviousEntriesUnchanged": true
+  },
+  "protectedResources": 148,
+  "allProtectedHashesVerified": true,
+  "newlyProtectedExistingOriginal": {
+    "path": "/lottie/boda/invitali-sin-ninos-original.json",
+    "sha256": "1a1dc78dcffc96b4f1bca344c791d533cde5e4070780041b8384ff9a45f0c713",
+    "bytes": 31986
+  },
+  "newOriginals": [
+    {
+      "url": "https://invitali.com/wp-content/uploads/2025/09/Hotel-Sheraton-copia.webp",
+      "label": "Hotel Four Points · imagen de referencia",
+      "localPath": "/invitations/paradise-referencia/2025-09-Hotel-Sheraton-copia.webp",
+      "archiveFile": "Iconos INVITALI/2025-09-Hotel-Sheraton-copia.webp",
+      "sha256": "bb3547679e33301060b20f4e7a8e0a17e372c87ac2ebbf27d16289ee9558c60b",
+      "bytes": 77088,
+      "verifiedAt": "2026-10-23T00:32:47.735Z"
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/2025/09/Hotel-MAdison-copia.webp",
+      "label": "Hotel Madisson Inn · imagen de referencia",
+      "localPath": "/invitations/paradise-referencia/2025-09-Hotel-MAdison-copia.webp",
+      "archiveFile": "Iconos INVITALI/2025-09-Hotel-MAdison-copia.webp",
+      "sha256": "25cb4c9ac6eb75bba4c3fcfe19a421305f03dfd0c0c804086083323a7acfb819",
+      "bytes": 80680,
+      "verifiedAt": "2026-10-23T00:32:48.742Z"
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/2025/12/paradise-muestras3.webp",
+      "label": "Paradise · galería 1",
+      "localPath": "/invitations/paradise-referencia/2025-12-paradise-muestras3.webp",
+      "archiveFile": "Iconos INVITALI/2025-12-paradise-muestras3.webp",
+      "sha256": "3de7a8f7ad7b2a5c1f3779058669a6942155ba33efe7f7f3a1454dafeb352b06",
+      "bytes": 167832,
+      "verifiedAt": "2026-10-23T00:32:49.352Z"
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/2025/12/paradise-muestras6.webp",
+      "label": "Paradise · galería 2",
+      "localPath": "/invitations/paradise-referencia/2025-12-paradise-muestras6.webp",
+      "archiveFile": "Iconos INVITALI/2025-12-paradise-muestras6.webp",
+      "sha256": "e51ec2b7cec547287e77114880f7c02a2b954ce3777607c7069b62e3ca887118",
+      "bytes": 124032,
+      "verifiedAt": "2026-10-23T00:32:49.687Z"
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/2025/12/paradise-muestras5.webp",
+      "label": "Paradise · galería 3",
+      "localPath": "/invitations/paradise-referencia/2025-12-paradise-muestras5.webp",
+      "archiveFile": "Iconos INVITALI/2025-12-paradise-muestras5.webp",
+      "sha256": "2af96aeebdbe0a05100f0f8ba747689388f44599211a5cd6cff7e9aa9d0876f0",
+      "bytes": 147124,
+      "verifiedAt": "2026-10-23T00:32:49.994Z"
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/2025/12/muestras-PARADISE2.webp",
+      "label": "Paradise · cierre 1",
+      "localPath": "/invitations/paradise-referencia/2025-12-muestras-PARADISE2.webp",
+      "archiveFile": "Iconos INVITALI/2025-12-muestras-PARADISE2.webp",
+      "sha256": "e922ad3e07ad434393187feea46b62cafe46075c03417e0824cbce39cd2e2bd6",
+      "bytes": 233554,
+      "verifiedAt": "2026-10-23T00:32:50.330Z"
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/2025/12/muestras-PARADISE1.webp",
+      "label": "Paradise · cierre 2",
+      "localPath": "/invitations/paradise-referencia/2025-12-muestras-PARADISE1.webp",
+      "archiveFile": "Iconos INVITALI/2025-12-muestras-PARADISE1.webp",
+      "sha256": "aa35a3a19c9f9a2dea5900ba7f28dedf6c29ac2267cb9a7874bcbdb94201b959",
+      "bytes": 244722,
+      "verifiedAt": "2026-10-23T00:32:50.639Z"
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/2025/05/Ed-Sheran-Perfect-Violin.mp3",
+      "label": "Perfect · violín · original Paradise",
+      "localPath": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+      "archiveFile": "Iconos INVITALI/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+      "sha256": "3c620d851139ead919cb446cff2a646661325e50507d3cdfbf662cb75d0d8c8c",
+      "bytes": 1287764,
+      "verifiedAt": "2026-10-23T00:32:51.318Z"
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/2025/05/biblia.json",
+      "label": "Biblia · original Paradise",
+      "localPath": "/lottie/invitali-originales/2025-05-biblia.json",
+      "archiveFile": "Iconos INVITALI/2025-05-biblia.json",
+      "sha256": "1be4d70cbd1e4f91750801d8233bd1eb060528ee769fdb796167c4dad11ee8ea",
+      "bytes": 43964,
+      "verifiedAt": "2026-10-23T00:32:51.477Z"
+    },
+    {
+      "url": "https://invitali.com/wp-content/uploads/2025/06/Logo-Falabella-1024x400.webp",
+      "label": "Falabella · logo de muestra Paradise",
+      "localPath": "/invitations/paradise-referencia/2025-06-Logo-Falabella-1024x400.webp",
+      "archiveFile": "Iconos INVITALI/2025-06-Logo-Falabella-1024x400.webp",
+      "sha256": "8fbc34e6adba9ccda9c4dcd3d0c884738fd36842308619366c34be0056326458",
+      "bytes": 15394,
+      "verifiedAt": "2026-10-23T00:36:32.078Z"
+    }
+  ],
+  "reusedAndNewLottieInstances": [
+    {
+      "role": "music",
+      "url": "https://invitali.com/wp-content/uploads/2025/03/Animation-1741383787701.json",
+      "localPath": "/lottie/invitali-originales/2025-03-Animation-1741383787701.json",
+      "sha256": "780bbdcb6d01b95ae7e4419e213861de5ab1a65bbe626086214e91b0431bb840",
+      "bytes": 9090,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "bible",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/biblia.json",
+      "localPath": "/lottie/invitali-originales/2025-05-biblia.json",
+      "sha256": "1be4d70cbd1e4f91750801d8233bd1eb060528ee769fdb796167c4dad11ee8ea",
+      "bytes": 43964,
+      "reused": false,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": false,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "ceremony",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/17-Iglesia.json",
+      "localPath": "/lottie/invitali-originales/2025-05-17-Iglesia.json",
+      "sha256": "d9e2caf90581c9334287c43939960a5d19e88f36afdbb2b8d34517b915db2c42",
+      "bytes": 55545,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "civil",
+      "url": "https://invitali.com/wp-content/uploads/2025/07/boda.json",
+      "localPath": "/lottie/invitali-originales/2025-07-boda.json",
+      "sha256": "b27cad92bd0c63b72360565f524bfa7ced65a7dbdae7d39e125188bbb927e130",
+      "bytes": 16042,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "suit",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/chaqueta-de-sport.json",
+      "localPath": "/lottie/invitali-originales/2025-05-chaqueta-de-sport.json",
+      "sha256": "841f86c11edd3d2204e11952a475781e20db9bcfff36b7fada4802cc10d01989",
+      "bytes": 53811,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "dress",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/vestido-de-novia.json",
+      "localPath": "/lottie/invitali-originales/2025-05-vestido-de-novia.json",
+      "sha256": "8aaa58865b05cf356c2abf083abe97ea74f11d57a618d288a638bf9aed13c260",
+      "bytes": 20180,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "reception",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/11-recepcion-social.json",
+      "localPath": "/lottie/invitali-originales/2025-05-11-recepcion-social.json",
+      "sha256": "f042b1187185c12ed58ef9f6bd998e296fffc8ae535dc63d68707b31114a6dcb",
+      "bytes": 26282,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "dinner",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/14-Cena.json",
+      "localPath": "/lottie/invitali-originales/2025-05-14-Cena.json",
+      "sha256": "101e2409d75dff47c7355f46d05b766a14e9d5fd6ccc303516e6512e65d4d04a",
+      "bytes": 28947,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "farewell",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/23-adios-fin-de-fiesta-1.json",
+      "localPath": "/lottie/invitali-originales/2025-05-23-adios-fin-de-fiesta-1.json",
+      "sha256": "d5bf28fe2d71a49c8f358598ed956c83b7d5689f00dbfb979cac2e40f2164941",
+      "bytes": 19024,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "firstDance",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/vals.json",
+      "localPath": "/lottie/invitali-originales/2025-05-vals.json",
+      "sha256": "94a3c64ecd250b9e6d568d64d171622b5bbb9f37e7ed9c75baa7b877f890c1e3",
+      "bytes": 41765,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "dance",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/baile.json",
+      "localPath": "/lottie/invitali-originales/2025-05-baile.json",
+      "sha256": "2f67597c05d464dbf9728c0b4d8f0fde7c96b7adccfd507955e1d0a4cf5519e0",
+      "bytes": 43579,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "gift",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/37-regalo-1.json",
+      "localPath": "/lottie/invitali-originales/2025-05-37-regalo-1.json",
+      "sha256": "22d006cd8b7793ac1f0a2454fdf2cb7fed8a1fdd1230590c6722cc9238e1c0ba",
+      "bytes": 40403,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": false,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "adults",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/10-no-ninos.json",
+      "localPath": "/lottie/boda/invitali-sin-ninos-original.json",
+      "sha256": "1a1dc78dcffc96b4f1bca344c791d533cde5e4070780041b8384ff9a45f0c713",
+      "bytes": 31986,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    },
+    {
+      "role": "camera",
+      "url": "https://invitali.com/wp-content/uploads/2025/02/Animation-1740029697999.json",
+      "localPath": "/lottie/invitali-originales/2025-02-Animation-1740029697999.json",
+      "sha256": "248eb569d73481cc7e35e755f4854528edfbd0c9c8d17b8c8798f10d4e55514f",
+      "bytes": 42508,
+      "reused": true,
+      "declared": {
+        "loop": true,
+        "speed": 1,
+        "reverse": true,
+        "renderer": "svg",
+        "trigger": "arriving_to_viewport"
+      }
+    }
+  ],
+  "reversePlaybackSemantics": {
+    "source": "https://invitali.com/wp-content/plugins/elementor-pro/assets/js/elements-handlers.min.js?ver=4.3.0",
+    "sha256": "eaa8df312cfc2eeba8b360c9170f79931697e81280d8c42945f064c68b09f393",
+    "initialDirection": "forward",
+    "reverseAnimationYes": "alternate forward and backward on each completion",
+    "sourceMethods": [
+      "isReverseMode",
+      "setReverseAnimationOnLoop",
+      "playLottie"
+    ],
+    "evidenceKind": "source code inspected; not a frame timing measurement"
+  },
+  "music": {
+    "source": "https://invitali.com/wp-content/uploads/2025/05/Ed-Sheran-Perfect-Violin.mp3",
+    "durationSeconds": 214.529161,
+    "sampleRateHz": 44100,
+    "channels": 2,
+    "codec": "mp3",
+    "unchangedOriginal": true
+  },
+  "slideshowDeclarations": [
+    {
+      "id": "c978a43",
+      "images": [
+        "https://invitali.com/wp-content/uploads/2025/12/paradise-muestras3.webp",
+        "https://invitali.com/wp-content/uploads/2025/12/paradise-muestras6.webp",
+        "https://invitali.com/wp-content/uploads/2025/12/paradise-muestras5.webp"
+      ],
+      "intervalMs": 2000,
+      "transitionMs": 1000,
+      "transition": "fade",
+      "kenBurns": true,
+      "zoom": "in"
+    },
+    {
+      "id": "9ce4617",
+      "images": [
+        "https://invitali.com/wp-content/uploads/2025/12/muestras-PARADISE2.webp",
+        "https://invitali.com/wp-content/uploads/2025/12/muestras-PARADISE1.webp"
+      ],
+      "intervalMs": 2000,
+      "transitionMs": 1000,
+      "transition": "fade",
+      "kenBurns": false,
+      "zoom": null
+    }
+  ],
+  "excluded": [
+    "QR bancario de la referencia",
+    "formularios externos",
+    "logo comercial Invitali"
+  ],
+  "limits": [
+    "Los parámetros de Elementor son declaraciones archivadas, no certificación temporal o visual.",
+    "Los originales se conservan sin recodificar; cualquier color o tamaño corresponde a la instancia."
+  ]
+}
