@@ -1,0 +1,284 @@
+{
+  "version": 1,
+  "checkedAt": "2026-10-23T22:44:10.460Z",
+  "sourceSha": "662c03825fe879d56629e664f62ad796cf430e04",
+  "deploymentId": "dpl_3zYrHyhxmC3CF5j5SjRti9aprcAJ",
+  "ready": true,
+  "sample": "https://enkarta.vercel.app/muestra/capitulo",
+  "automated": {
+    "profile": 14,
+    "jsonPlayer": 6,
+    "envelope": 9,
+    "sectionIcons": 36,
+    "deploymentGuard": 5,
+    "total": 70,
+    "typeScript": true
+  },
+  "criticalFiles": 60,
+  "preservation": {
+    "originals": 169,
+    "unchangedFromCurrentBaseline": true,
+    "currentBaseline": "7e2225c56eab712f36ad9252d7ee13b421304e62",
+    "lockByteIdentical": true,
+    "generatedCapituloAndTravesiaBytesUnchanged": true,
+    "bcpDisabled": true
+  },
+  "production": {
+    "method": "read-only public GET",
+    "routes": [
+      {
+        "route": "/muestra/capitulo",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctRequiredOriginals": 12,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 2,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/capitulo?full=1",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctRequiredOriginals": 12,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/capitulo?preview=1",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctRequiredOriginals": 12,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/capitulo?full=1&n=50&m=QA%20Forged%20Family",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctRequiredOriginals": 12,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 0,
+        "autoplay": false
+      }
+    ],
+    "images": [
+      {
+        "path": "/invitations/capitulo/hero.webp",
+        "bytes": 202028,
+        "sha256": "63c15dc5760178cfa75a6b812557f41af1cadbee36f3605ab49864adae1abe9d",
+        "passed": true
+      },
+      {
+        "path": "/invitations/capitulo/detail.webp",
+        "bytes": 91706,
+        "sha256": "3c23b3d4af8adadbd68d0d23550be3679fec7714042b642fe8d489523a75fc04",
+        "passed": true
+      },
+      {
+        "path": "/invitations/capitulo/celebration.webp",
+        "bytes": 344052,
+        "sha256": "196c3dc353a888797a64854ff3d2e5d230173c63ddb5221dabd0bb33c9e63a7c",
+        "passed": true
+      }
+    ],
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "cleanupRequired": false
+  },
+  "visual": {
+    "closed": {
+      "audioPaused": true,
+      "audioTime": 0,
+      "buttons": 2,
+      "envelope": true,
+      "height": 844,
+      "width": 390
+    },
+    "opening": {
+      "flap": "matrix3d(1, 0, 0, 0, 0, -0.946792, 0.321846, 0, 0, -0.321846, -0.946792, 0, 0, 0, 0, 1)",
+      "phase": "opening"
+    },
+    "silent": {
+      "entry": false,
+      "focus": "H1",
+      "paused": true,
+      "time": 0
+    },
+    "mobile": {
+      "body": {
+        "align": "center",
+        "center": 192.27940559387207,
+        "columns": "none",
+        "direction": "row",
+        "font": "16px"
+      },
+      "borders": [
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ],
+      "counter": {
+        "align": "center",
+        "center": 192.27940559387207,
+        "columns": "none",
+        "direction": "row",
+        "font": "16px"
+      },
+      "date": {
+        "align": "center",
+        "center": 192.27940559387207,
+        "columns": "none",
+        "direction": "column",
+        "font": "16px"
+      },
+      "dateTop": 1512.3046875,
+      "familyIcons": [
+        "groom",
+        "groom"
+      ],
+      "height": 844,
+      "hour": {
+        "align": "center",
+        "center": 192.27940368652344,
+        "columns": "none",
+        "direction": "row",
+        "font": "15px"
+      },
+      "itinerary": {
+        "align": "center",
+        "center": 192.27940559387207,
+        "columns": "336.581px",
+        "direction": "row",
+        "font": "16px"
+      },
+      "overflow": false,
+      "rootCenter": 192.27940368652344,
+      "width": 390
+    },
+    "desktop": {
+      "gridColumns": "317.291px 317.291px 317.302px",
+      "height": 900,
+      "itineraryTop": 2560.064208984375,
+      "overflow": false,
+      "sections": [
+        {
+          "align": "center",
+          "section": "hero"
+        },
+        {
+          "align": "center",
+          "section": "welcome"
+        },
+        {
+          "align": "center",
+          "section": "date"
+        },
+        {
+          "align": "center",
+          "section": "story"
+        },
+        {
+          "align": "center",
+          "section": "parents"
+        },
+        {
+          "align": "center",
+          "section": "celebration"
+        },
+        {
+          "align": "center",
+          "section": "itinerary"
+        },
+        {
+          "align": "center",
+          "section": "venues"
+        },
+        {
+          "align": "center",
+          "section": "adults"
+        },
+        {
+          "align": "center",
+          "section": "gallery"
+        },
+        {
+          "align": "center",
+          "section": "sharing"
+        },
+        {
+          "align": "center",
+          "section": "rsvp"
+        },
+        {
+          "align": "center",
+          "section": "gifts"
+        }
+      ],
+      "width": 1440
+    },
+    "musicPlays": {
+      "paused": false,
+      "ready": 4,
+      "time": 8.997961
+    },
+    "musicPauses": {
+      "paused": true,
+      "time": 9.027448
+    },
+    "families": [
+      {
+        "role": "groom",
+        "src": "/lottie/invitali-originales/2025-05-marido.json",
+        "state": "ready"
+      },
+      {
+        "role": "groom",
+        "src": "/lottie/invitali-originales/2025-05-marido.json",
+        "state": "ready"
+      }
+    ],
+    "consoleErrorsObserved": 0,
+    "physicalDeviceTest": false,
+    "screenshots": [
+      {
+        "file": "tmp/capitulo-centered-20261023/visual/production-desktop-clean-itinerary.png",
+        "bytes": 59702,
+        "sha256": "56e419677c9f639029b123f69f64dccf27a7438b6df3fe6203fa628f86cfe161"
+      },
+      {
+        "file": "tmp/capitulo-centered-20261023/visual/production-desktop-envelope.png",
+        "bytes": 35783,
+        "sha256": "f527ed739b5457a267215a61b03edaf066547a7e9b8c1f15a531cddc3408038d"
+      },
+      {
+        "file": "tmp/capitulo-centered-20261023/visual/production-desktop-families.png",
+        "bytes": 142444,
+        "sha256": "c033956259d8a18253473cb7659c6b45ca8a681f2183c09107d9138ffa6f68cd"
+      },
+      {
+        "file": "tmp/capitulo-centered-20261023/visual/production-mobile-centered-date.png",
+        "bytes": 37700,
+        "sha256": "6c5bc4d830c222590f72e05bef1a88c7bcbc60d6a55e98405c0a327783ac678d"
+      },
+      {
+        "file": "tmp/capitulo-centered-20261023/visual/production-mobile-envelope.png",
+        "bytes": 22895,
+        "sha256": "1e2b8345d15baa78ac4e4c4289b408f67c1532a30f42eff307f46d0ee165f0e1"
+      }
+    ]
+  }
+}
