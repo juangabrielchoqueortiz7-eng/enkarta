@@ -22,6 +22,7 @@ for (const name of ['PublishedTemplate', 'EntryGate', 'BlockRenderer', 'FontScop
 }
 replace(source('components/invitations/ParadiseReference.tsx'), { __esModule: true, default: fakeComponent('ParadiseReference'), ParadiseReferenceEntry: fakeComponent('ParadiseReferenceEntry') });
 replace(source('components/invitations/ParadiseReferenceRsvp.tsx'), { __esModule: true, default: fakeComponent('ParadiseReferenceRsvp'), ParadiseReferenceRsvpProvider: fakeComponent('ParadiseReferenceRsvpProvider') });
+replace(source('components/invitations/AzureReference.tsx'), { __esModule: true, default: fakeComponent('AzureReference'), AzureReferenceEntry: fakeComponent('AzureReferenceEntry'), AzureReferenceRsvpProvider: fakeComponent('AzureReferenceRsvpProvider') });
 replace(source('lib/scroll-motion.tsx'), { PageMotionProvider: fakeComponent('PageMotionProvider') });
 replace('next/navigation', { notFound() { throw new Error('NEXT_NOT_FOUND'); } });
 replace('next/headers', { async headers() { headerReads++; return new Headers({ host: 'attacker.example', 'x-forwarded-host': 'attacker.example' }); } });
@@ -192,6 +193,59 @@ test('a cinematic override delegates entry once while Paradise retains the autho
   assert.equal(componentNodes(result, 'ParadiseReferenceEntry').length, 0);
   assert.equal(componentNodes(result, 'PublishedTemplate')[0].props.skipEntry, true, 'The native envelope is explicitly bypassed while the cinematic entry runs');
   const providers = componentNodes(result, 'ParadiseReferenceRsvpProvider'); assert.equal(providers.length, 1);
+  assert.equal(componentNodes(providers[0].props.form, 'SmartRsvp').length, 1);
+  assert.equal(componentNodes(result, 'SmartRsvp').length, 0);
+  assert.equal(componentNodes(entries[0].props.children, 'PageMotionProvider')[0].props.gated, true);
+});
+
+test('the Azure reference transports only its verified RSVP form into its native interior under one entry', async () => {
+  snapshot.template = 'azure';
+  snapshot.config = { designKey: 'azure-referencia', entry: { enabled: true } };
+  features = { guestNames: true, smartRsvp: true, passes: true, entry: true, music: false };
+  guest = { id: 'qa-guest', publicId: 'TEST0001', name: 'QA Verified Family', passes: 2, allowKids: true };
+  for (const full of [undefined, '1']) {
+    const result = await page.default(props({ g: 'TEST0001', full }));
+    assert.equal(componentNodes(result, 'EntryGate').length, 0, 'The shared gate cannot cover the native envelope');
+    const template = componentNodes(result, 'PublishedTemplate'); assert.equal(template.length, 1);
+    assert.equal(template[0].props.invitation.config.designKey, 'azure-referencia');
+    assert.equal(template[0].props.skipEntry, true, 'The template does not mount a second envelope inside the server wrapper');
+    const providers = componentNodes(result, 'AzureReferenceRsvpProvider'); assert.equal(providers.length, 1);
+    const forms = componentNodes(providers[0].props.form, 'SmartRsvp'); assert.equal(forms.length, 1);
+    assert.equal(forms[0].props.slug, row.slug); assert.equal(forms[0].props.viewport, 'both');
+    assert.equal(forms[0].props.guestName, 'QA Verified Family'); assert.equal(forms[0].props.maxPasses, 2); assert.equal(forms[0].props.publicId, 'TEST0001');
+    assert.equal(componentNodes(result, 'SmartRsvp').length, 0, 'There is no duplicate external form after the native closing section');
+    assert.equal(componentNodes(providers[0].props.children, 'PublishedTemplate').length, 1);
+    assert.equal(componentNodes(result, 'PageMotionProvider')[0].props.gated, full !== '1');
+    const entries = componentNodes(result, 'AzureReferenceEntry'); assert.equal(entries.length, full === '1' ? 0 : 1);
+    if (full !== '1') {
+      assert.equal(componentNodes(entries[0].props.children, 'PublishedTemplate').length, 1);
+      assert.equal(componentNodes(entries[0].props.children, 'SmartRsvp').length, 0, 'The form is supplied by context to the interior, never exposed as an entry sibling');
+    }
+  }
+  snapshot.config.entry.enabled = false;
+  assert.equal(componentNodes(await page.default(props()), 'AzureReferenceEntry').length, 0);
+  snapshot.config.entry = {};
+  features.entry = false;
+  const unavailable = await page.default(props());
+  assert.equal(componentNodes(unavailable, 'AzureReferenceEntry').length, 0, 'An omitted toggle follows the entry entitlement');
+  assert.equal(componentNodes(unavailable, 'PublishedTemplate')[0].props.skipEntry, true);
+  assert.equal(componentNodes(componentNodes(unavailable, 'AzureReferenceRsvpProvider')[0].props.form, 'SmartRsvp').length, 1);
+  assert.equal(componentNodes(unavailable, 'PageMotionProvider')[0].props.gated, false);
+  features.smartRsvp = false;
+  const uncontracted = await page.default(props());
+  assert.equal(componentNodes(uncontracted, 'SmartRsvp').length, 0, 'The new visual profile does not grant uncontracted RSVP');
+  assert.equal(componentNodes(uncontracted, 'AzureReferenceRsvpProvider')[0].props.form, null);
+});
+
+test('a cinematic override delegates entry once while Azure retains the authorized form in its interior context', async () => {
+  snapshot.template = 'azure';
+  snapshot.config = { designKey: 'azure-referencia', entry: { enabled: true, style: 'cinematic', videoUrl: '/qa-original-entry.mp4' } };
+  features = { guestNames: true, smartRsvp: true, passes: true, entry: true, music: false };
+  const result = await page.default(props()), entries = componentNodes(result, 'EntryGate');
+  assert.equal(entries.length, 1); assert.equal(entries[0].props.scene, 'cinematic'); assert.equal(entries[0].props.entryVideoUrl, '/qa-original-entry.mp4');
+  assert.equal(componentNodes(result, 'AzureReferenceEntry').length, 0);
+  assert.equal(componentNodes(result, 'PublishedTemplate')[0].props.skipEntry, true, 'The native envelope is explicitly bypassed while the cinematic entry runs');
+  const providers = componentNodes(result, 'AzureReferenceRsvpProvider'); assert.equal(providers.length, 1);
   assert.equal(componentNodes(providers[0].props.form, 'SmartRsvp').length, 1);
   assert.equal(componentNodes(result, 'SmartRsvp').length, 0);
   assert.equal(componentNodes(entries[0].props.children, 'PageMotionProvider')[0].props.gated, true);

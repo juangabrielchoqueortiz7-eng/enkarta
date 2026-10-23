@@ -17,6 +17,11 @@
       "bytes": 1287764
     },
     {
+      "path": "/audio/invitali-originales/2025-07-Kenny-G-Forever-In-Love-Offiical-Video.mp3",
+      "sha256": "e1bfe0a671f050f18ae7d15585fc37dd0c79859fb38650c95f2edaff06f5ef19",
+      "bytes": 5947905
+    },
+    {
       "path": "/audio/invitali-originales/2026-01-JVKE-golden-hour-Traducida-al-Espanol-Lyrics-Infinite-Letters.mp3",
       "sha256": "442598b3e7ab0346e01639acccba190f229b42be653d07db11df8bbc4819f3e2",
       "bytes": 8388615
@@ -35,6 +40,81 @@
       "path": "/audio/invitali-originales/2026-04-Viva-la-Vida-Instrumental-Violin-La-Vid-Violin.mp3",
       "sha256": "b1b6d878a2761a3d9a837dd7608c1f6afedc0c61d4dffd832c95bed80ffbeace",
       "bytes": 3622846
+    },
+    {
+      "path": "/invitations/azure-referencia/2024-04-ROBERTORecurso-10oro.svg",
+      "sha256": "9905abd9dc8a4d9d14483cbf24cbf83aa515fd73ec0093b76e895026c7ddbbf2",
+      "bytes": 1789
+    },
+    {
+      "path": "/invitations/azure-referencia/2024-04-ROBERTORecurso-11oro.svg",
+      "sha256": "211dfd31bea68c77b3b167254fbc3b261873ddde920ffcc31f0caabc4f8a5023",
+      "bytes": 1812
+    },
+    {
+      "path": "/invitations/azure-referencia/2025-03-Fondo-hojas-Azul.webp",
+      "sha256": "1c93ef31a3aa156be839e7597bd4b3eb066235231dbbd601b8e0417204a62329",
+      "bytes": 310012
+    },
+    {
+      "path": "/invitations/azure-referencia/2025-06-Recurso-1logo-laura-y-mateo.svg",
+      "sha256": "6e80f1b48964247656a91df011f453669de9fe81995a2298bb91c5752cac4224",
+      "bytes": 3795
+    },
+    {
+      "path": "/invitations/azure-referencia/2025-07-Diente-de-leon-azul.png",
+      "sha256": "3264724ab3e17c24e20b8fdc5766d1b005b7fd852af3fa8296192c9e9daf8e1f",
+      "bytes": 6850
+    },
+    {
+      "path": "/invitations/azure-referencia/2025-07-Recurso-1ORQUIDEAS-SKETCH.webp",
+      "sha256": "db69b12b682c227db97e16e3610444020011c7fbec6542e3d76059965e83734f",
+      "bytes": 70832
+    },
+    {
+      "path": "/invitations/azure-referencia/2025-07-Recurso-2ORQUIDEAS-SKETCH.webp",
+      "sha256": "b286ef513771a7b58528510a760e68dfd5494922757090a13345dcbc8c6508a1",
+      "bytes": 47974
+    },
+    {
+      "path": "/invitations/azure-referencia/2025-07-Recurso-3iconos.svg",
+      "sha256": "fe54a3d81621fd808ed9538ec375d71d2328c6a9f04e1e3c334b87ffdcce5b13",
+      "bytes": 9168
+    },
+    {
+      "path": "/invitations/azure-referencia/2025-07-Recurso-3ORQUIDEAS-SKETCH-2.webp",
+      "sha256": "4108020144e10aa987bcbac8ff7ce28995ca510735fedecd4b7c9ffb21d52514",
+      "bytes": 40826
+    },
+    {
+      "path": "/invitations/azure-referencia/2025-07-Recurso-4Adornos-orquideas-trazos-flores-copia.webp",
+      "sha256": "ad60d161653c57d8e71064084bf2de8a302a6774c347c410e6ea54c48e69d6f1",
+      "bytes": 59594
+    },
+    {
+      "path": "/invitations/azure-referencia/2025-07-Recurso-4aro-anillo-trazos.svg",
+      "sha256": "e9e96412018579c39d3460b86d27d658b62700d72a000ee9917dd551a83874f7",
+      "bytes": 44099
+    },
+    {
+      "path": "/invitations/azure-referencia/2025-07-Recurso-4iconos.svg",
+      "sha256": "954ee512f7b333b9a44bcca7eb26d2886ba8aa1fd5c98831ce9182c0e7d3f2b9",
+      "bytes": 10448
+    },
+    {
+      "path": "/invitations/azure-referencia/2025-07-Recurso-6ico-cam.svg",
+      "sha256": "494c9e00d09174155ffa196ab091f71739511e74b6e454f3b949c2c7cf47a451",
+      "bytes": 1979
+    },
+    {
+      "path": "/invitations/azure-referencia/2026-10-abhayalibre-e3tmeugtx-co5mnzeaoqineqfenx.woff2",
+      "sha256": "4c36e530004dc8118872aedf92281acfdfa3ac8aa6a277324237603201367b6f",
+      "bytes": 21232
+    },
+    {
+      "path": "/invitations/azure-referencia/2026-10-opensans-memvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTS-mu0SC55I.woff2",
+      "sha256": "94a23e7f96fbde62943e5fc93c59212f68a57d2587fe51f056d20ce802e8249c",
+      "bytes": 43068
     },
     {
       "path": "/invitations/karla-y-mauricio/adorno-orquideas-sketch-nude-1.webp",
@@ -110,6 +190,16 @@
       "path": "/invitations/laura-andres/poiretone-uqyvk80njxn4zfrgbdfbo55cvw.woff2",
       "sha256": "a6361b9b4bd84cd02407a4674e0158642a51d5f968f0366adf8a19302bec6c0c",
       "bytes": 7824
+    },
+    {
+      "path": "/invitations/laura-andres/raleway-1ptug8zys_skggpnyc0itw.woff2",
+      "sha256": "b1bef1f03a77a36fc257c5525e32a1dd621bb6f935b743a419da7ed0b18dc8f5",
+      "bytes": 48264
+    },
+    {
+      "path": "/invitations/laura-andres/Romantic-Lovely.ttf",
+      "sha256": "bdd87ffc355a252fe9b334a4214135337df346843f4e7274932162516a0125a7",
+      "bytes": 131448
     },
     {
       "path": "/invitations/laura-andres/SELLO-VERDE-copia_2.webp",
