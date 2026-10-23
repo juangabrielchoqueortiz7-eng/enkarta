@@ -1,0 +1,10 @@
+{
+  "deploymentId": "dpl_5D8uRqjKD9RKoNifth1cvSsSv1AE",
+  "sourceSha": "38c8e1fc1bbcbe8a73f9ff95aab6883fdeee6229",
+  "checked": 148,
+  "protectedOriginalsMatchUploadedBytes": true,
+  "verdealmaUnchanged": true,
+  "bcpAdapterUnchangedAndBlocked": true,
+  "starterResourcesUnchanged": true,
+  "method": "Vercel uploaded-file SHA-1 identities compared to release bytes and archived SHA-256 lock"
+}

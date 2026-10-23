@@ -86,3 +86,16 @@ La instalación del proyecto usa la ubicación de descubrimiento `.agents/skills
 Tras reiniciar la aplicación, el navegador integrado quedó operativo. La limitación descrita en el estudio inicial ya no impide inspeccionar las muestras públicas. Se compararon Paradise de Invitali y Verdealma de Enkarta a 390 × 844 y 1440 × 900, con capturas de entrada y regiones abiertas, estilos computados y registro de diferencias. El resultado está en [COMPARACION_VISUAL_INVITALI_PARADISE.md](COMPARACION_VISUAL_INVITALI_PARADISE.md).
 
 La evidencia confirma que la variante actual difiere en entrada, geometría, fuentes, fondos, fotografías, iconos, cronograma y hospedaje. No se modificaron sus recursos ni se certificaron las demás variantes. Una futura reproducción requiere un perfil independiente y verificación de recursos por URL/hash. No se midieron Core Web Vitals ni se certificó equivalencia temporal de animaciones o archivos tipográficos cargados.
+
+## Verificación proporcional para las siguientes invitaciones
+
+Preferencia acordada con el usuario: agrupar ajustes visuales para avanzar con más rapidez, conservando comprobaciones útiles.
+
+- Cambios limitados al CSS o composición de una variante: ejecutar sus regresiones relacionadas y una revisión conjunta de las regiones afectadas en móvil y escritorio. La compilación del despliegue valida la entrega final.
+- Reservar la batería completa para cambios en lógica compartida, permisos, publicación, pagos, persistencia o comportamiento transversal. No repetirla para cada ajuste de espaciado.
+- Un solo lote de correcciones y una confirmación final. Abrir otro ciclo únicamente ante un defecto material, no para seguir puliendo diferencias insignificantes.
+- Usar las muestras ficticias existentes para revisar apariencia. Crear eventos en producción cuando sea necesario comprobar escrituras o flujos de negocio; en ese caso mantener la limpieza del fixture exacto.
+- Conservar recursos por hash y comprobar los archivos de la entrega. Descargar o volver a probar todos los medios solo cuando cambien su distribución, identidad o disponibilidad.
+- Verificar los Lottie ya cargados: su caja provisional de carga puede tener una altura distinta del dibujo original. Las pruebas visuales deben exigir los SVG reales y controles visibles, sin aceptar marcadores vacíos como resultado correcto.
+
+El verificador `scripts/paradise-visual-check.cjs` se ejecuta contra medidas reales obtenidas con el navegador autorizado. No sustituye una referencia de otra invitación ni obliga a copiar sus dimensiones. BCP permanece bloqueado y cada diseño conserva su identidad.
