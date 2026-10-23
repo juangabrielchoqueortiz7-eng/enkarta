@@ -2,7 +2,7 @@
 
 Trabajo del 22 de octubre de 2026. Variante independiente: `config.designKey = 'paradise-referencia'`, sobre la plantilla SQL `paradise`. La variante anterior `paradise` / Verdealma conserva su componente, datos iniciales y recursos. Este incremento continúa la [entrada y cabecera](PARADISE_REFERENCIA_ENTRADA_CABECERA.md); no convierte las demás variantes al aspecto de Invitali.
 
-**Estado de esta entrega documental: implementación y comprobaciones locales en curso; despliegue, pruebas con datos ficticios y limpieza en producción pendientes.** La existencia de este documento no acredita que la versión nueva esté desplegada.
+**Estado: desplegado y verificado en producción, con prueba ficticia y limpieza confirmadas.** Código principal `ab0f06daedc5f9e0fe75919a052e2d608f0f3a8e`; corrección final del control de galería `0b6346d2ac5b58ad4517e4f95947de0b56b0e539`. El dominio `enkarta.vercel.app` se comprobó por separado contra el despliegue Ready `dpl_7aGorfPM4TyeH85dfcfoWyWidhRd`.
 
 ## Alcance implementado
 
@@ -67,10 +67,30 @@ Su estado inicial es `animationDirection: "forward"`; `setReverseAnimationOnLoop
 
 Los carruseles y Lottie disponen de limpieza al desmontar y de política de visibilidad, movimiento reducido y ahorro de datos. Los carruseles ofrecen controles manuales y pausa. La música empieza mediante un gesto del usuario y debe conservar una pausa posterior aunque una promesa de reproducción anterior termine tarde; no se trata un intento de reproducción como éxito confirmado.
 
-## Comprobaciones y cierre pendiente
+## Verificación y cierre
 
 El importador aprobó sus **27 pruebas de regresión**, incluidos los casos de destinos distintos, formatos engañosos, recorridos de ruta y enlaces que intentan salir de las carpetas autorizadas. La segunda importación de imágenes no modificó ningún recurso ya distribuido. La conservación de los 148 archivos se comprobó por hash y tamaño.
 
-La revisión independiente del código señaló tres puntos para resolver antes del cierre: selectores CSS que aún esperaban un `div` donde el icono renderiza `span`; el cargador genérico que podía mostrar un Lottie de sustitución si faltaba un original; y el calendario nativo sin condición del contrato. También se identificó la semántica real de reproducción alternada de Elementor. Sus correcciones y regresiones deben quedar incluidas en la verificación final.
+La revisión independiente detectó y permitió corregir selectores CSS que esperaban un `div` donde el icono renderiza `span`, la posibilidad de mostrar un Lottie de sustitución cuando faltara un original y el calendario nativo sin condición del contrato. También se corrigió la semántica real de reproducción alternada de Elementor. Las regresiones correspondientes quedaron incluidas.
 
-Todavía corresponde registrar en esta entrega el resultado definitivo de la batería automática, el despliegue de producción, la comparación renderizada por región en computadora y tamaño móvil, la prueba con datos ficticios y su limpieza. Hasta ese cierre no se declara equivalencia visual completa ni se acredita esta implementación en producción. La emulación de un viewport tampoco sustituye una aceptación física de audio en Android o iOS.
+`npm run verify` aprobó **2.087 pruebas Node y 27 comprobaciones del importador: 2.114 en total**, además de lint, tipos y compilación. Entre las nuevas regresiones hay 35 casos de interiores, calendario, carruseles, música y edición, y ocho del reproductor de originales. También se comprobaron el formulario autorizado y los comportamientos existentes de entrada y publicación. Tras la corrección exclusivamente CSS del control de galería, se repitieron sus 35 casos relacionados y Vercel volvió a compilar la entrega final sin errores. El script completo corresponde al commit principal; la corrección posterior tiene además comprobación de interacción en navegador.
+
+Se comparó la referencia renderizada y Enkarta a **1.440 × 900** y **390 × 844**. Se revisaron introducción, versículo, galería, lugares, cronograma, regalos, hospedaje, asistencia y cierre. La composición conserva fuentes, fondos y originales de la muestra. Como comprobación geométrica, el cronograma de escritorio mide 1.140,98 px frente a 1.140,97 px observados en la referencia; esta coincidencia aislada no certifica igualdad global de píxeles.
+
+La revisión móvil detectó que el arco recortaba el control adicional «Pausar». La entrega final lo centra dentro de la parte curva y mantiene un mínimo CSS de 44 px de alto. Una comprobación de cinco puntos de interacción confirmó que todo el control es alcanzable, sin desbordamiento horizontal. La música original comenzó desde el gesto «Ver invitación», alcanzó `readyState = 4`, duración 214,529161 segundos, y respondió a la pausa. La navegación manual de hospedaje conservó la asociación entre la segunda imagen y «Madisson Inn hotel & Luxury suites».
+
+Las pruebas HTTP en producción comprobaron:
+
+- Creación de un único borrador ficticio por ejecución, guardado CAS y persistencia de los textos, fotos, títulos, pies, hoteles y música configurados.
+- Publicación de la instantánea, entrada y acceso completo; un solo formulario RSVP autorizado situado antes del cierre.
+- Cambios posteriores de borrador que permanecen privados; la vista pública conserva fotos, música y textos publicados.
+- Vista privada del administrador con los nuevos valores y rechazo 401 de la API del editor sin sesión.
+- Limpieza de cada copia ficticia, cero registros asociados en nueve tablas, respuestas 404 de sus tres vistas y cierre de la sesión de prueba.
+
+La primera ejecución falló en una expectativa del script: una pista vacía en `/i` utiliza Pista 1 por una política anterior del producto. Se confirmó contra el SSR real, se conservó la evidencia y se corrigió exclusivamente la expectativa QA. Su copia quedó limpia antes de preparar una segunda con otro identificador. La segunda ejecución aprobó todas las comprobaciones y también terminó limpia. No se crearon cuentas, invitados, archivos, mensajes ni pagos.
+
+La publicación final se contrastó con **23 archivos críticos del commit**. Se volvió a descargar por GET cada uno de los **148 originales protegidos**, comparando tamaño y SHA-256, con resultado correcto. El comprobador histórico cubría 147 registros de los manifiestos; el original heredado de Solo adultos se verificó además contra el registro completo de distribución, sin inferir su estado remoto a partir del archivo local.
+
+Evidencia de cierre: [acceptance.json](evidence/paradise-reference-interior-2026-10-22/acceptance.json), [source-attestation.json](evidence/paradise-reference-interior-2026-10-22/source-attestation.json), [originals-production.json](evidence/paradise-reference-interior-2026-10-22/originals-production.json) y [CAPTURAS.md](evidence/paradise-reference-interior-2026-10-22/CAPTURAS.md).
+
+**Límite de aceptación:** la revisión por regiones y los parámetros de la fuente no certifican identidad visual global ni equivalencia temporal medida. La emulación de un viewport no sustituye una aceptación física de audio en Android o iOS. Los controles accesibles, RSVP, enlaces, datos de regalo ficticios y pie comercial propios de Enkarta son diferencias deliberadas. Esta entrega no incorpora la variante a las opciones comerciales de Socios como un producto terminado. Verdealma permanece intacta y BCP desactivado.

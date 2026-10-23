@@ -1,0 +1,81 @@
+{
+  "checkedAt": "2026-10-23T01:25:31.531Z",
+  "sourceSha": "0b6346d2ac5b58ad4517e4f95947de0b56b0e539",
+  "deploymentId": "dpl_7aGorfPM4TyeH85dfcfoWyWidhRd",
+  "canonicalOrigin": "https://enkarta.vercel.app",
+  "ready": true,
+  "automatedVerification": {
+    "nodeTests": 2087,
+    "importerAssertions": 27,
+    "total": 2114,
+    "fullVerificationCommit": "ab0f06daedc5f9e0fe75919a052e2d608f0f3a8e",
+    "lint": "passed",
+    "typecheck": "passed",
+    "build": "passed",
+    "finalCssFollowup": {
+      "relatedTests": 35,
+      "passed": true,
+      "vercelBuild": "passed",
+      "browserControlProbe": "passed"
+    }
+  },
+  "productionChecks": {
+    "privatePreviewAndAnonymousDraftClosed": true,
+    "interiorFieldsSavedByCas": true,
+    "publicInteriorMusicAndEntry": true,
+    "publishedSnapshotNoDraftLeak": true,
+    "ownerSeesPrivateDraft": true,
+    "anonymousBuilderDenied": true
+  },
+  "verificationPassed": true,
+  "cleanupVerified": true,
+  "cleanupRows": {
+    "invitations": 0,
+    "builder_versions": 0,
+    "builder_review_notes": 0,
+    "invitation_analytics_events": 0,
+    "guests": 0,
+    "rsvps": 0,
+    "invitation_validity_events": 0,
+    "save_date_responses": 0,
+    "guest_import_requests": 0
+  },
+  "cleanupConfirmedAt": "2026-10-23T01:17:37.974Z",
+  "sessionCookie": "cleared",
+  "earlierRun": {
+    "reason": "QA expected no audio for an empty track; existing route policy provides Pista 1",
+    "productChangeForThisExpectation": false,
+    "cleanupVerified": true,
+    "cleanupRows": {
+      "invitations": 0,
+      "builder_versions": 0,
+      "builder_review_notes": 0,
+      "invitation_analytics_events": 0,
+      "guests": 0,
+      "rsvps": 0,
+      "invitation_validity_events": 0,
+      "save_date_responses": 0,
+      "guest_import_requests": 0
+    },
+    "sessionCookie": "cleared"
+  },
+  "originalsChecked": 148,
+  "originalHashesMatch": true,
+  "operations": {
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "mediaWrites": 0,
+    "guestWrites": 0,
+    "accountWrites": 0,
+    "paymentWrites": 0
+  },
+  "protected": {
+    "bcpEnabled": false,
+    "verdealmaChanged": false,
+    "previousOriginalsChanged": 0
+  },
+  "limitations": [
+    "No physical Android or iOS audio acceptance in this run.",
+    "Visual region checks do not certify global pixel identity or measured temporal equivalence."
+  ]
+}

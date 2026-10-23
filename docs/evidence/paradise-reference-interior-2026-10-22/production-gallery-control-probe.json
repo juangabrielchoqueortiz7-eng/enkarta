@@ -1,0 +1,44 @@
+{
+  "allReachable": true,
+  "button": {
+    "height": 43.991268157958984,
+    "text": "Reanudar",
+    "width": 79.77941131591797,
+    "x": 147.96644592285156,
+    "y": 400.1378479003906
+  },
+  "overflow": false,
+  "points": [
+    {
+      "reachable": true,
+      "x": 0.5,
+      "y": 0.5
+    },
+    {
+      "reachable": true,
+      "x": 0.25,
+      "y": 0.25
+    },
+    {
+      "reachable": true,
+      "x": 0.75,
+      "y": 0.25
+    },
+    {
+      "reachable": true,
+      "x": 0.25,
+      "y": 0.75
+    },
+    {
+      "reachable": true,
+      "x": 0.75,
+      "y": 0.75
+    }
+  ],
+  "viewport": {
+    "height": 844,
+    "width": 390
+  },
+  "computedMinHeight": "44px",
+  "roundingTolerancePx": 0.05
+}
