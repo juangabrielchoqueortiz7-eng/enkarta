@@ -4,11 +4,11 @@ Variante independiente sobre la familia SQL `primicia`, con `config.designKey = 
 
 ## Dirección de esta edición
 
-Una invitación como edición especial de una historia compartida: papel `#f8f7f3`, tinta `#242825`, piedra `#e4e1d9` y acento `#8c453b`. Baskervville y Raleway se sirven desde los archivos locales existentes. La entrada divide texto y fotografía en escritorio; en móvil, la fotografía cierra la pantalla. La portada organiza cabecera editorial, fecha, nombres y una fotografía junto al mensaje de apertura. Las reglas finas y dobles pertenecen a esta edición, sin trasladarse al portal.
+Una invitación como edición especial de una historia compartida: papel `#f8f7f3`, tinta `#242825`, piedra `#e4e1d9` y acento `#8c453b`. Baskervville y Raleway se sirven desde los archivos locales existentes. La revisión del usuario incorpora un sobre de papel con solapa, sello tipográfico y carta, y centra la composición. La portada conserva cabecera editorial, fecha, nombres y fotografía. El itinerario prescinde de líneas divisorias; las reglas de la cabecera pertenecen únicamente a esta edición.
 
 Recorrido: portada → bienvenida → invitado verificado, si existe → fecha y cuenta regresiva → historia → familias → celebración → itinerario y vestimenta → lugares → adultos, si se configura → galería de la pareja → fotografías compartidas → RSVP → regalos, solo con datos del anfitrión → Enkarta.
 
-La apertura dura 650 ms, o es inmediata con movimiento reducido. Conserva foco, límite inerte y bloqueo de scroll únicamente mientras la entrada está cerrada. El RSVP recibe el formulario autorizado por el servidor; los parámetros libres de nombre o cupos no autorizan invitaciones. La muestra explica que no envía confirmaciones.
+La apertura del sobre dura 800 ms, o es inmediata con movimiento reducido o ahorro de datos. Conserva foco, límite inerte y bloqueo de scroll únicamente mientras la entrada está cerrada. El RSVP recibe el formulario autorizado por el servidor; los parámetros libres de nombre o cupos no autorizan invitaciones. La muestra explica que no envía confirmaciones.
 
 Se omite una ronda de alternativas porque el usuario ya eligió continuar con otra referencia, con recursos nuevos y variantes independientes. El cierre usa una inspección agrupada móvil/escritorio, pruebas pertinentes y un único despliegue.
 
@@ -24,7 +24,7 @@ Los campos existentes editan nombres, fecha, familias, lugares e itinerario. Fot
 
 `premiumFor()` resuelve Capítulo antes que Primicia. La ruta pública monta una sola entrada y un único RSVP interior; la variante cinematográfica mantiene la entrada compartida. La vista previa utiliza la acción de muestra sin duplicar el formulario exterior.
 
-No se selecciona música automáticamente, tampoco en la página pública. Una pista elegida se reproduce con el controlador existente y el permiso del paquete. Las otras variantes conservan su fallback musical. BCP permanece bloqueado y no hay cuentas o QR bancarios de muestra.
+Los nuevos borradores y la muestra incluyen Perfect · violín, ya archivada. La página pública conserva la pista configurada; vaciarla mantiene el silencio. El audio comienza al abrir con música o al usar su control. «Abrir sin música» y Escape abren el sobre en silencio. Las otras variantes conservan su comportamiento musical. BCP permanece bloqueado y no hay cuentas o QR bancarios de muestra.
 
 La ruta independiente es `/muestra/capitulo`, sin indexación. `?full=1` omite la entrada. Esta entrega no añade la variante al catálogo comercial ni al selector de Socios y no requiere migración SQL.
 
@@ -64,3 +64,15 @@ Código `82e970789b48825ec028d05685a3382d05e51394`, despliegue Ready `dpl_6t25AZ
 Cuatro modos públicos pasaron la comprobación HTTP: entrada, muestra completa, preview y parámetros falsificados. Los tres nuevos JSON y las tres fotografías devolvieron sus hashes previstos. El navegador de producción confirmó las 15 instancias Lottie listas con SVG, los seis pasos del itinerario y un cambio real de cuadro del vals. Escritorio y móvil no presentaron desbordamiento; el carrusel avanzó a 2/3 con su leyenda asociada y el RSVP de muestra informó que no envió confirmación. No se observaron errores de consola. No hubo cuentas, eventos, pagos ni mensajes creados y no quedó limpieza de datos pendiente. BCP sigue bloqueado.
 
 Evidencia de esta corrección: [capitulo-motion-production-2026-10-23.json](evidence/capitulo-motion-production-2026-10-23.json). Capturas en `tmp/capitulo-motion-20261023/visual/`, con el itinerario completo a 1440×1100 y revisión móvil a 390×844. El servidor local está detenido y el viewport restaurado.
+
+## Revisión de centrado, sobre y legibilidad
+
+El usuario pidió sustituir la entrada fotográfica por un sobre, añadir música, aumentar la letra móvil, centrar las secciones y retirar las líneas del itinerario. La nueva composición conserva la paleta, las tres fotografías generadas y los JSON originales. El sobre es geometría CSS propia: solapa, carta y sello tipográfico con las iniciales del evento. Tiene apertura de 800 ms, inmediata con movimiento reducido o ahorro de datos, y ofrece la etiqueta de apertura configurada y «Abrir sin música». Escape abre en silencio. Los dos botones conservan el foco dentro de la entrada y el contenido permanece inerte hasta abrir.
+
+La pista del nuevo preset es `/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3` (1.287.764 bytes; SHA-256 `3c620d851139ead919cb446cff2a646661325e50507d3cdfbf662cb75d0d8c8c`). Se reutiliza el archivo archivado. El gesto inicia el audio antes de la transición; el botón flotante permite pausar y reanudar. No hay autoplay al montar. Los borradores con pista vaciada permanecen silenciosos y el permiso del paquete continúa aplicándose.
+
+Fecha, contador, familias, historia, lugares, galería y RSVP se centran. Día, mes y año se apilan. El cuerpo móvil usa 16 px, las horas 15–16 px y las etiquetas auxiliares al menos 12 px. El itinerario distribuye seis momentos sin bordes ni líneas: tres columnas en computadora y una en móvil y en el lienzo estrecho del constructor. Ambas familias muestran el señor formal aprobado por el usuario, con etiquetas de familia de la novia y del novio y ajustes independientes; el original de la novia continúa conservado en la biblioteca.
+
+Los revelados de sección mantienen el contenido visible por defecto y comienzan después de abrir el sobre. Se desactivan en vista previa, movimiento reducido, ahorro de datos o preset sin movimiento, y cancelan observadores y animaciones cuando la página se oculta o desmonta. No se modifican los efectos de otras invitaciones.
+
+Comprobaciones: 14 pruebas del perfil y sus medios, 6 del reproductor de JSON, 9 de apertura/teclado/audio del sobre, 36 de iconos de sección y 5 de protección del despliegue: **70 pruebas relacionadas**. TypeScript aprobado. La revisión local agrupada a 1440×900 y 390×844 confirmó sobre completo, reproducción real y pausa del violín, apertura silenciosa, fecha y contador centrados y seis momentos sin bordes. Capturas en `tmp/capitulo-centered-20261023/visual/`; no sustituyen pruebas físicas en Android/iOS.

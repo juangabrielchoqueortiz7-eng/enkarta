@@ -80,7 +80,7 @@ export default function SectionIconsEditor({ data, onChange, draft }: Props) {
   const editorDraft = useLegacyDraft(data, onChange, draft);
   const isAnnie = data.config.designKey === 'annie-y-micky';
   const sections = data.config.designKey === 'capitulo' ? [
-    { key: 'parentsBride', label: 'Familia de la novia', def: capituloIcons.bride.localPath },
+    { key: 'parentsBride', label: 'Familia de la novia', def: capituloIcons.groom.localPath },
     { key: 'parentsGroom', label: 'Familia del novio', def: capituloIcons.groom.localPath },
     { key: 'ceremony', label: 'Ubicación de la ceremonia', def: capituloIcons.location.localPath },
     { key: 'reception', label: 'Ubicación de la recepción', def: capituloIcons.location.localPath },

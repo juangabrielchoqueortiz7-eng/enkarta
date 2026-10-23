@@ -1,7 +1,7 @@
 'use client';
 
 /* eslint-disable @next/next/no-img-element */
-import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import Link from 'next/link';
 import type { InvitationParsed } from '@/lib/types';
 import { CAPITULO_ASSETS as A, capituloDate, capituloNames } from '@/lib/capitulo';
@@ -33,15 +33,16 @@ function RsvpAction({ demo }: { demo: boolean }) {
   return <p className={styles.notice}>Solicita a los anfitriones el enlace de confirmación de tu invitación.</p>;
 }
 
-/** Optional native cover, with one guarded gesture and a cleaned-up transition. */
+/** Paper envelope: its opening gesture also owns the guest's audio choice. */
 export function CapituloEntry({ data, children, label }: { data: InvitationParsed; children: ReactNode; label?: string }) {
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open'>('closed');
   const active = useRef(false), opening = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const content = useRef<HTMLDivElement>(null), gate = useRef<HTMLDivElement>(null);
   const names = capituloNames(data.names), date = capituloDate(data.event_date);
-  const hero = paradiseReferenceHref(data.cover_image_url ?? A.hero);
   const buttonLabel = label ?? data.config.entry?.label ?? 'Abrir este capítulo';
+  const hasMusic = resolveFeatures(data.config).music && !!paradiseReferenceHref(data.config.musicUrl);
+  const monogram = [names.first, names.second].filter(Boolean).map(name => Array.from(name.trim())[0]).join(' · ');
   const opened = phase === 'open';
   useEffect(() => {
     active.current = true;
@@ -65,36 +66,88 @@ export function CapituloEntry({ data, children, label }: { data: InvitationParse
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = previous; };
   }, [opened]);
-  const enter = () => {
+  const enter = (withMusic: boolean) => {
     if (!active.current || opening.current) return;
     opening.current = true;
-    startParadiseReferenceMusic(content.current);
+    if (withMusic && hasMusic) startParadiseReferenceMusic(content.current);
     emitInvitationAnalytics('entry_open');
     setPhase('opening');
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || connection?.saveData;
     timer.current = setTimeout(() => {
       timer.current = null;
       if (!active.current) return;
       setPhase('open');
       window.dispatchEvent(new CustomEvent('enkarta:enter'));
-    }, reduced ? 0 : 650);
+    }, reduced ? 0 : 800);
   };
   return <>
     <div ref={content} aria-hidden={!opened}>{children}</div>
     {!opened && <div ref={gate} className={styles.entry} data-capitulo-entry={phase} role="dialog" aria-modal="true" aria-label="Abrir invitación" aria-busy={phase === 'opening'} onKeyDown={event => {
-      if (event.key === 'Tab') { event.preventDefault(); gate.current?.querySelector<HTMLButtonElement>('button')?.focus(); }
-      if (event.key === 'Escape') { event.preventDefault(); enter(); }
+      if (event.key === 'Tab') {
+        const buttons = Array.from(gate.current?.querySelectorAll<HTMLButtonElement>('button') ?? []);
+        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        if (!buttons.length) return;
+        event.preventDefault();
+        buttons[(index + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length]?.focus();
+      }
+      if (event.key === 'Escape') { event.preventDefault(); enter(false); }
     }}>
-      <div className={styles.entryCopy}>
+      <div className={styles.entryFrame}>
         <p className={styles.entryMasthead}>Capítulo</p>
-        <p className={styles.entryHeadline}>La historia<br />continúa.</p>
-        <p className={styles.entryNames}>{[names.first, names.second].filter(Boolean).join(' & ')}</p>
-        {date && <time dateTime={date.iso}>{date.entryLine}</time>}
-        <button className={styles.entryButton} type="button" onClick={enter} aria-label={buttonLabel || 'Abrir invitación'} aria-disabled={phase === 'opening'}>{phase === 'opening' ? 'Abriendo invitación…' : buttonLabel}<Arrow /></button>
+        <p className={styles.entryHeadline}>Nuestra próxima página<br />empieza contigo.</p>
+        <div className={styles.envelope} data-capitulo-envelope aria-hidden="true">
+          <div className={styles.envelopeBack} />
+          <div className={styles.envelopeLetter}>
+            <p className={styles.letterHeading}>Nos casamos</p>
+            <p className={styles.entryNames}>{[names.first, names.second].filter(Boolean).join(' & ')}</p>
+            {date && <time dateTime={date.iso}>{date.entryLine}</time>}
+          </div>
+          <div className={styles.envelopePocket} />
+          <div className={styles.envelopeFlap} />
+          <span className={styles.envelopeSeal}>{monogram}</span>
+        </div>
+        <div className={styles.entryAccessibleNames}><p>{[names.first, names.second].filter(Boolean).join(' y ')}</p>{date && <time dateTime={date.iso}>{date.entryLine}</time>}</div>
+        <div className={styles.entryActions}>
+          <button className={styles.entryButton} type="button" onClick={() => enter(true)} aria-label={buttonLabel || 'Abrir invitación'} aria-disabled={phase === 'opening'}><span>{phase === 'opening' ? 'Abriendo invitación…' : buttonLabel}{hasMusic && phase === 'closed' && <small>Con música</small>}</span><Arrow /></button>
+          {hasMusic && <button className={styles.entrySilent} type="button" onClick={() => enter(false)} aria-disabled={phase === 'opening'}>Abrir sin música</button>}
+        </div>
       </div>
-      {hero && <img className={styles.entryImage} src={hero} alt="" width={1536} height={1024} loading="eager" decoding="async" />}
     </div>}
   </>;
+}
+
+/** The document is visible by default; effects only run once it is actually open. */
+function useCapituloReveals(root: RefObject<HTMLDivElement>, preview: boolean, disabled: boolean) {
+  const media = useMediaPreferences();
+  useEffect(() => {
+    const node = root.current;
+    if (!node || preview || disabled || !media.ready || media.reducedMotion || media.saveData || !media.pageVisible || typeof IntersectionObserver === 'undefined') return;
+    let observer: IntersectionObserver | null = null;
+    let frame: number | null = null;
+    const animations = new Set<Animation>();
+    const seen = new WeakSet<Element>();
+    const connect = () => {
+      if (node.closest('[inert], [aria-hidden="true"]') || node.querySelector('[data-capitulo-entry]')) return;
+      observer?.disconnect();
+      observer = new IntersectionObserver(entries => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting || seen.has(entry.target) || entry.target.closest('[inert], [aria-hidden="true"]')) continue;
+          seen.add(entry.target); observer?.unobserve(entry.target);
+          const element = entry.target as HTMLElement;
+          if (typeof element.animate !== 'function') continue;
+          const animation = element.animate([{ opacity: .65, transform: 'translateY(14px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 650, easing: 'cubic-bezier(.16,1,.3,1)' });
+          animations.add(animation);
+          animation.onfinish = () => animations.delete(animation);
+        }
+      }, { threshold: .12 });
+      node.querySelectorAll('[data-capitulo-section]').forEach(section => observer?.observe(section));
+    };
+    connect();
+    const afterEntry = () => { if (frame !== null) cancelAnimationFrame(frame); frame = requestAnimationFrame(connect); };
+    window.addEventListener('enkarta:enter', afterEntry);
+    return () => { if (frame !== null) cancelAnimationFrame(frame); observer?.disconnect(); animations.forEach(animation => animation.cancel()); window.removeEventListener('enkarta:enter', afterEntry); };
+  }, [root, preview, disabled, media.ready, media.reducedMotion, media.saveData, media.pageVisible]);
 }
 
 function Countdown({ data }: { data: InvitationParsed }) {
@@ -150,6 +203,8 @@ function Gifts({ data }: { data: InvitationParsed }) {
 }
 
 export default function Capitulo({ data, preview = false, skipEntry = false, demo = false }: { data: InvitationParsed; preview?: boolean; skipEntry?: boolean; demo?: boolean; deadlinePassed?: boolean }) {
+  const profile = useRef<HTMLDivElement>(null);
+  useCapituloReveals(profile, preview, data.config.motion?.preset === 'none');
   const c = data.config, features = resolveFeatures(c);
   const names = capituloNames(data.names), date = capituloDate(data.event_date);
   const hero = paradiseReferenceHref(data.cover_image_url ?? A.hero);
@@ -182,7 +237,7 @@ export default function Capitulo({ data, preview = false, skipEntry = false, dem
     {date && <section className={styles.dateSection} data-capitulo-section="date"><div className={styles.dateEditorial}><h2>Una fecha para recordar</h2><time dateTime={date.iso}><span>{date.day}</span><span>{date.month}<br />{date.year}</span></time><p>{date.weekday}</p></div><div className={styles.countdownSide}><p>Nos separa de este nuevo capítulo</p><Countdown data={data} /></div></section>}
 
     {(storyTitle || storyMessage || detail) && <section className={`${styles.story} ${!detail || !(storyTitle || storyMessage) ? styles.singleColumn : ''}`} data-capitulo-section="story"><div className={styles.storyCopy}>{storyTitle && <h2>{storyTitle}</h2>}{storyMessage && <p>{storyMessage}</p>}{storyMessage && c.verseRef && c.storyMessage == null && <small>{c.verseRef}</small>}</div>{detail && <img src={detail} alt={detail === A.detail ? 'Manos de una pareja ficticia sosteniendo un cuaderno de votos en blanco, imagen creada con IA' : 'Fotografía de nuestra historia'} width={1536} height={1024} loading="lazy" decoding="async" />}</section>}
-    {hasParents && <section className={styles.parents} data-capitulo-section="parents">{c.blessing && <h2>{c.blessing}</h2>}<div>{[data.parents_bride, data.parents_groom].map((list, index) => list.length > 0 && <div className={styles.parentFamily} key={index}><CapituloOriginalIcon role={index === 0 ? 'bride' : 'groom'} sectionKey={index === 0 ? 'parentsBride' : 'parentsGroom'} config={c} size={100} className={styles.originalIcon} /><p>{list.map((name, i) => <span key={i}>{name}</span>)}</p></div>)}</div></section>}
+    {hasParents && <section className={styles.parents} data-capitulo-section="parents">{c.blessing && <h2>{c.blessing}</h2>}<div>{[data.parents_bride, data.parents_groom].map((list, index) => list.length > 0 && <div className={styles.parentFamily} key={index}><CapituloOriginalIcon role="groom" sectionKey={index === 0 ? 'parentsBride' : 'parentsGroom'} config={c} size={100} className={styles.originalIcon} /><h3>{index === 0 ? 'Familia de la novia' : 'Familia del novio'}</h3><p>{list.map((name, i) => <span key={i}>{name}</span>)}</p></div>)}</div></section>}
     {celebration && <figure className={styles.celebration} data-capitulo-section="celebration"><img src={celebration} alt={celebration === A.celebration ? 'Patio imaginario preparado para una boda, fotografía en blanco y negro creada con IA' : 'Fotografía de nuestra celebración'} width={1536} height={1024} loading="lazy" decoding="async" /><figcaption>El escenario es especial. La compañía lo hará inolvidable.</figcaption></figure>}
 
     {(data.itinerary.length > 0 || data.dress_code) && <section className={styles.dayPlan} data-capitulo-section="itinerary">{data.itinerary.length > 0 && <div className={styles.itinerary}><h2>Itinerario</h2><p className={styles.itineraryIntro}>Así se escribe el día</p><ol>{data.itinerary.map((item, index) => <li key={index} data-capitulo-itinerary-item><CapituloOriginalIcon role={itineraryRoles[index] ?? 'reception'} sectionKey={`itinerary-${index}`} config={c} src={item.icon} colors={item.iconColors} speed={item.iconSpeed} size={80} className={styles.itineraryIcon} /><time>{paradiseReferenceClock(item.time)}</time><div><h3>{item.label}</h3>{item.place && <p>{item.place}</p>}{item.note && <p>{item.note}</p>}{item.duration && <p>{item.duration}</p>}</div></li>)}</ol></div>}{data.dress_code && <aside className={styles.dress}><div className={styles.dressIcons}><CapituloOriginalIcon role="suit" sectionKey="dressGroom" config={c} size={94} /><CapituloOriginalIcon role="dress" sectionKey="dressBride" config={c} size={94} /></div>{dressTitle && <h2>{dressTitle}</h2>}<p>{data.dress_code}</p></aside>}</section>}
@@ -197,5 +252,5 @@ export default function Capitulo({ data, preview = false, skipEntry = false, dem
     {!preview && features.music && paradiseReferenceHref(c.musicUrl) && <ParadiseReferenceMusic src={paradiseReferenceHref(c.musicUrl)!} color="#f8f7f3" iconSize={29} className={styles.musicButton} statusClassName={styles.musicStatus} />}
   </>;
   const entryEnabled = c.entry?.enabled ?? features.entry;
-  return <div className={styles.profile} style={theme} data-capitulo data-preview={preview ? '' : undefined}>{preview || skipEntry || !entryEnabled ? page : <CapituloEntry data={data} label={c.entry?.label ?? 'Abrir este capítulo'}>{page}</CapituloEntry>}</div>;
+  return <div ref={profile} className={styles.profile} style={theme} data-capitulo data-preview={preview ? '' : undefined}>{preview || skipEntry || !entryEnabled ? page : <CapituloEntry data={data} label={c.entry?.label ?? 'Abrir este capítulo'}>{page}</CapituloEntry>}</div>;
 }

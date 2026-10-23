@@ -93,7 +93,7 @@ test('Capitulo exposes its exact section originals and composes simultaneous ico
   await withEditor(async runner => {
     const pickers = runner.pickers();
     assert.deepEqual(pickers.map(picker => picker.props.defaultIcon), [
-      CAPITULO_ORIGINALS.bride.localPath, CAPITULO_ORIGINALS.groom.localPath,
+      CAPITULO_ORIGINALS.groom.localPath, CAPITULO_ORIGINALS.groom.localPath,
       CAPITULO_ORIGINALS.location.localPath, CAPITULO_ORIGINALS.location.localPath,
       CAPITULO_ORIGINALS.suit.localPath, CAPITULO_ORIGINALS.dress.localPath,
       CAPITULO_ORIGINALS.adults.localPath, CAPITULO_ORIGINALS.reception.localPath, CAPITULO_ORIGINALS.gift.localPath,

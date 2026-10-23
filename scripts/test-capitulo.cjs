@@ -189,6 +189,39 @@ test('the demo has six editable itinerary rows with original icons and its three
   assert.deepEqual(data, before, 'Rendering cannot rewrite the editable source lists');
 });
 
+test('both family groups use the archived parent portrait, preserving independent editable section keys', () => {
+  const { CAPITULO_ORIGINALS } = require('../src/lib/capitulo-assets.ts');
+  const data = capituloDemo(), html = markup(data);
+  const parents = html.match(/<section\b[^>]*data-capitulo-section="parents"[^>]*>[\s\S]*?<\/section>/)?.[0];
+  assert.ok(parents);
+  for (const family of [...data.parents_bride, ...data.parents_groom]) assert.ok(parents.includes(family));
+  assert.equal(parents.includes(CAPITULO_ORIGINALS.bride.localPath), false, 'A family label must not receive a bride illustration');
+  assert.equal(parents.split(`data-capitulo-original-icon="${CAPITULO_ORIGINALS.groom.localPath}"`).length - 1, 2);
+  data.config = { ...data.config, sectionIcons: { parentsBride: '/qa-first-family.svg', parentsGroom: '/qa-second-family.svg' } };
+  const customized = markup(data);
+  assert.ok(customized.includes('/qa-first-family.svg')); assert.ok(customized.includes('/qa-second-family.svg'));
+});
+
+test('the selected archived music is available without autoplay and explicitly clearing it remains silent after persistence', () => {
+  const { CAPITULO_MUSIC } = require('../src/lib/capitulo-assets.ts');
+  const data = capituloDemo();
+  assert.match(data.config.musicUrl, /^\/audio\/.+\.mp3$/);
+  assert.equal(data.config.musicUrl, CAPITULO_MUSIC.localPath);
+  const locked = JSON.parse(read('scripts/original-distribution-lock.json')).resources.find(asset => asset.path === CAPITULO_MUSIC.localPath);
+  assert.ok(locked, 'The sample selects an existing protected original rather than a new external request');
+  const audio = fs.readFileSync(path.join(root, 'public', CAPITULO_MUSIC.localPath));
+  assert.equal(audio.length, locked.bytes); assert.equal(sha(audio), locked.sha256);
+  const html = markup(data);
+  assert.match(html, /<audio\b[^>]*data-invitation-music/);
+  assert.ok(html.includes(data.config.musicUrl));
+  assert.doesNotMatch(html, /<audio\b[^>]*autoplay/i, 'Mounting the invitation cannot start audio without a gesture');
+  assert.match(html, /<audio\b[^>]*preload="none"/);
+  data.config.musicUrl = '';
+  const saved = parseInvitation({ ...data, builder_config: JSON.stringify(data.config) });
+  assert.equal(saved.config.musicUrl, ''); assert.doesNotMatch(markup(saved), /<audio\b/);
+  assert.doesNotMatch(markup(capituloDemo(), { preview: true }), /<audio\b/, 'The editor canvas remains silent');
+});
+
 test('itinerary edits, reordered rows and explicitly removed icons survive persistence without restoring samples', () => {
   const data = capituloDemo();
   data.itinerary = [

@@ -1,6 +1,6 @@
 import type { BuilderConfig, InvitationParsed } from './types';
 import { travesiaDate, travesiaNames } from './travesia';
-import { CAPITULO_ORIGINALS as originals } from './capitulo-assets';
+import { CAPITULO_MUSIC, CAPITULO_ORIGINALS as originals } from './capitulo-assets';
 
 /** Own editorial edition. The existing Primicia/Áurea design stays intact. */
 export const CAPITULO_KEY = 'capitulo' as const;
@@ -25,7 +25,7 @@ export function capituloStarter() {
     noKidsMessage: 'Esta celebración está preparada para adultos. Gracias por acompañarnos y disfrutar de la noche.',
     theme: { primary: '#242825', primaryDeep: '#242825', bg: '#f8f7f3', text: '#242825', onPrimary: '#ffffff' },
     entry: { enabled: true, label: 'Abrir este capítulo' },
-    motion: { preset: 'none' }, musicUrl: '', analytics: { enabled: false },
+    motion: { preset: 'elegant' }, musicUrl: CAPITULO_MUSIC.localPath, analytics: { enabled: false },
     sectionImages: { capituloDetail: CAPITULO_ASSETS.detail, capituloCelebration: CAPITULO_ASSETS.celebration },
     galleryImages: [CAPITULO_ASSETS.hero, CAPITULO_ASSETS.detail, CAPITULO_ASSETS.celebration],
     galleryCaptions: [

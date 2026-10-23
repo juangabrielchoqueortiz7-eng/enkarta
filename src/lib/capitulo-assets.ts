@@ -19,3 +19,9 @@ export const CAPITULO_ORIGINALS = {
   adults: original('2025/05/10-no-ninos.json', true, '/lottie/boda/invitali-sin-ninos-original.json'),
   gift: original('2025/05/37-regalo-1.json', false),
 } as const;
+
+/** Existing archived track, selected only when creating this preset. */
+export const CAPITULO_MUSIC = {
+  source: source + '2025/05/Ed-Sheran-Perfect-Violin.mp3',
+  localPath: '/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3',
+} as const;
