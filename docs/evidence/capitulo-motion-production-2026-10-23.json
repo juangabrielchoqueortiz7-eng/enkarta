@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "checkedAt": "2026-10-23T22:12:26.518Z",
+  "sourceSha": "82e970789b48825ec028d05685a3382d05e51394",
+  "deploymentId": "dpl_6t25AZxfNctqMQ7fEgijSb62F99q",
+  "ready": true,
+  "canonical": "https://enkarta.vercel.app",
+  "sample": "https://enkarta.vercel.app/muestra/capitulo?full=1",
+  "referenceStructure": "https://invitali.com/muestra-primicia/",
+  "automated": {
+    "capitulo": 12,
+    "motion": 6,
+    "sectionIcons": 36,
+    "importer": 33,
+    "deploymentGuard": 5,
+    "total": 92,
+    "typeScript": true
+  },
+  "criticalFiles": 59,
+  "preservation": {
+    "method": "uploaded-filehash",
+    "originals": 169,
+    "inheritedOriginalsUnchanged": 166,
+    "addedOriginals": 3,
+    "legacySources": 28,
+    "generatedCapituloAndTravesiaUnchanged": true,
+    "mastersExcludedFromUpload": true,
+    "bcpDisabled": true
+  },
+  "production": {
+    "method": "read-only public GET",
+    "routes": [
+      {
+        "route": "/muestra/capitulo",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctRequiredOriginals": 13,
+        "itineraryItems": 6,
+        "gallery": true
+      },
+      {
+        "route": "/muestra/capitulo?full=1",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctRequiredOriginals": 13,
+        "itineraryItems": 6,
+        "gallery": true
+      },
+      {
+        "route": "/muestra/capitulo?preview=1",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctRequiredOriginals": 13,
+        "itineraryItems": 6,
+        "gallery": true
+      },
+      {
+        "route": "/muestra/capitulo?full=1&n=50&m=QA%20Forged%20Family",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctRequiredOriginals": 13,
+        "itineraryItems": 6,
+        "gallery": true
+      }
+    ],
+    "images": [
+      {
+        "path": "/invitations/capitulo/hero.webp",
+        "bytes": 202028,
+        "sha256": "63c15dc5760178cfa75a6b812557f41af1cadbee36f3605ab49864adae1abe9d",
+        "passed": true
+      },
+      {
+        "path": "/invitations/capitulo/detail.webp",
+        "bytes": 91706,
+        "sha256": "3c23b3d4af8adadbd68d0d23550be3679fec7714042b642fe8d489523a75fc04",
+        "passed": true
+      },
+      {
+        "path": "/invitations/capitulo/celebration.webp",
+        "bytes": 344052,
+        "sha256": "196c3dc353a888797a64854ff3d2e5d230173c63ddb5221dabd0bb33c9e63a7c",
+        "passed": true
+      }
+    ],
+    "addedOriginals": [
+      {
+        "path": "/lottie/invitali-originales/2025-05-novia.json",
+        "url": "https://invitali.com/wp-content/uploads/2025/05/novia.json",
+        "bytes": 15339,
+        "sha256": "7a3f9cb756672bc08cb10340ab1c50bfb980afae086011304e489e7d4544d188",
+        "passed": true
+      },
+      {
+        "path": "/lottie/invitali-originales/2025-05-marido.json",
+        "url": "https://invitali.com/wp-content/uploads/2025/05/marido.json",
+        "bytes": 20165,
+        "sha256": "bcef4ce022665143544e8a63f851bd69865464171ac8928d5d0750c72d6f64fa",
+        "passed": true
+      },
+      {
+        "path": "/lottie/invitali-originales/2025-05-Lugar-03.json",
+        "url": "https://invitali.com/wp-content/uploads/2025/05/Lugar-03.json",
+        "bytes": 22707,
+        "sha256": "c94b9c6de37c80bb795a7b960f0d66c351e3dff50c21306c522b8ed91e47830f",
+        "passed": true
+      }
+    ],
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "eventsCreated": 0,
+    "cleanupRequired": false
+  },
+  "visual": {
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 1440,
+        "height": 1100
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "itinerarySteps": 6,
+    "originalInstancesReady": [
+      {
+        "role": "bride",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "groom",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "ceremony",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "reception",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "firstDance",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "dinner",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "dance",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "farewell",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "suit",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "dress",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "location",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "location",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "adults",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "reception",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "gift",
+        "state": "ready",
+        "svg": true
+      }
+    ],
+    "originalAnimationFrameChanged": true,
+    "galleryAdvancedAndCaptionMatched": true,
+    "noHorizontalOverflow": true,
+    "unselectedMusicAbsent": true,
+    "demoStatus": "Esta es una vista de muestra. No se envió ninguna confirmación.",
+    "consoleErrorsObserved": 0,
+    "physicalDeviceTest": false,
+    "screenshots": [
+      {
+        "file": "tmp/capitulo-motion-20261023/visual/production-desktop-itinerary.png",
+        "bytes": 65728,
+        "sha256": "f39338232130098027a9b1e37be2878578359f09448a80918e7094f166d15660"
+      },
+      {
+        "file": "tmp/capitulo-motion-20261023/visual/production-desktop-six-steps.png",
+        "bytes": 74210,
+        "sha256": "ac937360dcf7ce21fe7966e0d41023e470367863e9e2d755ed8ac173f0ff1abe"
+      },
+      {
+        "file": "tmp/capitulo-motion-20261023/visual/production-mobile-gallery.png",
+        "bytes": 37060,
+        "sha256": "bd70f8528eb6f12d9db0712d159273d92299d919ab22564e2e0eb8c30440e4ff"
+      },
+      {
+        "file": "tmp/capitulo-motion-20261023/visual/production-mobile-itinerary.png",
+        "bytes": 28249,
+        "sha256": "c3d56c77e1ae274baf02714a5f0e2866ba4492d0605a7b45458ab268b2eaeff6"
+      }
+    ]
+  }
+}
