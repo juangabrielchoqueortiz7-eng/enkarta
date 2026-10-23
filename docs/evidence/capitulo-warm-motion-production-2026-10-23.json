@@ -1,0 +1,229 @@
+{
+  "verifiedAt": "2026-10-23T23:28:57.271Z",
+  "sourceSha": "14e9bd7c9d54eda0478c861baaa3b747d0bcfeeb",
+  "deploymentId": "dpl_85wTyFe6ue35VEywJENvEC1n3VjY",
+  "canonical": "https://enkarta.vercel.app/muestra/capitulo",
+  "ready": true,
+  "change": "Warm original paper, coordinated terracotta Lottie instances and independent photograph/heading/copy entrances",
+  "tests": {
+    "profile": 15,
+    "jsonPaletteLifecycle": 10,
+    "entry": 10,
+    "reveals": 7,
+    "deployment": 5,
+    "total": 47,
+    "failed": 0
+  },
+  "vercelBuild": {
+    "compilation": true,
+    "lint": true,
+    "types": true,
+    "existingImageWarnings": true
+  },
+  "sourceAttestation": {
+    "criticalFiles": 64,
+    "allMatch": true,
+    "method": "commit and independently inspected uploaded-file hashes"
+  },
+  "preservation": {
+    "originals": 169,
+    "originalBytes": 56293636,
+    "currentLockByteIdentical": true,
+    "newOriginals": 0,
+    "legacySources": 28,
+    "bcpDisabled": true,
+    "generatedMastersExcludedFromUpload": true,
+    "localSqlPreservedSha256": "e02d9eb658bd7d1b1941d7502da6817893aadd7df461fef1db405b1735d71aeb",
+    "otherVariants": {
+      "atlas": true,
+      "aurea": true,
+      "verdealma": true,
+      "lunaria": true,
+      "azure": true,
+      "paradise": true,
+      "travesia": true
+    }
+  },
+  "entryOriginals": {
+    "manifest": "docs/assets/capitulo-entry-originals.json",
+    "manifestSha256": "c938a968645deed1696b28495f95982dd84803ed44f0f4d7ec035a124cdc6b3a",
+    "manifestBytes": 1188,
+    "assets": [
+      {
+        "role": "left",
+        "path": "/invitations/mariana-y-jesus/Recurso-1Sobres-copia-scaled.webp",
+        "source": "https://invitali.com/wp-content/uploads/2025/03/Recurso-1Sobres-copia-scaled.webp",
+        "width": 2389,
+        "height": 2560,
+        "bytes": 42994,
+        "sha256": "c35f6beb5df9fa5dd225e40d66bd9920760aa1fcd37e086e5e2800540ff14302",
+        "reused": true,
+        "originalBytesPreserved": true
+      },
+      {
+        "role": "right",
+        "path": "/invitations/mariana-y-jesus/Recurso-2Sobres-copia-scaled.webp",
+        "source": "https://invitali.com/wp-content/uploads/2025/03/Recurso-2Sobres-copia-scaled.webp",
+        "width": 2560,
+        "height": 2411,
+        "bytes": 31730,
+        "sha256": "342fa0b0ec8a97eba90d53a6936f4e8395e5b6c2cb0c2955c8e3e5521ecae003",
+        "reused": true,
+        "originalBytesPreserved": true
+      },
+      {
+        "role": "seal",
+        "path": "/invitations/laura-andres/SELLO-VERDE-copia_2.webp",
+        "source": "https://invitali.com/wp-content/uploads/2025/11/SELLO-VERDE-copia_2.webp",
+        "width": 344,
+        "height": 344,
+        "bytes": 17814,
+        "sha256": "9a192bff5eb9ec437398adaadb9bcb56be54393a2bc30b85091068f7781c7e31",
+        "reused": true,
+        "originalBytesPreserved": true
+      }
+    ],
+    "newOriginals": 0
+  },
+  "publicHttp": {
+    "passed": true,
+    "method": "read-only public GET",
+    "routes": [
+      {
+        "route": "/muestra/capitulo",
+        "passed": true,
+        "originalInstances": 13,
+        "distinctRequiredOriginals": 11,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 2,
+        "authenticEntryImages": 3,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/capitulo?full=1",
+        "passed": true,
+        "originalInstances": 13,
+        "distinctRequiredOriginals": 11,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/capitulo?preview=1",
+        "passed": true,
+        "originalInstances": 13,
+        "distinctRequiredOriginals": 11,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/capitulo?full=1&n=50&m=QA%20Forged%20Family",
+        "passed": true,
+        "originalInstances": 13,
+        "distinctRequiredOriginals": 11,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      }
+    ],
+    "images": [
+      {
+        "path": "/invitations/capitulo/hero.webp",
+        "bytes": 202028,
+        "sha256": "63c15dc5760178cfa75a6b812557f41af1cadbee36f3605ab49864adae1abe9d",
+        "passed": true
+      },
+      {
+        "path": "/invitations/capitulo/detail.webp",
+        "bytes": 91706,
+        "sha256": "3c23b3d4af8adadbd68d0d23550be3679fec7714042b642fe8d489523a75fc04",
+        "passed": true
+      },
+      {
+        "path": "/invitations/capitulo/celebration.webp",
+        "bytes": 344052,
+        "sha256": "196c3dc353a888797a64854ff3d2e5d230173c63ddb5221dabd0bb33c9e63a7c",
+        "passed": true
+      }
+    ],
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "accountsCreated": 0,
+    "eventsCreated": 0,
+    "cleanupRequired": false
+  },
+  "designReview": {
+    "skill": "impeccable",
+    "detector": {
+      "fontWarnings": 7,
+      "variantColorAdvisories": 13,
+      "otherFindings": 0,
+      "intentional": "Archived invitation fonts and palette are independent of portal tokens, documented in DESIGN.md."
+    }
+  },
+  "browser": {
+    "sourceSha": "14e9bd7c9d54eda0478c861baaa3b747d0bcfeeb",
+    "deploymentId": "dpl_85wTyFe6ue35VEywJENvEC1n3VjY",
+    "url": "https://enkarta.vercel.app/muestra/capitulo",
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 1100
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "entry": {
+      "paper": "rgb(248, 247, 243)",
+      "backgroundBlendMode": "multiply",
+      "originalRasterBytesPreserved": true
+    },
+    "icons": {
+      "visibleItineraryAllSixTerracotta": true,
+      "ink": "rgb(140,69,59)",
+      "allSixReady": true,
+      "paperContrast": 6.47,
+      "svgFrameChanged": true
+    },
+    "motion": {
+      "mode": "active",
+      "editorialPhotoTargets": 3,
+      "temporalLifecycleVerification": "7 executable hook regressions plus entry commit-order regression; static screenshots do not certify timing"
+    },
+    "mobile": {
+      "itineraryColumns": 1,
+      "overflow": false
+    },
+    "consoleErrors": [],
+    "screenshots": [
+      "production-entry-desktop.png",
+      "production-entry-mobile.png",
+      "production-itinerary-desktop.png"
+    ],
+    "physicalDeviceAcceptance": false,
+    "productionWrites": 0,
+    "cleanupRequired": false
+  },
+  "screenshotsDirectory": "tmp/capitulo-warm-motion-20261023/visual/",
+  "cleanup": {
+    "fixturesCreated": 0,
+    "pending": false,
+    "localServerStopped": true,
+    "viewportRestored": true
+  }
+}
