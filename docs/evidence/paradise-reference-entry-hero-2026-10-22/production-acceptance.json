@@ -1,0 +1,52 @@
+{
+  "sourceSha": "22d3c286db3ae046094e503e460f1f08fc9fc288",
+  "deploymentId": "dpl_6VxZx6BZLFsK1yK61CWzNRvPy6gy",
+  "origin": "https://enkarta.vercel.app",
+  "checks": {
+    "privatePreviewAndAnonymousDraftClosed": true,
+    "publicHeroAndEntry": true,
+    "publishedSnapshotNoDraftLeak": true,
+    "ownerSeesPrivateDraft": true,
+    "anonymousBuilderDenied": true
+  },
+  "verificationPassed": true,
+  "cleanupVerified": true,
+  "cleanupRows": {
+    "invitations": 0,
+    "builder_versions": 0,
+    "builder_review_notes": 0,
+    "invitation_analytics_events": 0,
+    "guests": 0,
+    "rsvps": 0,
+    "invitation_validity_events": 0,
+    "save_date_responses": 0,
+    "guest_import_requests": 0
+  },
+  "adminCookie": "cleared",
+  "verifiedAt": "2026-10-23T00:24:59.772Z",
+  "cleanupConfirmedAt": "2026-10-23T00:25:10.910Z",
+  "fixtureCount": 1,
+  "bankCalls": 0,
+  "messagesSent": 0,
+  "mediaWrites": 0,
+  "paymentWrites": 0,
+  "tests": {
+    "fullVerifyPassed": true,
+    "nodeTests": 2044,
+    "importerAssertions": 27,
+    "total": 2071,
+    "finalAffectedSuitesPassed": 34
+  },
+  "visual": {
+    "desktop": [
+      1440,
+      900
+    ],
+    "mobile": [
+      390,
+      844
+    ],
+    "physicalDevice": false,
+    "scope": "entry-and-hero-only"
+  }
+}

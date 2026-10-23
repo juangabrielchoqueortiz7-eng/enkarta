@@ -1,0 +1,171 @@
+{
+  "gate": {
+    "arrow": "0 0 320 512",
+    "backgroundInert": true,
+    "bodyOverflow": "hidden",
+    "dialogs": 1,
+    "entry": "closed",
+    "horizontalOverflow": false,
+    "viewport": [
+      1440,
+      900
+    ]
+  },
+  "opened": {
+    "backgroundInert": false,
+    "bodyOverflow": "",
+    "dialogs": 0,
+    "focusedTag": "H1"
+  },
+  "metrics": {
+    "city": {
+      "font": "ParadiseRefCinzel, serif",
+      "fontSize": "30px",
+      "rect": {
+        "bottom": 546.9554138183594,
+        "height": 193.92233276367188,
+        "left": 1213.3616943359375,
+        "right": 1252.3552589416504,
+        "top": 353.0330810546875,
+        "width": 38.99356460571289,
+        "x": 1213.3616943359375,
+        "y": 353.0330810546875
+      },
+      "text": "Santa Cruz"
+    },
+    "date": {
+      "font": "ParadiseRefDate, serif",
+      "fontSize": "30px",
+      "rect": {
+        "bottom": 536.93701171875,
+        "height": 173.88555908203125,
+        "left": 633.386962890625,
+        "right": 672.3805274963379,
+        "top": 363.0514526367187,
+        "width": 38.99356460571289,
+        "x": 633.386962890625,
+        "y": 363.0514526367187
+      },
+      "text": "29/03/26"
+    },
+    "hero": {
+      "font": "Outfit, sans-serif",
+      "fontSize": "16px",
+      "rect": {
+        "bottom": 900,
+        "height": 900,
+        "left": 0,
+        "right": 1425.7352294921875,
+        "top": 0,
+        "width": 1425.7352294921875,
+        "x": 0,
+        "y": 0
+      },
+      "text": "LauraRuggeri&ElvisGarrido29/03/26Santa Cruz"
+    },
+    "horizontalOverflow": false,
+    "images": [
+      {
+        "complete": true,
+        "naturalWidth": 1440,
+        "src": "https://enkarta.vercel.app/invitations/paradise-referencia/2025-12-pasport.webp"
+      }
+    ],
+    "names": [
+      {
+        "font": "ParadiseRefCinzel, serif",
+        "fontSize": "55px",
+        "rect": {
+          "bottom": 412.7412567138672,
+          "height": 71.49586486816406,
+          "left": 176.4361114501953,
+          "right": 351.4361114501953,
+          "top": 341.2453918457031,
+          "width": 175,
+          "x": 176.4361114501953,
+          "y": 341.2453918457031
+        },
+        "text": "Laura"
+      },
+      {
+        "font": "ParadiseRefNathalia, cursive",
+        "fontSize": "45px",
+        "rect": {
+          "bottom": 448.736213684082,
+          "height": 58.50183868408203,
+          "left": 331.4453125,
+          "right": 463.1204071044922,
+          "top": 390.234375,
+          "width": 131.6750946044922,
+          "x": 331.4453125,
+          "y": 390.234375
+        },
+        "text": "Ruggeri"
+      },
+      {
+        "font": "ParadiseRefInfant, serif",
+        "fontSize": "85px",
+        "rect": {
+          "bottom": 493.2329864501953,
+          "height": 110.48942565917967,
+          "left": 176.4361114501953,
+          "right": 237.3046760559082,
+          "top": 382.7435607910156,
+          "width": 60.86856460571289,
+          "x": 176.4361114501953,
+          "y": 382.7435607910156
+        },
+        "text": "&"
+      },
+      {
+        "font": "ParadiseRefCinzel, serif",
+        "fontSize": "55px",
+        "rect": {
+          "bottom": 522.7366790771484,
+          "height": 71.49586486816406,
+          "left": 225.93060302734375,
+          "right": 372.21966552734375,
+          "top": 451.2408142089844,
+          "width": 146.2890625,
+          "x": 225.93060302734375,
+          "y": 451.2408142089844
+        },
+        "text": "Elvis"
+      },
+      {
+        "font": "ParadiseRefNathalia, cursive",
+        "fontSize": "45px",
+        "rect": {
+          "bottom": 558.7316055297852,
+          "height": 58.50183868408203,
+          "left": 352.2288513183594,
+          "right": 472.472412109375,
+          "top": 500.2297668457031,
+          "width": 120.24356079101562,
+          "x": 352.2288513183594,
+          "y": 500.2297668457031
+        },
+        "text": "Garrido"
+      }
+    ],
+    "photo": {
+      "font": "Outfit, sans-serif",
+      "fontSize": "16px",
+      "rect": {
+        "bottom": 809.9953765869141,
+        "height": 719.9907836914062,
+        "left": 692.8768310546875,
+        "right": 1192.8768310546875,
+        "top": 90.00459289550781,
+        "width": 500,
+        "x": 692.8768310546875,
+        "y": 90.00459289550781
+      },
+      "text": ""
+    },
+    "viewport": [
+      1440,
+      900
+    ]
+  }
+}
