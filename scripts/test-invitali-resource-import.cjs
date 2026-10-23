@@ -88,6 +88,14 @@ try {
   fs.writeFileSync(path.join(f.root,f.row.archiveFile),font);assert.equal(f.run().copied,1);assert.deepEqual(fs.readFileSync(path.join(f.root,'public',f.row.localPath)),font);
  });
  test('rejects unsupported script-capable resource formats',()=>rejectsChanged(f=>{f.row.localPath='/invitations/test/file.svg';},/Invalid original image\/font bytes/));
+ test('imports a static original SVG byte for byte',()=>{
+  const f=fixture(),svg=fs.readFileSync(path.join(project,'public/invitations/karla-y-mauricio/Recurso-1iconos.svg'));
+  f.row.archiveFile='Iconos INVITALI/2026-10-static.svg';f.row.localPath='/invitations/test/static.svg';f.row.sha256=digest(svg);f.row.bytes=svg.length;
+  fs.writeFileSync(path.join(f.root,f.row.archiveFile),svg);assert.equal(f.run().copied,1);assert.deepEqual(fs.readFileSync(path.join(f.root,'public',f.row.localPath)),svg);
+ });
+ for(const [name,body] of [['script','<script>alert(1)</script>'],['event handler','<rect onload="alert(1)"/>'],['external reference','<image href="https://example.com/x.png"/>'],['foreign object','<foreignObject><p>x</p></foreignObject>'],['javascript URL','<a href="javascript:alert(1)"/>']]) test('rejects SVG with '+name,()=>rejectsChanged(f=>{
+  const svg=Buffer.from('<svg xmlns="http://www.w3.org/2000/svg">'+body+'</svg>');f.row.archiveFile='Iconos INVITALI/2026-10-active.svg';f.row.localPath='/invitations/test/active.svg';fs.writeFileSync(path.join(f.root,f.row.archiveFile),svg);f.row.sha256=digest(svg);f.row.bytes=svg.length;
+ },/Invalid original image\/font bytes/));
  test('rejects duplicate destinations including case variants',()=>{
   const f=fixture();assert.throws(()=>f.run([f.row,{...f.row,url:f.row.url+'?other=1',localPath:f.row.localPath.toUpperCase()}]),/Duplicate resource destination/);
   assert.equal(fs.existsSync(f.destination),false);

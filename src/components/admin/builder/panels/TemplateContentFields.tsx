@@ -112,6 +112,27 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
     );
   }
 
+  if (cfg.designKey === 'azure-referencia') {
+    return (
+      <Wrapper title="Azure · contenido de la invitación">
+        <p className="font-outfit text-sm leading-6 text-[#62594d]">Edita nombres, fecha, lugares, padres, vestimenta e itinerario en Datos; música en Fotos y música; el texto del botón de entrada en Config. Estos ajustes pertenecen únicamente a esta invitación.</p>
+        <Field label="Ciudad (aparece sobre el día)">
+          <input type="text" name="azure-reference-city" autoComplete="off" className={inputCls} value={cfg.city ?? ''} onChange={e => setCfg({ city: e.target.value })} />
+        </Field>
+        {([
+          ['welcomeTitle', 'Título de bienvenida'], ['introMessage', 'Mensaje de la portada'], ['blessing', 'Encabezado de padres'],
+          ['ceremonyDesc', 'Título de la ceremonia'], ['receptionDesc', 'Título de la recepción'], ['dressCodeTitle', 'Título de vestimenta'],
+          ['galleryMessage', 'Mensaje para compartir fotos'], ['rsvpMessage', 'Mensaje de confirmación'],
+        ] as const).map(([key, label]) => <Field key={key} label={label}><textarea name={`azure-${key}`} autoComplete="off" className={textareaCls} rows={2} value={cfg[key] ?? ''} onChange={e => setCfg({ [key]: e.target.value })} /></Field>)}
+        <details className="space-y-4"><summary className="min-h-11 cursor-pointer font-outfit font-semibold">Monograma y regalos</summary>
+          <Field label="Monograma de la entrada (URL o recurso local; vacío lo oculta)"><input name="azure-monogram" autoComplete="off" className={inputCls} value={cfg.sectionImages?.azureMonogram ?? ''} onChange={e => draft.config(current => ({ sectionImages: { ...current.sectionImages, azureMonogram: e.target.value } }))} /></Field>
+          <Field label="Imagen del QR de regalos"><input name="azure-giftQrUrl" autoComplete="off" className={inputCls} value={cfg.giftQrUrl ?? ''} onChange={e => setCfg({ giftQrUrl: e.target.value })} /></Field>
+          <p className="text-sm text-[#62594d]">Los datos bancarios se editan en Datos (una línea por dato). Usa únicamente cuentas y QR proporcionados por los anfitriones. BCP permanece desactivado.</p>
+        </details>
+      </Wrapper>
+    );
+  }
+
   const t = data.template;
 
   if (t === 'azure') {

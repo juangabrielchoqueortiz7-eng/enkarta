@@ -36,6 +36,12 @@ function validateResourceBytes(bytes, extension) {
   '.otf':()=>bytes.length>=12&&text(0,4)==='OTTO',
   '.woff':()=>bytes.length>=44&&text(0,4)==='wOFF'&&bytes.readUInt32BE(8)===bytes.length,
   '.woff2':()=>bytes.length>=48&&text(0,4)==='wOF2'&&bytes.readUInt32BE(8)===bytes.length,
+  // Static vector art only: anything able to run script or load external content is rejected.
+  '.svg':()=>{
+   const source=bytes.toString('utf8').replace(/^﻿/,'').trim();
+   return /^(<\?xml[^>]*\?>\s*)?<svg[\s>]/.test(source)&&source.endsWith('</svg>')
+    &&!/<\s*(script|foreignObject|iframe|object|embed)\b|\son\w+\s*=|javascript:|(href|src)\s*=\s*["']?\s*(https?:|\/\/|data:)|@import|url\(\s*["']?\s*(https?:|\/\/)|<!ENTITY/i.test(source);
+  },
  };
  if(!valid[extension]?.()) throw Error('Invalid original image/font bytes: '+extension);
 }

@@ -8,6 +8,7 @@ import React from 'react';
 import EntryGate from '@/components/invitations/EntryGate';
 import { ParadiseReferenceEntry } from '@/components/invitations/ParadiseReference';
 import { ParadiseReferenceRsvpProvider } from '@/components/invitations/ParadiseReferenceRsvp';
+import { AzureReferenceEntry, AzureReferenceRsvpProvider } from '@/components/invitations/AzureReference';
 import BlockRenderer from '@/components/invitations/BlockRenderer';
 import FontScope from '@/components/invitations/FontScope';
 import SmartRsvp from '@/components/invitations/SmartRsvp';
@@ -195,19 +196,21 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const nativeLaura = (config.designKey === 'laura-y-andres' || config.designKey === 'annie-y-micky' || config.designKey === 'roly-y-yeliana' || config.designKey === 'nicole-y-francisco' || config.designKey === 'manuel-y-maya' || config.designKey === 'mariana-y-jesus' || config.designKey === 'paula-y-juan-felipe' || config.designKey === 'karla-y-mauricio' || (config.designKey === 'maria-angelica-y-mario' || isCleanDesign(config.designKey))) && !hasBlocks;
   // This incremental profile owns its entry, while its RSVP remains external.
   const nativeParadiseReference = config.designKey === 'paradise-referencia' && !hasBlocks;
-  const nativeEntry = nativeLaura || nativeParadiseReference;
+  const nativeAzureReference = config.designKey === 'azure-referencia' && !hasBlocks;
+  const nativeReference = nativeParadiseReference || nativeAzureReference;
+  const nativeEntry = nativeLaura || nativeReference;
   const customCinematic = nativeEntry && config.entry?.style === 'cinematic';
   let templateEl: React.ReactNode;
   if (hasBlocks) {
     templateEl = null; // se reemplaza más abajo por <BlockRenderer> (con sus providers)
   } else {
-    templateEl = <PublishedTemplate invitation={parsed} demo={privatePreview} skipEntry={nativeParadiseReference || full === '1' || customCinematic} deadlinePassed={deadlinePassed} />;
+    templateEl = <PublishedTemplate invitation={parsed} demo={privatePreview} skipEntry={nativeReference || full === '1' || customCinematic} deadlinePassed={deadlinePassed} />;
   }
 
   // ── Pantalla de entrada / "sobre": enlace principal la muestra; ?full=1 la salta ──
   // El toggle explícito de Entrada manda; si no se tocó, decide el paquete.
   const entryEnabled = (config.entry?.enabled ?? resolveFeatures(config).entry) && full !== '1' && (!nativeEntry || customCinematic);
-  const paradiseEntryEnabled = nativeParadiseReference && (config.entry?.enabled ?? feats.entry) && full !== '1' && !customCinematic;
+  const referenceEntryEnabled = nativeReference && (config.entry?.enabled ?? feats.entry) && full !== '1' && !customCinematic;
 
   // Confirmación inteligente: formulario in-app al final (gateado por paquete).
   const smartRsvp = !nativeLaura && feats.smartRsvp && !privatePreview && !(mobileForm && desktopForm) ? (
@@ -236,17 +239,18 @@ export default async function InvitationPage({ params, searchParams }: Props) {
       {hasBlocks ? (
         <BlockRenderer layout={resolvedLayout!} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} guest={guest ?? undefined} demo={privatePreview} deadlinePassed={deadlinePassed} gated={entryEnabled} navigation={config.additionalServices?.navigation} locale={locale} />
       ) : (
-        <PageMotionProvider value={config.motion} gated={entryEnabled || paradiseEntryEnabled}>
-          {nativeParadiseReference ? <ParadiseReferenceRsvpProvider form={smartRsvp}>{templateEl}</ParadiseReferenceRsvpProvider> : templateEl}
+        <PageMotionProvider value={config.motion} gated={entryEnabled || referenceEntryEnabled}>
+          {nativeParadiseReference ? <ParadiseReferenceRsvpProvider form={smartRsvp}>{templateEl}</ParadiseReferenceRsvpProvider> : nativeAzureReference ? <AzureReferenceRsvpProvider form={smartRsvp}>{templateEl}</AzureReferenceRsvpProvider> : templateEl}
         </PageMotionProvider>
       )}
-      {!nativeParadiseReference && smartRsvp}
+      {!nativeReference && smartRsvp}
     </>
   );
 
   // The native entry owns the entire public content, including external RSVP.
   // One inert boundary and one focus trap protect the invitation while closed.
-  if (paradiseEntryEnabled) return <FontScope config={config}><ParadiseReferenceEntry label={config.entry?.label ?? copy.enter}>{content}</ParadiseReferenceEntry></FontScope>;
+  if (referenceEntryEnabled && nativeAzureReference) return <FontScope config={config}><AzureReferenceEntry data={parsed} label={config.entry?.label ?? copy.enter}>{content}</AzureReferenceEntry></FontScope>;
+  if (referenceEntryEnabled) return <FontScope config={config}><ParadiseReferenceEntry label={config.entry?.label ?? copy.enter}>{content}</ParadiseReferenceEntry></FontScope>;
   if (!entryEnabled) return <FontScope config={config}>{content}</FontScope>;
 
   // Solo aplicamos overrides de paleta si el usuario personalizó el tema; si no,
