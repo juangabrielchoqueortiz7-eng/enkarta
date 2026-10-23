@@ -179,7 +179,7 @@
   .entryInner::before{background-size:137px auto}
   .entryColumn{padding-top:65px}
   .monogram{width:95px}
-  .entryNames{margin:11px 11px 10px!important;font-size:18px;line-height:27.2px}
+  .entryNames{margin:11px 11px 10px!important;font-size:18px;line-height:27.2px;letter-spacing:normal}
   .entryDate{font-size:16px;line-height:19px}
   .entryArrow{width:21px;height:21px;margin:32px 12px 46px}
   .entryButton{padding:15px 28px;font-size:13px}
