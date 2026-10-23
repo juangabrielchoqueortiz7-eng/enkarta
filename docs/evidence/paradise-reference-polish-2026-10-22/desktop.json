@@ -1,0 +1,67 @@
+{
+  "adults": {
+    "height": 107.99632263183594,
+    "left": 372.8745422363281,
+    "top": 6313.912841796875,
+    "width": 100
+  },
+  "adultsDrawing": {
+    "height": 115.99264526367188,
+    "left": 364.8745422363281,
+    "top": 6305.913330078125,
+    "width": 115.99264526367188
+  },
+  "camera": {
+    "height": 70.49632263183594,
+    "left": 951.3556518554688,
+    "top": 6319.462158203125,
+    "width": 102.99861907958984
+  },
+  "cameraDrawing": {
+    "height": 62.41957473754883,
+    "left": 951.3556518554688,
+    "top": 6319.462158203125,
+    "width": 102.99861907958984
+  },
+  "control": {
+    "box": {
+      "height": 43.991268157958984,
+      "left": 963.120361328125,
+      "top": 2055.4572143554688,
+      "width": 79.77941131591797
+    },
+    "hitPoints": [
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "minHeight": "44px",
+    "visible": true
+  },
+  "gallery": {
+    "height": 643.0491333007812,
+    "left": 753.0100708007812,
+    "top": 2041.4636840820312,
+    "width": 500
+  },
+  "intro": {
+    "height": 72.00138092041016,
+    "left": 462.8676452636719,
+    "top": 1040.3033142089844,
+    "width": 500
+  },
+  "music": [
+    {
+      "autoplay": false,
+      "src": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3"
+    }
+  ],
+  "originalsUnavailable": 0,
+  "overflow": false,
+  "viewport": {
+    "height": 900,
+    "width": 1440
+  }
+}

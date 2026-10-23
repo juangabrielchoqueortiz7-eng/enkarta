@@ -4,6 +4,8 @@ Trabajo del 22 de octubre de 2026. Variante independiente: `config.designKey = '
 
 **Estado: desplegado y verificado en producción, con prueba ficticia y limpieza confirmadas.** Código principal `ab0f06daedc5f9e0fe75919a052e2d608f0f3a8e`; corrección final del control de galería `0b6346d2ac5b58ad4517e4f95947de0b56b0e539`. El dominio `enkarta.vercel.app` se comprobó por separado contra el despliegue Ready `dpl_7aGorfPM4TyeH85dfcfoWyWidhRd`.
 
+**Actualización visual posterior:** `38c8e1fc1bbcbe8a73f9ff95aab6883fdeee6229`, Ready `dpl_5D8uRqjKD9RKoNifth1cvSsSv1AE`. Se corrigieron medida de introducción, galería móvil, cajas de iconos cargados y textos de tarjetas. Aprobó 35 regresiones relacionadas y dos comprobaciones de diseño reales, conservando los 148 originales. [Resultados y capturas de este lote](evidence/paradise-reference-polish-2026-10-22/README.md). El cierre completo de lógica y limpieza descrito debajo sigue siendo histórico; no se repitió para este ajuste visual.
+
 ## Alcance implementado
 
 La muestra independiente incorpora introducción y pases, versículo con la Biblia original, cuenta regresiva y calendario, galería fotográfica en arco, padres y padrinos, lugares, vestimenta, cronograma alternado, regalos, hospedaje, solo adultos, fotos compartidas, confirmación, carrusel de cierre y pie de Enkarta. La música original se inicia mediante una acción de entrada y dispone de control propio de reproducción y pausa.
