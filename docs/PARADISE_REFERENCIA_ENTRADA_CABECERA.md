@@ -34,6 +34,8 @@ La referencia no se introduce como una invitación completa del catálogo ni com
 
 La lista documenta responsabilidades de este incremento; no sustituye el diff final ni afirma que el despliegue ya haya concluido.
 
+La flecha de entrada conserva el vector `angle-double-down` de Font Awesome Free incrustado en la referencia pública, con atribución en el código a su [licencia oficial](https://fontawesome.com/license/free). El DOM observado muestra un SVG estático de 16 × 16 px, color `#a5a5a5`, sin animación en él ni sus tres contenedores inmediatos; no se presenta como Lottie ni como recurso animado original.
+
 ## Recursos originales: dos nuevos y ocho reutilizados
 
 Antes de descargar se consultaron `docs/INVITALI_RECURSOS.md`, `src/lib/invitation-assets.ts`, `Iconos INVITALI/manifest.json`, `public/invitali-originales.json`, los registros particulares y las copias existentes. Las diez URLs se leyeron por HTTPS; las ocho copias ya presentes se compararon con los bytes remotos en memoria. Coinciden en tamaño y SHA-256. No se guardaron descargas duplicadas de esos ocho recursos.

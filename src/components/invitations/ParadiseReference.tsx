@@ -92,7 +92,8 @@ export function ParadiseReferenceEntry({ children, label = 'Ver invitación' }: 
       <div className={styles.envelopeRight} style={{ backgroundImage: `url("${ENVELOPE_RIGHT}")` }} aria-hidden="true" />
       <button type="button" className={styles.sealButton} onClick={enter} aria-label={label || 'Ver invitación'} aria-disabled={phase === 'opening'}>
         <span className={styles.entryLabel}>{label}</span>
-        <svg className={styles.entryArrow} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true"><path d="m5 6 7 7 7-7M5 13l7 7 7-7" /></svg>
+        {/* Font Awesome Free angle-double-down, as embedded in the reference. Attribution: https://fontawesome.com/license/free */}
+        <svg className={styles.entryArrow} viewBox="0 0 320 512" fill="currentColor" aria-hidden="true"><path d="M143 256.3L7 120.3c-9.4-9.4-9.4-24.6 0-33.9l22.6-22.6c9.4-9.4 24.6-9.4 33.9 0l96.4 96.4 96.4-96.4c9.4-9.4 24.6-9.4 33.9 0L313 86.3c9.4 9.4 9.4 24.6 0 33.9l-136 136c-9.4 9.5-24.6 9.5-34 .1zm34 192l136-136c9.4-9.4 9.4-24.6 0-33.9l-22.6-22.6c-9.4-9.4-24.6-9.4-33.9 0L160 352.1l-96.4-96.4c-9.4-9.4-24.6-9.4-33.9 0L7 278.3c-9.4 9.4-9.4 24.6 0 33.9l136 136c9.4 9.5 24.6 9.5 34 .1z" /></svg>
         <img src={SEAL} alt="" width={100} height={100} draggable={false} decoding="async" />
       </button>
     </div>}
