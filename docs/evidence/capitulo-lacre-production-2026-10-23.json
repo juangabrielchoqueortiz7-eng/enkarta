@@ -1,0 +1,277 @@
+{
+  "verifiedAt": "2026-10-23T23:07:18.638Z",
+  "sourceSha": "580824275fbc0da576e0e4a3dcfc19bedd7d24aa",
+  "deploymentId": "dpl_51RKkcFxFmQuwXvdtbXixC2UPSY3",
+  "canonical": "https://enkarta.vercel.app/muestra/capitulo",
+  "ready": true,
+  "change": "Original full-screen Paradise paper panels and green floral wax seal; text-only families",
+  "tests": {
+    "capituloProfile": 15,
+    "capituloJsonMotion": 6,
+    "capituloEntry": 9,
+    "builderSectionIcons": 36,
+    "deployment": 5,
+    "total": 71,
+    "failed": 0
+  },
+  "vercelBuild": {
+    "compilation": true,
+    "lint": true,
+    "types": true,
+    "existingImageWarnings": true
+  },
+  "sourceAttestation": {
+    "criticalFiles": 61,
+    "allMatch": true,
+    "method": "commit and independently inspected uploaded-file hashes"
+  },
+  "preservation": {
+    "originals": 169,
+    "originalBytes": 56293636,
+    "currentLockByteIdentical": true,
+    "newOriginals": 0,
+    "legacySources": 28,
+    "bcpDisabled": true,
+    "atlasUnchanged": true,
+    "aureaUnchanged": true,
+    "verdealmaUnchanged": true,
+    "lunariaUnchanged": true,
+    "azureReferenceUnchanged": true,
+    "paradiseReferenceUnchanged": true,
+    "travesiaUnchanged": true,
+    "generatedMastersExcludedFromUpload": true,
+    "localSqlPreservedSha256": "e02d9eb658bd7d1b1941d7502da6817893aadd7df461fef1db405b1735d71aeb"
+  },
+  "entryOriginals": {
+    "manifest": "docs/assets/capitulo-entry-originals.json",
+    "manifestSha256": "c938a968645deed1696b28495f95982dd84803ed44f0f4d7ec035a124cdc6b3a",
+    "manifestBytes": 1188,
+    "assets": [
+      {
+        "role": "left",
+        "path": "/invitations/mariana-y-jesus/Recurso-1Sobres-copia-scaled.webp",
+        "source": "https://invitali.com/wp-content/uploads/2025/03/Recurso-1Sobres-copia-scaled.webp",
+        "width": 2389,
+        "height": 2560,
+        "bytes": 42994,
+        "sha256": "c35f6beb5df9fa5dd225e40d66bd9920760aa1fcd37e086e5e2800540ff14302",
+        "reused": true,
+        "originalBytesPreserved": true
+      },
+      {
+        "role": "right",
+        "path": "/invitations/mariana-y-jesus/Recurso-2Sobres-copia-scaled.webp",
+        "source": "https://invitali.com/wp-content/uploads/2025/03/Recurso-2Sobres-copia-scaled.webp",
+        "width": 2560,
+        "height": 2411,
+        "bytes": 31730,
+        "sha256": "342fa0b0ec8a97eba90d53a6936f4e8395e5b6c2cb0c2955c8e3e5521ecae003",
+        "reused": true,
+        "originalBytesPreserved": true
+      },
+      {
+        "role": "seal",
+        "path": "/invitations/laura-andres/SELLO-VERDE-copia_2.webp",
+        "source": "https://invitali.com/wp-content/uploads/2025/11/SELLO-VERDE-copia_2.webp",
+        "width": 344,
+        "height": 344,
+        "bytes": 17814,
+        "sha256": "9a192bff5eb9ec437398adaadb9bcb56be54393a2bc30b85091068f7781c7e31",
+        "reused": true,
+        "originalBytesPreserved": true
+      }
+    ],
+    "newOriginals": 0
+  },
+  "publicHttp": {
+    "passed": true,
+    "method": "read-only public GET",
+    "routes": [
+      {
+        "route": "/muestra/capitulo",
+        "passed": true,
+        "originalInstances": 13,
+        "distinctRequiredOriginals": 11,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 2,
+        "authenticEntryImages": 3,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/capitulo?full=1",
+        "passed": true,
+        "originalInstances": 13,
+        "distinctRequiredOriginals": 11,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/capitulo?preview=1",
+        "passed": true,
+        "originalInstances": 13,
+        "distinctRequiredOriginals": 11,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/capitulo?full=1&n=50&m=QA%20Forged%20Family",
+        "passed": true,
+        "originalInstances": 13,
+        "distinctRequiredOriginals": 11,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3",
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      }
+    ],
+    "images": [
+      {
+        "path": "/invitations/capitulo/hero.webp",
+        "bytes": 202028,
+        "sha256": "63c15dc5760178cfa75a6b812557f41af1cadbee36f3605ab49864adae1abe9d",
+        "passed": true
+      },
+      {
+        "path": "/invitations/capitulo/detail.webp",
+        "bytes": 91706,
+        "sha256": "3c23b3d4af8adadbd68d0d23550be3679fec7714042b642fe8d489523a75fc04",
+        "passed": true
+      },
+      {
+        "path": "/invitations/capitulo/celebration.webp",
+        "bytes": 344052,
+        "sha256": "196c3dc353a888797a64854ff3d2e5d230173c63ddb5221dabd0bb33c9e63a7c",
+        "passed": true
+      }
+    ],
+    "entryImages": [
+      {
+        "role": "left",
+        "path": "/invitations/mariana-y-jesus/Recurso-1Sobres-copia-scaled.webp",
+        "source": "https://invitali.com/wp-content/uploads/2025/03/Recurso-1Sobres-copia-scaled.webp",
+        "width": 2389,
+        "height": 2560,
+        "bytes": 42994,
+        "sha256": "c35f6beb5df9fa5dd225e40d66bd9920760aa1fcd37e086e5e2800540ff14302",
+        "reused": true,
+        "originalBytesPreserved": true,
+        "passed": true
+      },
+      {
+        "role": "right",
+        "path": "/invitations/mariana-y-jesus/Recurso-2Sobres-copia-scaled.webp",
+        "source": "https://invitali.com/wp-content/uploads/2025/03/Recurso-2Sobres-copia-scaled.webp",
+        "width": 2560,
+        "height": 2411,
+        "bytes": 31730,
+        "sha256": "342fa0b0ec8a97eba90d53a6936f4e8395e5b6c2cb0c2955c8e3e5521ecae003",
+        "reused": true,
+        "originalBytesPreserved": true,
+        "passed": true
+      },
+      {
+        "role": "seal",
+        "path": "/invitations/laura-andres/SELLO-VERDE-copia_2.webp",
+        "source": "https://invitali.com/wp-content/uploads/2025/11/SELLO-VERDE-copia_2.webp",
+        "width": 344,
+        "height": 344,
+        "bytes": 17814,
+        "sha256": "9a192bff5eb9ec437398adaadb9bcb56be54393a2bc30b85091068f7781c7e31",
+        "reused": true,
+        "originalBytesPreserved": true,
+        "passed": true
+      }
+    ],
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "accountsCreated": 0,
+    "eventsCreated": 0,
+    "cleanupRequired": false
+  },
+  "browser": {
+    "sourceSha": "580824275fbc0da576e0e4a3dcfc19bedd7d24aa",
+    "deploymentId": "dpl_51RKkcFxFmQuwXvdtbXixC2UPSY3",
+    "url": "https://enkarta.vercel.app/muestra/capitulo",
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "reference": "https://invitali.com/muestra-paradise/",
+    "entry": {
+      "fullScreenOriginalPaper": true,
+      "backgroundPositions": [
+        "100% 50%",
+        "0% 50%"
+      ],
+      "realWaxSealWidth": 100,
+      "options": [
+        "Ver invitación",
+        "Abrir sin música"
+      ],
+      "noHorizontalOverflow": true,
+      "openingObserved": {
+        "phase": "opening",
+        "leftTransform": "matrix(1, 0, 0, 1, -126.266, 0)"
+      },
+      "focusAfterOpening": "H1"
+    },
+    "music": {
+      "autoplayBeforeGesture": false,
+      "desktopPlayingTime": 14.177162,
+      "mobilePlayingTime": 5.991678,
+      "pausedFromControl": true,
+      "silentOpening": [
+        {
+          "paused": true,
+          "time": 0
+        }
+      ]
+    },
+    "families": {
+      "avatars": 0,
+      "names": [
+        "Irene y Julián",
+        "Lucía y Esteban"
+      ],
+      "desktopAndMobileScreenshots": true
+    },
+    "consoleErrors": [],
+    "screenshots": [
+      "production-entry-desktop.png",
+      "production-entry-mobile.png",
+      "production-families-desktop.png",
+      "production-families-mobile.png"
+    ],
+    "localCaptureLimitation": "Native getScreenshot failed on long content. Explicit viewport screenshot succeeded in production.",
+    "physicalDeviceAcceptance": false,
+    "productionWrites": 0,
+    "cleanupRequired": false
+  },
+  "screenshotsDirectory": "tmp/capitulo-lacre-20261023/visual/",
+  "cleanup": {
+    "fixturesCreated": 0,
+    "fixturesDeleted": 0,
+    "pending": false,
+    "localServerStopped": true,
+    "viewportRestored": true
+  }
+}
