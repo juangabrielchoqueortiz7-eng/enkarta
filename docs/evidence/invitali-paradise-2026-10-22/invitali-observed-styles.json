@@ -1,0 +1,228 @@
+{
+  "audio": [],
+  "backgrounds": [
+    "url(\"https://invitali.com/wp-content/uploads/2025/03/Recurso-1Sobres-copia-scaled.webp\")",
+    "url(\"https://invitali.com/wp-content/uploads/2025/03/Recurso-2Sobres-copia-scaled.webp\")",
+    "url(\"https://invitali.com/wp-content/uploads/2025/03/Fondo-verde-marmol-copia.webp\")",
+    "url(\"https://invitali.com/wp-content/uploads/2025/12/pasport.webp\")",
+    "url(\"https://invitali.com/wp-content/uploads/2025/12/paradise-muestras3.webp\")",
+    "url(\"https://invitali.com/wp-content/uploads/2025/12/paradise-muestras6.webp\")",
+    "url(\"https://invitali.com/wp-content/uploads/2025/12/paradise-muestras5.webp\")",
+    "url(\"https://invitali.com/wp-content/uploads/2025/09/Hotel-Sheraton-copia.webp\")",
+    "url(\"https://invitali.com/wp-content/uploads/2025/09/Hotel-MAdison-copia.webp\")",
+    "url(\"https://invitali.com/wp-content/uploads/2025/12/muestras-PARADISE2.webp\")",
+    "url(\"https://invitali.com/wp-content/uploads/2025/12/muestras-PARADISE1.webp\")"
+  ],
+  "texts": [
+    {
+      "color": "rgb(255, 255, 255)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Nuestro gran día se aproxima y nos encantaría que formaras parte de él. Nos hace mucha ilusión invitarlos a nuestra boda."
+    },
+    {
+      "color": "rgb(255, 255, 255)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Hemos reservado:"
+    },
+    {
+      "color": "rgb(255, 255, 255)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "en su honor"
+    },
+    {
+      "color": "rgb(50, 77, 47)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "«Dos son mejor que uno, porque obtienen más fruto de su esfuerzo. Si caen, el uno levanta al otro.» Eclesiastés 4:9-10"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "Nathalia, sans-serif",
+      "lineHeight": "48px",
+      "size": "40px",
+      "text": "Faltan"
+    },
+    {
+      "color": "rgb(50, 77, 47)",
+      "font": "Cinzel, sans-serif",
+      "lineHeight": "31.2px",
+      "size": "26px",
+      "text": "Con la bendición de Dios y guiados por el amor de nuestros padres:"
+    },
+    {
+      "color": "rgb(50, 77, 47)",
+      "font": "Nathalia, sans-serif",
+      "lineHeight": "42px",
+      "size": "35px",
+      "text": "Padres de la Novia"
+    },
+    {
+      "color": "rgb(50, 77, 47)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Alicia Mariluz RocaJorge Pachas Avalos"
+    },
+    {
+      "color": "rgb(50, 77, 47)",
+      "font": "Nathalia, sans-serif",
+      "lineHeight": "42px",
+      "size": "35px",
+      "text": "Padres del Novio"
+    },
+    {
+      "color": "rgb(50, 77, 47)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Liduzmila Damián AcostaJosé Zeña Santamaría"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "Nathalia, sans-serif",
+      "lineHeight": "48px",
+      "size": "40px",
+      "text": "Ceremonia Religiosa"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "18:00 h"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Centro de Eventos Notre Dame"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "Nathalia, sans-serif",
+      "lineHeight": "48px",
+      "size": "40px",
+      "text": "Ceremonia Civil"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "20:00 h"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Centro de Eventos Notre Dame"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "Nathalia, sans-serif",
+      "lineHeight": "48px",
+      "size": "40px",
+      "text": "Vestimenta"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Formal"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "Nathalia, sans-serif",
+      "lineHeight": "48px",
+      "size": "40px",
+      "text": "Cronograma"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Recepción Social"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "18:00 h"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Cena"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "20:00 h"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Fin de la fiesta"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "00:00 h"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Ceremonia Religiosa"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "16:00 h"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "Vals y Brindis"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "18:30 h"
+    },
+    {
+      "color": "rgb(237, 228, 210)",
+      "font": "\"Poiret One\", sans-serif",
+      "lineHeight": "24px",
+      "size": "20px",
+      "text": "A bailar"
+    }
+  ]
+}

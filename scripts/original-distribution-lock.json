@@ -92,6 +92,36 @@
       "bytes": 9990
     },
     {
+      "path": "/invitations/laura-andres/cormorantinfant-hhypu44g9vkim1sorysiweasln997_cv2q.woff2",
+      "sha256": "8f9f468a10e78619156182f2585f3f119f06d166bf0896a8a581e25f89ad5809",
+      "bytes": 35720
+    },
+    {
+      "path": "/invitations/laura-andres/Nathalia.ttf",
+      "sha256": "7235404d6b8fba4b2d0c22238fcd7aa577716f4c6ffa2088e6626ebf6d495064",
+      "bytes": 67236
+    },
+    {
+      "path": "/invitations/laura-andres/poiretone-uqyvk80njxn4zfrgbdfbo55cvw.woff2",
+      "sha256": "a6361b9b4bd84cd02407a4674e0158642a51d5f968f0366adf8a19302bec6c0c",
+      "bytes": 7824
+    },
+    {
+      "path": "/invitations/laura-andres/SELLO-VERDE-copia_2.webp",
+      "sha256": "9a192bff5eb9ec437398adaadb9bcb56be54393a2bc30b85091068f7781c7e31",
+      "bytes": 17814
+    },
+    {
+      "path": "/invitations/manuel-y-maya/cinzel-8vij7ww63mvu7gt79mt7.woff2",
+      "sha256": "a88b9e2784b1440392fdb02a09c194ca985b19b64be781c801f0fa4f3ca634a2",
+      "bytes": 25960
+    },
+    {
+      "path": "/invitations/manuel-y-maya/cinzeldecorative-daacsscvjgqlyhg8nnt8kppswuapni7ttmw.woff2",
+      "sha256": "97d28bf5a628c4f0305a6f837e85d5ae7dbf44485f04d2a4cada8d7810c9bb03",
+      "bytes": 14416
+    },
+    {
       "path": "/invitations/maria-angelica-y-mario/Aquamare-hotel.webp",
       "sha256": "c08f48a9c19e52181ddf12360cabc16b56cdbe11c102b1fc5a00385a9f0eb317",
       "bytes": 43284
@@ -360,6 +390,16 @@
       "path": "/invitations/mariana-y-jesus/ZELLE-MJ.webp",
       "sha256": "cd582af6e1e97effa43f07fd7ae546fef973ae0b731540e22b302159f98443f3",
       "bytes": 33232
+    },
+    {
+      "path": "/invitations/paradise-referencia/2025-03-Fondo-verde-marmol-copia.webp",
+      "sha256": "37f55ef323508d88236bc039e694e291aee9587ee18795daa547205698b21079",
+      "bytes": 20354
+    },
+    {
+      "path": "/invitations/paradise-referencia/2025-12-pasport.webp",
+      "sha256": "2618d55d5a0635b3e8e0c2086847ef5f5cc57d5879c063c0d392176edefefc97",
+      "bytes": 309402
     },
     {
       "path": "/invitations/paula-y-juan-felipe/fondo-flores-rosas.webp",

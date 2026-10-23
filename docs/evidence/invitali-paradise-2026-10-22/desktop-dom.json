@@ -1,0 +1,191 @@
+{
+  "enkarta": {
+    "document": {
+      "height": 6144,
+      "width": 1434
+    },
+    "headings": [
+      {
+        "color": "rgb(238, 240, 224)",
+        "font": "Cinzel, serif",
+        "height": 79.11305236816406,
+        "lineHeight": "79.12px",
+        "size": "86px",
+        "text": "LAURA",
+        "width": 524.0004272460938,
+        "x": 173.2766571044922,
+        "y": 273.68994140625
+      },
+      {
+        "color": "rgb(238, 240, 224)",
+        "font": "Cinzel, serif",
+        "height": 79.11305236816406,
+        "lineHeight": "79.12px",
+        "size": "86px",
+        "text": "ELVIS",
+        "width": 524.0004272460938,
+        "x": 173.2766571044922,
+        "y": 475.1953125
+      },
+      {
+        "color": "rgb(60, 74, 42)",
+        "font": "\"Cormorant Garamond\", serif",
+        "height": 30.33985710144043,
+        "lineHeight": "30.8px",
+        "size": "22px",
+        "text": "Con la bendición de Dios y guiados por el amor de nuestros padres:",
+        "width": 1365.7822265625,
+        "x": 34.388328552246094,
+        "y": 2152.197509765625
+      },
+      {
+        "color": "rgb(255, 255, 255)",
+        "font": "\"Cormorant Garamond\", serif",
+        "height": 71.70221710205078,
+        "lineHeight": "36.4px",
+        "size": "26px",
+        "text": "Madisson Inn Hotel & Luxury Suites",
+        "width": 362.5057373046875,
+        "x": 536.0208129882812,
+        "y": 4501.374328613281
+      },
+      {
+        "color": "rgb(60, 74, 42)",
+        "font": "\"Cormorant Garamond\", serif",
+        "height": 145.58822631835938,
+        "lineHeight": "36.4px",
+        "size": "26px",
+        "text": "Creemos que mereces una noche alegre y divertida es por eso que esperamos contar con tu presencia",
+        "width": 575.99951171875,
+        "x": 429.2738952636719,
+        "y": 5242.807674407959
+      }
+    ],
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    }
+  },
+  "invitali": {
+    "document": {
+      "height": 8135,
+      "width": 1426
+    },
+    "headings": [
+      {
+        "color": "rgb(0, 0, 0)",
+        "font": "\"Poiret One\", sans-serif",
+        "height": 22.10477828979492,
+        "lineHeight": "22.1px",
+        "size": "17px",
+        "text": "Ver invitación",
+        "width": 98.02389526367188,
+        "x": 663.855712890625,
+        "y": 342.42877197265625
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "font": "Cinzel, sans-serif",
+        "height": 71.49586486816406,
+        "lineHeight": "71.5px",
+        "size": "55px",
+        "text": "LAURA",
+        "width": 175.01148986816406,
+        "x": 176.3327178955078,
+        "y": 341.25689697265625
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "font": "Nathalia, sans-serif",
+        "height": 58.50183868408203,
+        "lineHeight": "58.5px",
+        "size": "45px",
+        "text": "Ruggeri",
+        "width": 125,
+        "x": 331.3419189453125,
+        "y": 390.245849609375
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "font": "\"Cormorant Infant\", sans-serif",
+        "height": 110.50091552734376,
+        "lineHeight": "110.5px",
+        "size": "85px",
+        "text": "&",
+        "width": 60.86856460571289,
+        "x": 176.3327178955078,
+        "y": 382.7435607910156
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "font": "Cinzel, sans-serif",
+        "height": 71.49586486816406,
+        "lineHeight": "71.5px",
+        "size": "55px",
+        "text": "ELVIS",
+        "width": 146.2890625,
+        "x": 225.8271942138672,
+        "y": 451.2408142089844
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "font": "Nathalia, sans-serif",
+        "height": 58.50183868408203,
+        "lineHeight": "58.5px",
+        "size": "45px",
+        "text": "Garrido",
+        "width": 120.24356079101562,
+        "x": 352.11395263671875,
+        "y": 500.2297668457031
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "font": "\"Cinzel Decorative\", sans-serif",
+        "height": 173.88555908203125,
+        "lineHeight": "39px",
+        "size": "30px",
+        "text": "29/03/26",
+        "width": 39.00505447387695,
+        "x": 635.6617431640625,
+        "y": 363.0514526367187
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "font": "Cinzel, sans-serif",
+        "height": 193.92233276367188,
+        "lineHeight": "39px",
+        "size": "30px",
+        "text": "SANTA CRUZ",
+        "width": 39.00505447387695,
+        "x": 1214.6484375,
+        "y": 353.0330810546875
+      },
+      {
+        "color": "rgb(204, 173, 132)",
+        "font": "nathalia, sans-serif",
+        "height": 43.19852828979492,
+        "lineHeight": "43.2px",
+        "size": "43.2px",
+        "text": "Daniel Martinez",
+        "width": 480.0091857910156,
+        "x": 472.863037109375,
+        "y": 1123.9888916015625
+      },
+      {
+        "color": "rgb(204, 173, 132)",
+        "font": "nathalia, sans-serif",
+        "height": 43.19852828979492,
+        "lineHeight": "43.2px",
+        "size": "43.2px",
+        "text": "2 pases",
+        "width": 480.0091857910156,
+        "x": 472.863037109375,
+        "y": 1191.18798828125
+      }
+    ],
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    }
+  }
+}

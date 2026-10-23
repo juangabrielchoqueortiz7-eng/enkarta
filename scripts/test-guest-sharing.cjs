@@ -20,6 +20,7 @@ const fakeComponent = name => Object.assign(function Component() {}, { displayNa
 for (const name of ['PublishedTemplate', 'EntryGate', 'BlockRenderer', 'FontScope', 'SmartRsvp', 'InvitationAnalytics', 'PreviewCaptureController']) {
   replace(source(`components/invitations/${name}.tsx`), { __esModule: true, default: fakeComponent(name) });
 }
+replace(source('components/invitations/ParadiseReference.tsx'), { __esModule: true, default: fakeComponent('ParadiseReference'), ParadiseReferenceEntry: fakeComponent('ParadiseReferenceEntry') });
 replace(source('lib/scroll-motion.tsx'), { PageMotionProvider: fakeComponent('PageMotionProvider') });
 replace('next/navigation', { notFound() { throw new Error('NEXT_NOT_FOUND'); } });
 replace('next/headers', { async headers() { headerReads++; return new Headers({ host: 'attacker.example', 'x-forwarded-host': 'attacker.example' }); } });
@@ -136,6 +137,54 @@ test('public client props contain only the verified group, never roster or opera
   assert.doesNotMatch(JSON.stringify(result), /OTHERGROUP|QA SAVED PREVIEW GUEST|QA PRIVATE GROUP|59170000000|59171111111|guestMeta|metadataStored/);
   const generic = await page.default(props({ full: '1' }));
   assert.equal(generic.props.config.activeGuest, undefined); assert.equal(generic.props.config.guestMeta, undefined);
+});
+
+const componentNodes = (value, name) => !value || typeof value !== 'object' ? [] : Array.isArray(value)
+  ? value.flatMap(child => componentNodes(child, name))
+  : [...(value.type?.displayName === name ? [value] : []), ...componentNodes(value.props?.children, name)];
+
+test('the Paradise reference wraps both its hero and server-gated RSVP in exactly one native entry', async () => {
+  snapshot.template = 'paradise';
+  snapshot.config = { designKey: 'paradise-referencia', entry: { enabled: true } };
+  features = { guestNames: true, smartRsvp: true, passes: true, entry: true, music: false };
+  for (const full of [undefined, '1']) {
+    const result = await page.default(props({ full }));
+    assert.equal(componentNodes(result, 'EntryGate').length, 0, 'The shared gate cannot cover the native envelope');
+    const template = componentNodes(result, 'PublishedTemplate'); assert.equal(template.length, 1);
+    assert.equal(template[0].props.invitation.config.designKey, 'paradise-referencia');
+    assert.equal(template[0].props.skipEntry, true, 'The template does not mount a second envelope inside the server wrapper');
+    const forms = componentNodes(result, 'SmartRsvp'); assert.equal(forms.length, 1);
+    assert.equal(forms[0].props.slug, row.slug); assert.equal(forms[0].props.viewport, 'both');
+    assert.equal(componentNodes(result, 'PageMotionProvider')[0].props.gated, full !== '1');
+    const entries = componentNodes(result, 'ParadiseReferenceEntry'); assert.equal(entries.length, full === '1' ? 0 : 1);
+    if (full !== '1') {
+      assert.equal(componentNodes(entries[0].props.children, 'PublishedTemplate').length, 1);
+      assert.equal(componentNodes(entries[0].props.children, 'SmartRsvp').length, 1, 'RSVP remains in the same inert background as the hero until entry completes');
+    }
+  }
+  snapshot.config.entry.enabled = false;
+  assert.equal(componentNodes(await page.default(props()), 'ParadiseReferenceEntry').length, 0);
+  snapshot.config.entry = {};
+  features.entry = false;
+  const unavailable = await page.default(props());
+  assert.equal(componentNodes(unavailable, 'ParadiseReferenceEntry').length, 0, 'An omitted toggle follows the entry entitlement');
+  assert.equal(componentNodes(unavailable, 'PublishedTemplate')[0].props.skipEntry, true);
+  assert.equal(componentNodes(unavailable, 'SmartRsvp').length, 1);
+  assert.equal(componentNodes(unavailable, 'PageMotionProvider')[0].props.gated, false);
+  features.smartRsvp = false;
+  assert.equal(componentNodes(await page.default(props()), 'SmartRsvp').length, 0, 'The new visual profile does not grant uncontracted RSVP');
+});
+
+test('a cinematic override delegates entry once while the Paradise reference keeps its external RSVP', async () => {
+  snapshot.template = 'paradise';
+  snapshot.config = { designKey: 'paradise-referencia', entry: { enabled: true, style: 'cinematic', videoUrl: '/qa-original-entry.mp4' } };
+  features = { guestNames: true, smartRsvp: true, passes: true, entry: true, music: false };
+  const result = await page.default(props()), entries = componentNodes(result, 'EntryGate');
+  assert.equal(entries.length, 1); assert.equal(entries[0].props.scene, 'cinematic'); assert.equal(entries[0].props.entryVideoUrl, '/qa-original-entry.mp4');
+  assert.equal(componentNodes(result, 'ParadiseReferenceEntry').length, 0);
+  assert.equal(componentNodes(result, 'PublishedTemplate')[0].props.skipEntry, true, 'The native envelope is explicitly bypassed while the cinematic entry runs');
+  assert.equal(componentNodes(entries[0].props.children, 'SmartRsvp').length, 1);
+  assert.equal(componentNodes(entries[0].props.children, 'PageMotionProvider')[0].props.gated, true);
 });
 
 test('closed and unpublished pages skip publication history and personalized guest queries', async () => {

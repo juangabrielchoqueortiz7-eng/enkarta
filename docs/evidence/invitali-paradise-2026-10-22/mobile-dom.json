@@ -1,0 +1,276 @@
+{
+  "invitali": {
+    "document": {
+      "height": 7632,
+      "width": 376
+    },
+    "headings": [
+      {
+        "color": "rgb(0, 0, 0)",
+        "display": "block",
+        "font": "\"Poiret One\", sans-serif",
+        "height": 0,
+        "lineHeight": "22.1px",
+        "size": "17px",
+        "text": "Ver invitación",
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "display": "block",
+        "font": "Cinzel, sans-serif",
+        "height": 42.89981460571289,
+        "lineHeight": "42.9px",
+        "size": "33px",
+        "text": "LAURA",
+        "width": 113.2467803955078,
+        "x": 62.867645263671875,
+        "y": 104.51516723632812
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "display": "block",
+        "font": "Nathalia, sans-serif",
+        "height": 39.00505447387695,
+        "lineHeight": "39px",
+        "size": "30px",
+        "text": "Ruggeri",
+        "width": 87.78722381591797,
+        "x": 163.1204071044922,
+        "y": 130.51470947265625
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "display": "block",
+        "font": "\"Cormorant Infant\", sans-serif",
+        "height": 80.59513092041016,
+        "lineHeight": "80.6px",
+        "size": "62px",
+        "text": "&",
+        "width": 44.39338302612305,
+        "x": 62.867645263671875,
+        "y": 125.52848815917967
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "display": "block",
+        "font": "Cinzel, sans-serif",
+        "height": 45.49632263183594,
+        "lineHeight": "45.5px",
+        "size": "35px",
+        "text": "ELVIS",
+        "width": 93.09512329101562,
+        "x": 112.86764526367188,
+        "y": 167.1300506591797
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "display": "block",
+        "font": "Nathalia, sans-serif",
+        "height": 39.00505447387695,
+        "lineHeight": "39px",
+        "size": "30px",
+        "text": "Garrido",
+        "width": 80.17003631591797,
+        "x": 196.95541381835935,
+        "y": 198.12728881835935
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "display": "block",
+        "font": "\"Cinzel Decorative\", sans-serif",
+        "height": 121.65670776367188,
+        "lineHeight": "37.7px",
+        "size": "29px",
+        "text": "29/03/26",
+        "width": 37.6953125,
+        "x": 17.48621368408203,
+        "y": 480.0551452636719
+      },
+      {
+        "color": "rgb(237, 228, 210)",
+        "display": "block",
+        "font": "Cinzel, sans-serif",
+        "height": 193.92233276367188,
+        "lineHeight": "39px",
+        "size": "30px",
+        "text": "SANTA CRUZ",
+        "width": 39.00505447387695,
+        "x": 324.6438293457031,
+        "y": 443.9223327636719
+      },
+      {
+        "color": "rgb(204, 173, 132)",
+        "display": "block",
+        "font": "nathalia, sans-serif",
+        "height": 40.52159881591797,
+        "lineHeight": "40.5176px",
+        "size": "40.5176px",
+        "text": "Daniel Martinez",
+        "width": 239.28079223632812,
+        "x": 68.22150421142578,
+        "y": 1011.5234375
+      },
+      {
+        "color": "rgb(204, 173, 132)",
+        "display": "block",
+        "font": "nathalia, sans-serif",
+        "height": 40.52159881591797,
+        "lineHeight": "40.5176px",
+        "size": "40.5176px",
+        "text": "2 pases",
+        "width": 85.69622802734375,
+        "x": 145.01377868652344,
+        "y": 1087.0404052734375
+      }
+    ],
+    "images": [
+      {
+        "alt": "",
+        "height": 0,
+        "src": "https://invitali.com/muestra-paradise/?n=2%20pases&m=Daniel%20Martinez",
+        "width": 0
+      },
+      {
+        "alt": "",
+        "height": 0,
+        "src": "https://invitali.com/wp-content/uploads/2025/11/SELLO-VERDE-copia_2.webp",
+        "width": 0
+      },
+      {
+        "alt": "",
+        "height": 123.9430160522461,
+        "src": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+        "width": 123.9430160522461
+      },
+      {
+        "alt": "",
+        "height": 118.99126434326172,
+        "src": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+        "width": 118.99126434326172
+      },
+      {
+        "alt": "",
+        "height": 0.3446691036224365,
+        "src": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+        "width": 0.3446691036224365
+      },
+      {
+        "alt": "",
+        "height": 0,
+        "src": "https://pixel.wp.com/g.gif?v=ext&blog=239835359&post=35381&tz=-4&srv=invitali.com&j=1%3A16.2&host=invitali.com&ref=&fcp=3676&rand=0.9111441789197049",
+        "width": 0
+      }
+    ],
+    "viewport": {
+      "height": 844,
+      "width": 390
+    }
+  },
+  "enkarta": {
+    "document": {
+      "height": 7333,
+      "width": 384
+    },
+    "headings": [
+      {
+        "color": "rgb(238, 240, 224)",
+        "display": "block",
+        "font": "Cinzel, serif",
+        "height": 40.475643157958984,
+        "lineHeight": "40.48px",
+        "size": "44px",
+        "text": "LAURA",
+        "width": 336.58087158203125,
+        "x": 23.988969802856445,
+        "y": 533.0881958007812
+      },
+      {
+        "color": "rgb(238, 240, 224)",
+        "display": "block",
+        "font": "Cinzel, serif",
+        "height": 40.475643157958984,
+        "lineHeight": "40.48px",
+        "size": "44px",
+        "text": "ELVIS",
+        "width": 336.58087158203125,
+        "x": 23.988969802856445,
+        "y": 640.5560302734375
+      },
+      {
+        "color": "rgb(60, 74, 42)",
+        "display": "block",
+        "font": "\"Cormorant Garamond\", serif",
+        "height": 66.20231628417969,
+        "lineHeight": "22.4px",
+        "size": "16px",
+        "text": "Con la bendición de Dios y guiados por el amor de nuestros padres:",
+        "width": 331.5321960449219,
+        "x": 26.513322830200195,
+        "y": 2384.533203125
+      },
+      {
+        "color": "rgb(255, 255, 255)",
+        "display": "block",
+        "font": "\"Cormorant Garamond\", serif",
+        "height": 49.634864807128906,
+        "lineHeight": "25.2px",
+        "size": "18px",
+        "text": "Madisson Inn Hotel & Luxury Suites",
+        "width": 252.7683868408203,
+        "x": 65.89521026611328,
+        "y": 5419.611328125
+      },
+      {
+        "color": "rgb(60, 74, 42)",
+        "display": "block",
+        "font": "\"Cormorant Garamond\", serif",
+        "height": 99.26901245117188,
+        "lineHeight": "25.2px",
+        "size": "18px",
+        "text": "Creemos que mereces una noche alegre y divertida es por eso que esperamos contar con tu presencia",
+        "width": 331.5321960449219,
+        "x": 26.513322830200195,
+        "y": 6544.89013671875
+      }
+    ],
+    "images": [
+      {
+        "alt": "",
+        "height": 395.6341857910156,
+        "src": "https://images.unsplash.com/photo-1519741497674-611481863552?w=900&q=80",
+        "width": 296.72564697265625
+      },
+      {
+        "alt": "",
+        "height": 346.1194152832031,
+        "src": "https://images.unsplash.com/photo-1606800052052-a08af7148866?w=900&q=80",
+        "width": 276.8954162597656
+      },
+      {
+        "alt": "QR",
+        "height": 157.5952911376953,
+        "src": "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Enkarta-Paradise-Regalo",
+        "width": 157.595458984375
+      },
+      {
+        "alt": "",
+        "height": 283.6741638183594,
+        "src": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
+        "width": 284.27392578125
+      },
+      {
+        "alt": "",
+        "height": 506.4682922363281,
+        "src": "https://images.unsplash.com/photo-1519741497674-611481863552?w=900&q=80",
+        "width": 384.5588073730469
+      }
+    ],
+    "viewport": {
+      "height": 844,
+      "width": 390
+    }
+  }
+}

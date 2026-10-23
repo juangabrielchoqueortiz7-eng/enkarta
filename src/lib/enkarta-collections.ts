@@ -196,6 +196,7 @@ export function collectionFor(template?: string | null): EnkartaCollection {
 }
 
 export function publicTemplateName(template?: string | null, presetKey?: string): string {
+  if (presetKey === 'paradise-referencia') return 'Paradise · estudio de referencia';
   const clean=CLEAN_DESIGNS.find(d=>d.key===presetKey);if(clean)return clean.name;
   if (presetKey === MARIA_MARIO_DESIGN.key) return MARIA_MARIO_DESIGN.name;
   if (presetKey === KARLA_MAURICIO_DESIGN.key) return KARLA_MAURICIO_DESIGN.name;

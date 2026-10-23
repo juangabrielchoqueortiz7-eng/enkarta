@@ -74,6 +74,25 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
   const setLines = (key: keyof BuilderConfig) => (v: string) =>
     setCfg({ [key]: v.split('\n').map(s => s.trim()).filter(Boolean) } as Partial<BuilderConfig>);
 
+  if (cfg.designKey === 'paradise-referencia') {
+    return (
+      <Wrapper title="Paradise · entrada y cabecera">
+        <p className="font-outfit text-sm leading-6 text-[#62594d]">Este estudio incluye la entrada y la cabecera. Edita los nombres y la fecha en Datos, la fotografía en Fotos y música, y el texto de entrada en Config.</p>
+        <div className="grid min-w-0 grid-cols-1 gap-3 min-[1200px]:grid-cols-2">
+          <Field label="Apellido de la novia">
+            <input type="text" name="paradise-reference-bride-last" autoComplete="off" className={inputCls} value={cfg.brideLast ?? ''} onChange={e => setCfg({ brideLast: e.target.value })} />
+          </Field>
+          <Field label="Apellido del novio">
+            <input type="text" name="paradise-reference-groom-last" autoComplete="off" className={inputCls} value={cfg.groomLast ?? ''} onChange={e => setCfg({ groomLast: e.target.value })} />
+          </Field>
+        </div>
+        <Field label="Ciudad">
+          <input type="text" name="paradise-reference-city" autoComplete="off" className={inputCls} value={cfg.city ?? ''} onChange={e => setCfg({ city: e.target.value })} />
+        </Field>
+      </Wrapper>
+    );
+  }
+
   const t = data.template;
 
   if (t === 'azure') {

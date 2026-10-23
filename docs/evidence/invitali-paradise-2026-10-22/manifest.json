@@ -1,0 +1,408 @@
+{
+  "observedDate": "2026-10-22",
+  "scope": "Paradise / Verdealma, public samples only",
+  "references": {
+    "invitali": "https://invitali.com/muestra-paradise/?n=2%20pases&m=Daniel%20Martinez",
+    "enkarta": "https://enkarta.vercel.app/muestra/paradise"
+  },
+  "method": "Live CUA browser; verified CSS viewports; unchanged public samples; screenshots of visible regions",
+  "limits": [
+    "Screenshots omit scrollbars; image widths differ from CSS viewport widths.",
+    "Region scroll offsets differ when content heights differ.",
+    "Entry buttons may retain the accessible focus indicator.",
+    "No full-page images retained: untriggered Reveal and fixed backgrounds made them unreliable.",
+    "Computed font family does not prove the rasterized font file.",
+    "No timing parity, sound parity, physical-device metrics, CWV or comparison of the other 23 demos certified."
+  ],
+  "captures": [
+    {
+      "file": "desktop-enkarta-entry.jpg",
+      "format": "image/jpeg",
+      "bytes": 35822,
+      "sha256": "6b077f3fc5d89cfb43e0fdc5fef953b19e98c708f5addb4927ddca65b4967c7f",
+      "image": {
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "desktop-enkarta-hero.jpg",
+      "format": "image/jpeg",
+      "bytes": 49590,
+      "sha256": "f4deb3bbb928b4200d43ea84ce599d1886fa81ffb58ea89a5c590297df48a166",
+      "image": {
+        "width": 1434,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "desktop-enkarta-intro.jpg",
+      "format": "image/jpeg",
+      "bytes": 55533,
+      "sha256": "b73b081cd551bd5284caf4c15b37c60526d092eb921695f3a6708de9c6981c61",
+      "image": {
+        "width": 1434,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "desktop-enkarta-itinerary.jpg",
+      "format": "image/jpeg",
+      "bytes": 27998,
+      "sha256": "5cb5ce60c17028c2d2c28580df031131ef5062a0315ce05959d67e6b80cdf9c9",
+      "image": {
+        "width": 1434,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "desktop-enkarta-lodging.jpg",
+      "format": "image/jpeg",
+      "bytes": 82315,
+      "sha256": "e77467b8da81b802fa18fc48ee62ed7151156743d6648d421458dd1d72d2a6e4",
+      "image": {
+        "width": 1434,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "desktop-invitali-entry.jpg",
+      "format": "image/jpeg",
+      "bytes": 17167,
+      "sha256": "a803ef1f9be61614637bc830ec54bcc3f87448e62a756d014de888cb69bbe835",
+      "image": {
+        "width": 1425,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "desktop-invitali-events.jpg",
+      "format": "image/jpeg",
+      "bytes": 54416,
+      "sha256": "7278d9275a84a9344f400b79bc87e3f65c2766ab436217e1a52dc0afe464d5d6",
+      "image": {
+        "width": 1425,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "desktop-invitali-hero.jpg",
+      "format": "image/jpeg",
+      "bytes": 122723,
+      "sha256": "4d7f87d7d0d319fe3c7df2a92eacbd8873f954043965627b36dd2011efcfacbe",
+      "image": {
+        "width": 1425,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "desktop-invitali-intro.jpg",
+      "format": "image/jpeg",
+      "bytes": 41099,
+      "sha256": "9a2bb3bf9d0960af7fbf87930d3bcc2f18a6093ed43a66381ee05d49dbcb3b41",
+      "image": {
+        "width": 1425,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "desktop-invitali-itinerary.jpg",
+      "format": "image/jpeg",
+      "bytes": 37245,
+      "sha256": "fd1d52f7434bf7159d30a13285c69b6fa865686c4055436bb5b0fcd90f262405",
+      "image": {
+        "width": 1425,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "desktop-invitali-lodging.jpg",
+      "format": "image/jpeg",
+      "bytes": 91384,
+      "sha256": "1e3bfa77efb4a6d22adf909a04ac97f0fd3ef9ee571bb4478c29efea4e8bfec2",
+      "image": {
+        "width": 1425,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "desktop-invitali-rsvp.jpg",
+      "format": "image/jpeg",
+      "bytes": 165066,
+      "sha256": "2a68bf21fdf9084932c0f82020c3c35fed02af65c82adb1e2b043cba4f12cf21",
+      "image": {
+        "width": 1425,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "mobile-enkarta-entry.jpg",
+      "format": "image/jpeg",
+      "bytes": 25078,
+      "sha256": "532c8670a3abc108fba5942e4fad81966fefa3f0fba97497de8f27af3d5edd99",
+      "image": {
+        "width": 390,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-enkarta-events.jpg",
+      "format": "image/jpeg",
+      "bytes": 25931,
+      "sha256": "819191811fbb0c239e20fe994757ec372857ecea9d164529de9658eb297074c7",
+      "image": {
+        "width": 384,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-enkarta-hero.jpg",
+      "format": "image/jpeg",
+      "bytes": 28140,
+      "sha256": "6f39a45f10b1448de8ad0b561ecc7d23387b11e0593f7bba2a215b46b3604702",
+      "image": {
+        "width": 384,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-enkarta-intro.jpg",
+      "format": "image/jpeg",
+      "bytes": 27885,
+      "sha256": "eccd2ab022df439a8b933a527f7a8f4f97f4e762d62e148bd102662b0229523b",
+      "image": {
+        "width": 384,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-enkarta-itinerary.jpg",
+      "format": "image/jpeg",
+      "bytes": 23256,
+      "sha256": "af84b506ef28af9c691486a9b9c35752b2503515a8ec818085e6fd9db9bb90ba",
+      "image": {
+        "width": 384,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-enkarta-lodging.jpg",
+      "format": "image/jpeg",
+      "bytes": 39559,
+      "sha256": "db2aa4cc01d8f11665fd2b9d8424788d0be428792a513fe145acba56a2227045",
+      "image": {
+        "width": 384,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-enkarta-rsvp.jpg",
+      "format": "image/jpeg",
+      "bytes": 34007,
+      "sha256": "0845d679b94530f079a733b0223aed9635598acc0a0152d6547f6d42bdefa132",
+      "image": {
+        "width": 384,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-invitali-entry.jpg",
+      "format": "image/jpeg",
+      "bytes": 8220,
+      "sha256": "6aa00c0499359955ece4e9adeee6ad86d7253c236090a3aa1a826762f1a7fb77",
+      "image": {
+        "width": 375,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-invitali-events.jpg",
+      "format": "image/jpeg",
+      "bytes": 26412,
+      "sha256": "cd5b35f230c2c9697ac7e5f60201de6b1f7437d3c3cf6f5b6c6277c1f87d9d81",
+      "image": {
+        "width": 375,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-invitali-hero.jpg",
+      "format": "image/jpeg",
+      "bytes": 53550,
+      "sha256": "3abb572dd3f4f6e76e72e948441e628a64f28f32edd93c90fd8df0ea2c19ab6a",
+      "image": {
+        "width": 375,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-invitali-intro.jpg",
+      "format": "image/jpeg",
+      "bytes": 22440,
+      "sha256": "93e6fea33dde714089cc5d0f99834d3012839a7b3b81ffa960be23b50928908a",
+      "image": {
+        "width": 375,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-invitali-itinerary.jpg",
+      "format": "image/jpeg",
+      "bytes": 18568,
+      "sha256": "058e5305bba58ce48dca316eb6796cbefacf7df6ae7a5684c73b794d6f5e150b",
+      "image": {
+        "width": 375,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-invitali-lodging.jpg",
+      "format": "image/jpeg",
+      "bytes": 50633,
+      "sha256": "ba37755b0183201e221bb0a5b8d4b9f3add00f9163f7bc850d44fb75d765fb81",
+      "image": {
+        "width": 375,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "mobile-invitali-rsvp.jpg",
+      "format": "image/jpeg",
+      "bytes": 55488,
+      "sha256": "44c5028e69fb3ef2fe5b451f864fd1bfd5c672073df365b0459fdaa8a705eecf",
+      "image": {
+        "width": 375,
+        "height": 844
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  ],
+  "sourceSnapshots": [
+    {
+      "file": "mobile-dom.json",
+      "bytes": 7898,
+      "sha256": "fe41e47e39ac9fdd854f346c457591b457eae84245a205d9cc7fc65bf16d1429"
+    },
+    {
+      "file": "desktop-dom.json",
+      "bytes": 5261,
+      "sha256": "a771a47d8f0d340d5ba9a53f11e500be699cfe7ed814b2d46a3e77a29f0d9ca1"
+    },
+    {
+      "file": "invitali-observed-styles.json",
+      "bytes": 6516,
+      "sha256": "10aaf3931856e3250f7b6a935b51c7bb556f28bfe429fcf7f6acfd3b21f07527"
+    }
+  ],
+  "integrity": {
+    "originalPublicResourcesVerified": 129,
+    "bcpSourceGuard": "BCP_CONTRACT_REQUIRED",
+    "applicationChanged": false,
+    "productionFixturesCreated": 0,
+    "productionFormsSubmitted": 0,
+    "temporaryTabsClosed": true
+  }
+}

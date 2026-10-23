@@ -80,3 +80,9 @@ La skill adicional `enkarta-invitali-fidelity` vive en `.agents/skills/enkarta-i
 No añade WordPress ni Elementor a Enkarta, no cambia precios ni recursos y no demuestra equivalencia visual. Distingue CSS declarado, estilo computado y comportamiento observado. El navegador automatizado está deshabilitado en esta sesión: el análisis no acredita «idéntico sin diferencias» ni un constructor privado. Para replicar una muestra, compara recursos completos y composición en ambos tamaños cuando exista acceso visual.
 
 La instalación del proyecto usa la ubicación de descubrimiento `.agents/skills/enkarta-invitali-fidelity/`. `AGENTS.md` remite a esta copia local para mantener el criterio del proyecto. La copia de usuario anterior permanece disponible; no se fusionan sus instrucciones automáticamente.
+
+### Comparación renderizada posterior · 22 de octubre de 2026
+
+Tras reiniciar la aplicación, el navegador integrado quedó operativo. La limitación descrita en el estudio inicial ya no impide inspeccionar las muestras públicas. Se compararon Paradise de Invitali y Verdealma de Enkarta a 390 × 844 y 1440 × 900, con capturas de entrada y regiones abiertas, estilos computados y registro de diferencias. El resultado está en [COMPARACION_VISUAL_INVITALI_PARADISE.md](COMPARACION_VISUAL_INVITALI_PARADISE.md).
+
+La evidencia confirma que la variante actual difiere en entrada, geometría, fuentes, fondos, fotografías, iconos, cronograma y hospedaje. No se modificaron sus recursos ni se certificaron las demás variantes. Una futura reproducción requiere un perfil independiente y verificación de recursos por URL/hash. No se midieron Core Web Vitals ni se certificó equivalencia temporal de animaciones o archivos tipográficos cargados.
