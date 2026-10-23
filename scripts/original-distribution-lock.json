@@ -787,9 +787,24 @@
       "bytes": 83269
     },
     {
+      "path": "/lottie/invitali-originales/2025-05-Lugar-03.json",
+      "sha256": "c94b9c6de37c80bb795a7b960f0d66c351e3dff50c21306c522b8ed91e47830f",
+      "bytes": 22707
+    },
+    {
+      "path": "/lottie/invitali-originales/2025-05-marido.json",
+      "sha256": "bcef4ce022665143544e8a63f851bd69865464171ac8928d5d0750c72d6f64fa",
+      "bytes": 20165
+    },
+    {
       "path": "/lottie/invitali-originales/2025-05-mesa4.json",
       "sha256": "96f6622072b33f4ea748db33d162ab7301369c5732af3ca05ec0526285ea8c8f",
       "bytes": 31766
+    },
+    {
+      "path": "/lottie/invitali-originales/2025-05-novia.json",
+      "sha256": "7a3f9cb756672bc08cb10340ab1c50bfb980afae086011304e489e7d4544d188",
+      "bytes": 15339
     },
     {
       "path": "/lottie/invitali-originales/2025-05-pastel.json",

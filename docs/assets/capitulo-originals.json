@@ -1,0 +1,109 @@
+{
+  "variant": "capitulo",
+  "originals": {
+    "bride": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/novia.json",
+      "localPath": "/lottie/invitali-originales/2025-05-novia.json",
+      "reverse": false,
+      "sha256": "7a3f9cb756672bc08cb10340ab1c50bfb980afae086011304e489e7d4544d188",
+      "bytes": 15339,
+      "archiveFile": "Iconos INVITALI/2025-05-novia.json"
+    },
+    "groom": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/marido.json",
+      "localPath": "/lottie/invitali-originales/2025-05-marido.json",
+      "reverse": false,
+      "sha256": "bcef4ce022665143544e8a63f851bd69865464171ac8928d5d0750c72d6f64fa",
+      "bytes": 20165,
+      "archiveFile": "Iconos INVITALI/2025-05-marido.json"
+    },
+    "ceremony": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/17-Iglesia.json",
+      "localPath": "/lottie/invitali-originales/2025-05-17-Iglesia.json",
+      "reverse": true,
+      "sha256": "d9e2caf90581c9334287c43939960a5d19e88f36afdbb2b8d34517b915db2c42",
+      "bytes": 55545,
+      "archiveFile": "Iconos INVITALI/2025-05-17-Iglesia.json"
+    },
+    "reception": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/11-recepcion-social.json",
+      "localPath": "/lottie/invitali-originales/2025-05-11-recepcion-social.json",
+      "reverse": true,
+      "sha256": "f042b1187185c12ed58ef9f6bd998e296fffc8ae535dc63d68707b31114a6dcb",
+      "bytes": 26282,
+      "archiveFile": "Iconos INVITALI/2025-05-11-recepcion-social.json"
+    },
+    "firstDance": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/vals.json",
+      "localPath": "/lottie/invitali-originales/2025-05-vals.json",
+      "reverse": true,
+      "sha256": "94a3c64ecd250b9e6d568d64d171622b5bbb9f37e7ed9c75baa7b877f890c1e3",
+      "bytes": 41765,
+      "archiveFile": "Iconos INVITALI/2025-05-vals.json"
+    },
+    "dinner": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/14-Cena.json",
+      "localPath": "/lottie/invitali-originales/2025-05-14-Cena.json",
+      "reverse": true,
+      "sha256": "101e2409d75dff47c7355f46d05b766a14e9d5fd6ccc303516e6512e65d4d04a",
+      "bytes": 28947,
+      "archiveFile": "Iconos INVITALI/2025-05-14-Cena.json"
+    },
+    "dance": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/baile.json",
+      "localPath": "/lottie/invitali-originales/2025-05-baile.json",
+      "reverse": true,
+      "sha256": "2f67597c05d464dbf9728c0b4d8f0fde7c96b7adccfd507955e1d0a4cf5519e0",
+      "bytes": 43579,
+      "archiveFile": "Iconos INVITALI/2025-05-baile.json"
+    },
+    "farewell": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/23-adios-fin-de-fiesta-1.json",
+      "localPath": "/lottie/invitali-originales/2025-05-23-adios-fin-de-fiesta-1.json",
+      "reverse": true,
+      "sha256": "d5bf28fe2d71a49c8f358598ed956c83b7d5689f00dbfb979cac2e40f2164941",
+      "bytes": 19024,
+      "archiveFile": "Iconos INVITALI/2025-05-23-adios-fin-de-fiesta-1.json"
+    },
+    "suit": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/chaqueta-de-sport.json",
+      "localPath": "/lottie/invitali-originales/2025-05-chaqueta-de-sport.json",
+      "reverse": true,
+      "sha256": "841f86c11edd3d2204e11952a475781e20db9bcfff36b7fada4802cc10d01989",
+      "bytes": 53811,
+      "archiveFile": "Iconos INVITALI/2025-05-chaqueta-de-sport.json"
+    },
+    "dress": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/vestido-de-novia.json",
+      "localPath": "/lottie/invitali-originales/2025-05-vestido-de-novia.json",
+      "reverse": true,
+      "sha256": "8aaa58865b05cf356c2abf083abe97ea74f11d57a618d288a638bf9aed13c260",
+      "bytes": 20180,
+      "archiveFile": "Iconos INVITALI/2025-05-vestido-de-novia.json"
+    },
+    "location": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/Lugar-03.json",
+      "localPath": "/lottie/invitali-originales/2025-05-Lugar-03.json",
+      "reverse": true,
+      "sha256": "c94b9c6de37c80bb795a7b960f0d66c351e3dff50c21306c522b8ed91e47830f",
+      "bytes": 22707,
+      "archiveFile": "Iconos INVITALI/2025-05-Lugar-03.json"
+    },
+    "adults": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/10-no-ninos.json",
+      "localPath": "/lottie/boda/invitali-sin-ninos-original.json",
+      "reverse": true,
+      "sha256": "1a1dc78dcffc96b4f1bca344c791d533cde5e4070780041b8384ff9a45f0c713",
+      "bytes": 31986,
+      "archiveFile": "public/lottie/boda/invitali-sin-ninos-original.json"
+    },
+    "gift": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/37-regalo-1.json",
+      "localPath": "/lottie/invitali-originales/2025-05-37-regalo-1.json",
+      "reverse": false,
+      "sha256": "22d006cd8b7793ac1f0a2454fdf2cb7fed8a1fdd1230590c6722cc9238e1c0ba",
+      "bytes": 40403,
+      "archiveFile": "Iconos INVITALI/2025-05-37-regalo-1.json"
+    }
+  }
+}

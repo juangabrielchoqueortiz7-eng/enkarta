@@ -1,0 +1,29 @@
+[
+  {
+    "label": "Novia · Primicia",
+    "url": "https://invitali.com/wp-content/uploads/2025/05/novia.json",
+    "filename": "json/2025-05-novia.json",
+    "localPath": "/lottie/invitali-originales/2025-05-novia.json",
+    "sha256": "7a3f9cb756672bc08cb10340ab1c50bfb980afae086011304e489e7d4544d188",
+    "bytes": 15339,
+    "archiveFile": "Iconos INVITALI/2025-05-novia.json"
+  },
+  {
+    "label": "Novio · Primicia",
+    "url": "https://invitali.com/wp-content/uploads/2025/05/marido.json",
+    "filename": "json/2025-05-marido.json",
+    "localPath": "/lottie/invitali-originales/2025-05-marido.json",
+    "sha256": "bcef4ce022665143544e8a63f851bd69865464171ac8928d5d0750c72d6f64fa",
+    "bytes": 20165,
+    "archiveFile": "Iconos INVITALI/2025-05-marido.json"
+  },
+  {
+    "label": "Ubicación · Primicia",
+    "url": "https://invitali.com/wp-content/uploads/2025/05/Lugar-03.json",
+    "filename": "json/2025-05-Lugar-03.json",
+    "localPath": "/lottie/invitali-originales/2025-05-Lugar-03.json",
+    "sha256": "c94b9c6de37c80bb795a7b960f0d66c351e3dff50c21306c522b8ed91e47830f",
+    "bytes": 22707,
+    "archiveFile": "Iconos INVITALI/2025-05-Lugar-03.json"
+  }
+]

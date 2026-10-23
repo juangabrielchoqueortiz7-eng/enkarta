@@ -723,6 +723,42 @@
             "boda",
             "hotel"
           ]
+        },
+        {
+          "id": "primicia-novia-original",
+          "label": "Novia original · Primicia",
+          "path": "/lottie/invitali-originales/2025-05-novia.json",
+          "tags": [
+            "original",
+            "invitali",
+            "primicia",
+            "capitulo",
+            "novia"
+          ]
+        },
+        {
+          "id": "primicia-novio-original",
+          "label": "Novio original · Primicia",
+          "path": "/lottie/invitali-originales/2025-05-marido.json",
+          "tags": [
+            "original",
+            "invitali",
+            "primicia",
+            "capitulo",
+            "marido"
+          ]
+        },
+        {
+          "id": "primicia-lugar-original",
+          "label": "Ubicación original · Primicia",
+          "path": "/lottie/invitali-originales/2025-05-Lugar-03.json",
+          "tags": [
+            "original",
+            "invitali",
+            "primicia",
+            "capitulo",
+            "lugar-03"
+          ]
         }
       ]
     },

@@ -10,6 +10,9 @@ export function originalInvitationAsset(source:string){return ORIGINAL_INVITATIO
 // These exact originals load in the browser. Keep their full source URL until
 // an original file is imported; then add its local path to the map above.
 export const REMOTE_ORIGINAL_ICONS = [
+ ['novia-primicia','Novia · Primicia','2025/05/novia.json'],
+ ['novio-primicia','Novio · Primicia','2025/05/marido.json'],
+ ['ubicacion-primicia','Ubicación · Primicia','2025/05/Lugar-03.json'],
  ['biblia','Biblia','2025/05/biblia.json'],
  ['vestimenta-playera','Vestimenta playera','2025/05/vestimenta-2.json'],
  ['hotel','Hotel','2025/05/hotel.json'],
