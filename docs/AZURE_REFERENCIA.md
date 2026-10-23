@@ -46,12 +46,26 @@ El importador acepta ahora SVG **estáticos**: rechaza `script`, `foreignObject`
 - El monograma original son las iniciales «L M». Se puede reemplazar o vaciar (`sectionImages.azureMonogram`).
 - Los iconos del itinerario móvil se muestran estirados a 82×62 y 76×60 porque así los renderiza la referencia (`object-fit: fill`).
 
-## Verificación
+## Cierre en producción · 23 de octubre de 2026
 
-Medición con el navegador integrado a 1440×900 y 390×844, con las animaciones detenidas y todas las imágenes cargadas en ambas páginas. Las posiciones verticales de aro, nombres, texto, cápsula, cuenta regresiva, separadores, padres, lugares, vestimenta, itinerario, fotos y confirmación coinciden con ±2 px en escritorio y móvil; la entrada, con ±2 px en escritorio y ajustada en móvil. La única diferencia de alto es la tarjeta de regalos de demostración. A 800 px no hay desbordamiento horizontal. La apertura retira el diálogo, el `inert` y el bloqueo de scroll, enfoca el H1 e inicia la música. La consola queda limpia en una pestaña nueva. Paradise de referencia sigue funcionando.
+Muestra activa: [Azure independiente](https://enkarta.vercel.app/muestra/azure-referencia). Código de aplicación `be4ce6ca8d808a336398f81311e4687378ad52dc`; despliegue `dpl_FMBD46gJWKFyBmVYEJMbsjcRaknt`, Ready y asociado al dominio canónico. La compilación de Vercel completó lint y tipos; conserva las advertencias existentes de imágenes.
 
-Pruebas: `test:azure-reference` (8), `test:invitali-resource-import` (33), Paradise (referencia, interior, icono), `test:integrity`, `test:deployment`, `test:template-fields-ux-ui` y `test:builder` aprobadas; `tsc` sin errores; lint sin errores nuevos.
+### Pruebas proporcionadas al cambio
 
-**Esto no certifica identidad píxel a píxel.** El panel del navegador quedó oculto durante la comparación final, así que no hay pares de capturas finales; tampoco se probó un teléfono físico ni producción.
+71 regresiones relacionadas aprobadas: Azure (8), compartición y página pública (25), importador de originales (33) y protección del despliegue (5). Se añadieron dos casos ejecutables de integración Azure: entrada nativa con formulario del grupo verificado y entrada cinematográfica con un único formulario autorizado. No se repitió la batería completa del portal por un cambio de una variante.
 
-Pendiente: crear y revisar un borrador real en `/i/[slug]`, desplegar, añadir el diseño al selector si se quiere ofrecer a clientes, y confirmar los derechos de la grabación musical y de los recursos gráficos antes de venderlo.
+Se comprobó un único evento ficticio en producción: creación del borrador, guardado CAS de textos e interiores, publicación del snapshot, contenido publicado separado del borrador posterior, vista privada autorizada y denegación anónima del estado del constructor (401). El RSVP aparece una sola vez dentro del cierre; música y monograma corresponden al contenido publicado. El evento quedó eliminado, las nueve tablas relacionadas en cero y sus tres URLs en 404; la sesión de prueba se cerró. Cero pagos, operaciones bancarias, mensajes, invitados o subidas de medios.
+
+Esa comprobación funcional se hizo sobre `97c111d`. La entrega final solo añade `letter-spacing:normal` en los nombres de la entrada móvil: los 476 archivos de código funcional son idénticos. Se comprobó esa equivalencia y se confirmó el render final sin repetir escrituras QA.
+
+### Revisión visual y recursos
+
+Comparación agrupada con navegador integrado a 390×844 y 1440×900: entrada, portada, fecha con el SVG original de corazones cargado e itinerario; además se revisaron regalos, fotografías y cierre en escritorio. Se confirmó apertura, retirada de `inert`, foco en H1, inicio de música mediante gesto, pausa, ausencia de desbordamiento horizontal y mensaje de muestra sin enviar confirmaciones. El ajuste móvil elimina el espaciado excesivo entre los nombres. La música queda pausada en la pestaña entregada.
+
+Se atestaron 34 archivos críticos y 166 originales (56.235.425 bytes) mediante UID SHA-1 de los archivos subidos a Vercel frente a bytes de la entrega y SHA-256 del lock. Los 148 originales anteriores permanecen intactos; también Verdealma, Lunaria y Paradise. No se volvieron a descargar los medios archivados. BCP sigue bloqueado.
+
+**No se certifica identidad píxel a píxel.** Los distintos anchos de la barra nativa producen pequeñas diferencias de centrado horizontal; las semillas aleatorias no están sincronizadas. Los recortes por región del documento no conservan los fondos fijos, por lo que estos se revisaron con capturas nativas de viewport. No se hizo aceptación en un dispositivo físico en este cierre. Los datos bancarios ficticios, los flujos de Enkarta y su pie siguen siendo las diferencias deliberadas indicadas arriba.
+
+Evidencia resumida: [azure-reference-production-2026-10-23.json](evidence/azure-reference-production-2026-10-23.json). Capturas y diarios de este cierre permanecen en `tmp/azure-release-20261023/` del espacio local; no contienen cookies ni contraseñas.
+
+La variante continúa como muestra independiente y se resuelve en el constructor al usar su clave; incorporarla al catálogo comercial y al selector de Socios no forma parte de este cierre.

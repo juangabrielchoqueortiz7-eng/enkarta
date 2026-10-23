@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "checkedAt": "2026-10-23T20:27:31.219Z",
+  "sourceSha": "be4ce6ca8d808a336398f81311e4687378ad52dc",
+  "deploymentId": "dpl_FMBD46gJWKFyBmVYEJMbsjcRaknt",
+  "ready": true,
+  "canonical": "https://enkarta.vercel.app",
+  "sample": "https://enkarta.vercel.app/muestra/azure-referencia",
+  "reference": "https://invitali.com/azure/?n=2%20pases&m=Daniel%20Martinez",
+  "automated": {
+    "azureReference": 8,
+    "guestSharing": 25,
+    "resourceImporter": 33,
+    "deploymentGuard": 5,
+    "total": 71,
+    "newRegressions": [
+      "Azure native entry transports only the verified RSVP form",
+      "Azure cinematic entry retains authorized RSVP once"
+    ],
+    "offlinePlanChecks": 31
+  },
+  "uploadedSourceFiles": 34,
+  "preservation": {
+    "method": "uploaded-filehash",
+    "originals": 166,
+    "bytes": 56235425,
+    "inheritedOriginalsUnchanged": 148,
+    "verdealmaUnchanged": true,
+    "lunariaUnchanged": true,
+    "paradiseReferenceUnchanged": true,
+    "bcpDisabled": true
+  },
+  "productionQa": {
+    "sourceSha": "97c111d9792682db26a7ef1ec395198cfefc01c0",
+    "deploymentId": "dpl_5DMxcy6Qb8MfoGgdw6Affv9RbE8U",
+    "checks": {
+      "privatePreviewAndAnonymousDraftClosed": true,
+      "interiorFieldsSavedByCas": true,
+      "publicInteriorMusicAndEntry": true,
+      "publishedSnapshotNoDraftLeak": true,
+      "ownerSeesPrivateDraft": true,
+      "anonymousBuilderDenied": true
+    },
+    "verificationPassed": true,
+    "cleanupVerified": true,
+    "cleanupRows": {
+      "invitations": 0,
+      "builder_versions": 0,
+      "builder_review_notes": 0,
+      "invitation_analytics_events": 0,
+      "guests": 0,
+      "rsvps": 0,
+      "invitation_validity_events": 0,
+      "save_date_responses": 0,
+      "guest_import_requests": 0
+    },
+    "fixtureUrls404": 3,
+    "adminCookie": "cleared",
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "mediaWrites": 0,
+    "paymentWrites": 0,
+    "finalCssOnlyChange": {
+      "file": "src/components/invitations/AzureReference.module.css",
+      "viewport": "max-width:767px",
+      "selector": ".entryNames",
+      "property": "letter-spacing",
+      "value": "normal",
+      "beforeSha256": "df1b3f21296cce278054fe2b4ee47c53790f4386e5fad107560991d3e4517b09",
+      "afterSha256": "5b6a2275476fb6da1823f2067e8103e2f0a41ce5a67e3fa7676b4f789c6cf776"
+    },
+    "identicalFunctionalSourceFiles": 476
+  },
+  "visual": {
+    "viewports": [
+      {
+        "width": 390,
+        "height": 844
+      },
+      {
+        "width": 1440,
+        "height": 900
+      }
+    ],
+    "mobileEntryLetterSpacing": "normal",
+    "desktopHeroFont": "AzureRefRomantic",
+    "entryOpensAndRemovesInert": true,
+    "focusAfterOpening": "H1",
+    "gestureMusicAndPause": true,
+    "noHorizontalOverflow": true,
+    "loadedOriginalHeartsSvg": true,
+    "demoRsvpShowsNoConfirmationSent": true,
+    "consoleErrorsObserved": 0,
+    "limits": [
+      "Native scrollbar widths differ between sites; horizontal centering is not a pixel-identical certification.",
+      "Document-region clips do not preserve fixed backgrounds; native viewport screenshots are the visual reference for those layers.",
+      "No physical-device acceptance performed in this closure."
+    ],
+    "screenshots": [
+      {
+        "file": "tmp/azure-release-20261023/visual/reference-entry-mobile.jpg",
+        "sha256": "1c56ebbfe36def86c722cf68c952e215a99a1176d920c16130951733bb33b25d",
+        "bytes": 34230
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/reference-hero-mobile.jpg",
+        "sha256": "8639b52084eb81d1cd08c73f8e8c204b6fb71238e0e4e3253941c48dfee7d63a",
+        "bytes": 43420
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/reference-date-mobile.jpg",
+        "sha256": "0aa459a836c1955334a45429e00e72321321216eab6fd72fb614ffc89116b85c",
+        "bytes": 29290
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/reference-interior-mobile.jpg",
+        "sha256": "dd0c2d3f25d69c7ed18a5c43924bebf2cfae3af595b0557325102934bc9177e5",
+        "bytes": 21615
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/reference-entry-desktop.jpg",
+        "sha256": "98a74bbebd36ffd4f0e9aaf7ca846590ec0d89aba44cd92be45a347c61714439",
+        "bytes": 91015
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/reference-hero-desktop.jpg",
+        "sha256": "93df3c5fb36622216b1da8814d4c9f243b8fc49a5d332e34e1c2d07b17173d98",
+        "bytes": 89945
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/reference-date-desktop.jpg",
+        "sha256": "9b74bd9910184d204eedd49e5dbf5893b7bc82822b7739104d0c63eed4680c38",
+        "bytes": 53984
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/reference-interior-desktop.jpg",
+        "sha256": "8dd9fb8e618a376987caff55ea2fd65d57d19b1f434dd1d254a494ff7297e0b1",
+        "bytes": 80219
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/final-entry-mobile.jpg",
+        "sha256": "8a2c680b999c8b7249fedf9fcaca2d164884dc6bf1c94fbb80f36883b84a4d6a",
+        "bytes": 40818
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/final-hero-desktop.jpg",
+        "sha256": "68ba499d69dca909c7a3648735d6e0b29d71ab857fbb7956ea7379f008f224ea",
+        "bytes": 91723
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/production-date-mobile.jpg",
+        "sha256": "d6e7b2f4c198fc697f70b7315080cbc59a0cef07a4668a90640e661dd674087c",
+        "bytes": 28420
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/production-interior-mobile.jpg",
+        "sha256": "cac19b19d53ace0e01b6b1619aae3b6dbeee050c0647949f367958bd02246847",
+        "bytes": 20339
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/production-date-desktop.jpg",
+        "sha256": "bdb41817808c1417e602346102599d90c292efd67b009873f32f215180906289",
+        "bytes": 49830
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/production-interior-desktop.jpg",
+        "sha256": "5e7bfc33aeed4d8803d287e26bade5e222c2543346282721d89ed7c74106def4",
+        "bytes": 72343
+      },
+      {
+        "file": "tmp/azure-release-20261023/visual/production-closing-desktop.jpg",
+        "sha256": "22b1883a9872d0bfbc3103992fe57ef58889ff89920c201a86c0c8a99080f9a5",
+        "bytes": 83430
+      }
+    ]
+  }
+}
