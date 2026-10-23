@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "checkedAt": "2026-10-23T20:56:04.830Z",
+  "sourceSha": "b295c525609ad05e8f368e0d43dbf2f33ac07ce3",
+  "deploymentId": "dpl_Be8umqqmxcCxeeqgQLy74jos4uEm",
+  "ready": true,
+  "canonical": "https://enkarta.vercel.app",
+  "sample": "https://enkarta.vercel.app/muestra/travesia",
+  "referenceStructure": "https://invitali.com/muestra-pasport/",
+  "independentArtDirection": true,
+  "automated": {
+    "profile": 8,
+    "guestSharing": 28,
+    "builderFields": 29,
+    "deploymentGuard": 5,
+    "total": 70
+  },
+  "criticalFiles": 47,
+  "generatedImages": {
+    "tool": "OpenAI image_gen built-in",
+    "count": 3,
+    "manifest": "docs/assets/travesia-images.json",
+    "manifestSha256": "1c6c004e6cd1974df7fad77701ededb287d1bf31eafc03f2145f668a9e779e7a",
+    "mastersRetainedUnchanged": true,
+    "mastersExcludedFromUpload": true,
+    "publicWebpBytes": 1155276,
+    "publicHttpHashesVerified": true
+  },
+  "preservation": {
+    "method": "uploaded-filehash",
+    "originals": 166,
+    "inheritedOriginalsUnchanged": 166,
+    "atlasUnchanged": true,
+    "verdealmaUnchanged": true,
+    "lunariaUnchanged": true,
+    "azureReferenceUnchanged": true,
+    "paradiseReferenceUnchanged": true,
+    "bcpDisabled": true
+  },
+  "production": {
+    "method": "read-only public GET",
+    "routeChecks": [
+      {
+        "route": "/muestra/travesia",
+        "passed": true
+      },
+      {
+        "route": "/muestra/travesia?full=1",
+        "passed": true
+      },
+      {
+        "route": "/muestra/travesia?full=1&n=50&m=QA%20Forged%20Family",
+        "passed": true
+      }
+    ],
+    "generatedImageChecks": [
+      {
+        "path": "/invitations/travesia/hero.webp",
+        "bytes": 420258,
+        "sha256": "a0307a180656a211d91757e285bbd3e6c1c50581133fa58ff1a450d9e3252142",
+        "passed": true
+      },
+      {
+        "path": "/invitations/travesia/story.webp",
+        "bytes": 387074,
+        "sha256": "3ea77730bcee1a46d2f179df60363ab203434cf87c9c07570bdd95a2c9b3130f",
+        "passed": true
+      },
+      {
+        "path": "/invitations/travesia/celebration.webp",
+        "bytes": 347944,
+        "sha256": "bcf020942a3b9ad517bf4dfdb583fb99d52b32ad704db3f65f1b91f9f23d4d32",
+        "passed": true
+      }
+    ],
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "eventsCreated": 0,
+    "cleanupRequired": false
+  },
+  "visual": {
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "entryOpens": true,
+    "focusAfterEntry": "H1",
+    "inertRemoved": true,
+    "noHorizontalOverflow": true,
+    "allThreeNewImagesLoaded": true,
+    "unselectedMusicAbsent": true,
+    "demoRsvpExplainsNoConfirmationSent": true,
+    "syntheticImageNoticeShown": true,
+    "consoleErrorsObserved": 0,
+    "physicalDeviceTest": false,
+    "screenshots": [
+      {
+        "file": "tmp/travesia-release-20261023/visual/closing-mobile.jpg",
+        "bytes": 25915,
+        "sha256": "88d455c810f390fe565178bb40ea4365c073d2a31dc8d8e183bb26f3288b0b14"
+      },
+      {
+        "file": "tmp/travesia-release-20261023/visual/entry-desktop.jpg",
+        "bytes": 178188,
+        "sha256": "15b946e74a23f4129e45af41a9d65e635080d13a59c237fa1bbb4eeee3c9f2f0"
+      },
+      {
+        "file": "tmp/travesia-release-20261023/visual/entry-mobile.jpg",
+        "bytes": 45458,
+        "sha256": "618e628cc06bceedfbdede43a0e6bedd6fd6a7aa8df4ab496f1f5264bd2d47e0"
+      },
+      {
+        "file": "tmp/travesia-release-20261023/visual/hero-desktop.jpg",
+        "bytes": 167931,
+        "sha256": "98d4b7511a095aa7cfcdf6ed3c90c02788b9903f2dd9cceabc05f388d6a5bdfc"
+      },
+      {
+        "file": "tmp/travesia-release-20261023/visual/hero-mobile.jpg",
+        "bytes": 54773,
+        "sha256": "5618188af1118f3e44d0a69080eb372b8e749284da77b9cff00fdab4b486dff5"
+      },
+      {
+        "file": "tmp/travesia-release-20261023/visual/interior-mobile.jpg",
+        "bytes": 50765,
+        "sha256": "8645ba7a96e3aca71510d2693320a93ab437f7361052f78c7b10618b9c2ab5bf"
+      }
+    ]
+  }
+}

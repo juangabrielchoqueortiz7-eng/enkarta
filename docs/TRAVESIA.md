@@ -44,3 +44,11 @@ BCP sigue desactivado. La variante no incluye cuentas de demostración, QR banca
 Total: **70 pruebas relacionadas**. TypeScript local aprobado. Revisión local a 1440×900 y 390×844: entrada, portada, imágenes, itinerario, cierre, foco, desplazamiento y aviso de muestra comprobados; sin desbordamiento horizontal. La imagen principal carga de inmediato y las interiores de forma diferida.
 
 La muestra independiente se publica en `/muestra/travesia`, sin indexación. `?full=1` omite la entrada. Añadirla al catálogo comercial o al selector de Socios es un paso separado, como en Azure de referencia.
+
+## Entrega en producción · 23 de octubre de 2026
+
+[Ver Travesía](https://enkarta.vercel.app/muestra/travesia). Código de aplicación `b295c525609ad05e8f368e0d43dbf2f33ac07ce3`, despliegue `dpl_Be8umqqmxcCxeeqgQLy74jos4uEm`, Ready y confirmado desde el dominio canónico. Vercel completó compilación, lint y tipos, con las advertencias existentes de imágenes. Se atestaron 47 archivos críticos, los 166 originales anteriores y los tres derivados nuevos; los tres PNG maestros permanecen sin publicar.
+
+Verificación de lectura en producción: muestra con entrada, muestra completa y parámetros de nombre/cupos falsificados sin efecto. Las tres imágenes nuevas devolvieron WebP con bytes y SHA-256 idénticos al manifiesto. El navegador confirmó apertura y foco, las tres imágenes cargadas, composición sin desbordamiento a 1440×900 y 390×844, ausencia de música no seleccionada y aviso de confirmación de muestra sin envío. No se crearon eventos, cuentas ni pagos y no hubo datos ficticios que eliminar. Se cerró el servidor local y se restauró el viewport.
+
+Atlas, Lunaria, Verdealma, Azure y Paradise conservan sus fuentes de diseño; los 166 recursos existentes mantienen sus bytes. BCP sigue bloqueado. Evidencia resumida: [travesia-production-2026-10-23.json](evidence/travesia-production-2026-10-23.json). Capturas locales en `tmp/travesia-release-20261023/visual/`; no sustituyen aceptación manual en un dispositivo físico.
