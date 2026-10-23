@@ -38,7 +38,8 @@
 .previous,.next,.pause{position:absolute;z-index:3;border:0;background:rgb(0 0 0 /20%);color:#fff;cursor:pointer}
 .previous,.next{top:50%;transform:translateY(-50%);width:44px;height:48px;font-size:38px;line-height:1}
 .previous{left:6px}.next{right:6px}
-.pause{top:14px;right:14px;border-radius:20px;padding:8px 12px;font:14px/1.2 ParadiseRefPoiret,sans-serif;opacity:0;min-height:40px}
+.pause{top:14px;right:14px;border-radius:20px;padding:8px 12px;font:14px/1.2 ParadiseRefPoiret,sans-serif;opacity:0;min-height:44px}
+.archGallery .pause{right:auto;left:50%;transform:translateX(-50%);max-width:calc(100% - 40px)}
 .carousel:hover .pause,.pause:focus-visible{opacity:1}
 .slideCount{position:absolute;bottom:15px;left:50%;transform:translateX(-50%);z-index:3;border-radius:20px;padding:5px 12px;background:rgb(0 0 0 /35%);color:#fff;font-size:14px;font-variant-numeric:tabular-nums}
 .caption{position:absolute;z-index:4;bottom:45px;left:12px;right:12px;background:rgb(0 0 0 /65%);color:#fff;padding:10px;border-radius:8px;font-size:16px}
