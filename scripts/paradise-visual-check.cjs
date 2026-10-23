@@ -44,11 +44,13 @@ function verifyParadiseVisual(report) {
   close(report.gallery.height, mobile ? 510 : report.viewport.height * .7145, 'Original gallery height');
   close(report.camera.width, 103, 'Camera width'); close(report.camera.height, 70.5, 'Loaded camera flow box');
   close(report.adults.width, mobile ? 65 : 100, 'Adults width'); close(report.adults.height, mobile ? 73 : 108, 'Adults flow box');
-  if (report.cameraDrawing) close(report.cameraDrawing.height, 103 * 200 / 330, 'Original camera drawing ratio');
-  if (report.adultsDrawing) close(report.adultsDrawing.width, mobile ? 81 : 116, 'Original adults drawing size');
+  assert(report.cameraDrawing && report.adultsDrawing, 'Load the actual original drawings before checking layout');
+  close(report.cameraDrawing.height, 103 * 200 / 330, 'Original camera drawing ratio');
+  close(report.adultsDrawing.width, mobile ? 81 : 116, 'Original adults drawing size');
   assert.equal(report.originalsUnavailable, 0, 'An original failed to load');
   assert.equal(report.control.minHeight, '44px');
-  if (report.control.visible) assert(report.control.hitPoints.length === 5 && report.control.hitPoints.every(Boolean), 'Gallery control clipped');
+  assert(report.control.visible, 'Bring the gallery control into the viewport before checking interaction');
+  assert(report.control.hitPoints.length === 5 && report.control.hitPoints.every(Boolean), 'Gallery control clipped');
   assert.equal(report.music.length, 1); assert.equal(report.music[0].autoplay, false);
   assert.equal(report.music[0].src, '/audio/invitali-originales/2025-05-Ed-Sheran-Perfect-Violin.mp3');
   return { width: report.viewport.width, passed: true, loadedDrawings: !!report.cameraDrawing && !!report.adultsDrawing, controlChecked: report.control.visible };
