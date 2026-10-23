@@ -208,7 +208,7 @@ export function ParadiseReferenceSections({ data, demo = false, preview = false 
       {hotels.some(item => item.url || item.desc) && <ul className={styles.hotelLinks}>{hotels.map((item, i) => <li key={i}>{item.desc && <p>{item.desc}</p>}{paradiseReferenceHref(item.url) && <a href={paradiseReferenceHref(item.url)} target="_blank" rel="noopener noreferrer">{item.name} · información</a>}</li>)}</ul>}
     </div></section>}
     {(data.no_kids || (feats.photoSharing && (c.galleryMessage || share))) && <section className={styles.extras}>
-      {data.no_kids && <article className={styles.extraCard} data-paradise-section="adults"><Original role="adults" size={73} className={styles.creamIcon} /><h2 className={styles.script}>Solo Adultos</h2>{c.noKidsMessage && <p>{c.noKidsMessage}</p>}</article>}
+      {data.no_kids && <article className={styles.extraCard} data-paradise-section="adults"><Original role="adults" size={73} className={`${styles.creamIcon} ${styles.adultsIcon}`} /><h2 className={styles.script}>Solo Adultos</h2>{c.noKidsMessage && <p>{c.noKidsMessage}</p>}</article>}
       {feats.photoSharing && (c.galleryMessage || share) && <article className={styles.extraCard} data-paradise-section="photos"><Original role="camera" size={103} className={styles.cameraIcon} />{c.galleryMessage && <p>{c.galleryMessage}</p>}{share && <a className={styles.button} href={share} target="_blank" rel="noopener noreferrer">Compartir fotografías</a>}{!share && demo && <button className={styles.button} type="button" disabled>Compartir fotografías · muestra</button>}</article>}
     </section>}
     <section className={`${styles.paper} ${styles.rsvp}`} data-paradise-section="rsvp">

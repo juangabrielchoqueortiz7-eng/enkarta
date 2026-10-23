@@ -9,7 +9,7 @@
 .paper{background:var(--paper);color:var(--green)}
 .dark::before{content:'';position:absolute;inset:0;background:#324d2f;opacity:.5;mix-blend-mode:multiply;z-index:-1;pointer-events:none}
 .intro{min-height:59svh;padding:50px max(24px,10%);display:flex;flex-direction:column;align-items:center;justify-content:center}
-.intro>p{max-width:1140px;color:#fff}
+.intro>p{max-width:500px;color:#fff}
 .reservation{margin-top:18px;color:#fff}
 .reservation .guestName{font-family:ParadiseRefNathalia,cursive;font-size:4.8svh;font-weight:400;line-height:1;color:#ccad84;margin:4px 0 9px}
 .verse{min-height:58svh;padding:80px 12.5%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
@@ -18,7 +18,10 @@
 .creamIcon :global(svg path){fill:var(--cream);stroke:var(--cream);stroke-width:1.5px}
 .greenIcon{filter:brightness(55%) contrast(98%) saturate(174%) hue-rotate(86deg)}
 .greenIcon :global(svg path){fill:#51765d;stroke:#324d2f;stroke-width:1.5px}
-.cameraIcon{filter:brightness(180%) contrast(121%) saturate(24%) hue-rotate(14deg)}
+.cameraIcon{height:70.5px!important;align-items:flex-start;filter:brightness(180%) contrast(121%) saturate(24%) hue-rotate(14deg)}
+.cameraIcon>div{height:62.425px!important}
+.adultsIcon{width:100px!important;height:108px!important;overflow:visible}
+.adultsIcon>div{width:116px!important;height:116px!important;flex-shrink:0;transform:translate(-8px,-8px)}
 .countdownSection{min-height:100svh;display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:70px 10%;align-items:center}
 .countdownContent{display:flex;flex-direction:column;align-items:center;gap:30px;padding:20px 10px}
 .countdown{display:flex;justify-content:space-around;gap:20px;width:100%;border:1.5px double var(--cream);border-radius:15px;padding:10px;max-width:550px}
@@ -109,16 +112,17 @@
   .sections{font-size:16px;line-height:1.2}
   .script{font-size:38px;line-height:35px}
   .intro{min-height:50svh;padding:19px;max-width:100%}
+  .intro>p{max-width:300px}
   .dark::before{opacity:.87}
   .reservation .guestName{font-size:4.8svh}
   .verse{min-height:40svh;padding:40px;gap:20px}
   .verse .icon{width:74px!important;height:82px!important}
-  .countdownSection{min-height:100svh;display:flex;flex-direction:column;padding:35px 20px 50px;gap:45px;justify-content:center}
+  .countdownSection{min-height:100svh;display:flex;flex-direction:column;padding:35px 10px 60px;gap:60px;justify-content:center}
   .countdownContent{width:100%;padding:0;gap:25px}
   .countdown{gap:10px;padding:10px 5px}
   .countdown span{font-size:22px}.countdown small{font-size:13px}
   .countdownContent .button{font-size:13px}
-  .archGallery{width:80%;max-width:400px;height:60svh;min-height:350px;margin:0 auto}
+  .archGallery{width:350px;max-width:100%;height:510px;min-height:0;flex-shrink:0;margin:0 auto}
   .parents{min-height:60svh;padding:60px 10px;gap:30px}
   .parents>h2:not(.script){font-size:16px;line-height:1.2}
   .parentColumns{flex-direction:column;gap:45px;align-items:center}
@@ -148,6 +152,9 @@
   .slideTitle{font-size:28px;line-height:32px;padding:45px}
   .extras{padding:10px;gap:20px;flex-direction:column;align-items:center}
   .extraCard{width:100%;padding:19px;gap:12px;border-radius:15px;line-height:18px}
+  .extraCard>p{max-width:calc(100% - 39px)}
+  .adultsIcon{width:65px!important;height:73px!important}
+  .adultsIcon>div{width:81px!important;height:81px!important}
   .extraCard .button{font-size:16px;margin-top:5px}
   .rsvp{min-height:63svh;padding:65px 20px;gap:30px}
   .rsvpClosing{font-size:16px;line-height:1.2;margin-top:15px!important}
