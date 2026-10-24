@@ -1,0 +1,528 @@
+{
+  "checkedAt": "2026-10-24T00:14:27.712Z",
+  "sourceSha": "850c2b662c52a231d3b9746d5e1ea1e475623e1c",
+  "deploymentId": "dpl_G8uo6Rgv19hJkNweBMNP2GBiFjM1",
+  "ready": true,
+  "url": "https://enkarta.vercel.app/muestra/serenata",
+  "baseline": "70899d44ae35baff76ad510f2796faf00d5a204c",
+  "reference": "https://invitali.com/dolcevita/",
+  "independence": "Own designKey serenata in dolcevita SQL family; existing Oliva and all prior variants preserved. Public sample only; not automatically added to commercial catalog or Socios picker.",
+  "tests": {
+    "profileAndEditor": 10,
+    "entry": 10,
+    "originalPlayer": 4,
+    "reveals": 7,
+    "builderSectionIcons": 36,
+    "deployment": 5,
+    "passed": 72,
+    "failed": 0,
+    "fullRepositorySuiteRun": false
+  },
+  "build": {
+    "typescriptLocalPassed": true,
+    "vercelCompilePassed": true,
+    "vercelLintPassed": true,
+    "vercelTypesPassed": true,
+    "advisories": [
+      "Existing Next.js img optimization advisories.",
+      "Serenata.tsx:137 exhaustive-deps advisory on generation.current cleanup. This ref is an invalidation counter for asynchronous clipboard work, not a DOM node; cleanup intentionally increments the current generation."
+    ]
+  },
+  "attestation": {
+    "criticalSources": 73,
+    "method": "Exact source hashes independently compared with uploaded deployment files",
+    "generatedMastersExcludedFromUpload": true
+  },
+  "preservation": {
+    "originals": 179,
+    "inheritedOriginalsUnchanged": 169,
+    "newOriginals": 9,
+    "newlyProtectedExisting": 1,
+    "legacySources": [
+      {
+        "file": "src/components/invitations/Paradise.tsx",
+        "sha256": "08ad52fb81bbf59d579feffd41f1711b9c7cdc6faab9d4879606a6346a690ba3",
+        "uploadedSha1": "cd3888e3feb638ac1b7bfa67e3093e5f6dca57c6",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Azure.tsx",
+        "sha256": "0064a8b4e4cdba8fc058d8e99ba4999e36d6fec099182fd99c6d0ca7dd8500f4",
+        "uploadedSha1": "b9def4706866873dd1c0f20ad85d78b59e1b8c98",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Passport.tsx",
+        "sha256": "993644915306df911e445c8b0832904687aa937ed55512c127fe5e7450beb72d",
+        "uploadedSha1": "ec2e6d98c4e99499610c59f9f194a36e6e21c1bd",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Primicia.tsx",
+        "sha256": "7fd77a15057481a37842aa92ca203a06eb9b564c55f3e579e4ee1b8c5e2ef786",
+        "uploadedSha1": "15f414ab1b9d00696cc0ed75f289d3836005d41c",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/AzureReference.tsx",
+        "sha256": "0b63df8c5e8293c5c77625ef46b22e4e2ff48280e39f03427121196b2b196ca2",
+        "uploadedSha1": "1eb6446d0a9a13630aeec7dbbf52d38949659ec6",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/AzureReference.module.css",
+        "sha256": "5b6a2275476fb6da1823f2067e8103e2f0a41ce5a67e3fa7676b4f789c6cf776",
+        "uploadedSha1": "1a75b338ce525486d0a373a80daa7997f2bc3300",
+        "unchanged": true
+      },
+      {
+        "file": "src/lib/azure-reference.ts",
+        "sha256": "54cc2d17714fa7b4d0a942efda9d7948ab37fd9dc01c83a42c727d6b3182d143",
+        "uploadedSha1": "aebfd1aaa1b22abe7f1105dd0b79fa8f4eb11e9a",
+        "unchanged": true
+      },
+      {
+        "file": "src/app/muestra/azure-referencia/page.tsx",
+        "sha256": "9c94a601157aa5fecb2d832c3d6451497c4c4be78e157f6fcc14fcaf251caf5f",
+        "uploadedSha1": "667287245e6ab5b685620b08e1aeaca099ddf860",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/sampleData.ts",
+        "sha256": "a92b5613c6c41c827f64aceebe13efac91395a44bd9d61a012fc3bf9bbe8273b",
+        "uploadedSha1": "b8af20fa1bb91af269e0337519d7a1ca719eb116",
+        "unchanged": true
+      },
+      {
+        "file": "src/lib/invitation-mapper.ts",
+        "sha256": "f1486b6bfcc7416f590427d32afdde4640c24fbc3a2cfb007073b38cf86e59a6",
+        "uploadedSha1": "87aa6205133e250d94000b06b60877cf4980c075",
+        "unchanged": true
+      },
+      {
+        "file": "src/lib/layout-presets.ts",
+        "sha256": "256b29280bba85554dcdbd82517e49cf025a93c4b959f8f921e89746b66320e0",
+        "uploadedSha1": "da49f5bd303d6b958794f644e85ecfdbbf323450",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/ParadiseReference.tsx",
+        "sha256": "af0f8062ba7e8ed515b82424b30989c4044cf1fcdb25075031f6d03632644aa1",
+        "uploadedSha1": "657001d1d4ff6d7c8273d2e06716f9f7c1513c01",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/ParadiseReference.module.css",
+        "sha256": "ddfaa53302bee7096be0c23a17fb90211ccd39b98261165520334033d3bbb7e9",
+        "uploadedSha1": "f621ee0e118d83ddef02d3bbd62143578edd860f",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/ParadiseReferenceSections.tsx",
+        "sha256": "c809677366be4a03d084e4bfa0edfbb5a87b0851d196fd564701a57819679872",
+        "uploadedSha1": "7103755d41e9970b677a23509edacfedf9f952d6",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/ParadiseReferenceSections.module.css",
+        "sha256": "780a333e540abb0fc4344c44f851c67493a853ea73d3a1fc94262affa0ea0384",
+        "uploadedSha1": "ab5afc58b150fdaa36783008a8dc4c6fec06d6ab",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/ParadiseReferenceIcon.tsx",
+        "sha256": "afb5abb50268d0dc06f15697530f89d714403642e33ce50297235ae767a845e7",
+        "uploadedSha1": "196a12ad0c55123738d4bb1b0fa1972a7cd77dda",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/ParadiseReferenceMusic.tsx",
+        "sha256": "a6ab0a3c9f471cf7c63b438f5e33e2cf3c42d7c3162a5451f0697865bcf0c652",
+        "uploadedSha1": "e3d2973c9328a5366e4571787e72ddb323b8bc9a",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/ParadiseReferenceRsvp.tsx",
+        "sha256": "d90024c6d3828ea179c406887f2aacc62b06d902b0b9155b6ad125f4622e0314",
+        "uploadedSha1": "d79288f55e03c4d51dfad07109f2587f0dac6e97",
+        "unchanged": true
+      },
+      {
+        "file": "src/lib/paradise-reference.ts",
+        "sha256": "91f09afc1fbca94189d02df7786292516e815fa5d5c7af547b73e644a1475455",
+        "uploadedSha1": "9fbc89cf32067478bf2390e90f5248ec536f20f0",
+        "unchanged": true
+      },
+      {
+        "file": "src/lib/paradise-reference-assets.ts",
+        "sha256": "9dbaaa46340389e196ea720a9cef66e517ba137a9d79ebb9a822d911626e8c24",
+        "uploadedSha1": "97b5d7b9edd12c954ca57614e7c63f76eec04dd7",
+        "unchanged": true
+      },
+      {
+        "file": "src/app/muestra/paradise-referencia/page.tsx",
+        "sha256": "ee65a831aa38f4eae71c71f5b671ce9bb2e159231c12764f6928c420aeebc462",
+        "uploadedSha1": "32b46a9551e4d0c1a774ff9c9dba4989884d2113",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Travesia.tsx",
+        "sha256": "228c0f34a0411db793d360d41e16f9371af8b8397f67899d718e02bae91c0835",
+        "uploadedSha1": "06c52fa1a5810232111aa76e59105b46ee2c7384",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Travesia.module.css",
+        "sha256": "7f57fb398af67c90810351258d938fc0d0cac968cf712f1ab20b4673e371eefb",
+        "uploadedSha1": "674f7b604dfb92e972e08c1b3cb7a783a965263d",
+        "unchanged": true
+      },
+      {
+        "file": "src/lib/travesia.ts",
+        "sha256": "392fe255e5dec5b1d3203a76dcbc099eae8f5799704afde871f4d84884e3360c",
+        "uploadedSha1": "d44e8adda796abfa941f6f8d9a65436246661dce",
+        "unchanged": true
+      },
+      {
+        "file": "src/app/muestra/travesia/page.tsx",
+        "sha256": "6b4cb532abfd2f3c604c054e02c54fa1ee5aef60eb9ac91fb7ee89442d5260a1",
+        "uploadedSha1": "7ccd9997b56aecfd213bd2966d86f8c009003137",
+        "unchanged": true
+      },
+      {
+        "file": "scripts/test-travesia.cjs",
+        "sha256": "952a51d7aceb2af5ba81eb34c6756855e009d9ebc3d7a2a74d3ed64c5212cbc0",
+        "uploadedSha1": "a9c8b31ca01161b441674301db3d43e2a85cb137",
+        "unchanged": true
+      },
+      {
+        "file": "docs/assets/travesia-images.json",
+        "sha256": "1c6c004e6cd1974df7fad77701ededb287d1bf31eafc03f2145f668a9e779e7a",
+        "uploaded": false,
+        "unchanged": true
+      },
+      {
+        "file": "src/lib/payments/bcp.ts",
+        "sha256": "b44ea758c7151d37d4a4cbad564606ea70af3284c71b6abf6d43ab9398ecb2da",
+        "uploadedSha1": "4e5bc227600e23d3743d9af6c7858a29097f1ebf",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Capitulo.tsx",
+        "sha256": "e15a00488799e9aacb22f68706e2fd54986326c68c634c13bcb911e7e20e2d57",
+        "uploadedSha1": "db9df77e388fc7d422e7008ed82adc1b74b721c0",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Capitulo.module.css",
+        "sha256": "c2497b5b76e21ee556fb5ac7def5fd9c9bd4b03fef087f58a169daccef2a5713",
+        "uploadedSha1": "13f7e08cd8a3135eae8debcbf825385a405847cf",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/CapituloOriginalIcon.tsx",
+        "sha256": "1f47158acf11bb645f78fa23e2a880864c7f5397210e7c1b8d5f66cbf8134210",
+        "uploadedSha1": "2bb158a95503bb4be0ab382ac9482ed4f3353fa1",
+        "unchanged": true
+      },
+      {
+        "file": "src/lib/capitulo.ts",
+        "sha256": "90374dde2d015326fbcf1cc707b31ab3279fe17b0b12f07861a5095a1846e218",
+        "uploadedSha1": "15abd0b54343d08f24e66b753ad92843dee92efd",
+        "unchanged": true
+      },
+      {
+        "file": "src/lib/capitulo-assets.ts",
+        "sha256": "fd5f5f362cf770c4551a5e801da5cd79a5935a05daa640c21223ab388c28af5c",
+        "uploadedSha1": "a8301b71bc73b50699a8b3298373dc4551a82bde",
+        "unchanged": true
+      },
+      {
+        "file": "src/lib/capitulo-icon-palette.ts",
+        "sha256": "435cdaabf6b8ccc0e2edeae20dc39fa8ae0df648dbdf214846504e5a9d30a81a",
+        "uploadedSha1": "e29b1f8062bb4c3b76c38d2d6d885c08644c6d12",
+        "unchanged": true
+      },
+      {
+        "file": "src/lib/use-capitulo-reveals.ts",
+        "sha256": "67e958f3284de83d46bff40a4e7290cede27f236f8ba28f58cbf82474ec93686",
+        "uploadedSha1": "a80c4663406ed776e6c542efbf8bb40dc777b645",
+        "unchanged": true
+      },
+      {
+        "file": "src/app/muestra/capitulo/page.tsx",
+        "sha256": "38bc39aefad54ccf50a94413a6869ac70027ef787c23b540ef33c18ba1daf309",
+        "uploadedSha1": "781cf1d08064e004daa40858abb41106fb68c017",
+        "unchanged": true
+      },
+      {
+        "file": "scripts/test-capitulo.cjs",
+        "sha256": "de2f04922d9adfd239b6f7cae4619c82542a77b1e9aff7a0048ac0708b31a405",
+        "uploadedSha1": "ec41ae7db9642af994400f2bef01744387429447",
+        "unchanged": true
+      },
+      {
+        "file": "scripts/test-capitulo-entry.cjs",
+        "sha256": "cb0674d8c64004bd721a92810376957712c4fc2e2f25971747bbe289b0d85c54",
+        "uploadedSha1": "9c9b95851fefc94843fafe5c4552805f204f0c34",
+        "unchanged": true
+      },
+      {
+        "file": "scripts/test-capitulo-motion.cjs",
+        "sha256": "35a5b74e98287dfc7f6b210f1f5caa9a6b6079a2536340cbb8a0d57977ee8951",
+        "uploadedSha1": "c0d9d8169760f62076d5de8aaf60c370a9a85094",
+        "unchanged": true
+      },
+      {
+        "file": "scripts/test-capitulo-reveals.cjs",
+        "sha256": "b59f411d094939df2e9c07d84292dda5d1afb7eccd5dd873a1f887e1db3815de",
+        "uploadedSha1": "2a26c5506c5b9d6cb0ad12a453e97718ac863483",
+        "unchanged": true
+      }
+    ],
+    "priorGeneratedPhotos": 6,
+    "variants": {
+      "inheritedOriginalsUnchanged": 169,
+      "atlasUnchanged": true,
+      "aureaUnchanged": true,
+      "verdealmaUnchanged": true,
+      "lunariaUnchanged": true,
+      "dolcevitaUnchanged": true,
+      "azureReferenceUnchanged": true,
+      "paradiseReferenceUnchanged": true,
+      "travesiaUnchanged": true,
+      "capituloUnchanged": true
+    },
+    "bcpDisabled": true
+  },
+  "generatedImages": {
+    "count": 3,
+    "manifest": "docs/assets/serenata-images.json",
+    "manifestSha256": "dcb5732ae3013bc76a58daef559e4d00a2452dcc7ee37341e4f663db8889e637",
+    "distributedBytes": 765404,
+    "production": [
+      {
+        "path": "/invitations/serenata/hero.webp",
+        "bytes": 288922,
+        "sha256": "0b7cd80d10f81df4d6e6e93d2d643661031fda087871c9cccfa9126ebb67abb7",
+        "passed": true
+      },
+      {
+        "path": "/invitations/serenata/detail.webp",
+        "bytes": 194688,
+        "sha256": "b0f55ee2a2881bf5040c29ee4d600bfbc06070cee77a0a092fc2fb8edf42c82c",
+        "passed": true
+      },
+      {
+        "path": "/invitations/serenata/celebration.webp",
+        "bytes": 281794,
+        "sha256": "03e553a17edc5d922587c6c919c0c3a8966853872fad501c0a76f8193ed83472",
+        "passed": true
+      }
+    ]
+  },
+  "originalAssetsManifest": {
+    "path": "docs/assets/serenata-originals.json",
+    "sha256": "41aeec2b5dce68afc9d1d1b28c253c8bf62e28d7c3bd7bff1059020047ee1557"
+  },
+  "publicSmoke": {
+    "method": "read-only public GET",
+    "routes": [
+      {
+        "route": "/muestra/serenata",
+        "passed": true,
+        "originalInstances": 17,
+        "distinctRequiredOriginals": 15,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2024-10-Contigo-Aprendi-guitarras-Luis-Miguel.mp3",
+        "nativeEntryChoices": 2,
+        "authenticEntryImages": 3,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/serenata?full=1",
+        "passed": true,
+        "originalInstances": 17,
+        "distinctRequiredOriginals": 15,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2024-10-Contigo-Aprendi-guitarras-Luis-Miguel.mp3",
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/serenata?preview=1",
+        "passed": true,
+        "originalInstances": 17,
+        "distinctRequiredOriginals": 15,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2024-10-Contigo-Aprendi-guitarras-Luis-Miguel.mp3",
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/serenata?full=1&n=50&m=QA%20Forged%20Family",
+        "passed": true,
+        "originalInstances": 17,
+        "distinctRequiredOriginals": 15,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2024-10-Contigo-Aprendi-guitarras-Luis-Miguel.mp3",
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      }
+    ],
+    "responses": [
+      {
+        "route": "/muestra/serenata",
+        "status": 200,
+        "bytes": 36927,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/serenata?full=1",
+        "status": 200,
+        "bytes": 35146,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/serenata?preview=1",
+        "status": 200,
+        "bytes": 35152,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/serenata?full=1&n=50&m=QA%20Forged%20Family",
+        "status": 200,
+        "bytes": 35236,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/invitations/serenata/hero.webp",
+        "status": 200,
+        "bytes": 288922,
+        "contentType": "image/webp"
+      },
+      {
+        "route": "/invitations/serenata/detail.webp",
+        "status": 200,
+        "bytes": 194688,
+        "contentType": "image/webp"
+      },
+      {
+        "route": "/invitations/serenata/celebration.webp",
+        "status": 200,
+        "bytes": 281794,
+        "contentType": "image/webp"
+      }
+    ],
+    "passed": true
+  },
+  "browser": {
+    "sourceSha": "850c2b662c52a231d3b9746d5e1ea1e475623e1c",
+    "deploymentId": "dpl_G8uo6Rgv19hJkNweBMNP2GBiFjM1",
+    "url": "https://enkarta.vercel.app/muestra/serenata",
+    "reference": "https://invitali.com/dolcevita/",
+    "referenceObservedViewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "localVisualViewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "productionDomViewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "entry": {
+      "originalPaperAndWaxSeal": true,
+      "desktopHeight": 900,
+      "sealWidth": 100,
+      "options": [
+        "Abrir nuestra invitación",
+        "Abrir sin música"
+      ],
+      "focusAfterOpening": "H1"
+    },
+    "music": {
+      "playingObservedSeconds": 7.069613,
+      "playingObserved": true,
+      "pauseFromControl": true,
+      "silentOpeningObserved": true
+    },
+    "itinerary": {
+      "items": 6,
+      "allSixReadyWithSvg": true,
+      "newPartyJsonFrameChanged": true
+    },
+    "gallery": {
+      "counterAfterNext": "2 / 3",
+      "caption": "Palabras para toda la vida",
+      "controlsVisible": true
+    },
+    "rsvp": {
+      "demoFeedback": "Estás viendo una muestra. No se envió ninguna confirmación.",
+      "writes": 0
+    },
+    "layout": {
+      "audio": [
+        {
+          "paused": true,
+          "time": 0
+        }
+      ],
+      "bodyFont": "21px",
+      "height": 900,
+      "mode": "active",
+      "overflow": false,
+      "photos": 3,
+      "width": 1440
+    },
+    "consoleErrors": [],
+    "screenshots": {
+      "production": [
+        "production-hero-mobile.png"
+      ],
+      "local": [
+        "local-entry-desktop.png",
+        "local-hero-desktop.png",
+        "local-venues-desktop.png",
+        "local-entry-mobile.png",
+        "local-hero-mobile-final.png"
+      ]
+    },
+    "captureLimitations": "Initial and desktop production screenshot attempts did not return images; final production mobile screenshot succeeded. Desktop composition was visually reviewed locally and checked with production DOM plus exact uploaded-source hashes.",
+    "physicalDeviceAcceptance": false,
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "cleanupRequired": false
+  },
+  "cleanup": {
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "accountsCreated": 0,
+    "eventsCreated": 0,
+    "required": false,
+    "reason": "Read-only public sample with fictional content; sample RSVP explicitly sends no confirmation."
+  }
+}
