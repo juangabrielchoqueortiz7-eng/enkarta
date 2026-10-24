@@ -1,0 +1,479 @@
+{
+  "checkedAt": "2026-10-24T00:59:50.990Z",
+  "sourceSha": "884cce25d89d1bf6216a61978a38bcbf15173680",
+  "deploymentId": "dpl_EavgiUPJsoJbDTCbFnzHTd6iSb9h",
+  "ready": true,
+  "url": "https://enkarta.vercel.app/muestra/vespera",
+  "reference": "https://invitali.com/grazia/",
+  "independence": "Own designKey vespera in grazia SQL family; existing Seda and all previous invitation designs preserved. Public sample only, not automatically added to catalog or Socios picker.",
+  "tests": {
+    "profileEditorRouteProvenance": 11,
+    "entry": 10,
+    "originalPlayer": 4,
+    "reveals": 7,
+    "builderSectionIcons": 36,
+    "deployment": 5,
+    "passed": 73,
+    "failed": 0,
+    "fullRepositorySuiteRun": false
+  },
+  "build": {
+    "typescriptLocalPassed": true,
+    "vercelCompilePassed": true,
+    "vercelLintPassed": true,
+    "vercelTypesPassed": true
+  },
+  "sources": {
+    "criticalSources": 42,
+    "legacySources": 259,
+    "lineEndingOnlyExports": 245,
+    "method": "server-UID-verified uploaded source archive; exact extracted-file byte comparison",
+    "archiveSha256": "76707d07f1a94cd9b83f84984024de16c12478ebf432162c81d8df8cdc0b4290",
+    "sourceArchiveIncludesMasters": true,
+    "sourceArchiveIncludesDocs": false,
+    "sourceArchiveVisibility": "Authenticated source archive; non-public files remain outside Next.js public/ and are not served as public assets"
+  },
+  "preservation": {
+    "originals": 184,
+    "inheritedOriginalsUnchanged": 179,
+    "newOriginals": 4,
+    "newlyProtectedExisting": 1,
+    "preservedGeneratedPhotos": 9,
+    "priorVariants": [
+      {
+        "file": "src/components/invitations/Azure.tsx",
+        "bytes": 33893,
+        "sha256": "0064a8b4e4cdba8fc058d8e99ba4999e36d6fec099182fd99c6d0ca7dd8500f4",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/AzureReference.tsx",
+        "bytes": 24338,
+        "sha256": "0b63df8c5e8293c5c77625ef46b22e4e2ff48280e39f03427121196b2b196ca2",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Paradise.tsx",
+        "bytes": 28081,
+        "sha256": "08ad52fb81bbf59d579feffd41f1711b9c7cdc6faab9d4879606a6346a690ba3",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/ParadiseReference.tsx",
+        "bytes": 8184,
+        "sha256": "af0f8062ba7e8ed515b82424b30989c4044cf1fcdb25075031f6d03632644aa1",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Passport.tsx",
+        "bytes": 29031,
+        "sha256": "993644915306df911e445c8b0832904687aa937ed55512c127fe5e7450beb72d",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Primicia.tsx",
+        "bytes": 29008,
+        "sha256": "7fd77a15057481a37842aa92ca203a06eb9b564c55f3e579e4ee1b8c5e2ef786",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/DolceVita.tsx",
+        "bytes": 28803,
+        "sha256": "35354b64d7b7394ac5f990d491f31a587101afbf3a3760e2914f193c966583a7",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Grazia.tsx",
+        "bytes": 19271,
+        "sha256": "fbe346cf449673be082fa71c93260582df0844fa3539f6b01bb37a1b30efa32c",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Obsidiana.tsx",
+        "bytes": 26275,
+        "sha256": "1ab08e748bb55279b90e10360257d9f0755f7bd204bf480567b9f8e4a615ddaf",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Capitulo.tsx",
+        "bytes": 20915,
+        "sha256": "e15a00488799e9aacb22f68706e2fd54986326c68c634c13bcb911e7e20e2d57",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Travesia.tsx",
+        "bytes": 17573,
+        "sha256": "228c0f34a0411db793d360d41e16f9371af8b8397f67899d718e02bae91c0835",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      },
+      {
+        "file": "src/components/invitations/Serenata.tsx",
+        "bytes": 21166,
+        "sha256": "b9a82aeaeb12f3d93d1dc96be2e0e845220355fc5ef13afd6a105810c409d287",
+        "uploaded": true,
+        "method": "byte equality in server-UID-verified uploaded archive",
+        "unchanged": true
+      }
+    ],
+    "bcpDisabled": true
+  },
+  "images": {
+    "generated": 3,
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "distributedBytes": 732968,
+    "manifest": "docs/assets/vespera-images.json",
+    "manifestSha256": "5ba066aee2d6713af2747a3d66bf015a4302182216a481086eb8adaf38dc092a",
+    "originalsManifest": "docs/assets/vespera-originals.json",
+    "originalsManifestSha256": "4acee7fa3e95eaa5157426601cebbe3db873e7beada1201d8668effc3c90b74f",
+    "mastersExcludedFromUpload": false
+  },
+  "publicSmoke": {
+    "checkedAt": "2026-10-24T00:58:56.682Z",
+    "sourceSha": "884cce25d89d1bf6216a61978a38bcbf15173680",
+    "deploymentId": "dpl_EavgiUPJsoJbDTCbFnzHTd6iSb9h",
+    "canonical": "https://enkarta.vercel.app",
+    "passed": true,
+    "method": "read-only public GET; expected icon/source counts derived from attested release SSR",
+    "routes": [
+      {
+        "route": "/muestra/vespera",
+        "passed": true,
+        "originalInstances": 16,
+        "distinctOriginalSources": 13,
+        "itineraryItems": 8,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2024-10-Contigo-Aprendi-guitarras-Luis-Miguel.mp3",
+        "previewStatic": false,
+        "nativeEntryChoices": 2,
+        "authenticEntryImages": 3,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/vespera?full=1",
+        "passed": true,
+        "originalInstances": 16,
+        "distinctOriginalSources": 13,
+        "itineraryItems": 8,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2024-10-Contigo-Aprendi-guitarras-Luis-Miguel.mp3",
+        "previewStatic": false,
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/vespera?preview=1",
+        "passed": true,
+        "originalInstances": 16,
+        "distinctOriginalSources": 13,
+        "itineraryItems": 8,
+        "gallery": true,
+        "audio": null,
+        "previewStatic": true,
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/vespera?full=1&n=50&m=QA%20Forged%20Family",
+        "passed": true,
+        "originalInstances": 16,
+        "distinctOriginalSources": 13,
+        "itineraryItems": 8,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2024-10-Contigo-Aprendi-guitarras-Luis-Miguel.mp3",
+        "previewStatic": false,
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      }
+    ],
+    "images": [
+      {
+        "path": "/invitations/vespera/hero.webp",
+        "bytes": 256850,
+        "sha256": "392b21a673a728a691758dd4546772ea486cfd07c1c2421d8d15ffeab803439a",
+        "passed": true
+      },
+      {
+        "path": "/invitations/vespera/detail.webp",
+        "bytes": 215926,
+        "sha256": "d85d4fc2cd4fdb0e6cbdbe8f68538b0fb6539b58c59054beac3aff95ae52a6f3",
+        "passed": true
+      },
+      {
+        "path": "/invitations/vespera/celebration.webp",
+        "bytes": 260192,
+        "sha256": "7b8837973adbcc5ee5e3ffb90a9494c8ecae1b06b47bac66634d0908b93b348d",
+        "passed": true
+      }
+    ],
+    "responses": [
+      {
+        "route": "/muestra/vespera",
+        "status": 200,
+        "bytes": 35451,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/vespera?full=1",
+        "status": 200,
+        "bytes": 33909,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/vespera?preview=1",
+        "status": 200,
+        "bytes": 33366,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/vespera?full=1&n=50&m=QA%20Forged%20Family",
+        "status": 200,
+        "bytes": 33999,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/invitations/vespera/hero.webp",
+        "status": 200,
+        "bytes": 256850,
+        "contentType": "image/webp"
+      },
+      {
+        "route": "/invitations/vespera/detail.webp",
+        "status": 200,
+        "bytes": 215926,
+        "contentType": "image/webp"
+      },
+      {
+        "route": "/invitations/vespera/celebration.webp",
+        "status": 200,
+        "bytes": 260192,
+        "contentType": "image/webp"
+      },
+      {
+        "route": "/assets/generated/vespera/2026-10/hero.png",
+        "status": 404,
+        "bytes": 10801,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/docs/assets/vespera-images.json",
+        "status": 404,
+        "bytes": 10801,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/Iconos%20INVITALI/vespera-recursos.json",
+        "status": 404,
+        "bytes": 10801,
+        "contentType": "text/html; charset=utf-8"
+      }
+    ],
+    "originalJsonDownloads": 0,
+    "audioDownloaded": false,
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "accountsCreated": 0,
+    "eventsCreated": 0,
+    "cleanupRequired": false,
+    "sourceOnlyPaths": [
+      {
+        "route": "/assets/generated/vespera/2026-10/hero.png",
+        "status": 404,
+        "public": false
+      },
+      {
+        "route": "/docs/assets/vespera-images.json",
+        "status": 404,
+        "public": false
+      },
+      {
+        "route": "/Iconos%20INVITALI/vespera-recursos.json",
+        "status": 404,
+        "public": false
+      }
+    ]
+  },
+  "browser": {
+    "sourceSha": "884cce25d89d1bf6216a61978a38bcbf15173680",
+    "deploymentId": "dpl_EavgiUPJsoJbDTCbFnzHTd6iSb9h",
+    "url": "https://enkarta.vercel.app/muestra/vespera",
+    "reference": "https://invitali.com/grazia/",
+    "referenceViewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "localViewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "productionViewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "entry": {
+      "originalPaperAndBlackFloralSeal": true,
+      "desktopHeight": 900,
+      "sealWidth": 112,
+      "choices": 2,
+      "focusAfterOpening": "H1"
+    },
+    "music": {
+      "playingObserved": true,
+      "playingObservedSeconds": 0.949109,
+      "pauseFromControl": true,
+      "silentOpening": true
+    },
+    "itinerary": {
+      "items": 8,
+      "allReady": true,
+      "newEmbraceJsonFrameChanged": true,
+      "rows": [
+        {
+          "label": "15:30 hUn encuentro esperado",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "16:00 hNuestra ceremonia",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "18:00 hLa recepción",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "18:30 hLa entrada de los novios",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "19:00 hCompartimos la cena",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "20:30 hA bailar",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "22:00 hUn momento dulce",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "23:30 hHasta nuestro próximo encuentro",
+          "ready": "ready",
+          "svg": true
+        }
+      ]
+    },
+    "gallery": {
+      "afterNext": "‹›Reanudar2 / 3Promesas que nos unenPequeños detalles para un recuerdo de toda la vida.",
+      "counter": "2 / 3",
+      "caption": "Promesas que nos unen"
+    },
+    "rsvp": {
+      "feedback": [
+        "Estás viendo una muestra. No se envió ninguna confirmación."
+      ],
+      "writes": 0
+    },
+    "mobile": {
+      "audio": [
+        {
+          "paused": true,
+          "time": 0
+        }
+      ],
+      "bodyFont": "20px",
+      "height": 844,
+      "motion": "active",
+      "namesFont": "VesperaRoman, Georgia, serif",
+      "overflow": false,
+      "width": 390
+    },
+    "desktop": {
+      "width": 1440,
+      "height": 900,
+      "overflow": false
+    },
+    "consoleErrors": [],
+    "screenshots": [
+      "production-entry-desktop.png",
+      "production-hero-desktop.png",
+      "production-itinerary-desktop.png",
+      "production-entry-mobile.png",
+      "production-rsvp-mobile.png"
+    ],
+    "physicalDeviceAcceptance": false,
+    "pixelIdentityCertified": false,
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "cleanupRequired": false,
+    "finalHeroCapture": {
+      "height": 844,
+      "top": 0,
+      "width": 390
+    },
+    "captureNotes": "Mobile entry and RSVP screenshots are stable captures. The attempted hero capture occurred during smooth scrolling and is kept separately as an opening transition, not a final hero reference."
+  },
+  "cleanup": {
+    "required": false,
+    "productionWrites": 0,
+    "accountsCreated": 0,
+    "eventsCreated": 0,
+    "messagesSent": 0,
+    "bankCalls": 0,
+    "reason": "Only a fictional public sample was used. Demo RSVP sends no confirmation; no production fixture records were created."
+  }
+}
