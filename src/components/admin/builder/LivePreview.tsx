@@ -236,7 +236,7 @@ export default function LivePreview({ invitation: rawInvitation, device = 'mobil
             )}
             </PageMotionProvider>
             )}
-            {smartRsvpOn && cfg.designKey !== 'capitulo' && cfg.designKey !== 'travesia' && cfg.designKey !== 'laura-y-andres' && cfg.designKey !== 'annie-y-micky' && cfg.designKey !== 'roly-y-yeliana' && cfg.designKey !== 'nicole-y-francisco' && cfg.designKey !== 'manuel-y-maya' && cfg.designKey !== 'mariana-y-jesus' && cfg.designKey !== 'paula-y-juan-felipe' && cfg.designKey !== 'karla-y-mauricio' && cfg.designKey !== 'maria-angelica-y-mario' && !isCleanDesign(cfg.designKey) && <SmartRsvp demo slug={invitation.slug} theme={cfg.theme} guest={activeGuest} publicId={activeGuest?.publicId} guestName={activeGuest?.name} maxPasses={activeGuest?.passes ?? invitation.guest_passes} tableNo={activeGuest?.tableNo} locale={activeInvitationLocale(cfg)} />}
+            {smartRsvpOn && cfg.designKey !== 'serenata' && cfg.designKey !== 'capitulo' && cfg.designKey !== 'travesia' && cfg.designKey !== 'laura-y-andres' && cfg.designKey !== 'annie-y-micky' && cfg.designKey !== 'roly-y-yeliana' && cfg.designKey !== 'nicole-y-francisco' && cfg.designKey !== 'manuel-y-maya' && cfg.designKey !== 'mariana-y-jesus' && cfg.designKey !== 'paula-y-juan-felipe' && cfg.designKey !== 'karla-y-mauricio' && cfg.designKey !== 'maria-angelica-y-mario' && !isCleanDesign(cfg.designKey) && <SmartRsvp demo slug={invitation.slug} theme={cfg.theme} guest={activeGuest} publicId={activeGuest?.publicId} guestName={activeGuest?.name} maxPasses={activeGuest?.passes ?? invitation.guest_passes} tableNo={activeGuest?.tableNo} locale={activeInvitationLocale(cfg)} />}
             </FontScope>
           </div>
           </div>

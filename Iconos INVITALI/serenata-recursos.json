@@ -1,0 +1,56 @@
+[
+  {
+    "label": "Certificado civil · ceremonia",
+    "url": "https://invitali.com/wp-content/uploads/2025/05/33-Certificado-de-Matrimonio_3.json",
+    "filename": "json/2025-05-33-Certificado-de-Matrimonio_3.json",
+    "localPath": "/lottie/invitali-originales/2025-05-33-Certificado-de-Matrimonio_3.json",
+    "archiveFile": "Iconos INVITALI/2025-05-33-Certificado-de-Matrimonio_3.json",
+    "sha256": "507c414a74a0b040743e39000feedd2a5608f47c4ae230aad81136898e5d5dbe",
+    "bytes": 15152
+  },
+  {
+    "label": "Vestimenta · Dolcevita",
+    "url": "https://invitali.com/wp-content/uploads/2025/05/vestiementa-1.json",
+    "filename": "json/2025-05-vestiementa-1.json",
+    "localPath": "/lottie/invitali-originales/2025-05-vestiementa-1.json",
+    "archiveFile": "Iconos INVITALI/2025-05-vestiementa-1.json",
+    "sha256": "f1213af2a47b3a1f5655eae120bc1d70224466086f5bdb36868c4fe4e8eaea97",
+    "bytes": 22951
+  },
+  {
+    "label": "Certificado civil · itinerario",
+    "url": "https://invitali.com/wp-content/uploads/2025/05/33-Certificado-de-Matrimonio.json",
+    "filename": "json/2025-05-33-Certificado-de-Matrimonio.json",
+    "localPath": "/lottie/invitali-originales/2025-05-33-Certificado-de-Matrimonio.json",
+    "archiveFile": "Iconos INVITALI/2025-05-33-Certificado-de-Matrimonio.json",
+    "sha256": "7ed00b82eac06578f9d0ed14382d60128955fe80757ccf0d620652dd394d17ed",
+    "bytes": 19141
+  },
+  {
+    "label": "Fiesta con música · Dolcevita",
+    "url": "https://invitali.com/wp-content/uploads/2025/05/39-musica.json",
+    "filename": "json/2025-05-39-musica.json",
+    "localPath": "/lottie/invitali-originales/2025-05-39-musica.json",
+    "archiveFile": "Iconos INVITALI/2025-05-39-musica.json",
+    "sha256": "2c1d30012eda689b735d42d0019026bf7711f315fcbe3f683fda25f157928b7f",
+    "bytes": 60099
+  },
+  {
+    "label": "Pajarito · Dolcevita",
+    "url": "https://invitali.com/wp-content/uploads/2025/06/Pajarito.json",
+    "filename": "json/2025-06-Pajarito.json",
+    "localPath": "/lottie/invitali-originales/2025-06-Pajarito.json",
+    "archiveFile": "Iconos INVITALI/2025-06-Pajarito.json",
+    "sha256": "ab8ffaf4117b13fb2cdc6c3bf615f9f00312a762f8c3e2210d9ce0de062d6364",
+    "bytes": 90377
+  },
+  {
+    "label": "Corazones · original aportado por el usuario",
+    "url": "https://invitali.com/wp-content/uploads/2024/05/Animation-1715978306775.json",
+    "localPath": "/lottie/boda/annie-corazones-original.json",
+    "sha256": "96991ec4e2b0f4175d064c0698078e68b9a408aba72a35e3e4c2ec774a713303",
+    "bytes": 16023,
+    "archiveFile": "Iconos INVITALI/2024-05-Animation-1715978306775.json",
+    "reused": true
+  }
+]

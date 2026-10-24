@@ -845,6 +845,56 @@
       "path": "/lottie/invitali-originales/2026-04-tiempo.json",
       "sha256": "ccc6804b0fe2b08d4a922852732376f832057e89d08c4b7131d4797ae2f423f7",
       "bytes": 24208
+    },
+    {
+      "path": "/lottie/invitali-originales/2025-05-33-Certificado-de-Matrimonio_3.json",
+      "sha256": "507c414a74a0b040743e39000feedd2a5608f47c4ae230aad81136898e5d5dbe",
+      "bytes": 15152
+    },
+    {
+      "path": "/lottie/invitali-originales/2025-05-vestiementa-1.json",
+      "sha256": "f1213af2a47b3a1f5655eae120bc1d70224466086f5bdb36868c4fe4e8eaea97",
+      "bytes": 22951
+    },
+    {
+      "path": "/lottie/invitali-originales/2025-05-33-Certificado-de-Matrimonio.json",
+      "sha256": "7ed00b82eac06578f9d0ed14382d60128955fe80757ccf0d620652dd394d17ed",
+      "bytes": 19141
+    },
+    {
+      "path": "/lottie/invitali-originales/2025-05-39-musica.json",
+      "sha256": "2c1d30012eda689b735d42d0019026bf7711f315fcbe3f683fda25f157928b7f",
+      "bytes": 60099
+    },
+    {
+      "path": "/lottie/invitali-originales/2025-06-Pajarito.json",
+      "sha256": "ab8ffaf4117b13fb2cdc6c3bf615f9f00312a762f8c3e2210d9ce0de062d6364",
+      "bytes": 90377
+    },
+    {
+      "path": "/invitations/serenata-reference/2026-10-meowscript-latin.woff2",
+      "sha256": "faf719a185d21180c31649b77f7b627b66dfcd47f15cf19d13f50da0714e311b",
+      "bytes": 32704
+    },
+    {
+      "path": "/invitations/serenata-reference/2024-09-Recurso-43Principal-1-copia.webp",
+      "sha256": "b4a8f692490f8f394fdb8308964d80a1a8c56942bd79171a0cc1f7117b7797e6",
+      "bytes": 96030
+    },
+    {
+      "path": "/invitations/serenata-reference/2024-09-jairo-y-GabrielaRecurso-48cuerpo-copia.webp",
+      "sha256": "caa754030d0c1a62eca0c8a0a41229a86e5f25cfbc8f078784429aabfb07c010",
+      "bytes": 83514
+    },
+    {
+      "path": "/invitations/serenata-reference/2024-05-15-rominaRecurso-61separador.svg",
+      "sha256": "e13023c4c892f90bd37793162122fdceb49488d49dc6330750f65611d0928a1a",
+      "bytes": 1364
+    },
+    {
+      "path": "/lottie/boda/annie-corazones-original.json",
+      "sha256": "96991ec4e2b0f4175d064c0698078e68b9a408aba72a35e3e4c2ec774a713303",
+      "bytes": 16023
     }
   ]
 }

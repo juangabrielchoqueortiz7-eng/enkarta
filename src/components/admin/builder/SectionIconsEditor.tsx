@@ -1,5 +1,6 @@
 'use client';
 import { CAPITULO_ORIGINALS as capituloIcons } from '@/lib/capitulo-assets';
+import { SERENATA_ORIGINALS as serenataIcons } from '@/lib/serenata-assets';
 import {isCleanDesign} from '@/lib/clean-designs';
 import { MA_ICONS } from '@/lib/maria-mario';
 import { NF_ICONS } from '@/lib/nicole-francisco';
@@ -79,7 +80,15 @@ const SECTIONS: Record<string, SectionDef[]> = {
 export default function SectionIconsEditor({ data, onChange, draft }: Props) {
   const editorDraft = useLegacyDraft(data, onChange, draft);
   const isAnnie = data.config.designKey === 'annie-y-micky';
-  const sections = data.config.designKey === 'capitulo' ? [
+  const sections = data.config.designKey === 'serenata' ? [
+    { key: 'ceremony', label: 'Ceremonia religiosa', def: serenataIcons.ceremony.localPath },
+    { key: 'civil', label: 'Ceremonia civil', def: serenataIcons.civil.localPath },
+    { key: 'reception', label: 'Recepción', def: serenataIcons.reception.localPath },
+    { key: 'dressCode', label: 'Código de vestimenta', def: serenataIcons.dress.localPath },
+    { key: 'noKids', label: 'Solo adultos', def: serenataIcons.adults.localPath },
+    { key: 'gift', label: 'Regalos', def: serenataIcons.gift.localPath },
+    { key: 'rsvp', label: 'Confirmación de asistencia', def: serenataIcons.reception.localPath },
+  ] : data.config.designKey === 'capitulo' ? [
     { key: 'ceremony', label: 'Ubicación de la ceremonia', def: capituloIcons.location.localPath },
     { key: 'reception', label: 'Ubicación de la recepción', def: capituloIcons.location.localPath },
     { key: 'dressGroom', label: 'Vestimenta · traje', def: capituloIcons.suit.localPath },

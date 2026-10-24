@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "variant": "serenata",
+  "synthetic": true,
+  "assets": [
+    {
+      "id": "hero",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: new original wedding invitation hero photograph for Serenata. Generate a landscape 1536x1024 image. An entirely fictional Latin American adult couple in their early thirties, woman about 30 with shoulder-length dark chestnut wavy hair wearing an elegant opaque ivory satin wedding dress, man about 32 with dark wavy hair and light beard wearing a beautifully tailored dark olive green suit with an ivory shirt. They stand close together affectionately in an imaginary Mediterranean olive garden, quietly smiling at each other, natural relaxed pose, hands anatomically believable. Refined editorial wedding photography, realistic skin texture, warm late-afternoon light filtered through olive leaves, soft champagne and ivory highlights, muted olive greens. Frame their three-quarter bodies together near the central third with generous garden space on both sides; keep both faces and upper bodies within the middle 45 percent so the image also crops beautifully to a tall arched portrait. Crisp subjects, softly layered natural background, delicate cinematic depth of field, understated elegance. No recognizable venue or landmark, no celebrity or real person, no borrowed photograph or existing invitation composition. No text, no monograms, no logo, no watermark, no frame, no interface.",
+      "generatedMaster": {
+        "file": "assets/generated/serenata/2026-10/hero.png",
+        "sha256": "876116251f5d6623e867e8cd39dcad08711aa7729dc9b0bc7132d752c91b87ea",
+        "bytes": 2841227,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/serenata/hero.webp",
+        "sha256": "0b7cd80d10f81df4d6e6e93d2d643661031fda087871c9cccfa9126ebb67abb7",
+        "bytes": 288922,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "detail",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: new original editorial wedding detail photograph for the Serenata invitation. Landscape 1536x1024. A close, intimate still life in an imaginary Mediterranean olive garden: a delicate organic bouquet of white garden roses, small ivory blossoms and real olive branches rests beside a completely blank ivory linen-bound wedding vow notebook on a pale warm stone table. Two fictional adult hands, one woman's hand with an understated wedding band and one man's hand emerging from a dark olive suit sleeve, gently touch the open blank paper together. Natural anatomically credible hands with five fingers, no faces. Soft champagne afternoon sunlight through leaves, authentic linen and matte paper textures, light ivory and muted olive palette, rich but gentle shadows. Sophisticated, quiet, photorealistic medium-format wedding editorial. Compose the bouquet and hands around the middle with generous breathing room, no visual clutter. The notebook and paper must be entirely blank, with no writing, letters, monogram, numbers, stamps or graphics. No readable text anywhere, no brand, no logo, no watermark, no frame or interface. Create a new original photograph; do not copy an existing photograph or invitation.",
+      "generatedMaster": {
+        "file": "assets/generated/serenata/2026-10/detail.png",
+        "sha256": "b13b927b986fb5f27fbd8b5c928e55671c272725ebbf480bcddd709ec4f1c436",
+        "bytes": 2572364,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/serenata/detail.webp",
+        "sha256": "b0f55ee2a2881bf5040c29ee4d600bfbc06070cee77a0a092fc2fb8edf42c82c",
+        "bytes": 194688,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "celebration",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: new original wedding celebration venue photograph for the Serenata invitation. Landscape 1536x1024. An imaginary intimate Mediterranean garden prepared for an elegant wedding dinner at sunset, no people present. Olive trees and soft white flowering greenery surround a beautifully arranged long ivory-linen table with natural olive branches, delicate white flowers, slender warm candles, fine clear crystal glasses and understated champagne details. Pale warm stone terraces, irregular artisan wooden chairs, a softly glowing garden beyond, quiet anticipation before the guests arrive. Photorealistic sophisticated wedding editorial photography with authentic linen and glass textures, warm gentle evening light, restrained olive green, ivory and champagne palette, natural airy depth. Compose a generous landscape with the table leading the eye into the garden, refined organic asymmetry, no recognizable real venue, hotel, city or landmark. No people, no text, no signs, no logos, no watermarks, no graphic frame, no interface, no mockup. This must be a new original photographic composition, not a recreation of an existing invitation or photograph.",
+      "generatedMaster": {
+        "file": "assets/generated/serenata/2026-10/celebration.png",
+        "sha256": "338fe7dc981df7866af936aecbd05ddf373ae53b1592adf608f4af8970a2fe38",
+        "bytes": 2800649,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/serenata/celebration.webp",
+        "sha256": "03e553a17edc5d922587c6c919c0c3a8966853872fad501c0a76f8193ed83472",
+        "bytes": 281794,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    }
+  ]
+}

@@ -36,6 +36,7 @@ const ParadiseReference = dynamic(() => import('@/components/invitations/Paradis
 const AzureReference = dynamic(() => import('@/components/invitations/AzureReference'));
 const Travesia = dynamic(() => import('@/components/invitations/Travesia'));
 const Capitulo = dynamic(() => import('@/components/invitations/Capitulo'));
+const Serenata = dynamic(() => import('@/components/invitations/Serenata'));
 const Obsidiana = dynamic(() => import('@/components/invitations/Obsidiana'));
 const DolceVita = dynamic(() => import('@/components/invitations/DolceVita'));
 const Grazia = dynamic(() => import('@/components/invitations/Grazia'));
@@ -80,6 +81,7 @@ export const PREMIUM_KEYS = Object.keys(PREMIUM_REGISTRY);
 
 const LAURA_ANDRES_ENTRY: PremiumEntry = { Comp: LauraAndres, map: inv => inv };
 export function premiumFor(inv: InvitationParsed): PremiumEntry | undefined {
+  if (inv.config.designKey === 'serenata') return { Comp: Serenata, map: (inv: InvitationParsed) => inv };
   if (inv.config.designKey === 'capitulo') return { Comp: Capitulo, map: (inv: InvitationParsed) => inv };
   if (inv.config.designKey === 'travesia') return { Comp: Travesia, map: (inv: InvitationParsed) => inv };
   if (inv.config.designKey === 'paradise-referencia') return { Comp: ParadiseReference, map: (inv: InvitationParsed) => inv };

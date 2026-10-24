@@ -196,6 +196,7 @@ export function collectionFor(template?: string | null): EnkartaCollection {
 }
 
 export function publicTemplateName(template?: string | null, presetKey?: string): string {
+  if (presetKey === 'serenata') return 'Serenata';
   if (presetKey === 'capitulo') return 'Capítulo';
   if (presetKey === 'travesia') return 'Travesía';
   if (presetKey === 'paradise-referencia') return 'Paradise · estudio de referencia';

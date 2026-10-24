@@ -1,0 +1,110 @@
+[
+  {
+    "label": "Hojas · portada",
+    "url": "https://invitali.com/wp-content/uploads/2024/09/Recurso-43Principal-1-copia.webp",
+    "filename": "media/2024-09-Recurso-43Principal-1-copia.webp",
+    "localPath": "/invitations/serenata-reference/2024-09-Recurso-43Principal-1-copia.webp",
+    "archiveFile": "Iconos INVITALI/2024-09-Recurso-43Principal-1-copia.webp",
+    "sha256": "b4a8f692490f8f394fdb8308964d80a1a8c56942bd79171a0cc1f7117b7797e6",
+    "bytes": 96030,
+    "verifiedAt": "2026-10-23T23:47:32.890Z"
+  },
+  {
+    "label": "Hojas · cuerpo",
+    "url": "https://invitali.com/wp-content/uploads/2024/09/jairo-y-GabrielaRecurso-48cuerpo-copia.webp",
+    "filename": "media/2024-09-jairo-y-GabrielaRecurso-48cuerpo-copia.webp",
+    "localPath": "/invitations/serenata-reference/2024-09-jairo-y-GabrielaRecurso-48cuerpo-copia.webp",
+    "archiveFile": "Iconos INVITALI/2024-09-jairo-y-GabrielaRecurso-48cuerpo-copia.webp",
+    "sha256": "caa754030d0c1a62eca0c8a0a41229a86e5f25cfbc8f078784429aabfb07c010",
+    "bytes": 83514,
+    "verifiedAt": "2026-10-23T23:47:32.796Z"
+  },
+  {
+    "label": "Separador · Dolcevita",
+    "url": "https://invitali.com/wp-content/uploads/2024/05/15-rominaRecurso-61separador.svg",
+    "filename": "media/2024-05-15-rominaRecurso-61separador.svg",
+    "localPath": "/invitations/serenata-reference/2024-05-15-rominaRecurso-61separador.svg",
+    "archiveFile": "Iconos INVITALI/2024-05-15-rominaRecurso-61separador.svg",
+    "sha256": "e13023c4c892f90bd37793162122fdceb49488d49dc6330750f65611d0928a1a",
+    "bytes": 1364,
+    "verifiedAt": "2026-10-23T23:47:32.427Z"
+  },
+  {
+    "url": "https://invitali.com/wp-content/uploads/2024/04/ROBERTORecurso-11oro.svg",
+    "localPath": "/invitations/azure-referencia/2024-04-ROBERTORecurso-11oro.svg",
+    "archiveFile": "Iconos INVITALI/2024-04-ROBERTORecurso-11oro.svg",
+    "sha256": "211dfd31bea68c77b3b167254fbc3b261873ddde920ffcc31f0caabc4f8a5023",
+    "bytes": 1812,
+    "verifiedAt": "2026-10-23T01:25:42.952Z",
+    "reused": true
+  },
+  {
+    "url": "https://invitali.com/wp-content/uploads/2024/04/ROBERTORecurso-10oro.svg",
+    "localPath": "/invitations/azure-referencia/2024-04-ROBERTORecurso-10oro.svg",
+    "archiveFile": "Iconos INVITALI/2024-04-ROBERTORecurso-10oro.svg",
+    "sha256": "9905abd9dc8a4d9d14483cbf24cbf83aa515fd73ec0093b76e895026c7ddbbf2",
+    "bytes": 1789,
+    "verifiedAt": "2026-10-23T01:25:42.952Z",
+    "reused": true
+  },
+  {
+    "label": "Meow Script Latin",
+    "url": "https://invitali.com/wp-content/uploads/elementor/google-fonts/fonts/meowscript-0flqvpqanlajrtr8anj0ercm2fw.woff2",
+    "filename": "media/2026-10-meowscript-latin.woff2",
+    "localPath": "/invitations/serenata-reference/2026-10-meowscript-latin.woff2",
+    "archiveFile": "Iconos INVITALI/2026-10-meowscript-latin.woff2",
+    "sha256": "faf719a185d21180c31649b77f7b627b66dfcd47f15cf19d13f50da0714e311b",
+    "bytes": 32704,
+    "verifiedAt": "2026-10-23T23:47:32.581Z"
+  },
+  {
+    "url": "https://invitali.com/wp-content/uploads/elementor/google-fonts/fonts/cormorantinfant-hhypu44g9vkim1sorysiweasln997_cv2q.woff2",
+    "localPath": "/invitations/laura-andres/cormorantinfant-hhypu44g9vkim1sorysiweasln997_cv2q.woff2",
+    "reused": true,
+    "sha256": "8f9f468a10e78619156182f2585f3f119f06d166bf0896a8a581e25f89ad5809",
+    "bytes": 35720,
+    "verifiedAt": "2026-10-23T01:25:42.952Z"
+  },
+  {
+    "url": "https://invitali.com/wp-content/uploads/elementor/google-fonts/fonts/cinzel-8vij7ww63mvu7gt79mt7.woff2",
+    "localPath": "/invitations/manuel-y-maya/cinzel-8vij7ww63mvu7gt79mt7.woff2",
+    "reused": true,
+    "sha256": "a88b9e2784b1440392fdb02a09c194ca985b19b64be781c801f0fa4f3ca634a2",
+    "bytes": 25960,
+    "verifiedAt": "2026-10-23T01:25:42.952Z"
+  },
+  {
+    "url": "https://invitali.com/wp-content/uploads/2025/03/Recurso-1Sobres-copia-scaled.webp",
+    "localPath": "/invitations/mariana-y-jesus/Recurso-1Sobres-copia-scaled.webp",
+    "archiveFile": "Iconos INVITALI/2025-03-Recurso-1Sobres-copia-scaled.webp",
+    "reused": true,
+    "sha256": "c35f6beb5df9fa5dd225e40d66bd9920760aa1fcd37e086e5e2800540ff14302",
+    "bytes": 42994,
+    "verifiedAt": "2026-10-22T23:52:22.681Z"
+  },
+  {
+    "url": "https://invitali.com/wp-content/uploads/2025/03/Recurso-2Sobres-copia-scaled.webp",
+    "localPath": "/invitations/mariana-y-jesus/Recurso-2Sobres-copia-scaled.webp",
+    "archiveFile": "Iconos INVITALI/2025-03-Recurso-2Sobres-copia-scaled.webp",
+    "reused": true,
+    "sha256": "342fa0b0ec8a97eba90d53a6936f4e8395e5b6c2cb0c2955c8e3e5521ecae003",
+    "bytes": 31730,
+    "verifiedAt": "2026-10-22T23:52:23.483Z"
+  },
+  {
+    "url": "https://invitali.com/wp-content/uploads/2025/11/SELLO-VERDE-copia_2.webp",
+    "localPath": "/invitations/laura-andres/SELLO-VERDE-copia_2.webp",
+    "reused": true,
+    "sha256": "9a192bff5eb9ec437398adaadb9bcb56be54393a2bc30b85091068f7781c7e31",
+    "bytes": 17814,
+    "verifiedAt": "2026-10-22T23:52:23.789Z"
+  },
+  {
+    "url": "https://invitali.com/wp-content/uploads/elementor/google-fonts/fonts/raleway-1ptug8zys_skggpnyc0itw.woff2",
+    "localPath": "/invitations/laura-andres/raleway-1ptug8zys_skggpnyc0itw.woff2",
+    "reused": true,
+    "sha256": "b1bef1f03a77a36fc257c5525e32a1dd621bb6f935b743a419da7ed0b18dc8f5",
+    "bytes": 48264,
+    "verifiedAt": "2026-10-23T01:25:42.952Z"
+  }
+]
