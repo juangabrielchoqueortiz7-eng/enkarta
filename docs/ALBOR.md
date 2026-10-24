@@ -47,3 +47,13 @@ La captura automática de producción no devolvió imagen en escritorio ni móvi
 Diez GET verificaron cuatro modos de muestra, los tres WebP por SHA-256 y tres rutas privadas con HTTP 404. La vista previa no monta audio y los parámetros falsificados no generan invitados ni pases. La atestación de los archivos realmente subidos verificó 41 fuentes críticas, 271 fuentes anteriores, los 198 originales y las quince fotografías previas. Los 191 originales heredados conservaron sus bytes. Los maestros y fuentes privadas quedaron fuera del paquete antes de subir; no se utilizó archivo comprimido de entrega.
 
 Solo se usó contenido ficticio de muestra: no se crearon cuentas, eventos, confirmaciones, mensajes ni pagos; no hay datos pendientes de limpieza. El SQL 021 local del usuario quedó intacto y fuera del commit. BCP continúa desactivado. Registro sanitizado: [evidencia de producción](evidence/albor-production-2026-10-23.json).
+
+## Ajuste solicitado del sobre y familias · 23 de octubre de 2026
+
+El aro que rodeaba los nombres se quitó del sobre; nombres, fecha, hojas y lacre permanecen, y el aro original continúa en la cabecera interior. El pequeño fondo rectangular de familias se sustituyó por una superficie salvia de todo el ancho. El mismo follaje original aparece en bordes con mezcla y máscaras suaves, conservando sus bytes. Título y cuerpo superan 5,96:1 y 8,54:1 respectivamente sobre el fondo sólido calculado. No se modificaron otras variantes.
+
+Se ejecutaron 22 pruebas pertinentes (12 de perfil, incluida una nueva regresión, y diez de entrada). No se repitió la suite completa. El cambio de runtime se limita a `Albor.module.css`. Impeccable produjo avisos de fuentes y colores del diseño independiente frente a los tokens del portal; la banda y sus colores son la decisión solicitada, documentada en DESIGN.md.
+
+Publicado desde `2790bef11bf27b3f1fe8d8f047b9b43a0656458a`, despliegue `dpl_9F6KVXvyxbAsaQp6ch5pBJX8ra82` Ready, con compilación, lint y tipos aprobados. Alias público verificado por separado; 14 fuentes críticas, 281 fuentes de invitaciones/biblioteca intactas, 198 originales y 18 fotografías comprobados contra los hashes de los archivos subidos. Sin archivos maestros privados en la entrega y sin nuevas descargas.
+
+Se comprobó en el DOM publicado el sobre sin fondo detrás de los nombres, el aro interior conservado, el fondo de familias, su máscara y ausencia de desbordamiento a 1440×900 y 390×844. La captura de familias de escritorio en producción sí se obtuvo; la del sobre móvil no estuvo disponible y se conserva su captura local. No hubo errores de consola ni escrituras de datos, pagos o mensajes; no requiere limpieza. BCP sigue desactivado. [Evidencia del ajuste](evidence/albor-polish-production-2026-10-23.json).

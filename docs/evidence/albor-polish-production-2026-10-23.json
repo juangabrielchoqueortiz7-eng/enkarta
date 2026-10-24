@@ -1,0 +1,93 @@
+{
+  "checkedAt": "2026-10-24T02:15:32.555Z",
+  "sourceSha": "2790bef11bf27b3f1fe8d8f047b9b43a0656458a",
+  "deploymentId": "dpl_9F6KVXvyxbAsaQp6ch5pBJX8ra82",
+  "ready": true,
+  "url": "https://enkarta.vercel.app/muestra/albor",
+  "scope": "Only Albor CSS changed in runtime: remove decorative wreath behind envelope names/date, preserve interior hero wreath, integrate original foliage into a full-width sage family section.",
+  "tests": {
+    "profile": 12,
+    "entryLifecycle": 10,
+    "passed": 22,
+    "failed": 0,
+    "fullRepositorySuiteRun": false
+  },
+  "build": {
+    "compiled": true,
+    "lintPassed": true,
+    "typesPassed": true
+  },
+  "preservation": {
+    "criticalSources": 14,
+    "unchangedInvitationAndLibrarySources": 281,
+    "originalsUnchanged": 198,
+    "generatedPhotosUnchanged": 18,
+    "newDownloads": 0,
+    "bcpDisabled": true,
+    "privateSourcesExcluded": true,
+    "userSqlSha256": "e02d9eb658bd7d1b1941d7502da6817893aadd7df461fef1db405b1735d71aeb",
+    "method": "Expanded uploaded-file SHA-1 UIDs matched exact prepared bytes; batched Git baseline comparison"
+  },
+  "browser": {
+    "checkedAt": "2026-10-24T02:15:03.793Z",
+    "sourceSha": "2790bef11bf27b3f1fe8d8f047b9b43a0656458a",
+    "deploymentId": "dpl_9F6KVXvyxbAsaQp6ch5pBJX8ra82",
+    "url": "https://enkarta.vercel.app/muestra/albor",
+    "entry": {
+      "height": 844,
+      "identityBackground": "none",
+      "identityText": "Elena y Tomás22 de abril de 2028",
+      "overflow": false,
+      "seal": "/invitations/laura-andres/SELLO-VERDE-copia_2.webp",
+      "width": 390
+    },
+    "mobile": {
+      "audioPaused": true,
+      "audioTime": 0,
+      "background": "color(srgb 0.905569 0.905725 0.860706)",
+      "foliage": "url(\"https://enkarta.vercel.app/invitations/karla-y-mauricio/jairo-y-GabrielaRecurso-47cuerpo-1-copia.webp\")",
+      "height": 844,
+      "mask": "linear-gradient(90deg, rgb(0, 0, 0) 10%, rgba(0, 0, 0, 0))",
+      "overflow": false,
+      "pointerEvents": "none",
+      "sectionBackgroundImage": "none",
+      "sectionWidth": 384.5588073730469,
+      "width": 390
+    },
+    "desktop": {
+      "background": "color(srgb 0.905569 0.905725 0.860706)",
+      "height": 900,
+      "heroRing": true,
+      "overflow": false,
+      "sectionWidth": 1434.558837890625,
+      "width": 1440
+    },
+    "captures": {
+      "entry": false,
+      "families": true
+    },
+    "captureNotes": "Production desktop families captured successfully. Production mobile envelope capture unavailable; local mobile entry and families screenshots retained. Rendered production DOM verified the envelope has no background art, the family band and masks, preserved interior wreath and no horizontal overflow.",
+    "consoleErrors": [],
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "cleanupRequired": false
+  },
+  "contrast": {
+    "familyHeading": 5.96794,
+    "familyBody": 8.54272,
+    "method": "WCAG relative luminance on computed solid family background"
+  },
+  "screenshots": [
+    "tmp/albor-polish-20261023/visual/production-families-desktop.png",
+    "tmp/albor-polish-20261023/visual/local-entry-mobile.png",
+    "tmp/albor-polish-20261023/visual/local-families-mobile.png"
+  ],
+  "cleanup": {
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "required": false
+  },
+  "physicalDeviceAcceptance": false
+}
