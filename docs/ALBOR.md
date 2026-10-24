@@ -35,3 +35,15 @@ La muestra no envía confirmaciones. Los parámetros externos no fabrican invita
 Revisión local agrupada: sobre, cabecera, apertura con música y pausa, siete JSON de itinerario listos con SVG, legibilidad y ausencia de desbordamiento horizontal a 1440×900 y 390×844. Capturas en `tmp/albor-release-20261023/visual/`. No sustituyen aceptación en un teléfono físico.
 
 El detector de Impeccable señaló dos colores y siete fuentes/alias respecto del portal. Son decisiones locales documentadas, no instrucciones para normalizar las otras invitaciones. La entrega utiliza subida incremental y excluye físicamente maestros, documentación, skills y archivos `.env` del paquete enviado a Vercel.
+
+## Producción · 23 de octubre de 2026
+
+Publicado [Albor](https://enkarta.vercel.app/muestra/albor) desde `6d8641b9274fb5435c67283ba75b04513c5cdb08`, despliegue `dpl_8GqJ97GqVEWX6t82BdQKKhAwWhkX` Ready. El dominio público se consultó por separado y apunta al mismo despliegue. Compilación, lint y tipos aprobaron con avisos no bloqueantes registrados en la evidencia.
+
+La revisión del navegador de producción comprobó el sobre con sus dos opciones, apertura con música y pausa, apertura silenciosa con audio en cero, siete momentos listos con SVG y traje/vestido separados. Se observó un cambio real de cuadro del JSON introductorio de abril. La galería avanzó a «2 / 3» con «Los pequeños momentos» y la confirmación de muestra explicó que no envió respuestas. No hubo errores de consola ni desbordamiento horizontal a 1440×900 y 390×844; el cuerpo móvil conserva 21 px.
+
+La captura automática de producción no devolvió imagen en escritorio ni móvil. Se conservan las capturas locales y la referencia de escritorio, junto con las lecturas del DOM, accesibilidad, audio y SVG publicado. Se registra esta limitación sin afirmar comparación visual completa de píxeles ni aceptación en un dispositivo físico.
+
+Diez GET verificaron cuatro modos de muestra, los tres WebP por SHA-256 y tres rutas privadas con HTTP 404. La vista previa no monta audio y los parámetros falsificados no generan invitados ni pases. La atestación de los archivos realmente subidos verificó 41 fuentes críticas, 271 fuentes anteriores, los 198 originales y las quince fotografías previas. Los 191 originales heredados conservaron sus bytes. Los maestros y fuentes privadas quedaron fuera del paquete antes de subir; no se utilizó archivo comprimido de entrega.
+
+Solo se usó contenido ficticio de muestra: no se crearon cuentas, eventos, confirmaciones, mensajes ni pagos; no hay datos pendientes de limpieza. El SQL 021 local del usuario quedó intacto y fuera del commit. BCP continúa desactivado. Registro sanitizado: [evidencia de producción](evidence/albor-production-2026-10-23.json).

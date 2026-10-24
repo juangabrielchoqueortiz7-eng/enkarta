@@ -1,0 +1,388 @@
+{
+  "checkedAt": "2026-10-24T01:50:49.173Z",
+  "sourceSha": "6d8641b9274fb5435c67283ba75b04513c5cdb08",
+  "deploymentId": "dpl_8GqJ97GqVEWX6t82BdQKKhAwWhkX",
+  "ready": true,
+  "url": "https://enkarta.vercel.app/muestra/albor",
+  "reference": "https://invitali.com/euforia/",
+  "independence": "Own designKey albor in euforia SQL family; existing Euforia and all prior invitation variants preserved. Public sample, not automatically added to the commercial catalog or Socios picker.",
+  "tests": {
+    "profileEditorRouteProvenance": 11,
+    "entry": 10,
+    "originalPlayer": 4,
+    "reveals": 7,
+    "builderSectionIcons": 36,
+    "deployment": 5,
+    "passed": 73,
+    "failed": 0,
+    "fullRepositorySuiteRun": false,
+    "logs": [
+      {
+        "file": "tests.log",
+        "sha256": "0ec13fd1c2e3466f64c31089f4cd963e144d2571ec1c91829b1a96d024e3c569",
+        "passed": 32,
+        "failed": 0,
+        "groups": [
+          11,
+          4,
+          10,
+          7
+        ]
+      },
+      {
+        "file": "builder-tests.log",
+        "sha256": "f1dbe8386f4f073e9a80bc51c7f5cdd970c759d34182607c1de7153534377753",
+        "passed": 36,
+        "failed": 0,
+        "groups": [
+          36
+        ]
+      },
+      {
+        "file": "deployment-tests.log",
+        "sha256": "951fabc0cd729bb632dc27f266c57a3f6fb0103c278035bc611e85f3b3f6b808",
+        "passed": 5,
+        "failed": 0,
+        "groups": [
+          5
+        ]
+      }
+    ]
+  },
+  "build": {
+    "typescriptLocalPassed": true,
+    "typescriptExitCode": 0,
+    "vercelCompilePassed": true,
+    "vercelLintPassed": true,
+    "vercelTypesPassed": true,
+    "logSha256": "ca1f7997ac9f009e188e2f0b65494fb19547c10c58386b7f32a6c09d5803b630",
+    "nonBlockingWarnings": [
+      "192:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element",
+      "466:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element",
+      "502:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element",
+      "633:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element",
+      "674:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element",
+      "679:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element",
+      "684:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element",
+      "689:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element",
+      "694:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element",
+      "753:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element",
+      "137:75  Warning: The ref value 'generation.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'generation.current' to a variable inside the effect, and use that variable in the cleanup function.  react-hooks/exhaustive-deps"
+    ]
+  },
+  "sourceAttestation": {
+    "criticalSources": 41,
+    "legacySources": 271,
+    "method": "expanded uploaded-file SHA-1 UIDs matched exact release source bytes",
+    "mastersExcludedFromUpload": true,
+    "privateSourcesPhysicallyExcluded": true,
+    "sourceArchiveIncludesMasters": false
+  },
+  "preservation": {
+    "originals": 198,
+    "inheritedOriginalsUnchanged": 191,
+    "newOriginals": 7,
+    "newlyProtectedExisting": 0,
+    "preservedGeneratedPhotos": 15,
+    "bcpDisabled": true
+  },
+  "images": {
+    "generated": 3,
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "distributedBytes": 905710,
+    "manifest": "docs/assets/albor-images.json",
+    "manifestSha256": "bd3bd7b45001df6bfaee7e69ad707def059c348f01af35cc083789f552e64180",
+    "assets": [
+      {
+        "id": "hero",
+        "path": "/invitations/albor/hero.webp",
+        "bytes": 280958,
+        "sha256": "e194c07edcd720baaedd7c6d6c72a050f833c96e23ff09ea854adf7d78f06d4c",
+        "width": 1536,
+        "height": 1024
+      },
+      {
+        "id": "detail",
+        "path": "/invitations/albor/detail.webp",
+        "bytes": 289352,
+        "sha256": "d0b8e122bdb04d1a5265ca406860886dc206ae4527ce285d5fde166cb25b1e51",
+        "width": 1536,
+        "height": 1024
+      },
+      {
+        "id": "celebration",
+        "path": "/invitations/albor/celebration.webp",
+        "bytes": 335400,
+        "sha256": "fdbcc8f4d2e30bd4afaee99cb1a38086dec5961045c94e1555952e2beaf93037",
+        "width": 1536,
+        "height": 1024
+      }
+    ],
+    "originalsManifest": "docs/assets/albor-originals.json",
+    "originalsManifestSha256": "b058d97637230d8b9456fb0f1aa6b36152665eeb6d663a2d950c6dcab384c103",
+    "mastersExcludedFromUpload": true
+  },
+  "referenceDifferences": [
+    {
+      "role": "divider",
+      "source": "https://invitali.com/wp-content/uploads/2024/04/Recurso-60SEparador.png",
+      "httpStatus": 404,
+      "decision": "Unavailable separator omitted visually. No identity claimed for the unused alternate library SVG."
+    }
+  ],
+  "publicSmoke": {
+    "checkedAt": "2026-10-24T01:50:02.519Z",
+    "method": "read-only public GET; expected icon/source counts derived from attested release SSR",
+    "passed": true,
+    "routes": [
+      {
+        "route": "/muestra/albor",
+        "passed": true,
+        "originalInstances": 17,
+        "distinctOriginalSources": 15,
+        "itineraryItems": 7,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-01-Lucero-y-Mijares-el-privilegio-de-amar-acustico_.mp3",
+        "previewStatic": false,
+        "nativeEntryChoices": 2,
+        "authenticEntryImages": 3,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/albor?full=1",
+        "passed": true,
+        "originalInstances": 17,
+        "distinctOriginalSources": 15,
+        "itineraryItems": 7,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-01-Lucero-y-Mijares-el-privilegio-de-amar-acustico_.mp3",
+        "previewStatic": false,
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/albor?preview=1",
+        "passed": true,
+        "originalInstances": 17,
+        "distinctOriginalSources": 15,
+        "itineraryItems": 7,
+        "gallery": true,
+        "audio": null,
+        "previewStatic": true,
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/albor?full=1&n=50&m=QA%20Forged%20Family",
+        "passed": true,
+        "originalInstances": 17,
+        "distinctOriginalSources": 15,
+        "itineraryItems": 7,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-01-Lucero-y-Mijares-el-privilegio-de-amar-acustico_.mp3",
+        "previewStatic": false,
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      }
+    ],
+    "images": [
+      {
+        "path": "/invitations/albor/hero.webp",
+        "bytes": 280958,
+        "sha256": "e194c07edcd720baaedd7c6d6c72a050f833c96e23ff09ea854adf7d78f06d4c",
+        "passed": true
+      },
+      {
+        "path": "/invitations/albor/detail.webp",
+        "bytes": 289352,
+        "sha256": "d0b8e122bdb04d1a5265ca406860886dc206ae4527ce285d5fde166cb25b1e51",
+        "passed": true
+      },
+      {
+        "path": "/invitations/albor/celebration.webp",
+        "bytes": 335400,
+        "sha256": "fdbcc8f4d2e30bd4afaee99cb1a38086dec5961045c94e1555952e2beaf93037",
+        "passed": true
+      }
+    ],
+    "responses": [
+      {
+        "route": "/muestra/albor",
+        "status": 200,
+        "bytes": 36179,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/albor?full=1",
+        "status": 200,
+        "bytes": 34458,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/albor?preview=1",
+        "status": 200,
+        "bytes": 33906,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/albor?full=1&n=50&m=QA%20Forged%20Family",
+        "status": 200,
+        "bytes": 34548,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/invitations/albor/hero.webp",
+        "status": 200,
+        "bytes": 280958,
+        "contentType": "image/webp"
+      },
+      {
+        "route": "/invitations/albor/detail.webp",
+        "status": 200,
+        "bytes": 289352,
+        "contentType": "image/webp"
+      },
+      {
+        "route": "/invitations/albor/celebration.webp",
+        "status": 200,
+        "bytes": 335400,
+        "contentType": "image/webp"
+      },
+      {
+        "route": "/assets/generated/albor/2026-10/hero.png",
+        "status": 404,
+        "bytes": 10801,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/docs/assets/albor-images.json",
+        "status": 404,
+        "bytes": 10801,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/Iconos%20INVITALI/albor-recursos.json",
+        "status": 404,
+        "bytes": 10801,
+        "contentType": "text/html; charset=utf-8"
+      }
+    ],
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "accountsCreated": 0,
+    "eventsCreated": 0,
+    "cleanupRequired": false
+  },
+  "browser": {
+    "sourceSha": "6d8641b9274fb5435c67283ba75b04513c5cdb08",
+    "deploymentId": "dpl_8GqJ97GqVEWX6t82BdQKKhAwWhkX",
+    "url": "https://enkarta.vercel.app/muestra/albor",
+    "reference": "https://invitali.com/euforia/",
+    "referenceViewports": [
+      {
+        "width": 1440,
+        "height": 900
+      }
+    ],
+    "localViewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "productionViewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "entry": {
+      "height": 900,
+      "width": 1440,
+      "overflow": false,
+      "sealWidth": 111.9944839477539,
+      "choices": [
+        "Abrir nuestra invitación",
+        "Abrir sin música"
+      ],
+      "focusAfterOpening": "H1",
+      "originalPaperAndGreenFloralSeal": true
+    },
+    "music": {
+      "playingObserved": true,
+      "playingObservedSeconds": 3.634323,
+      "pauseFromControl": true,
+      "silentOpening": true
+    },
+    "itinerary": {
+      "items": 7,
+      "allReady": true
+    },
+    "newOriginalMotion": {
+      "introFrameChanged": true
+    },
+    "gallery": {
+      "counter": "2 / 3",
+      "caption": "Los pequeños momentos"
+    },
+    "rsvp": {
+      "feedback": [
+        "Estás viendo una muestra. No se envió ninguna confirmación."
+      ],
+      "writes": 0
+    },
+    "desktop": {
+      "font": "AlborBody, Georgia, serif",
+      "height": 900,
+      "width": 1440,
+      "overflow": false,
+      "size": "22px"
+    },
+    "mobile": {
+      "bodySize": "21px",
+      "height": 844,
+      "width": 390,
+      "overflow": false,
+      "motion": "active"
+    },
+    "consoleErrors": [],
+    "screenshots": [
+      "reference-hero-desktop.png",
+      "local-entry-desktop.png",
+      "local-hero-desktop.png",
+      "local-hero-mobile.png",
+      "local-heading-mobile.png"
+    ],
+    "captureNotes": "Production screenshots unavailable in the browser capture API for desktop and mobile. Stored images show the local variant and the desktop reference. Production verified through rendered accessibility/DOM, audio state and actual SVG frame change; no rendered mobile reference certification.",
+    "physicalDeviceAcceptance": false,
+    "pixelIdentityCertified": false,
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "cleanupRequired": false
+  },
+  "cleanup": {
+    "required": false,
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "accountsCreated": 0,
+    "eventsCreated": 0,
+    "reason": "Only fictional public sample content and read-only production checks. Demo RSVP explicitly does not submit a response; no database fixture records created."
+  }
+}
