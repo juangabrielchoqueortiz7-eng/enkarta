@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "variant": "opera",
+  "synthetic": true,
+  "assets": [
+    {
+      "id": "hero",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: new original photograph for the independent Ópera wedding invitation. Generate landscape 1536x1024. An entirely fictional Latin American adult couple: Isabel,28, with long dark softly waved hair, wearing a modest opaque ivory wedding gown with elegant satin texture; Gabriel,32, short dark hair, wearing a well-tailored black tuxedo with an ivory shirt. They stand close together in an imaginary historic stone courtyard at blue hour, sharing a warm intimate smile, both faces clearly visible in three-quarter view with readable natural skin and soft warm lamplight. Refined moody wedding editorial photography, limestone architecture, antique golden sconces, restrained candlelight, black and antique gold accents, natural cinematic depth, romantic and quietly luxurious. Three-quarter body portrait framed in a landscape with both faces near the upper-middle central area; keep both heads within the central40 percent so this crops to a tall mobile portrait or a left desktop half-page. Realistic anatomy and hands, natural expression and authentic materials. No recognizable landmark or real venue, no reference photo, no existing invitation recreation, no fireworks, no lake, no text, no lettering, no monogram, no logo, no watermark, no frame, no interface.",
+      "alt": "Pareja adulta ficticia con vestido marfil y esmoquin negro en un patio de piedra iluminado al anochecer, imagen creada con IA",
+      "generatedMaster": {
+        "file": "assets/generated/opera/2026-10/hero.png",
+        "sha256": "acf83b905e64eb708277492a47833304782f61e6c6ed950c624936e214b2c630",
+        "bytes": 2057844,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/opera/hero.webp",
+        "sha256": "cfb23e347af965ec4b25645ab300207ed0eb8e2ef2aeaecfe5cbdbc5f9bff549",
+        "bytes": 177958,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "detail",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: new original complementary portrait for the independent Ópera wedding invitation. Generate landscape1536x1024. Entirely fictional Latin American adult Isabel,28, long dark softly waved hair and an elegant modest opaque ivory satin wedding gown, and Gabriel,32, short dark hair and black tuxedo with ivory shirt. They sit close together on an old stone stairway inside an imaginary historic courtyard at evening, soft affectionate connected expressions, both faces clearly visible and naturally illuminated by nearby candlelight. Three-quarter upper-body editorial portrait, bride on left and groom on right, no kissing or one face covering the other. Authentic limestone, antique brass lanterns, dark soft greenery and warm golden light balanced with quiet blue-hour shadows. Photorealistic high-end wedding photography, natural skin texture, natural hands and adult anatomy, realistic fabric and gentle cinematic depth. Heads central upper-middle with generous breathing room around them, a new original composition distinct from a lakeside wedding. No recognizable venue or real person. No lake, no fireworks, no text, no logo, no watermark, no border, no interface.",
+      "alt": "Pareja adulta ficticia sentada en una escalera de piedra con faroles y luz cálida, imagen creada con IA",
+      "generatedMaster": {
+        "file": "assets/generated/opera/2026-10/detail.png",
+        "sha256": "86fab8320419c74d61ceaf1f8b91f2086f39399358a2625dbe09b7a010fab435",
+        "bytes": 2280934,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/opera/detail.webp",
+        "sha256": "f7f1cb4f9927b2aaf5152ec969c616e76bcec3d192924e72f28384a4e820daab",
+        "bytes": 210600,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "celebration",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: new original celebration venue photograph for the independent Ópera wedding invitation. Generate landscape1536x1024. An entirely imaginary secluded historic stone courtyard garden prepared for an intimate elegant wedding dinner at evening, no people. A long beautifully set table with matte black linen, low ivory rose arrangements and delicate dark greenery, slender antique gold candleholders with softly glowing candles, fine clear crystal glasses and understated ivory place settings. Pale weathered limestone arches and old garden greenery softly lit with antique lamps, intimate warm golden atmosphere against night shadows. Sophisticated natural editorial wedding photography, realistic brass, crystal, linen and stone textures, restrained black, ivory and antique gold palette, cinematic yet believable exposure. Landscape perspective leading gently along the table into the quiet courtyard, elegant breathing room, tasteful asymmetry. No actual known hotel or landmark, no lake, no fireworks, no people, no writing on place cards, no text, no monograms, no signs, no brands, no logo, no watermark, no border, no interface. Create a new original photographic composition.",
+      "alt": "Mesa de boda con lino negro, flores marfil y velas doradas en un patio imaginario, imagen creada con IA",
+      "generatedMaster": {
+        "file": "assets/generated/opera/2026-10/celebration.png",
+        "sha256": "7a925f71a311d6cf2858018d7f543489dbbc28b57f2f4d2b2592a8cb6b5341f3",
+        "bytes": 2741767,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/opera/celebration.webp",
+        "sha256": "805a8f666343d6cbd8b91e8adcf5a03e985944bb061717d6559d1638877f1366",
+        "bytes": 370572,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    }
+  ],
+  "totalDistributedBytes": 759130,
+  "model": "Not reported by built-in tool"
+}

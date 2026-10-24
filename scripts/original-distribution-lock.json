@@ -920,6 +920,41 @@
       "path": "/invitations/manuel-y-maya/SELLO-NEGRO.webp",
       "sha256": "5924598a374da68dedaf6e99df723ba89fdf8d1449463bdb71b4b7e14ad889d1",
       "bytes": 24014
+    },
+    {
+      "path": "/lottie/invitali-originales/2025-05-31-Brindis.json",
+      "sha256": "770fbed9bb7647f6bcde24041e67e817f9a92a6abf5e3cca8dee183950b5a40d",
+      "bytes": 26581
+    },
+    {
+      "path": "/lottie/invitali-originales/2025-06-vestido-sin-cola.json",
+      "sha256": "604ee23ddbc523dcd62e53fd63d6e9c2f422de08acb5c2fb51ea70788e1f9ec8",
+      "bytes": 15277
+    },
+    {
+      "path": "/invitations/opera-reference/2025-03-Fondo-negro-marmol.webp",
+      "sha256": "3f1b3a4556e22fe23a6b190dac3f5a13d30bba5b744ed4f6e5e6b1850b3d5f8d",
+      "bytes": 43418
+    },
+    {
+      "path": "/invitations/opera-reference/2025-03-freepik__hojas-negras-y-doradas-elegantes__32511-copia-2.webp",
+      "sha256": "e97f81048ee5b02b996bf65b51e4523fc0b6cd31490ff33a31ba59cf1ac81309",
+      "bytes": 46884
+    },
+    {
+      "path": "/invitations/opera-reference/2025-03-freepik__hojas-negras-y-doradas-elegantes__32511-copia-2-2.webp",
+      "sha256": "df907ce23471534f0e7649416f8410be8da89fac35598ae817f622d3dcee775e",
+      "bytes": 45984
+    },
+    {
+      "path": "/invitations/opera-reference/2024-07-AmadeoRecurso-1hojas-doradas.svg",
+      "sha256": "05581c1f94379e0afbf9af10191f39ed5904866ec7ef2a05098663ecdd08fa68",
+      "bytes": 64881
+    },
+    {
+      "path": "/audio/invitali-originales/2025-03-Sleeping-At-Last.mp3",
+      "sha256": "31c989c97fcd7278f007353522751962339838869da3b6e0992a4c1e2dcbeb38",
+      "bytes": 6123448
     }
   ]
 }

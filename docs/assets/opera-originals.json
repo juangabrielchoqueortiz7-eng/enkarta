@@ -1,0 +1,314 @@
+{
+  "variant": "opera",
+  "reference": "https://invitali.com/obsidiana/",
+  "observedAt": "2026-10-23",
+  "originals": {
+    "music": {
+      "label": "Botón de música",
+      "url": "https://invitali.com/wp-content/uploads/2025/03/Animation-1741383787701.json",
+      "filename": "json/2025-03-Animation-1741383787701.json",
+      "localPath": "/lottie/invitali-originales/2025-03-Animation-1741383787701.json",
+      "sha256": "780bbdcb6d01b95ae7e4419e213861de5ab1a65bbe626086214e91b0431bb840",
+      "bytes": 9090,
+      "archiveFile": "Iconos INVITALI/2025-03-Animation-1741383787701.json",
+      "reused": true,
+      "reverse": true
+    },
+    "ceremony": {
+      "label": "Iglesia",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/17-Iglesia.json",
+      "filename": "json/2025-05-17-Iglesia.json",
+      "localPath": "/lottie/invitali-originales/2025-05-17-Iglesia.json",
+      "sha256": "d9e2caf90581c9334287c43939960a5d19e88f36afdbb2b8d34517b915db2c42",
+      "bytes": 55545,
+      "archiveFile": "Iconos INVITALI/2025-05-17-Iglesia.json",
+      "reused": true,
+      "reverse": true
+    },
+    "reception": {
+      "label": "Brindis · Obsidiana",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/31-Brindis.json",
+      "filename": "json/2025-05-31-Brindis.json",
+      "localPath": "/lottie/invitali-originales/2025-05-31-Brindis.json",
+      "archiveFile": "Iconos INVITALI/2025-05-31-Brindis.json",
+      "type": "json",
+      "sha256": "770fbed9bb7647f6bcde24041e67e817f9a92a6abf5e3cca8dee183950b5a40d",
+      "bytes": 26581,
+      "reused": false,
+      "verifiedAt": "2026-10-24T01:07:59.456Z",
+      "reverse": true
+    },
+    "jacket": {
+      "label": "Traje",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/chaqueta-de-sport.json",
+      "filename": "json/2025-05-chaqueta-de-sport.json",
+      "localPath": "/lottie/invitali-originales/2025-05-chaqueta-de-sport.json",
+      "sha256": "841f86c11edd3d2204e11952a475781e20db9bcfff36b7fada4802cc10d01989",
+      "bytes": 53811,
+      "archiveFile": "Iconos INVITALI/2025-05-chaqueta-de-sport.json",
+      "reused": true,
+      "reverse": true
+    },
+    "dress": {
+      "label": "Vestido sin cola · Obsidiana",
+      "url": "https://invitali.com/wp-content/uploads/2025/06/vestido-sin-cola.json",
+      "filename": "json/2025-06-vestido-sin-cola.json",
+      "localPath": "/lottie/invitali-originales/2025-06-vestido-sin-cola.json",
+      "archiveFile": "Iconos INVITALI/2025-06-vestido-sin-cola.json",
+      "type": "json",
+      "sha256": "604ee23ddbc523dcd62e53fd63d6e9c2f422de08acb5c2fb51ea70788e1f9ec8",
+      "bytes": 15277,
+      "reused": false,
+      "verifiedAt": "2026-10-24T01:07:59.630Z",
+      "reverse": true
+    },
+    "receptionTimeline": {
+      "label": "Recepción",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/11-recepcion-social.json",
+      "filename": "json/2025-05-11-recepcion-social.json",
+      "localPath": "/lottie/invitali-originales/2025-05-11-recepcion-social.json",
+      "sha256": "f042b1187185c12ed58ef9f6bd998e296fffc8ae535dc63d68707b31114a6dcb",
+      "bytes": 26282,
+      "archiveFile": "Iconos INVITALI/2025-05-11-recepcion-social.json",
+      "reused": true,
+      "reverse": true
+    },
+    "dinner": {
+      "label": "Cena",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/14-Cena.json",
+      "filename": "json/2025-05-14-Cena.json",
+      "localPath": "/lottie/invitali-originales/2025-05-14-Cena.json",
+      "sha256": "101e2409d75dff47c7355f46d05b766a14e9d5fd6ccc303516e6512e65d4d04a",
+      "bytes": 28947,
+      "archiveFile": "Iconos INVITALI/2025-05-14-Cena.json",
+      "reused": true,
+      "reverse": true
+    },
+    "cake": {
+      "label": "Torta",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/pastel.json",
+      "filename": "json/2025-05-pastel.json",
+      "localPath": "/lottie/invitali-originales/2025-05-pastel.json",
+      "sha256": "47f646980d0c5e501d822324c268e72b3b3148aa5579ef6b4be6a2d92c867738",
+      "bytes": 23854,
+      "archiveFile": "Iconos INVITALI/2025-05-pastel.json",
+      "reused": true,
+      "reverse": true
+    },
+    "bouquet": {
+      "label": "Bouquet",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/flores.json",
+      "filename": "json/2025-05-flores.json",
+      "localPath": "/lottie/invitali-originales/2025-05-flores.json",
+      "sha256": "04adef0f1955f69cc1b18868490d023854cbddc33e031455cb524282b6a19744",
+      "bytes": 53915,
+      "archiveFile": "Iconos INVITALI/2025-05-flores.json",
+      "reused": true,
+      "reverse": true
+    },
+    "party": {
+      "label": "Fiesta",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/cancion.json",
+      "filename": "json/2025-05-cancion.json",
+      "localPath": "/lottie/invitali-originales/2025-05-cancion.json",
+      "sha256": "f3dc6efd7679738f90a93a7dc2bc652dfaa3461c7a4807edaa7009b88007e493",
+      "bytes": 39124,
+      "archiveFile": "Iconos INVITALI/2025-05-cancion.json",
+      "reused": true,
+      "reverse": true
+    },
+    "gift": {
+      "label": "Regalo",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/37-regalo-1.json",
+      "filename": "json/2025-05-37-regalo-1.json",
+      "localPath": "/lottie/invitali-originales/2025-05-37-regalo-1.json",
+      "sha256": "22d006cd8b7793ac1f0a2454fdf2cb7fed8a1fdd1230590c6722cc9238e1c0ba",
+      "bytes": 40403,
+      "archiveFile": "Iconos INVITALI/2025-05-37-regalo-1.json",
+      "reused": true,
+      "reverse": false
+    },
+    "envelopes": {
+      "label": "Lluvia de sobres",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/33-lluvia-de-sobres.json",
+      "filename": "json/2025-05-33-lluvia-de-sobres.json",
+      "localPath": "/lottie/invitali-originales/2025-05-33-lluvia-de-sobres.json",
+      "sha256": "1ac7879f21dcb3613b5f262050121ee2aee595eecfe756fe43f45c4dd501812b",
+      "bytes": 23429,
+      "archiveFile": "Iconos INVITALI/2025-05-33-lluvia-de-sobres.json",
+      "reused": true,
+      "reverse": false
+    },
+    "camera": {
+      "label": "Fotografía",
+      "url": "https://invitali.com/wp-content/uploads/2025/02/Animation-1740029697999.json",
+      "filename": "json/2025-02-Animation-1740029697999.json",
+      "localPath": "/lottie/invitali-originales/2025-02-Animation-1740029697999.json",
+      "sha256": "248eb569d73481cc7e35e755f4854528edfbd0c9c8d17b8c8798f10d4e55514f",
+      "bytes": 42508,
+      "archiveFile": "Iconos INVITALI/2025-02-Animation-1740029697999.json",
+      "reused": true,
+      "reverse": true
+    },
+    "adults": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/10-no-ninos.json",
+      "localPath": "/lottie/boda/invitali-sin-ninos-original.json",
+      "reverse": true,
+      "sha256": "1a1dc78dcffc96b4f1bca344c791d533cde5e4070780041b8384ff9a45f0c713",
+      "bytes": 31986,
+      "reused": true,
+      "url": "https://invitali.com/wp-content/uploads/2025/05/10-no-ninos.json"
+    }
+  },
+  "media": {
+    "background": {
+      "label": "Mármol negro · Obsidiana",
+      "url": "https://invitali.com/wp-content/uploads/2025/03/Fondo-negro-marmol.webp",
+      "filename": "media/2025-03-Fondo-negro-marmol.webp",
+      "localPath": "/invitations/opera-reference/2025-03-Fondo-negro-marmol.webp",
+      "archiveFile": "Iconos INVITALI/2025-03-Fondo-negro-marmol.webp",
+      "type": "media",
+      "sha256": "3f1b3a4556e22fe23a6b190dac3f5a13d30bba5b744ed4f6e5e6b1850b3d5f8d",
+      "bytes": 43418,
+      "reused": false,
+      "verifiedAt": "2026-10-24T01:08:03.999Z"
+    },
+    "foliageLeft": {
+      "label": "Follaje dorado izquierdo · Obsidiana",
+      "url": "https://invitali.com/wp-content/uploads/2025/03/freepik__hojas-negras-y-doradas-elegantes__32511-copia-2.webp",
+      "filename": "media/2025-03-freepik__hojas-negras-y-doradas-elegantes__32511-copia-2.webp",
+      "localPath": "/invitations/opera-reference/2025-03-freepik__hojas-negras-y-doradas-elegantes__32511-copia-2.webp",
+      "archiveFile": "Iconos INVITALI/2025-03-freepik__hojas-negras-y-doradas-elegantes__32511-copia-2.webp",
+      "type": "media",
+      "sha256": "e97f81048ee5b02b996bf65b51e4523fc0b6cd31490ff33a31ba59cf1ac81309",
+      "bytes": 46884,
+      "reused": false,
+      "verifiedAt": "2026-10-24T01:08:04.168Z"
+    },
+    "foliageRight": {
+      "label": "Follaje dorado derecho · Obsidiana",
+      "url": "https://invitali.com/wp-content/uploads/2025/03/freepik__hojas-negras-y-doradas-elegantes__32511-copia-2-2.webp",
+      "filename": "media/2025-03-freepik__hojas-negras-y-doradas-elegantes__32511-copia-2-2.webp",
+      "localPath": "/invitations/opera-reference/2025-03-freepik__hojas-negras-y-doradas-elegantes__32511-copia-2-2.webp",
+      "archiveFile": "Iconos INVITALI/2025-03-freepik__hojas-negras-y-doradas-elegantes__32511-copia-2-2.webp",
+      "type": "media",
+      "sha256": "df907ce23471534f0e7649416f8410be8da89fac35598ae817f622d3dcee775e",
+      "bytes": 45984,
+      "reused": false,
+      "verifiedAt": "2026-10-24T01:08:04.332Z"
+    },
+    "ornament": {
+      "label": "Rama dorada · Obsidiana",
+      "url": "https://invitali.com/wp-content/uploads/2024/07/AmadeoRecurso-1hojas-doradas.svg",
+      "filename": "media/2024-07-AmadeoRecurso-1hojas-doradas.svg",
+      "localPath": "/invitations/opera-reference/2024-07-AmadeoRecurso-1hojas-doradas.svg",
+      "archiveFile": "Iconos INVITALI/2024-07-AmadeoRecurso-1hojas-doradas.svg",
+      "type": "media",
+      "sha256": "05581c1f94379e0afbf9af10191f39ed5904866ec7ef2a05098663ecdd08fa68",
+      "bytes": 64881,
+      "reused": false,
+      "verifiedAt": "2026-10-24T01:08:04.505Z"
+    },
+    "divider": {
+      "label": "Separador · Dolcevita",
+      "url": "https://invitali.com/wp-content/uploads/2024/05/15-rominaRecurso-61separador.svg",
+      "filename": "media/2024-05-15-rominaRecurso-61separador.svg",
+      "localPath": "/invitations/serenata-reference/2024-05-15-rominaRecurso-61separador.svg",
+      "archiveFile": "Iconos INVITALI/2024-05-15-rominaRecurso-61separador.svg",
+      "sha256": "e13023c4c892f90bd37793162122fdceb49488d49dc6330750f65611d0928a1a",
+      "bytes": 1364,
+      "verifiedAt": "2026-10-23T23:47:32.427Z",
+      "reused": true
+    },
+    "fonts": {
+      "script": {
+        "url": "https://invitali.com/wp-content/uploads/2024/08/Romantic-Lovely.ttf",
+        "localPath": "/invitations/laura-andres/Romantic-Lovely.ttf",
+        "reused": true,
+        "sha256": "bdd87ffc355a252fe9b334a4214135337df346843f4e7274932162516a0125a7",
+        "bytes": 131448,
+        "verifiedAt": "2026-10-23T01:25:42.952Z"
+      },
+      "body": {
+        "url": "https://invitali.com/wp-content/uploads/elementor/google-fonts/fonts/raleway-1ptug8zys_skggpnyc0itw.woff2",
+        "localPath": "/invitations/laura-andres/raleway-1ptug8zys_skggpnyc0itw.woff2",
+        "reused": true,
+        "sha256": "b1bef1f03a77a36fc257c5525e32a1dd621bb6f935b743a419da7ed0b18dc8f5",
+        "bytes": 48264,
+        "verifiedAt": "2026-10-23T01:25:42.952Z"
+      },
+      "display": {
+        "url": "https://invitali.com/wp-content/uploads/elementor/google-fonts/fonts/poiretone-uqyvk80njxn4zfrgbdfbo55cvw.woff2",
+        "localPath": "/invitations/laura-andres/poiretone-uqyvk80njxn4zfrgbdfbo55cvw.woff2",
+        "reused": true,
+        "sha256": "a6361b9b4bd84cd02407a4674e0158642a51d5f968f0366adf8a19302bec6c0c",
+        "bytes": 7824,
+        "verifiedAt": "2026-10-22T23:52:24.730Z"
+      },
+      "accent": {
+        "url": "https://invitali.com/wp-content/uploads/2025/06/Apple-Chancery.ttf",
+        "archiveFile": "Iconos INVITALI\\2025-06-Apple-Chancery.ttf",
+        "localPath": "/invitations/mariana-y-jesus/Apple-Chancery.ttf",
+        "sha256": "a9145a5dd2ab5b8f1813d22688de78ac1efee135d1c7f3bb30b5d8f30a311d80",
+        "bytes": 336652,
+        "reused": true
+      }
+    }
+  },
+  "music": {
+    "label": "Sleeping At Last · Obsidiana",
+    "url": "https://invitali.com/wp-content/uploads/2025/03/Sleeping-At-Last.mp3",
+    "filename": "audio/2025-03-Sleeping-At-Last.mp3",
+    "localPath": "/audio/invitali-originales/2025-03-Sleeping-At-Last.mp3",
+    "archiveFile": "Iconos INVITALI/2025-03-Sleeping-At-Last.mp3",
+    "type": "audio",
+    "sha256": "31c989c97fcd7278f007353522751962339838869da3b6e0992a4c1e2dcbeb38",
+    "bytes": 6123448,
+    "reused": false,
+    "verifiedAt": "2026-10-24T01:08:03.035Z"
+  },
+  "entry": {
+    "left": {
+      "url": "https://invitali.com/wp-content/uploads/2025/03/Recurso-1Sobres-copia-scaled.webp",
+      "archiveFile": "Iconos INVITALI\\2025-03-Recurso-1Sobres-copia-scaled.webp",
+      "localPath": "/invitations/mariana-y-jesus/Recurso-1Sobres-copia-scaled.webp",
+      "sha256": "c35f6beb5df9fa5dd225e40d66bd9920760aa1fcd37e086e5e2800540ff14302",
+      "bytes": 42994,
+      "reused": true
+    },
+    "right": {
+      "url": "https://invitali.com/wp-content/uploads/2025/03/Recurso-2Sobres-copia-scaled.webp",
+      "archiveFile": "Iconos INVITALI\\2025-03-Recurso-2Sobres-copia-scaled.webp",
+      "localPath": "/invitations/mariana-y-jesus/Recurso-2Sobres-copia-scaled.webp",
+      "sha256": "342fa0b0ec8a97eba90d53a6936f4e8395e5b6c2cb0c2955c8e3e5521ecae003",
+      "bytes": 31730,
+      "reused": true
+    },
+    "seal": {
+      "url": "https://invitali.com/wp-content/uploads/2026/02/SELLO-NEGRO.webp",
+      "localPath": "/invitations/manuel-y-maya/SELLO-NEGRO.webp",
+      "archiveFile": "Iconos INVITALI/2026-02-SELLO-NEGRO.webp",
+      "reused": true,
+      "sourceEvidence": "src/app/invitacion-invitali/page.tsx:193; existing archived public asset reused without another download",
+      "sha256": "5924598a374da68dedaf6e99df723ba89fdf8d1449463bdb71b4b7e14ad889d1",
+      "bytes": 24014
+    }
+  },
+  "referenceMotion": {
+    "source": "Archived Obsidiana HTML data-settings, speed1 loop yes; all reverse except gift/envelopes",
+    "preservedBytes": true
+  },
+  "distribution": {
+    "baselineOriginals": 184,
+    "newlyDownloadedOriginals": 7,
+    "newlyLockedExistingOriginals": 0,
+    "totalLockedOriginals": 191,
+    "existingOriginalsUnchanged": true
+  },
+  "notes": [
+    "Six reference itinerary icons: church, reception, dinner, cake, bouquet and party.",
+    "Original paper leaves and black floral wax seal reused for an independent entry composition; colors are instance CSS only.",
+    "No reference photographs, bank QR, hotel links or Invitali branding copied.",
+    "New photographs are generated separately for Ópera."
+  ]
+}

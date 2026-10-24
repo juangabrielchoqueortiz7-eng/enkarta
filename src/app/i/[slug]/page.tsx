@@ -13,6 +13,7 @@ import { TravesiaEntry, TravesiaRsvpProvider } from '@/components/invitations/Tr
 import { CapituloEntry, CapituloRsvpProvider } from '@/components/invitations/Capitulo';
 import { SerenataEntry, SerenataRsvpProvider } from '@/components/invitations/Serenata';
 import { VesperaEntry, VesperaRsvpProvider } from '@/components/invitations/Vespera';
+import { OperaEntry, OperaRsvpProvider } from '@/components/invitations/Opera';
 import BlockRenderer from '@/components/invitations/BlockRenderer';
 import FontScope from '@/components/invitations/FontScope';
 import SmartRsvp from '@/components/invitations/SmartRsvp';
@@ -154,7 +155,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   // Toda invitación con música activa suena al abrirse: si el cliente no
   // eligió canción en el builder, se usa la pista por defecto. (Después del
   // gating: si el paquete apaga la música, no se re-añade.)
-  if (feats.music && !config.musicUrl && !['travesia', 'capitulo', 'serenata', 'vespera'].includes(config.designKey ?? '')) config.musicUrl = DEFAULT_MUSIC_URL;
+  if (feats.music && !config.musicUrl && !['travesia', 'capitulo', 'serenata', 'vespera', 'opera'].includes(config.designKey ?? '')) config.musicUrl = DEFAULT_MUSIC_URL;
 
   // ── Link único por invitado (?g=): su nombre, pases y reglas viajan a la plantilla ──
   let guest: Guest | null = null;
@@ -205,7 +206,8 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const nativeCapitulo = config.designKey === 'capitulo' && !hasBlocks;
   const nativeSerenata = config.designKey === 'serenata' && !hasBlocks;
   const nativeVespera = config.designKey === 'vespera' && !hasBlocks;
-  const nativeReference = nativeParadiseReference || nativeAzureReference || nativeTravesia || nativeCapitulo || nativeSerenata || nativeVespera;
+  const nativeOpera = config.designKey === 'opera' && !hasBlocks;
+  const nativeReference = nativeParadiseReference || nativeAzureReference || nativeTravesia || nativeCapitulo || nativeSerenata || nativeVespera || nativeOpera;
   const nativeEntry = nativeLaura || nativeReference;
   const customCinematic = nativeEntry && config.entry?.style === 'cinematic';
   let templateEl: React.ReactNode;
@@ -248,7 +250,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
         <BlockRenderer layout={resolvedLayout!} theme={config.theme} nightTheme={config.nightTheme} nightDefault={config.nightDefault} motion={config.motion} decor={config.decor} tokens={config.tokens} musicUrl={config.musicUrl} slug={invitation.slug} guest={guest ?? undefined} demo={privatePreview} deadlinePassed={deadlinePassed} gated={entryEnabled} navigation={config.additionalServices?.navigation} locale={locale} />
       ) : (
         <PageMotionProvider value={config.motion} gated={entryEnabled || referenceEntryEnabled}>
-          {nativeParadiseReference ? <ParadiseReferenceRsvpProvider form={smartRsvp}>{templateEl}</ParadiseReferenceRsvpProvider> : nativeAzureReference ? <AzureReferenceRsvpProvider form={smartRsvp}>{templateEl}</AzureReferenceRsvpProvider> : nativeTravesia ? <TravesiaRsvpProvider form={smartRsvp}>{templateEl}</TravesiaRsvpProvider> : nativeCapitulo ? <CapituloRsvpProvider form={smartRsvp}>{templateEl}</CapituloRsvpProvider> : nativeSerenata ? <SerenataRsvpProvider form={smartRsvp}>{templateEl}</SerenataRsvpProvider> : nativeVespera ? <VesperaRsvpProvider form={smartRsvp}>{templateEl}</VesperaRsvpProvider> : templateEl}
+          {nativeParadiseReference ? <ParadiseReferenceRsvpProvider form={smartRsvp}>{templateEl}</ParadiseReferenceRsvpProvider> : nativeAzureReference ? <AzureReferenceRsvpProvider form={smartRsvp}>{templateEl}</AzureReferenceRsvpProvider> : nativeTravesia ? <TravesiaRsvpProvider form={smartRsvp}>{templateEl}</TravesiaRsvpProvider> : nativeCapitulo ? <CapituloRsvpProvider form={smartRsvp}>{templateEl}</CapituloRsvpProvider> : nativeSerenata ? <SerenataRsvpProvider form={smartRsvp}>{templateEl}</SerenataRsvpProvider> : nativeVespera ? <VesperaRsvpProvider form={smartRsvp}>{templateEl}</VesperaRsvpProvider> : nativeOpera ? <OperaRsvpProvider form={smartRsvp}>{templateEl}</OperaRsvpProvider> : templateEl}
         </PageMotionProvider>
       )}
       {!nativeReference && smartRsvp}
@@ -257,6 +259,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
 
   // The native entry owns the entire public content, including external RSVP.
   // One inert boundary and one focus trap protect the invitation while closed.
+  if (referenceEntryEnabled && nativeOpera) return <FontScope config={config}><OperaEntry data={parsed} label={config.entry?.label ?? copy.enter}>{content}</OperaEntry></FontScope>;
   if (referenceEntryEnabled && nativeVespera) return <FontScope config={config}><VesperaEntry data={parsed} label={config.entry?.label ?? copy.enter}>{content}</VesperaEntry></FontScope>;
   if (referenceEntryEnabled && nativeSerenata) return <FontScope config={config}><SerenataEntry data={parsed} label={config.entry?.label ?? copy.enter}>{content}</SerenataEntry></FontScope>;
   if (referenceEntryEnabled && nativeCapitulo) return <FontScope config={config}><CapituloEntry data={parsed} label={config.entry?.label ?? 'Abrir este capítulo'}>{content}</CapituloEntry></FontScope>;

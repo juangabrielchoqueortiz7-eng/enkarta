@@ -2,6 +2,7 @@
 import { CAPITULO_ORIGINALS as capituloIcons } from '@/lib/capitulo-assets';
 import { SERENATA_ORIGINALS as serenataIcons } from '@/lib/serenata-assets';
 import { VESPERA_ORIGINALS as vesperaIcons } from '@/lib/vespera-assets';
+import { OPERA_ORIGINALS as operaIcons } from '@/lib/opera-assets';
 import {isCleanDesign} from '@/lib/clean-designs';
 import { MA_ICONS } from '@/lib/maria-mario';
 import { NF_ICONS } from '@/lib/nicole-francisco';
@@ -81,7 +82,16 @@ const SECTIONS: Record<string, SectionDef[]> = {
 export default function SectionIconsEditor({ data, onChange, draft }: Props) {
   const editorDraft = useLegacyDraft(data, onChange, draft);
   const isAnnie = data.config.designKey === 'annie-y-micky';
-  const sections = data.config.designKey === 'vespera' ? [
+  const sections = data.config.designKey === 'opera' ? [
+    { key: 'ceremony', label: 'Ceremonia', def: operaIcons.ceremony.localPath },
+    { key: 'reception', label: 'Recepción', def: operaIcons.reception.localPath },
+    { key: 'dressCode', label: 'Vestimenta · vestido', def: operaIcons.dress.localPath },
+    { key: 'jacket', label: 'Vestimenta · traje', def: operaIcons.jacket.localPath },
+    { key: 'noKids', label: 'Solo adultos', def: operaIcons.adults.localPath },
+    { key: 'gift', label: 'Regalos', def: operaIcons.gift.localPath },
+    { key: 'gallery', label: 'Galería', def: operaIcons.camera.localPath },
+    { key: 'rsvp', label: 'Confirmación de asistencia', def: operaIcons.reception.localPath },
+  ] : data.config.designKey === 'vespera' ? [
     { key: 'ceremony', label: 'Ceremonia', def: vesperaIcons.ceremony.localPath },
     { key: 'reception', label: 'Recepción', def: vesperaIcons.reception.localPath },
     { key: 'dressCode', label: 'Código de vestimenta', def: vesperaIcons.dress.localPath },
