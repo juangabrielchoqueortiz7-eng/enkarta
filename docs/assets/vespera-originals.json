@@ -1,0 +1,280 @@
+{
+  "variant": "vespera",
+  "reference": "https://invitali.com/grazia/",
+  "observedAt": "2026-10-23",
+  "originals": {
+    "embrace": {
+      "label": "Abrazo · Grazia",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/abrazo.json",
+      "filename": "json/2025-05-abrazo.json",
+      "localPath": "/lottie/invitali-originales/2025-05-abrazo.json",
+      "archiveFile": "Iconos INVITALI/2025-05-abrazo.json",
+      "sha256": "7e25f9970a618b321097d6d849334ab5de1cc8fb040198010ba9e3e31bb39e30",
+      "bytes": 30444,
+      "reused": false,
+      "verifiedAt": "2026-10-24T00:43:13.866Z",
+      "reverse": true
+    },
+    "ceremony": {
+      "url": "https://invitali.com/wp-content/uploads/2025/05/biblia.json",
+      "label": "Biblia · original Paradise",
+      "localPath": "/lottie/invitali-originales/2025-05-biblia.json",
+      "archiveFile": "Iconos INVITALI/2025-05-biblia.json",
+      "sha256": "1be4d70cbd1e4f91750801d8233bd1eb060528ee769fdb796167c4dad11ee8ea",
+      "bytes": 43964,
+      "verifiedAt": "2026-10-23T00:32:51.477Z",
+      "filename": "json/2025-05-biblia.json",
+      "reused": true,
+      "reverse": false
+    },
+    "reception": {
+      "label": "Recepción",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/11-recepcion-social.json",
+      "filename": "json/2025-05-11-recepcion-social.json",
+      "localPath": "/lottie/invitali-originales/2025-05-11-recepcion-social.json",
+      "sha256": "f042b1187185c12ed58ef9f6bd998e296fffc8ae535dc63d68707b31114a6dcb",
+      "bytes": 26282,
+      "archiveFile": "Iconos INVITALI/2025-05-11-recepcion-social.json",
+      "reused": true,
+      "reverse": true
+    },
+    "couple": {
+      "label": "Pareja",
+      "url": "https://invitali.com/wp-content/uploads/2025/08/boda.json",
+      "filename": "json/2025-08-boda.json",
+      "localPath": "/lottie/invitali-originales/2025-08-boda.json",
+      "sha256": "7470fdd7cc9c7315acb7eeeda802cfe64a83e65c14684b46700e31e836aa1434",
+      "bytes": 61165,
+      "archiveFile": "Iconos INVITALI/2025-08-boda.json",
+      "reused": true,
+      "reverse": true
+    },
+    "dinner": {
+      "label": "Cena",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/14-Cena.json",
+      "filename": "json/2025-05-14-Cena.json",
+      "localPath": "/lottie/invitali-originales/2025-05-14-Cena.json",
+      "sha256": "101e2409d75dff47c7355f46d05b766a14e9d5fd6ccc303516e6512e65d4d04a",
+      "bytes": 28947,
+      "archiveFile": "Iconos INVITALI/2025-05-14-Cena.json",
+      "reused": true,
+      "reverse": true
+    },
+    "party": {
+      "label": "Fiesta",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/cancion.json",
+      "filename": "json/2025-05-cancion.json",
+      "localPath": "/lottie/invitali-originales/2025-05-cancion.json",
+      "sha256": "f3dc6efd7679738f90a93a7dc2bc652dfaa3461c7a4807edaa7009b88007e493",
+      "bytes": 39124,
+      "archiveFile": "Iconos INVITALI/2025-05-cancion.json",
+      "reused": true,
+      "reverse": true
+    },
+    "cake": {
+      "label": "Torta",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/pastel.json",
+      "filename": "json/2025-05-pastel.json",
+      "localPath": "/lottie/invitali-originales/2025-05-pastel.json",
+      "sha256": "47f646980d0c5e501d822324c268e72b3b3148aa5579ef6b4be6a2d92c867738",
+      "bytes": 23854,
+      "archiveFile": "Iconos INVITALI/2025-05-pastel.json",
+      "reused": true,
+      "reverse": true
+    },
+    "farewell": {
+      "label": "Despedida",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/23-adios-fin-de-fiesta-1.json",
+      "filename": "json/2025-05-23-adios-fin-de-fiesta-1.json",
+      "localPath": "/lottie/invitali-originales/2025-05-23-adios-fin-de-fiesta-1.json",
+      "sha256": "d5bf28fe2d71a49c8f358598ed956c83b7d5689f00dbfb979cac2e40f2164941",
+      "bytes": 19024,
+      "archiveFile": "Iconos INVITALI/2025-05-23-adios-fin-de-fiesta-1.json",
+      "reused": true,
+      "reverse": true
+    },
+    "camera": {
+      "label": "Fotografía",
+      "url": "https://invitali.com/wp-content/uploads/2025/02/Animation-1740029697999.json",
+      "filename": "json/2025-02-Animation-1740029697999.json",
+      "localPath": "/lottie/invitali-originales/2025-02-Animation-1740029697999.json",
+      "sha256": "248eb569d73481cc7e35e755f4854528edfbd0c9c8d17b8c8798f10d4e55514f",
+      "bytes": 42508,
+      "archiveFile": "Iconos INVITALI/2025-02-Animation-1740029697999.json",
+      "reused": true,
+      "reverse": true
+    },
+    "music": {
+      "label": "Botón de música",
+      "url": "https://invitali.com/wp-content/uploads/2025/03/Animation-1741383787701.json",
+      "filename": "json/2025-03-Animation-1741383787701.json",
+      "localPath": "/lottie/invitali-originales/2025-03-Animation-1741383787701.json",
+      "sha256": "780bbdcb6d01b95ae7e4419e213861de5ab1a65bbe626086214e91b0431bb840",
+      "bytes": 9090,
+      "archiveFile": "Iconos INVITALI/2025-03-Animation-1741383787701.json",
+      "reused": true,
+      "reverse": true
+    },
+    "adults": {
+      "source": "https://invitali.com/wp-content/uploads/2025/05/10-no-ninos.json",
+      "localPath": "/lottie/boda/invitali-sin-ninos-original.json",
+      "reverse": true,
+      "sha256": "1a1dc78dcffc96b4f1bca344c791d533cde5e4070780041b8384ff9a45f0c713",
+      "bytes": 31986,
+      "reused": true,
+      "url": "https://invitali.com/wp-content/uploads/2025/05/10-no-ninos.json"
+    },
+    "gift": {
+      "label": "Regalo",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/37-regalo-1.json",
+      "filename": "json/2025-05-37-regalo-1.json",
+      "localPath": "/lottie/invitali-originales/2025-05-37-regalo-1.json",
+      "sha256": "22d006cd8b7793ac1f0a2454fdf2cb7fed8a1fdd1230590c6722cc9238e1c0ba",
+      "bytes": 40403,
+      "archiveFile": "Iconos INVITALI/2025-05-37-regalo-1.json",
+      "reused": true,
+      "reverse": false
+    },
+    "envelopes": {
+      "label": "Lluvia de sobres",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/33-lluvia-de-sobres.json",
+      "filename": "json/2025-05-33-lluvia-de-sobres.json",
+      "localPath": "/lottie/invitali-originales/2025-05-33-lluvia-de-sobres.json",
+      "sha256": "1ac7879f21dcb3613b5f262050121ee2aee595eecfe756fe43f45c4dd501812b",
+      "bytes": 23429,
+      "archiveFile": "Iconos INVITALI/2025-05-33-lluvia-de-sobres.json",
+      "reused": true,
+      "reverse": false
+    },
+    "dress": {
+      "label": "Vestimenta · Dolcevita",
+      "url": "https://invitali.com/wp-content/uploads/2025/05/vestiementa-1.json",
+      "filename": "json/2025-05-vestiementa-1.json",
+      "localPath": "/lottie/invitali-originales/2025-05-vestiementa-1.json",
+      "sha256": "f1213af2a47b3a1f5655eae120bc1d70224466086f5bdb36868c4fe4e8eaea97",
+      "bytes": 22951,
+      "archiveFile": "Iconos INVITALI/2025-05-vestiementa-1.json",
+      "reused": true,
+      "reverse": true
+    }
+  },
+  "media": {
+    "divider": {
+      "label": "Separador · Dolcevita",
+      "url": "https://invitali.com/wp-content/uploads/2024/05/15-rominaRecurso-61separador.svg",
+      "filename": "media/2024-05-15-rominaRecurso-61separador.svg",
+      "localPath": "/invitations/serenata-reference/2024-05-15-rominaRecurso-61separador.svg",
+      "archiveFile": "Iconos INVITALI/2024-05-15-rominaRecurso-61separador.svg",
+      "sha256": "e13023c4c892f90bd37793162122fdceb49488d49dc6330750f65611d0928a1a",
+      "bytes": 1364,
+      "verifiedAt": "2026-10-23T23:47:32.427Z",
+      "reused": true
+    },
+    "fonts": {
+      "script": {
+        "label": "Tangerine Latin · regular",
+        "url": "https://invitali.com/wp-content/uploads/elementor/google-fonts/fonts/tangerine-iury6y5j_osczzow4voxczzm.woff2",
+        "filename": "media/2026-10-tangerine-latin-regular.woff2",
+        "localPath": "/invitations/vespera-reference/2026-10-tangerine-latin-regular.woff2",
+        "archiveFile": "Iconos INVITALI/2026-10-tangerine-latin-regular.woff2",
+        "sha256": "cb4e7c0a159ec0cc2bdab8e3cd4b5541cf77748e1f07d4719eb5835c3afcabce",
+        "bytes": 23304,
+        "reused": false,
+        "verifiedAt": "2026-10-24T00:43:14.491Z"
+      },
+      "boldScript": {
+        "label": "Tangerine Latin · bold",
+        "url": "https://invitali.com/wp-content/uploads/elementor/google-fonts/fonts/tangerine-iurd6y5j_osczzow4vo5srnzi5fn.woff2",
+        "filename": "media/2026-10-tangerine-latin-bold.woff2",
+        "localPath": "/invitations/vespera-reference/2026-10-tangerine-latin-bold.woff2",
+        "archiveFile": "Iconos INVITALI/2026-10-tangerine-latin-bold.woff2",
+        "sha256": "0dbef693a0e3502c8b77d77874867ae7e87514309f644009b0a5aa4d52a2536b",
+        "bytes": 24804,
+        "reused": false,
+        "verifiedAt": "2026-10-24T00:43:15.573Z"
+      },
+      "body": {
+        "url": "https://invitali.com/wp-content/uploads/elementor/google-fonts/fonts/poiretone-uqyvk80njxn4zfrgbdfbo55cvw.woff2",
+        "localPath": "/invitations/laura-andres/poiretone-uqyvk80njxn4zfrgbdfbo55cvw.woff2",
+        "reused": true,
+        "sha256": "a6361b9b4bd84cd02407a4674e0158642a51d5f968f0366adf8a19302bec6c0c",
+        "bytes": 7824,
+        "verifiedAt": "2026-10-22T23:52:24.730Z"
+      },
+      "heading": {
+        "url": "https://invitali.com/wp-content/uploads/elementor/google-fonts/fonts/cinzel-8vij7ww63mvu7gt79mt7.woff2",
+        "localPath": "/invitations/manuel-y-maya/cinzel-8vij7ww63mvu7gt79mt7.woff2",
+        "reused": true,
+        "sha256": "a88b9e2784b1440392fdb02a09c194ca985b19b64be781c801f0fa4f3ca634a2",
+        "bytes": 25960,
+        "verifiedAt": "2026-10-23T01:25:42.952Z"
+      },
+      "entryScript": {
+        "label": "Great Vibes Latin",
+        "url": "https://invitali.com/wp-content/uploads/elementor/google-fonts/fonts/greatvibes-rwmmokwr9v4ksmfawd_jn9xfiaq.woff2",
+        "filename": "media/2026-10-great-vibes-latin.woff2",
+        "localPath": "/invitations/vespera-reference/2026-10-great-vibes-latin.woff2",
+        "archiveFile": "Iconos INVITALI/2026-10-great-vibes-latin.woff2",
+        "sha256": "386a513d0ae794f6373a5f7d005a437ee97b516ccf046aa645d54450788ea44a",
+        "bytes": 42732,
+        "reused": false,
+        "verifiedAt": "2026-10-24T00:43:16.335Z"
+      }
+    }
+  },
+  "music": {
+    "label": "Contigo aprendí · guitarra",
+    "url": "https://invitali.com/wp-content/uploads/2024/10/Contigo-Aprendi-guitarras-Luis-Miguel.mp3",
+    "filename": "audio/2024-10-Contigo-Aprendi-guitarras-Luis-Miguel.mp3",
+    "localPath": "/audio/invitali-originales/2024-10-Contigo-Aprendi-guitarras-Luis-Miguel.mp3",
+    "sha256": "25ec92403cb133767dc0553c7e9be2bed58fb8db005a5af3474bf12462b80a91",
+    "bytes": 3264398,
+    "archiveFile": "Iconos INVITALI/2024-10-Contigo-Aprendi-guitarras-Luis-Miguel.mp3",
+    "reused": true
+  },
+  "entry": {
+    "left": {
+      "url": "https://invitali.com/wp-content/uploads/2025/03/Recurso-1Sobres-copia-scaled.webp",
+      "archiveFile": "Iconos INVITALI\\2025-03-Recurso-1Sobres-copia-scaled.webp",
+      "localPath": "/invitations/mariana-y-jesus/Recurso-1Sobres-copia-scaled.webp",
+      "sha256": "c35f6beb5df9fa5dd225e40d66bd9920760aa1fcd37e086e5e2800540ff14302",
+      "bytes": 42994,
+      "reused": true
+    },
+    "right": {
+      "url": "https://invitali.com/wp-content/uploads/2025/03/Recurso-2Sobres-copia-scaled.webp",
+      "archiveFile": "Iconos INVITALI\\2025-03-Recurso-2Sobres-copia-scaled.webp",
+      "localPath": "/invitations/mariana-y-jesus/Recurso-2Sobres-copia-scaled.webp",
+      "sha256": "342fa0b0ec8a97eba90d53a6936f4e8395e5b6c2cb0c2955c8e3e5521ecae003",
+      "bytes": 31730,
+      "reused": true
+    },
+    "seal": {
+      "url": "https://invitali.com/wp-content/uploads/2026/02/SELLO-NEGRO.webp",
+      "localPath": "/invitations/manuel-y-maya/SELLO-NEGRO.webp",
+      "archiveFile": "Iconos INVITALI/2026-02-SELLO-NEGRO.webp",
+      "reused": true,
+      "sourceEvidence": "src/app/invitacion-invitali/page.tsx:193; existing archived public asset reused without another download",
+      "sha256": "5924598a374da68dedaf6e99df723ba89fdf8d1449463bdb71b4b7e14ad889d1",
+      "bytes": 24014
+    }
+  },
+  "referenceMotion": {
+    "source": "Archived Grazia HTML data-settings; loop yes; speed1; viewport0-100; all reverse except biblia",
+    "preservedBytes": true
+  },
+  "distribution": {
+    "baselineOriginals": 179,
+    "newlyDownloadedOriginals": 4,
+    "newlyLockedExistingOriginals": 1,
+    "totalLockedOriginals": 184,
+    "existingOriginalsUnchanged": true
+  },
+  "notes": [
+    "Eight itinerary animations match exact Grazia source URLs; bible plays forward as declared.",
+    "New photographs belong to Véspera and are not Invitali assets.",
+    "No bank QR, external hotel or Invitali branding copied.",
+    "Black wax seal is reused from existing Manuel/Maya artwork; its exact source URL is preserved from committed source, without another download.",
+    "Entry is an Enkarta composition with archived paper leaves; not claimed identical to Grazia."
+  ]
+}

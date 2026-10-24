@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "variant": "vespera",
+  "synthetic": true,
+  "assets": [
+    {
+      "id": "hero",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: new original hero photograph for an independent wedding invitation called Véspera. Generate a landscape 1536x1024 photograph. Entirely fictional Latino adults Camila age29 and Nicolás age32: bride with dark chestnut softly waved hair, elegant opaque ivory wedding gown; groom with short dark hair and a tailored charcoal suit. A romantic candid moment, standing close and smiling softly at each other, in an imaginary lakeside garden at blue hour turning to night, a few graceful small golden fireworks high above and reflections on distant water. Sophisticated natural wedding editorial photography, realistic faces and skin, warm candlelight softly illuminating them, deep navy evening sky, ivory dress and antique gold highlights. New original composition with subjects together within central40 percent, faces in upper middle and bodies three-quarter visible; ample landscape on both sides for desktop hero and mobile portrait cropping. Eye level, photograph feels intimate and luminous, no staged kissing tableau. Hands natural and anatomically credible. No recognizable place or real person, no copied photograph, no text, no name, no monogram, no logo, no watermark, no border, no interface.",
+      "generatedMaster": {
+        "file": "assets/generated/vespera/2026-10/hero.png",
+        "sha256": "51308cb8f5f1adb0c001c98e91569220a0bbae5dc8013ace5e1382c44d78551f",
+        "bytes": 2370568,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/vespera/hero.webp",
+        "sha256": "392b21a673a728a691758dd4546772ea486cfd07c1c2421d8d15ffeab803439a",
+        "bytes": 256850,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "detail",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: new original complementary wedding portrait for the independent Véspera invitation. Generate a landscape 1536x1024 photograph. Entirely fictional Latino adult couple, Camila around29 with long dark chestnut softly waved hair and warm brown eyes wearing an elegant opaque ivory wedding gown; Nicolás around32 with short dark wavy hair and warm medium skin wearing a tailored charcoal suit and ivory shirt. They sit side by side on a stone garden bench at twilight in an imaginary lakeside garden, bride on the LEFT and groom on the RIGHT. Both heads and full faces clearly visible in soft three-quarter view toward camera, not kissing or obscuring one another, warm gentle expressions, close and relaxed, believable adult proportions. Their heads centered at approximately one-third and two-thirds of width at similar height, so each face can later be cropped into its own circular portrait. Warm candlelight balanced with fading blue evening light, realistic skin and anatomy, delicate ivory flowers and softly blurred distant garden lights, refined editorial wedding photography. Upper torso framing with generous breathing space around both heads, sharp faces. Entirely new original composition, no real person, no recognizable venue, no text, no monogram, no logo, no watermark, no frame, no interface.",
+      "generatedMaster": {
+        "file": "assets/generated/vespera/2026-10/detail.png",
+        "sha256": "f535acd288e123ab8b0f76495db9996842e8fbc9855d9da95cbd979338b96f12",
+        "bytes": 2385962,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/vespera/detail.webp",
+        "sha256": "d85d4fc2cd4fdb0e6cbdbe8f68538b0fb6539b58c59054beac3aff95ae52a6f3",
+        "bytes": 215926,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "celebration",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: new original wedding celebration photograph for the independent Véspera invitation. Generate landscape 1536x1024. An entirely imaginary intimate lakeside garden wedding reception at blue hour, no people. A beautifully arranged long ivory linen table with slender antique brass candleholders and warm lit candles, clear champagne glasses, low organic white flower arrangements with a little dark greenery, refined place settings with blank ivory paper and understated golden details. An elegant garden terrace overlooks a deep blue lake, mountains just visible in the distance, subtle scattered warm lights reflecting on water, twilight sky. Sophisticated natural editorial wedding photography, authentic linen/glass/brass textures, intimate evening atmosphere with warm luminous candlelight against blue evening air, restrained ivory, antique gold, charcoal and midnight blue palette. Landscape perspective following the table with gentle natural depth, generous breathing room, no recognizable real venue or city. No people, no text, no writing on place cards, no monograms, no signs, no brand, no logo, no watermark, no frame, no interface. Create an original scene and photographic composition, not a recreation of any existing photograph.",
+      "generatedMaster": {
+        "file": "assets/generated/vespera/2026-10/celebration.png",
+        "sha256": "541762a482b8558716354c4af24145b3be56e8e0e4c185247c03410f8b2a7886",
+        "bytes": 2402114,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/vespera/celebration.webp",
+        "sha256": "7b8837973adbcc5ee5e3ffb90a9494c8ecae1b06b47bac66634d0908b93b348d",
+        "bytes": 260192,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    }
+  ],
+  "totalDistributedBytes": 732968,
+  "model": "Not reported by built-in tool"
+}

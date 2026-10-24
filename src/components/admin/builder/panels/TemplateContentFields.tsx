@@ -74,6 +74,24 @@ export default function TemplateContentFields({ data, onChange, draft: inherited
   const setLines = (key: keyof BuilderConfig) => (v: string) =>
     setCfg({ [key]: v.split('\n').map(s => s.trim()).filter(Boolean) } as Partial<BuilderConfig>);
 
+  if (cfg.designKey === 'vespera') {
+    return <Wrapper title="Véspera · contenido de la invitación">
+      <p className="font-outfit text-sm leading-6 text-[#62594d]">Edita nombres, fecha, lugares y cronograma en Datos; la portada y la música en Fotos y música; la entrada en Config. Cada ajuste se guarda en esta invitación.</p>
+      {([
+        ['city', 'Ciudad o destino'], ['welcomeTitle', 'Título de bienvenida'], ['introMessage', 'Mensaje de bienvenida'],
+        ['blessing', 'Encabezado de familias'], ['ceremonyDesc', 'Título de la ceremonia'], ['receptionDesc', 'Título de la recepción'],
+        ['dressCodeTitle', 'Título de vestimenta'], ['storyTitle', 'Título de nuestra historia'], ['storyMessage', 'Texto de nuestra historia'],
+        ['noKidsMessage', 'Mensaje Solo adultos'], ['galleryMessage', 'Mensaje para compartir fotos'], ['rsvpMessage', 'Mensaje de confirmación'],
+      ] as const).map(([key, label]) => <Field key={key} label={label}><textarea name={`vespera-${key}`} autoComplete="off" className={textareaCls} rows={2} value={cfg[key] ?? ''} onChange={e => setCfg({ [key]: e.target.value })} /></Field>)}
+      <details className="space-y-4"><summary className="min-h-11 cursor-pointer font-outfit font-semibold">Imágenes de historia y celebración</summary>
+        {([['vesperaDetail', 'Imagen de nuestra historia'], ['vesperaCelebration', 'Imagen de la celebración']] as const).map(([key, label]) => <Field key={key} label={`${label} (URL o recurso local)`}><input name={`vespera-${key}`} autoComplete="off" className={inputCls} value={cfg.sectionImages?.[key] ?? ''} onChange={e => draft.config(current => ({ sectionImages: { ...current.sectionImages, [key]: e.target.value } }))} /></Field>)}
+      </details>
+      <details className="space-y-4"><summary className="min-h-11 cursor-pointer font-outfit font-semibold">Mesa de regalos</summary>
+        {([['giftRegistryUrl', 'Enlace de la mesa de regalos'], ['giftRegistryLabel', 'Texto del enlace de regalos']] as const).map(([key, label]) => <Field key={key} label={label}><input name={`vespera-${key}`} autoComplete="off" className={inputCls} value={cfg[key] ?? ''} onChange={e => setCfg({ [key]: e.target.value })} /></Field>)}
+      </details>
+    </Wrapper>;
+  }
+
   if (cfg.designKey === 'serenata') {
     return <Wrapper title="Serenata · contenido de la invitación">
       <p className="font-outfit text-sm leading-6 text-[#62594d]">Edita nombres, fecha, lugares y cronograma en Datos; la portada y la música en Fotos y música; la entrada en Config. Cada ajuste se guarda en esta invitación.</p>

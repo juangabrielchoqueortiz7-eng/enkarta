@@ -895,6 +895,31 @@
       "path": "/lottie/boda/annie-corazones-original.json",
       "sha256": "96991ec4e2b0f4175d064c0698078e68b9a408aba72a35e3e4c2ec774a713303",
       "bytes": 16023
+    },
+    {
+      "path": "/lottie/invitali-originales/2025-05-abrazo.json",
+      "sha256": "7e25f9970a618b321097d6d849334ab5de1cc8fb040198010ba9e3e31bb39e30",
+      "bytes": 30444
+    },
+    {
+      "path": "/invitations/vespera-reference/2026-10-tangerine-latin-regular.woff2",
+      "sha256": "cb4e7c0a159ec0cc2bdab8e3cd4b5541cf77748e1f07d4719eb5835c3afcabce",
+      "bytes": 23304
+    },
+    {
+      "path": "/invitations/vespera-reference/2026-10-tangerine-latin-bold.woff2",
+      "sha256": "0dbef693a0e3502c8b77d77874867ae7e87514309f644009b0a5aa4d52a2536b",
+      "bytes": 24804
+    },
+    {
+      "path": "/invitations/vespera-reference/2026-10-great-vibes-latin.woff2",
+      "sha256": "386a513d0ae794f6373a5f7d005a437ee97b516ccf046aa645d54450788ea44a",
+      "bytes": 42732
+    },
+    {
+      "path": "/invitations/manuel-y-maya/SELLO-NEGRO.webp",
+      "sha256": "5924598a374da68dedaf6e99df723ba89fdf8d1449463bdb71b4b7e14ad889d1",
+      "bytes": 24014
     }
   ]
 }
