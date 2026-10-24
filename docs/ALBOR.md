@@ -4,7 +4,7 @@ Variante independiente inspirada en [Euforia de Invitali](https://invitali.com/e
 
 ## Dirección y composición
 
-Modo de la superficie: experiencia. La referencia abierta se observó en escritorio a 1440×900: fotografía izquierda, frase sobre aro floral con nombres caligráficos a la derecha, papel marfil y serif de cuerpo. El intento de reducir el ancho de la pestaña de referencia conservó 1440×900; no se certifica una observación móvil renderizada de la fuente ni identidad píxel a píxel. Albor sí se revisó a 1440×900 y 390×844.
+Modo de la superficie: experiencia. La referencia abierta se observó en escritorio a 1440×900: fotografía izquierda, frase sobre aro floral con nombres caligráficos a la derecha, papel marfil y serif de cuerpo. En la corrección del fondo se confirmó también la referencia renderizada a 390×844, con la acuarela en escala `contain`. Albor se revisó en ambos tamaños. No se certifica identidad píxel a píxel entre documentos con contenido y estructura diferentes.
 
 La paleta propia conserva el papel `#f9f6ef`, acento decorativo `#8e6f55`, bronce oscuro `#67513e` y tinta `#493c30`. La frase pequeña usa el bronce oscuro: 6,89:1 sobre el papel; el acento decorativo queda para los nombres grandes y adornos. Romantic Lovely, Cormorant Infant, Great Vibes, Apple Chancery, Raleway y Cormorant Garamond son fuentes originales archivadas y configuradas localmente. El cuerpo mide 22 px en escritorio y 21 px en móvil; los controles tienen objetivos de al menos 44 px.
 
@@ -69,3 +69,15 @@ Se extendió una regresión existente y aprobaron las 22 pruebas pertinentes (12
 Publicado desde `fa8cb3fdb6ba2e6c2ac918603d7012115c2fe297`, despliegue `dpl_e1jRLdeawc8riL5Jky8dist6i5U5` Ready. Compilación, lint y tipos aprobaron, y el alias público coincide. La verificación de archivos subidos conserva 198 originales, 18 fotografías y 281 fuentes anteriores; solo cambió el CSS de Albor en runtime. Maestros y documentación privada quedaron físicamente excluidos.
 
 El DOM de producción confirmó el recurso, las dos máscaras, las opacidades de escritorio/móvil, ausencia de desbordamiento y sobre sin aro decorativo. La captura pública amplia no estuvo disponible: se conserva la captura local final y no se certifica identidad de píxeles ni aceptación física. Cero errores de consola, escrituras o datos pendientes de limpieza. BCP sigue desactivado. [Evidencia de los laterales](evidence/albor-body-production-2026-10-23.json).
+
+## Corrección vigente: fondo original de Euforia · 23 de octubre de 2026
+
+El usuario aclaró que quiere el fondo fiel a Euforia y rechazó los laterales repetidos. Se retiró completamente el recurso verde `48cuerpo`, sus pseudocapas, espejos, filtros y máscaras. También se eliminaron la banda salvia de familias y la sombra añadida a la fotografía. Las imágenes nuevas y los archivos originales permanecen intactos.
+
+La referencia se volvió a observar en vivo a 1440×900 y 390×844. Usa el original `47cuerpo-1-copia.webp` en una capa fija, con `cover` en escritorio, `contain` en móvil, posición superior izquierda, repetición vertical del póster completo y opacidad efectiva de imagen 1. El fondo del documento es `#f9f6ef`. Su overlay tiene opacidad declarada 0,5 pero carece de imagen/color, por lo que no se aplica un filtro o atenuación artificial a la acuarela.
+
+Albor reproduce el recurso, el color y esas escalas mediante `background-attachment:fixed`; cabecera y familias son transparentes sobre el fondo continuo. La vista previa mantiene el fondo dentro del propio lienzo con escala `100% auto`. Esta corrección no traslada el motor de parallax de Elementor (velocidad vertical 4,9 y capa de 149%); no se certifica identidad temporal o de píxeles. Capturas de referencia y Albor, escritorio/móvil: `tmp/albor-euforia-bg-20261023/visual/`.
+
+Publicado desde `fdc1d40e9523edcf18ef1dba3381229310cabdf8`, despliegue `dpl_5SFjgs2hC9oFPvsJcWxNrYUWqWJ7` Ready, con compilación, lint y tipos aprobados y alias público coincidente. Aprobaron 22 pruebas puntuales (12 de perfil y diez de entrada); la regresión que exigía los laterales fue reemplazada por la del fondo correcto identificado por URL, bytes y SHA-256. No se ejecutó la suite completa.
+
+La comprobación pública confirmó fondo original, posición fija, `cover`/`contain`, padres transparentes y ausencia de los pseudoelementos anteriores, sin desbordamiento ni errores de consola. Se obtuvo captura de escritorio en producción. La atestación conserva los 198 originales, 18 fotografías y 281 fuentes previas; solo cambió CSS de Albor en runtime. No se generaron datos de prueba ni operaciones bancarias y no hay limpieza pendiente. BCP sigue desactivado. [Evidencia de la corrección vigente](evidence/albor-euforia-bg-production-2026-10-23.json).

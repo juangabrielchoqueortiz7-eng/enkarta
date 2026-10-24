@@ -1,0 +1,164 @@
+{
+  "checkedAt": "2026-10-24T02:42:18.421Z",
+  "sourceSha": "fdc1d40e9523edcf18ef1dba3381229310cabdf8",
+  "deploymentId": "dpl_5SFjgs2hC9oFPvsJcWxNrYUWqWJ7",
+  "ready": true,
+  "url": "https://enkarta.vercel.app/muestra/albor",
+  "scope": "Only Albor CSS changed at runtime: remove repeated side motifs and use one page background with the archived Euforia 47cuerpo image, transparent family section and a plain envelope.",
+  "tests": {
+    "profile": 12,
+    "entryLifecycle": 10,
+    "passed": 22,
+    "failed": 0,
+    "fullRepositorySuiteRun": false,
+    "logs": [
+      {
+        "file": "profile-tests.log",
+        "passed": 12,
+        "failed": 0,
+        "sha256": "da7e7c857cb231e4dbb86e045c1568fafe0a9d52a509dee1d9e25bc16af361b7"
+      },
+      {
+        "file": "entry-tests.log",
+        "passed": 10,
+        "failed": 0,
+        "sha256": "77507d2be3d927d1a4ce404e61631376a41268121209ee092507b634ce9bd959"
+      }
+    ]
+  },
+  "build": {
+    "compiled": true,
+    "lintPassed": true,
+    "typesPassed": true,
+    "logSha256": "ee2f6f8d535228992e6766d6257b96a88b5a86dc8b132dfd6d9cfcd92c493f30"
+  },
+  "preservation": {
+    "method": "Expanded uploaded-file SHA-1 UIDs matched exact prepared bytes; batched Git baseline comparison",
+    "criticalSources": 14,
+    "unchangedInvitationAndLibrarySources": 281,
+    "originalsUnchanged": 198,
+    "generatedPhotosUnchanged": 18,
+    "newDownloads": 0,
+    "bcpDisabled": true,
+    "privateSourcesExcluded": true,
+    "userSqlSha256": "e02d9eb658bd7d1b1941d7502da6817893aadd7df461fef1db405b1735d71aeb"
+  },
+  "reusedAsset": {
+    "source": "https://invitali.com/wp-content/uploads/2024/09/jairo-y-GabrielaRecurso-47cuerpo-1-copia.webp",
+    "path": "/invitations/karla-y-mauricio/jairo-y-GabrielaRecurso-47cuerpo-1-copia.webp",
+    "sha256": "b1650a27e371642f625fd6f26b9fd051caad15354f4e160fbb1fdb0c59dfc6ab",
+    "bytes": 308336,
+    "uploadedSha1": "b2ab64c57cec4cb23e6a5c0361f2ede5d86208e4",
+    "originalBytesPreserved": true,
+    "newDownload": false
+  },
+  "reference": {
+    "url": "https://invitali.com/euforia/",
+    "evidence": "Live browser observation reported for this task, supported by archived inline CSS declarations and saved desktop/mobile captures",
+    "bodyColor": "#F9F6EF",
+    "backgroundElement": "410a543",
+    "imageSource": "https://invitali.com/wp-content/uploads/2024/09/jairo-y-GabrielaRecurso-47cuerpo-1-copia.webp",
+    "backgroundRepeat": "repeat-y",
+    "desktopBackgroundSize": "cover",
+    "mobileBackgroundSize": "contain",
+    "renderedImageOpacity": 1,
+    "effectsLayerHeight": "149%",
+    "motion": {
+      "engine": "Elementor",
+      "translateYSpeed": 4.9,
+      "devices": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ]
+    },
+    "overlay": "Empty overlay has no effective background color; its opacity variable does not dim the image layer"
+  },
+  "replica": {
+    "onePageBackground": true,
+    "sourcePosterAndColorsPreserved": true,
+    "backgroundSizeRulesMatchReference": true,
+    "backgroundAttachment": "fixed",
+    "preview": {
+      "selector": ".page[data-preview]",
+      "backgroundAttachment": "scroll",
+      "backgroundSize": "100% auto",
+      "method": "Exact uploaded CSS plus focused local regression"
+    },
+    "documentedDifference": "Uses CSS background-attachment: fixed with the original poster and cover/contain rules. It does not port Elementor’s dynamic vertical speed-4.9 parallax or its 149% effects-layer geometry. Composition is not certified pixel-identical."
+  },
+  "browser": {
+    "sourceSha": "fdc1d40e9523edcf18ef1dba3381229310cabdf8",
+    "deploymentId": "dpl_5SFjgs2hC9oFPvsJcWxNrYUWqWJ7",
+    "url": "https://enkarta.vercel.app/muestra/albor",
+    "entry": {
+      "backgroundImage": "none"
+    },
+    "desktop": {
+      "width": 1440,
+      "height": 900,
+      "overflow": false,
+      "backgroundImage": "url(\"https://enkarta.vercel.app/invitations/karla-y-mauricio/jairo-y-GabrielaRecurso-47cuerpo-1-copia.webp\")",
+      "backgroundAttachment": "fixed",
+      "backgroundPosition": "0px 0px",
+      "backgroundRepeat": "repeat-y",
+      "backgroundSize": "cover",
+      "beforeContent": "none",
+      "afterContent": "none",
+      "parentsBackground": "rgba(0, 0, 0, 0)",
+      "opacity": "1",
+      "backgroundColor": "rgb(249, 246, 239)"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "overflow": false,
+      "backgroundImage": "url(\"https://enkarta.vercel.app/invitations/karla-y-mauricio/jairo-y-GabrielaRecurso-47cuerpo-1-copia.webp\")",
+      "backgroundAttachment": "fixed",
+      "backgroundPosition": "0px 0px",
+      "backgroundRepeat": "repeat-y",
+      "backgroundSize": "contain",
+      "beforeContent": "none",
+      "afterContent": "none",
+      "parentsBackground": "rgba(0, 0, 0, 0)",
+      "opacity": "1",
+      "backgroundColor": "rgb(249, 246, 239)"
+    },
+    "consoleErrors": [],
+    "productionWrites": 0,
+    "cleanupRequired": false
+  },
+  "captures": {
+    "productionAvailable": true,
+    "notes": "Reference, local and available production captures retained; production DOM and uploaded sources verified.",
+    "screenshots": [
+      {
+        "file": "tmp/albor-euforia-bg-20261023/visual/reference-background-desktop.png",
+        "sha256": "d4e9823aa81b9dbe5a99a48bb1c24ab828b4778ff8721278e5c454478ec58cfa"
+      },
+      {
+        "file": "tmp/albor-euforia-bg-20261023/visual/reference-background-mobile.png",
+        "sha256": "70662b93b4e7abb4ec7a212e2855850dbcdb62039f924167d22efdabac9a9680"
+      },
+      {
+        "file": "tmp/albor-euforia-bg-20261023/visual/local-background-desktop.png",
+        "sha256": "41f4139571a6db15d654d11e533acd26ac1e099ef335b341d8babcaa1f8dbdff"
+      },
+      {
+        "file": "tmp/albor-euforia-bg-20261023/visual/local-background-mobile.png",
+        "sha256": "b40444d9e7e09896c8b10f1859e7aaf3d78e50418dd635ca03e4c9a03c385f82"
+      },
+      {
+        "file": "tmp/albor-euforia-bg-20261023/visual/production-background-desktop.png",
+        "sha256": "04484e138e0c09b505ffe3956fc65fd4bec47add4bc7565989922b28b4b3c6d0"
+      }
+    ]
+  },
+  "cleanup": {
+    "productionWrites": 0,
+    "required": false,
+    "reason": "Read-only public sample and source verification; no database fixtures created."
+  },
+  "physicalDeviceAcceptance": false,
+  "pixelIdentityCertified": false
+}
