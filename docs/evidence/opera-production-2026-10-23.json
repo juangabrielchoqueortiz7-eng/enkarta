@@ -1,0 +1,380 @@
+{
+  "checkedAt": "2026-10-24T01:22:06.509Z",
+  "sourceSha": "5d97ff77388a65f83a06115ced7337870753afe0",
+  "deploymentId": "dpl_3WciCUsaTmdB2ED52qrZiUUKrVEb",
+  "ready": true,
+  "url": "https://enkarta.vercel.app/muestra/opera",
+  "reference": "https://invitali.com/obsidiana/",
+  "independence": "Own designKey opera in obsidiana SQL family; Nocturna and all previous invitation variants preserved. Public sample, not automatically added to catalog or Socios picker.",
+  "tests": {
+    "profileEditorRouteProvenance": 11,
+    "entry": 10,
+    "originalPlayer": 4,
+    "reveals": 7,
+    "builderSectionIcons": 36,
+    "deployment": 5,
+    "passed": 73,
+    "failed": 0,
+    "fullRepositorySuiteRun": false
+  },
+  "build": {
+    "typescriptLocalPassed": true,
+    "vercelCompilePassed": true,
+    "vercelLintPassed": true,
+    "vercelTypesPassed": true
+  },
+  "sourceAttestation": {
+    "criticalSources": 40,
+    "legacySources": 265,
+    "method": "expanded uploaded-file SHA-1 UIDs matched exact release bytes",
+    "mastersExcludedFromUpload": true
+  },
+  "preservation": {
+    "originals": 191,
+    "inheritedOriginalsUnchanged": 184,
+    "newOriginals": 7,
+    "preservedGeneratedPhotos": 12,
+    "bcpDisabled": true
+  },
+  "images": {
+    "generated": 3,
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "distributedBytes": 759130,
+    "manifest": "docs/assets/opera-images.json",
+    "manifestSha256": "3848e7ce4c939708d0d709c833d0733bdb993c32b3d9387f6cbad8de85795af1",
+    "originalsManifest": "docs/assets/opera-originals.json",
+    "originalsManifestSha256": "cdc4ed3f2fd6a62aa15ee8fbf573ffdd665e85b52d47597101630b8fe8ab13ee",
+    "mastersExcludedFromUpload": true
+  },
+  "publicSmoke": {
+    "checkedAt": "2026-10-24T01:19:02.700Z",
+    "sourceSha": "5d97ff77388a65f83a06115ced7337870753afe0",
+    "deploymentId": "dpl_3WciCUsaTmdB2ED52qrZiUUKrVEb",
+    "canonical": "https://enkarta.vercel.app",
+    "passed": true,
+    "method": "read-only public GET; expected icon/source counts derived from attested release SSR",
+    "routes": [
+      {
+        "route": "/muestra/opera",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctOriginalSources": 13,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-03-Sleeping-At-Last.mp3",
+        "previewStatic": false,
+        "nativeEntryChoices": 2,
+        "authenticEntryImages": 3,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/opera?full=1",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctOriginalSources": 13,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-03-Sleeping-At-Last.mp3",
+        "previewStatic": false,
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/opera?preview=1",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctOriginalSources": 13,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": null,
+        "previewStatic": true,
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      },
+      {
+        "route": "/muestra/opera?full=1&n=50&m=QA%20Forged%20Family",
+        "passed": true,
+        "originalInstances": 15,
+        "distinctOriginalSources": 13,
+        "itineraryItems": 6,
+        "gallery": true,
+        "audio": "/audio/invitali-originales/2025-03-Sleeping-At-Last.mp3",
+        "previewStatic": false,
+        "nativeEntryChoices": 0,
+        "authenticEntryImages": 0,
+        "autoplay": false
+      }
+    ],
+    "images": [
+      {
+        "path": "/invitations/opera/hero.webp",
+        "bytes": 177958,
+        "sha256": "cfb23e347af965ec4b25645ab300207ed0eb8e2ef2aeaecfe5cbdbc5f9bff549",
+        "passed": true
+      },
+      {
+        "path": "/invitations/opera/detail.webp",
+        "bytes": 210600,
+        "sha256": "f7f1cb4f9927b2aaf5152ec969c616e76bcec3d192924e72f28384a4e820daab",
+        "passed": true
+      },
+      {
+        "path": "/invitations/opera/celebration.webp",
+        "bytes": 370572,
+        "sha256": "805a8f666343d6cbd8b91e8adcf5a03e985944bb061717d6559d1638877f1366",
+        "passed": true
+      }
+    ],
+    "responses": [
+      {
+        "route": "/muestra/opera",
+        "status": 200,
+        "bytes": 35496,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/opera?full=1",
+        "status": 200,
+        "bytes": 33622,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/opera?preview=1",
+        "status": 200,
+        "bytes": 33102,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/muestra/opera?full=1&n=50&m=QA%20Forged%20Family",
+        "status": 200,
+        "bytes": 33712,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/invitations/opera/hero.webp",
+        "status": 200,
+        "bytes": 177958,
+        "contentType": "image/webp"
+      },
+      {
+        "route": "/invitations/opera/detail.webp",
+        "status": 200,
+        "bytes": 210600,
+        "contentType": "image/webp"
+      },
+      {
+        "route": "/invitations/opera/celebration.webp",
+        "status": 200,
+        "bytes": 370572,
+        "contentType": "image/webp"
+      },
+      {
+        "route": "/assets/generated/opera/2026-10/hero.png",
+        "status": 404,
+        "bytes": 10801,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/docs/assets/opera-images.json",
+        "status": 404,
+        "bytes": 10801,
+        "contentType": "text/html; charset=utf-8"
+      },
+      {
+        "route": "/Iconos%20INVITALI/opera-recursos.json",
+        "status": 404,
+        "bytes": 10801,
+        "contentType": "text/html; charset=utf-8"
+      }
+    ],
+    "originalJsonDownloads": 0,
+    "audioDownloaded": false,
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "accountsCreated": 0,
+    "eventsCreated": 0,
+    "cleanupRequired": false,
+    "sourceOnlyPaths": [
+      {
+        "route": "/assets/generated/opera/2026-10/hero.png",
+        "status": 404,
+        "public": false
+      },
+      {
+        "route": "/docs/assets/opera-images.json",
+        "status": 404,
+        "public": false
+      },
+      {
+        "route": "/Iconos%20INVITALI/opera-recursos.json",
+        "status": 404,
+        "public": false
+      }
+    ]
+  },
+  "browser": {
+    "sourceSha": "5d97ff77388a65f83a06115ced7337870753afe0",
+    "deploymentId": "dpl_3WciCUsaTmdB2ED52qrZiUUKrVEb",
+    "url": "https://enkarta.vercel.app/muestra/opera",
+    "reference": "https://invitali.com/obsidiana/",
+    "referenceViewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "localViewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "productionViewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "entry": {
+      "entryHeight": 900,
+      "height": 900,
+      "overflow": false,
+      "sealWidth": 121.9898910522461,
+      "width": 1440,
+      "originalPaperAndBlackFloralSeal": true,
+      "choices": 2,
+      "focusAfterOpening": "H1"
+    },
+    "music": {
+      "playingObserved": true,
+      "playingObservedSeconds": 0.087811,
+      "pauseFromControl": true,
+      "silentOpening": true
+    },
+    "itinerary": {
+      "items": 6,
+      "allReady": true,
+      "rows": [
+        {
+          "label": "16:00 hNuestra ceremonia",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "18:00 hComienza la recepción",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "19:00 hCompartimos la cena",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "20:00 hUn momento dulce",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "20:30 hLanzamiento del ramo",
+          "ready": "ready",
+          "svg": true
+        },
+        {
+          "label": "21:00 hQue empiece la fiesta",
+          "ready": "ready",
+          "svg": true
+        }
+      ]
+    },
+    "newOriginalMotion": {
+      "toastFrameChanged": true,
+      "dressFrameChanged": true
+    },
+    "dress": [
+      {
+        "role": "jacket",
+        "state": "ready",
+        "svg": true
+      },
+      {
+        "role": "dress",
+        "state": "ready",
+        "svg": true
+      }
+    ],
+    "gallery": {
+      "afterNext": "‹›Reanudar2 / 3Promesas para toda la vidaUna mirada, un instante y todos nuestros sueños.",
+      "counter": "2 / 3",
+      "caption": "Promesas para toda la vida"
+    },
+    "rsvp": {
+      "feedback": [
+        "Estás viendo una muestra. No se envió ninguna confirmación."
+      ],
+      "writes": 0
+    },
+    "desktop": {
+      "font": "OperaScript, cursive",
+      "height": 900,
+      "overflow": false,
+      "size": "96px",
+      "top": 0,
+      "width": 1440
+    },
+    "mobile": {
+      "audio": [
+        {
+          "paused": true,
+          "time": 0
+        }
+      ],
+      "bodySize": "17px",
+      "height": 844,
+      "motion": "active",
+      "overflow": false,
+      "width": 390
+    },
+    "consoleErrors": [],
+    "screenshots": [
+      "production-entry-desktop.png",
+      "production-hero-desktop.png",
+      "production-dress-desktop.png",
+      "production-entry-mobile.png"
+    ],
+    "captureNotes": "The production mobile interior screenshot did not return an image. Production mobile entry capture and DOM measurements succeeded; mobile composition was also visually reviewed locally. No retry loop was used.",
+    "physicalDeviceAcceptance": false,
+    "pixelIdentityCertified": false,
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "cleanupRequired": false
+  },
+  "cleanup": {
+    "required": false,
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "accountsCreated": 0,
+    "eventsCreated": 0,
+    "reason": "Only a fictional public sample was used. Demo RSVP does not submit a response; no database fixture records were created."
+  }
+}

@@ -31,3 +31,17 @@ El RSVP real recibe únicamente el formulario autorizado por el servidor de Enka
 32 regresiones propias (11 de SSR/perfil/editor/ruta/procedencia, diez de entrada, cuatro del reproductor y siete de revelados), 36 de controles de iconos y cinco de distribución: **73 aprobadas**. TypeScript aprobado. No se ejecutó la suite completa del repositorio. La revisión agrupada local cubrió portada, lectura móvil, música y pausa, seis JSON del itinerario listos con SVG y los dos JSON distintos de vestimenta. No hubo desbordamiento horizontal en 1440×900 y 390×844. Se ajustaron en una sola tanda el tono neutro del sobre y el tamaño de nombres en escritorio. Capturas en `tmp/opera-release-20261023/visual/`; no sustituyen una aceptación física.
 
 El detector de Impeccable señaló cinco fuentes/alias y cinco colores propios frente al sistema del portal. Son decisiones locales documentadas en esta ficha y DESIGN.md; no autorizan cambiar las otras invitaciones. La entrega utiliza subida incremental y omite físicamente maestros, documentación y archivos `.env` antes de enviar el paquete a Vercel.
+
+## Producción · 23 de octubre de 2026
+
+Publicado [Ópera](https://enkarta.vercel.app/muestra/opera) desde `5d97ff77388a65f83a06115ced7337870753afe0`, despliegue `dpl_3WciCUsaTmdB2ED52qrZiUUKrVEb` en estado Ready. Compilación, lint y tipos de Vercel aprobaron; el dominio público se comprobó por separado y apunta al mismo despliegue. Los avisos de imágenes y del contador de invalidación de Serenata son previos a esta variante.
+
+La revisión de producción confirmó sobre oscuro con lacre y dos opciones, apertura con música y pausa, apertura silenciosa con audio detenido en cero, seis JSON del itinerario listos con SVG y ambos JSON distintos de vestimenta. Se observaron cambios reales de cuadro en los originales nuevos de brindis y vestido. El carrusel avanzó a 2 / 3 con «Promesas para toda la vida» y el RSVP de muestra avisó que no envió ninguna confirmación. El cuerpo móvil conserva 17 px y no hay desbordamiento horizontal en 1440×900 y 390×844. La revisión en navegador no sustituye una aceptación física.
+
+La captura interior móvil de producción no devolvió imagen; se conserva esta limitación sin afirmar una comparación de píxeles. Sí se capturaron entrada móvil, entrada/cabecera/vestimenta de escritorio y las composiciones móviles locales, junto con las medidas de DOM de producción. No se repitió la captura en un bucle.
+
+Diez GET públicos verificaron cuatro modos de muestra, las tres fotografías WebP por SHA-256 y tres rutas de fuente sin exposición pública (HTTP 404): maestro PNG, manifiesto de imágenes y manifiesto maestro de recursos. La vista previa no monta audio; los parámetros externos no generan invitados ni pases.
+
+La atestación contra los identificadores de archivos realmente subidos a Vercel verificó 40 fuentes críticas, 265 fuentes anteriores, los 191 originales y las doce fotografías previas, con sus bytes de entrega coincidentes. Se conservaron los 184 originales heredados y solo se añadieron siete. Los maestros generados, documentación, carpetas de skills y archivos `.env` quedaron físicamente fuera de la entrega antes de subir; no se utilizó `--archive=tgz`.
+
+No se crearon cuentas, eventos, respuestas RSVP, mensajes ni pagos. No quedó limpieza de datos pendiente; BCP sigue desactivado y el SQL 021 del usuario conserva su hash previo. Capturas publicadas y registro: `tmp/opera-release-20261023/visual/` y [evidencia de producción](evidence/opera-production-2026-10-23.json).
