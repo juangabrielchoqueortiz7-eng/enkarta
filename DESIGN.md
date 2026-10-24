@@ -78,9 +78,7 @@ Extraer componentes comunes cuando compartan comportamiento real. La composició
 
 ## Do's and Don'ts
 
-- Cuerpo de Albor: laterales de acuarela verde/dorada originales ya archivados, con mezcla multiplicar y máscaras horizontal/vertical para suavizar centro y uniones. Mayor presencia en escritorio, atenuación equivalente en móvil y en el contenedor pequeño del constructor; ninguna capa intercepta controles. Sombra suave en la foto en arco. Este ajuste solicitado por el usuario solo se aplica a Albor; no cambia archivos de imagen ni el sobre limpio.
-
-- Ajuste de Albor solicitado por el usuario: sobre con nombres y fecha sin aro decorativo; el aro original permanece en la cabecera interior. Familias usa una banda salvia (mezcla del papel con `#889875`, respaldo `#e8eadf`) y follaje original en bordes desvanecidos. Los archivos originales permanecen intactos; no propagar este tratamiento a otras variantes.
+- Fondo vigente de Albor, fiel a Euforia: una sola acuarela original `47cuerpo-1-copia.webp` sobre papel `#f9f6ef`, fija a la ventana, posición superior izquierda, `cover` en escritorio y `contain` en móvil. Se conserva la repetición vertical del póster completo declarada por la referencia; no usar franjas de hojas verdes, duplicación en espejo, filtros, máscaras ni banda salvia. Familias y cabecera son transparentes sobre ese fondo. La vista previa pinta el póster dentro de su propio lienzo. Nombres/fecha del sobre sin aro; el aro original se mantiene en la cabecera interior. No alterar otras invitaciones ni los bytes originales.
 
 - Conservar bytes, procedencia y disponibilidad en la biblioteca de cada recurso original; verificar los manifiestos antes de descargar.
 - Aplicar color, tamaño o velocidad mediante configuración de instancia, sin reescribir el JSON original.

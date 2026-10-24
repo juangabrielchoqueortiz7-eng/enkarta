@@ -92,78 +92,74 @@ test('the native entry keeps an editable action and authentic original paper and
   }
 });
 
-test('floral artwork stays on the interior and page edges while the envelope stays clean and families keep their softly masked band', () => {
+test('the clean envelope and original hero ring accompany the exact Euforia poster without invented side leaves or family overlays', () => {
   const postcss = require('postcss'), css = postcss.parse(read('src/components/invitations/Albor.module.css'));
-  const canonicalSelector = selector => selector.replace(/\s+/g, '').replace(/::?before/g, '::before').replace(/::?after/g, '::after');
+  const canonical = selector => selector.replace(/\s+/g, '');
   const declarations = (selector, accepts = () => true) => {
     const values = {};
     css.walkRules(rule => {
-      if (accepts(rule) && rule.selectors?.some(value => canonicalSelector(value) === selector)) rule.walkDecls(declaration => {
+      if (!accepts(rule) || !rule.selectors?.some(value => canonical(value) === selector)) return;
+      rule.walkDecls(declaration => {
         values[declaration.prop] = declaration.value;
-        // A later background shorthand also resets an earlier background-image.
-        if (declaration.prop === 'background') values['background-image'] = /url\(|gradient\(|var\(--ab-(?:ring|leaves)/i.test(declaration.value) ? declaration.value : 'none';
+        if (declaration.prop === 'background') {
+          values['background-image'] = /url\(|gradient\(|var\(--ab-(?:ring|leaves)/i.test(declaration.value) ? declaration.value : 'none';
+          values['background-color'] = /^(?:none|transparent|initial|unset)$/.test(declaration.value) ? 'transparent' : declaration.value;
+        }
       });
     });
     return values;
   };
   const entry = renderToStaticMarkup(React.createElement(Entry, { data: alborDemo() }, React.createElement('h1', null, 'QA interior')));
   const identity = entry.match(/<div\b[^>]*class="entryIdentity"[^>]*>([\s\S]*?)<\/div>/)?.[1];
-  assert.ok(identity, 'The envelope keeps an identity group for its names and date');
-  assert.ok(identity.includes('Elena') && identity.includes('Tomás') && identity.includes(alborDate(alborDemo().event_date).entryLine));
-  assert.doesNotMatch(identity, /<img\b|class="heroWreath"/, 'The envelope identity consists of names and date, without the interior floral frame');
+  assert.ok(identity && identity.includes('Elena') && identity.includes('Tomás') && identity.includes(alborDate(alborDemo().event_date).entryLine));
+  assert.doesNotMatch(identity, /<img\b|class="heroWreath"/, 'The envelope identity has names and date, without the interior floral ring');
   const identityStyle = declarations('.entryIdentity');
-  for (const property of ['background', 'background-image']) assert.doesNotMatch(identityStyle[property] || '', /url\(|gradient\(|var\(--ab-ring/i, 'The envelope names keep a clean background after the local style overrides');
-  assert.match(markup(), /class="heroWreath"/, 'The floral frame remains in the interior header');
-  assert.match(declarations('.heroWreath')['background-image'] || '', /var\(--ab-ring\)/, 'The interior still uses its archived floral ring');
+  for (const property of ['background', 'background-image']) assert.doesNotMatch(identityStyle[property] || '', /url\(|gradient\(|var\(--ab-ring/i, 'The envelope remains clean');
+  const html = markup();
+  assert.match(html, /class="heroWreath"/);
+  assert.match(declarations('.heroWreath')['background-image'] || '', /var\(--ab-ring\)/, 'The original ring remains on the interior header');
 
-  const parents = declarations('.parents');
-  assert.equal(parents.position, 'relative', 'The band anchors its decorative layers');
-  assert.ok(!parents['max-width'] || /^(none|initial|unset|100%)$/.test(parents['max-width']), 'The family background cannot be confined to a small centered rectangle');
-  const surface = parents['background-color'] || parents.background || '';
-  assert.ok(surface && !/^(?:none|transparent)$/.test(surface) && !/url\(/.test(surface), 'The family band has a continuous paper-colored surface');
-  assert.ok(!parents['background-image'] || parents['background-image'] === 'none', 'The original foliage belongs on a masked decorative layer');
-  const layers = [declarations('.parents::before'), declarations('.parents:before'), declarations('.parents::after'), declarations('.parents:after')];
-  const foliage = layers.find(layer => /var\(--ab-leaves\)/.test(layer['background-image'] || layer.background || ''));
-  assert.ok(foliage, 'The family band reuses the original foliage, rather than a replacement illustration');
-  assert.equal(foliage.position, 'absolute');
-  assert.equal(foliage['pointer-events'], 'none', 'Decorative foliage cannot intercept the page controls');
-  assert.match(foliage['mask-image'] || foliage['-webkit-mask-image'] || foliage.mask || foliage['-webkit-mask'] || '', /(?:linear|radial)-gradient\(/, 'A soft alpha mask blends the original background edges into the full band');
-
-  const page = declarations('.page');
-  assert.equal(page.position, 'relative', 'The document anchors the botanical sides independently of the family section');
-  assert.ok(!page['background-image'] || page['background-image'] === 'none', 'The original raster is blended through decorative layers, rather than painted as an opaque rectangular page tile');
-  const sideLeaf = page['--ab-side-leaves']?.match(/^url\(["']?(\/[^"')]+)["']?\)$/)?.[1];
-  const sideLeafProvenance = JSON.parse(read('docs/assets/serenata-originals.json')).media.bodyLeaves;
-  assert.equal(sideLeafProvenance.url, 'https://invitali.com/wp-content/uploads/2024/09/jairo-y-GabrielaRecurso-48cuerpo-copia.webp');
-  assert.equal(sideLeaf, sideLeafProvenance.localPath, 'The page sides reuse the exact archived color foliage');
-  const sideLeafLock = JSON.parse(read('scripts/original-distribution-lock.json')).resources.find(resource => resource.path === sideLeaf);
-  assert.ok(sideLeafLock, 'The botanical page source remains byte-protected in the original library');
-  assert.equal(sideLeafLock.sha256, sideLeafProvenance.sha256);
-  const sideLeafBytes = fs.readFileSync(path.join(root, 'public', sideLeaf));
-  assert.equal(sha(sideLeafBytes), sideLeafLock.sha256); assert.equal(sideLeafBytes.length, sideLeafLock.bytes);
-  const baseLayers = new Map(['.page::before', '.page::after'].map(selector => [selector, declarations(selector, rule => rule.parent.type === 'root')]));
-  for (const [selector, layer] of baseLayers) {
-    assert.match(layer.content || '', /^(?:""|'')$/, selector + ' is decorative and has no generated text');
-    assert.equal(layer.position, 'absolute'); assert.equal(layer['pointer-events'], 'none');
-    assert.match(layer['background-image'] || layer.background || '', /var\(--ab-side-leaves\)/, selector + ' reuses the archived botanical source');
-    assert.ok(layer['background-repeat'] === 'repeat-y' || /\brepeat-y\b/.test(layer.background || ''), 'The side artwork continues through the welcome, date and remaining document');
-    assert.equal(layer['mix-blend-mode'], 'multiply', 'The original pale raster blends into the invitation paper');
-    assert.match(layer['mask-image'] || layer['-webkit-mask-image'] || layer.mask || '', /(?:linear|radial)-gradient\(.*transparent/, 'An alpha fade leaves the central reading column clear');
+  const poster = JSON.parse(read('docs/assets/albor-originals.json')).media.bodyLeaves;
+  assert.equal(poster.url, 'https://invitali.com/wp-content/uploads/2024/09/jairo-y-GabrielaRecurso-47cuerpo-1-copia.webp');
+  assert.equal(poster.sha256, 'b1650a27e371642f625fd6f26b9fd051caad15354f4e160fbb1fdb0c59dfc6ab');
+  assert.ok(html.includes(poster.localPath), 'The instance points to the exact original whole poster');
+  const lock = JSON.parse(read('scripts/original-distribution-lock.json')).resources.find(resource => resource.path === poster.localPath);
+  assert.ok(lock); assert.equal(lock.sha256, poster.sha256);
+  const bytes = fs.readFileSync(path.join(root, 'public', poster.localPath));
+  assert.equal(sha(bytes), poster.sha256); assert.equal(bytes.length, lock.bytes);
+  const page = declarations('.page', rule => rule.parent.type === 'root');
+  assert.equal(page['background-image'], 'var(--ab-leaves)');
+  assert.equal(page['background-size'], 'cover');
+  assert.match(page['background-position'], /^0(?:px|%)?\s+0(?:px|%)?$/);
+  assert.equal(page['background-repeat'], 'repeat-y', 'The complete tall watercolor repeats, rather than a substituted foliage motif');
+  assert.equal(page['background-attachment'], 'fixed');
+  let mobileContainsPoster = false;
+  css.walkAtRules('media', atRule => {
+    if (!/max-width/.test(atRule.params)) return;
+    atRule.walkRules(rule => {
+      if (!rule.selectors?.some(selector => canonical(selector) === '.page')) return;
+      rule.walkDecls('background-size', declaration => { if (declaration.value === 'contain') mobileContainsPoster = true; });
+    });
+  });
+  assert.equal(mobileContainsPoster, true, 'Narrow public viewports preserve the original contain treatment');
+  const preview = declarations('.page[data-preview]');
+  assert.equal(preview['background-attachment'], 'scroll', 'The editor paints within its own canvas');
+  assert.equal(preview['background-size'], '100% auto');
+  assert.doesNotMatch(css.toString(), /--ab-side-|48cuerpo/i, 'The invented side pattern must not return');
+  css.walkRules(rule => {
+    for (const selector of rule.selectors || []) assert.doesNotMatch(canonical(selector), /^\.(?:page|parents)::?(?:before|after)$/, 'No mirrored botanical or sage overlay layers remain');
+  });
+  for (const selector of ['.page', '.parents', '.hero']) {
+    const values = declarations(selector);
+    for (const property of ['filter', 'mix-blend-mode', 'mask-image', '-webkit-mask-image', 'mask', '-webkit-mask']) assert.ok(!values[property] || values[property] === 'none' || values[property] === 'normal', selector + ' preserves the poster without color or alpha effects');
+    assert.ok(!values.opacity || Number(values.opacity) === 1);
+    if (selector !== '.page') {
+      assert.ok(!values['background-image'] || values['background-image'] === 'none');
+      assert.ok(!values['background-color'] || values['background-color'] === 'transparent', selector + ' lets the original poster show without a new tinted band');
+    }
   }
-  for (const atRuleName of ['media', 'container']) {
-    const attenuated = new Set();
-    css.walkAtRules(atRuleName, atRule => atRule.walkRules(rule => {
-      const matching = (rule.selectors || []).map(canonicalSelector).filter(selector => baseLayers.has(selector));
-      if (!matching.length) return;
-      rule.walkDecls('opacity', declaration => {
-        for (const selector of matching) {
-          const value = Number(declaration.value), normal = Number(baseLayers.get(selector).opacity);
-          if (Number.isFinite(value) && Number.isFinite(normal) && value >= 0 && value < normal) attenuated.add(selector);
-        }
-      });
-    }));
-    assert.deepEqual([...attenuated].sort(), [...baseLayers.keys()].sort(), 'Both botanical sides become quieter in narrow @' + atRuleName + ' layouts');
-  }
+  const portrait = declarations('.portraitimg');
+  assert.ok(!portrait['box-shadow'] || portrait['box-shadow'] === 'none', 'The photograph receives no added decorative shadow');
 });
 
 test('only the server-supplied RSVP is rendered and an unverified visitor cannot receive a fabricated form', () => {
