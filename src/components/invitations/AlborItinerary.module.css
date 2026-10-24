@@ -1,0 +1,111 @@
+/* Local Euforia composition; original icon bytes and other variants are untouched. */
+.section {
+  padding: 40px 20px 65px;
+  text-align: center;
+}
+
+.section .heading {
+  max-width: none;
+  margin: 0 auto 40px;
+  color: var(--ab-accent, #8e6f55);
+  font: 400 51px/1.2 AlborScript, cursive;
+}
+
+.section .list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+  max-width: 1225px;
+  margin: 0 auto;
+  padding: 10px;
+  list-style: none;
+}
+
+.section .item {
+  display: flex;
+  flex: 1 1 132px;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 172px;
+  min-height: 265px;
+  padding: 10px;
+}
+
+.iconArea {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 0;
+  min-height: 140px;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  min-height: 90px;
+  padding: 10px;
+  border-top: 1.5px solid var(--ab-timeline-line, #967f60);
+}
+
+.section .itemTitle {
+  order: 0;
+  max-width: 100%;
+  margin: 0;
+  color: var(--ab-deep, #67513e);
+  font: 400 19px/1.2 AlborBody, Georgia, serif;
+  overflow-wrap: anywhere;
+}
+
+.section .itemTime {
+  display: block;
+  order: 1;
+  max-width: 100%;
+  margin-top: 4px;
+  color: var(--ab-accent, #8e6f55);
+  font: 400 29px/31px AlborBody, Georgia, serif;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.section .itemExtra {
+  order: 2;
+  max-width: 100%;
+  margin: 8px 0 0;
+  font: 400 17px/1.45 AlborBody, Georgia, serif;
+  overflow-wrap: anywhere;
+}
+
+.section .itemNote {
+  font: 400 14px/1.6 AlborControls, sans-serif;
+}
+
+@media (max-width: 767px) {
+  .section { padding: 35px 20px 55px; }
+  .section .heading { margin-bottom: 32px; font-size: 35px; }
+  .section .list { flex-direction: column; flex-wrap: nowrap; gap: 27px; max-width: 300px; }
+  .section .item { position: relative; flex: none; flex-direction: row; align-items: stretch; width: 100%; max-width: none; min-height: 110px; padding: 0; }
+  .section .item:not(:last-child)::after { position: absolute; bottom: -17px; left: calc(50% - 3px); width: 6px; height: 6px; border-radius: 50%; background: #e4cfc1; content: ''; }
+  .iconArea { flex: 0 0 50%; width: 50%; min-height: 110px; padding: 10px; }
+  .details { flex: 0 0 50%; justify-content: center; width: 50%; min-height: 110px; padding: 10px; border-top: 0; border-left: 1.5px solid var(--ab-timeline-line, #967f60); border-radius: 30% 0 0; }
+  .item:nth-child(even) .iconArea { order: 1; }
+  .item:nth-child(even) .details { order: 0; border-left: 0; border-right: 1.5px solid var(--ab-timeline-line, #967f60); border-radius: 0 0 30%; }
+  .section .itemTime { order: -1; margin: 0 0 5px; }
+}
+
+/* Match the phone layout inside the desktop constructor's narrower canvas. */
+@container (max-width: 767px) {
+  .section { padding: 35px 20px 55px; }
+  .section .heading { margin-bottom: 32px; font-size: 35px; }
+  .section .list { flex-direction: column; flex-wrap: nowrap; gap: 27px; max-width: 300px; }
+  .section .item { position: relative; flex: none; flex-direction: row; align-items: stretch; width: 100%; max-width: none; min-height: 110px; padding: 0; }
+  .section .item:not(:last-child)::after { position: absolute; bottom: -17px; left: calc(50% - 3px); width: 6px; height: 6px; border-radius: 50%; background: #e4cfc1; content: ''; }
+  .iconArea { flex: 0 0 50%; width: 50%; min-height: 110px; padding: 10px; }
+  .details { flex: 0 0 50%; justify-content: center; width: 50%; min-height: 110px; padding: 10px; border-top: 0; border-left: 1.5px solid var(--ab-timeline-line, #967f60); border-radius: 30% 0 0; }
+  .item:nth-child(even) .iconArea { order: 1; }
+  .item:nth-child(even) .details { order: 0; border-left: 0; border-right: 1.5px solid var(--ab-timeline-line, #967f60); border-radius: 0 0 30%; }
+  .section .itemTime { order: -1; margin: 0 0 5px; }
+}

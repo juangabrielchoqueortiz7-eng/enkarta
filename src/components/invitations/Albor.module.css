@@ -27,3 +27,13 @@
 @media(max-width:767px){.backgroundLayer{background-size:contain}}
 .shell[data-preview] .background{position:absolute}.shell[data-preview] .backgroundLayer{background-size:100% auto}
 @media(prefers-reduced-motion:reduce){.backgroundLayer[data-albor-background-motion=active]{height:100%;transform:none!important;transition:none;will-change:auto}}
+
+/* Euforia's native three-layer wave and date hierarchy; scoped to Albor. */
+.heroPhoto{border-radius:0}
+.heroWave{position:absolute;bottom:-1px;left:0;width:calc(100% + 1px);height:71px;display:block;fill:var(--ab-paper);transform:scaleY(-1);pointer-events:none;z-index:1}
+.dateBar{display:grid;grid-template-columns:minmax(0,1fr) 153px minmax(0,1fr);align-items:center;max-width:637px;margin:0 auto;color:var(--ab-accent);font:400 35px/1.3 AlborBody,Georgia,serif;text-transform:uppercase}
+.dateWeekday,.dateClock{min-width:0;padding:10px;overflow-wrap:anywhere}
+.dateDay{font-size:93px;line-height:1;padding:8px 10px;border-inline:3px solid #c8a489;font-variant-numeric:lining-nums}
+.dateSection .dateCaption{margin-top:15px;font:400 24px/1.5 AlborBody,Georgia,serif;color:var(--ab-accent);text-transform:uppercase;overflow-wrap:anywhere}
+@media(max-width:767px){.heroPhoto{height:50svh;min-height:0;border-radius:0}.heroWave{height:38px}.dateBar{grid-template-columns:minmax(0,1fr) 90px minmax(0,1fr);width:100%;font-size:22.4px}.dateWeekday,.dateClock{padding:8px 4px;color:var(--ab-deep)}.dateDay{font-size:55px;padding:11px 8px;border-inline-width:1.5px}.dateSection .dateCaption{font-size:19px;color:var(--ab-deep)}}
+@container(max-width:767px){.heroPhoto{height:50svh;min-height:0;border-radius:0}.heroWave{height:38px}.dateBar{grid-template-columns:minmax(0,1fr) 90px minmax(0,1fr);width:100%;font-size:22.4px}.dateWeekday,.dateClock{padding:8px 4px;color:var(--ab-deep)}.dateDay{font-size:55px;padding:11px 8px;border-inline-width:1.5px}.dateSection .dateCaption{font-size:19px;color:var(--ab-deep)}}

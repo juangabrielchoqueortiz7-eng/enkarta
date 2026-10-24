@@ -54,6 +54,78 @@ test('dates and names remain derived from editable content and impossible dates 
   assert.match(markup(data), /dates=20280229\/20280301(?:&amp;|&)/, 'UTC calendar arithmetic crosses leap day into March');
 });
 
+test('the prominent event date keeps its accessible complete date, edited clock and city without inventing missing values', () => {
+  const data = alborDemo();
+  data.event_date = '2028-04-22'; data.ceremony_time = '18:45'; data.config = { ...data.config, city: 'QA <Ciudad>' };
+  let html = markup(data), date = section(html, 'date'); assert.ok(date);
+  const eventTime = date.match(/<time\b[^>]*data-albor-event-date\b[^>]*>[\s\S]*?<\/time>/)?.[0];
+  assert.ok(eventTime, 'The visual date remains a semantic time element');
+  assert.match(eventTime, /\bdatetime="2028-04-22"/i);
+  assert.match(eventTime, /aria-label="[^"]*SÁBADO[^"]*22 de abril de 2028[^"]*18:45/i);
+  assert.match(eventTime, /data-albor-date-weekday\b[^>]*>SÁBADO</);
+  assert.match(eventTime, /data-albor-date-day\b[^>]*>22</);
+  assert.match(eventTime, /data-albor-date-clock\b[^>]*>18:45 h</);
+  const month = date.match(/<span\b[^>]*data-albor-date-month\b[^>]*>([\s\S]*?)<\/span>/)?.[1];
+  assert.ok(month && /ABRIL/i.test(month) && /2028/.test(month), 'The month and year stay visible below the date');
+  assert.ok(date.includes('QA &lt;Ciudad&gt;')); assert.doesNotMatch(date, /<Ciudad>/);
+  assert.match(date, /dates=20280422\/20280423(?:&amp;|&)/);
+
+  for (const missingClock of [null, '', '25:90']) {
+    data.ceremony_time = missingClock; date = section(markup(data), 'date');
+    assert.ok(date); assert.doesNotMatch(date, /data-albor-date-clock\b|18:45|25:90/);
+    assert.match(date, /data-albor-date-day\b[^>]*>22</);
+  }
+  data.event_date = '2028-02-29'; data.ceremony_time = null;
+  date = section(markup(data), 'date');
+  assert.match(date, /data-albor-date-weekday\b[^>]*>MARTES</);
+  assert.match(date, /data-albor-date-day\b[^>]*>29</);
+  assert.match(date, /dates=20280229\/20280301(?:&amp;|&)/);
+  for (const invalidDate of [null, '', '2027-02-29', 'not-a-date']) {
+    data.event_date = invalidDate; html = markup(data);
+    assert.equal(section(html, 'date'), undefined);
+    assert.doesNotMatch(html, /data-albor-event-date\b|data-albor-date-(?:weekday|day|month|clock)\b/);
+  }
+});
+
+test('the itinerary keeps edited order, escaped details and per-item original icon settings when its layout changes', () => {
+  const data = alborDemo();
+  const colors = { '#000000': '#15607a' };
+  data.itinerary = [
+    { time: '21:15', label: 'QA cena <especial>', place: 'QA jardín & salón', note: '<script>QA nota</script>', duration: '45 minutos', icon: '/lottie/qa-custom-dinner.json', iconColors: colors, iconSpeed: 1.75 },
+    { time: '99:99', label: 'QA segundo momento', icon: '' },
+  ];
+  const before = structuredClone(data), icons = [], iconModule = require('../src/components/invitations/AlborOriginalIcon.tsx'), OriginalIcon = iconModule.default;
+  iconModule.default = props => { icons.push(props); return props.src === '' ? null : React.createElement('span', { 'data-qa-icon-source': props.src }); };
+  try {
+    const html = markup(data), itinerary = section(html, 'itinerary'); assert.ok(itinerary);
+    assert.match(itinerary, /<h2\b[^>]*>Itinerario<\/h2>/);
+    const rows = itinerary.match(/<li\b[^>]*data-albor-itinerary-item[^>]*>[\s\S]*?<\/li>/g) ?? [];
+    assert.equal(rows.length, 2); assert.ok(rows[0].includes('QA cena &lt;especial&gt;')); assert.ok(rows[1].includes('QA segundo momento'));
+    for (const value of ['21:15 h', 'QA jardín &amp; salón', '&lt;script&gt;QA nota&lt;/script&gt;', '45 minutos']) assert.ok(rows[0].includes(value), value);
+    assert.doesNotMatch(itinerary, /<script\b|99:99|16:00 h|Nuestra ceremonia/);
+    assert.doesNotMatch(rows[1], /<time\b|data-qa-icon-source/);
+    const first = icons.filter(icon => icon.sectionKey === 'itinerary-0'); assert.equal(first.length, 1);
+    assert.equal(first[0].src, data.itinerary[0].icon); assert.deepEqual(first[0].colors, colors); assert.equal(first[0].speed, 1.75); assert.equal(first[0].active, true);
+    icons.length = 0; markup(data, { preview: true });
+    assert.equal(icons.find(icon => icon.sectionKey === 'itinerary-0')?.active, false, 'The embedded builder preview cannot start original animations');
+    assert.deepEqual(data, before, 'Responsive presentation cannot rewrite saved itinerary data');
+  } finally { iconModule.default = OriginalIcon; }
+});
+
+test('the header wave remains decorative and accompanies only the selected photograph', () => {
+  const data = alborDemo(); let html = markup(data);
+  const header = html.match(/<header\b[^>]*data-albor-section="hero"[^>]*>[\s\S]*?<\/header>/)?.[0]; assert.ok(header);
+  const wave = header.match(/<svg\b[^>]*data-albor-hero-wave\b[^>]*>[\s\S]*?<\/svg>/)?.[0]; assert.ok(wave);
+  assert.match(wave, /aria-hidden="true"/); assert.equal((wave.match(/<path\b/g) ?? []).length, 3);
+  assert.ok(header.includes(ALBOR_ASSETS.hero));
+  assert.equal((html.match(/<img\b[^>]*data-albor-photo\b/g) ?? []).length, 3, 'The decorative separator adds no replacement photograph');
+  data.cover_image_url = '/invitations/qa-edited-cover.webp'; html = markup(data);
+  assert.ok(html.includes(data.cover_image_url)); assert.match(html, /data-albor-hero-wave\b/);
+  data.cover_image_url = ''; html = markup(data);
+  assert.doesNotMatch(html, /data-albor-hero-wave\b/);
+  assert.equal((html.match(/<img\b[^>]*data-albor-photo\b/g) ?? []).length, 2, 'Clearing the cover retains the other two original generated photographs');
+});
+
 test('edited and cleared names, copy, pictures and optional lists survive persistence without restoring samples', () => {
   const data = alborDemo(); data.names = 'QA Ana & QA Luis'; data.config = { ...data.config, city: 'QA ciudad', welcomeTitle: 'QA invitación editable', introMessage: '' };
   const saved = parseInvitation({ ...data, builder_config: JSON.stringify(data.config) });

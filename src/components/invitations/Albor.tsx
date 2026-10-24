@@ -15,9 +15,19 @@ import { ParadiseReferenceCarousel, paradiseReferenceHref as safeHref } from './
 import { emitInvitationAnalytics } from './InvitationAnalytics';
 import ParadiseReferenceMusic, { startParadiseReferenceMusic } from './ParadiseReferenceMusic';
 import AlborOriginalIcon from './AlborOriginalIcon';
+import AlborItinerary from './AlborItinerary';
 import styles from './Albor.module.css';
 
 const PreviewMode = createContext(false);
+
+/** Native wave paths already used by Enkarta and observed in Euforia's public hero. */
+function HeroWave() {
+  return <svg className={styles.heroWave} viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true" focusable="false" data-albor-hero-wave>
+    <path opacity=".33" d="M473,67.3c-203.9,88.3-263.1-34-320.3,0C66,119.1,0,59.7,0,59.7V0h1000v59.7 c0,0-62.1,26.1-94.9,29.3c-32.8,3.3-62.8-12.3-75.8-22.1C806,49.6,745.3,8.7,694.9,4.7S492.4,59,473,67.3z" />
+    <path opacity=".66" d="M734,67.3c-45.5,0-77.2-23.2-129.1-39.1c-28.6-8.7-150.3-10.1-254,39.1 s-91.7-34.4-149.2,0C115.7,118.3,0,39.8,0,39.8V0h1000v36.5c0,0-28.2-18.5-92.1-18.5C810.2,18.1,775.7,67.3,734,67.3z" />
+    <path d="M766.1,28.9c-200-57.5-266,65.5-395.1,19.5C242,1.8,242,5.4,184.8,20.6C128,35.8,132.3,44.9,89.9,52.5C28.6,63.7,0,0,0,0 h1000c0,0-9.9,40.9-83.6,48.1S829.6,47,766.1,28.9z" />
+  </svg>;
+}
 
 function alborTheme(c: BuilderConfig): CSSProperties {
   return { '--ab-accent': c.theme?.primary || '#8e6f55', '--ab-deep': c.theme?.primaryDeep || '#67513e', '--ab-paper': c.theme?.bg || '#f9f6ef', '--ab-ink': c.theme?.text || '#493c30', '--ab-on-deep': c.theme?.onPrimary || '#ffffff', '--ab-ring': 'url("'+M.ring.localPath+'")', '--ab-leaves': 'url("'+M.bodyLeaves.localPath+'")' } as CSSProperties;
@@ -149,7 +159,7 @@ export default function Albor({ data,preview=false,skipEntry=false,demo=false }:
   const intro=c.introMessage ?? data.message, welcome=c.welcomeTitle ?? 'Guardamos este día para ti';
   const venues=[...(data.ceremony_place || data.ceremony_address || paradiseReferenceClock(data.ceremony_time) ? [{role:'ceremony' as const,title:c.ceremonyDesc ?? 'Ceremonia religiosa',time:data.ceremony_time,place:data.ceremony_place,address:data.ceremony_address}] : []),...(data.reception_place || data.reception_address || paradiseReferenceClock(data.reception_time) ? [{role:'reception' as const,title:c.receptionDesc ?? 'Recepción social',time:data.reception_time,place:data.reception_place,address:data.reception_address}] : [])];
   const gallery=(c.galleryImages ?? []).slice(0,Math.max(0,features.galleryMax));
-  const itineraryRoles=['ceremony','firstDance','toast','dinner','party','cake','farewell'] as const;
+  const ceremonyClock=paradiseReferenceClock(data.ceremony_time);
   const music=features.music ? safeHref(c.musicUrl) : undefined, share=features.photoSharing ? safeHref(data.gallery_url) : undefined;
   const guest=c.activeGuest, lodging=features.lodging ? c.lodging?.filter(item=>item.name || safeHref(item.image)) : [];
   const compactDate=date ? date.iso.replaceAll('-','') : '';
@@ -157,15 +167,23 @@ export default function Albor({ data,preview=false,skipEntry=false,demo=false }:
   const calendar=date ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Boda de '+[names.first,names.second].filter(Boolean).join(' y '))}&dates=${compactDate}/${calendarEnd}&ctz=America%2FLa_Paz` : undefined;
   const page=<>
     <header className={`${styles.hero} ${!hero ? styles.heroWithoutImage : ''}`} data-albor-section="hero">
-      {hero && <figure className={styles.heroPhoto}><img data-albor-photo src={hero} width={1536} height={1024} alt={hero===A.hero ? 'Pareja adulta ficticia en un jardín iluminado por el sol de la mañana, fotografía creada con IA' : 'Fotografía de la pareja'} loading="eager" decoding="async"/></figure>}
+      {hero && <figure className={styles.heroPhoto}><img data-albor-photo src={hero} width={1536} height={1024} alt={hero===A.hero ? 'Pareja adulta ficticia en un jardín iluminado por el sol de la mañana, fotografía creada con IA' : 'Fotografía de la pareja'} loading="eager" decoding="async"/><HeroWave/></figure>}
       <div className={styles.heroPanel}>{(c.verse || c.verseRef) && <blockquote className={styles.verse}>{c.verse && <p>{c.verse}</p>}{c.verseRef && <cite>{c.verseRef}</cite>}</blockquote>}<div className={styles.heroWreath}><h1 aria-label={[names.first,names.second].filter(Boolean).join(' y ')}><span>{names.first}</span>{names.second && <><i aria-hidden="true">&amp;</i><span>{names.second}</span></>}</h1></div><p className={styles.announcement}>¡Nos casamos!</p></div>
     </header>
     {(welcome || intro || detail) && <section className={styles.welcome} data-albor-section="welcome"><Icon role="intro" config={c} size={240} className={styles.introIcon}/>{welcome && <h2>{welcome}</h2>}{intro && <p>{intro}</p>}{detail && <figure className={styles.portrait}><img data-albor-photo src={detail} width={1536} height={1024} alt={detail===A.detail ? 'Pareja adulta ficticia caminando en un jardín de día, fotografía creada con IA' : 'Fotografía de nuestra historia'} loading="lazy" decoding="async"/><figcaption>{[names.first,names.second].filter(Boolean).join(' y ')}</figcaption></figure>}</section>}
-    {date && <section className={styles.dateSection} data-albor-section="date"><h2>{date.entryLine}</h2>{data.ceremony_time && <p>{paradiseReferenceClock(data.ceremony_time)}</p>}{c.city && <p>{c.city}</p>}<Countdown data={data}/>{calendar && <a className={styles.button} href={calendar} target="_blank" rel="noopener noreferrer">Agregar a mi calendario</a>}</section>}
+    {date && <section className={styles.dateSection} data-albor-section="date">
+      <time className={styles.dateBar} dateTime={date.iso} aria-label={`${date.weekday}, ${date.entryLine}${ceremonyClock ? ` · ${ceremonyClock}` : ''}`} data-albor-event-date>
+        <span className={styles.dateWeekday} data-albor-date-weekday aria-hidden="true">{date.weekday}</span>
+        <span className={styles.dateDay} data-albor-date-day aria-hidden="true">{date.day}</span>
+        {ceremonyClock ? <span className={styles.dateClock} data-albor-date-clock aria-hidden="true">{ceremonyClock}</span> : <span aria-hidden="true" />}
+      </time>
+      <p className={styles.dateCaption}>{c.city && <span>{c.city}, </span>}<span data-albor-date-month>{date.month} DE {date.year}</span></p>
+      <Countdown data={data}/>{calendar && <a className={styles.button} href={calendar} target="_blank" rel="noopener noreferrer">Agregar a mi calendario</a>}
+    </section>}
     {guest && features.guestNames && <section className={styles.guest} data-albor-section="guest"><p>Hemos reservado este día contigo</p><h2>{guest.name}</h2>{features.passes && <p>{guest.passes} {guest.passes===1 ? 'pase reservado' : 'pases reservados'}</p>}{features.tableAssignment && guest.tableNo && <p>Mesa {guest.tableNo}</p>}</section>}
     {(data.parents_bride.length>0 || data.parents_groom.length>0 || data.sponsors.length>0) && <section className={styles.parents} data-albor-section="parents">{c.blessing && <h2>{c.blessing}</h2>}<div>{data.parents_bride.length>0 && <article><h3>Familia de la novia</h3>{data.parents_bride.map((name,i)=><p key={i}>{name}</p>)}</article>}{data.parents_groom.length>0 && <article><h3>Familia del novio</h3>{data.parents_groom.map((name,i)=><p key={i}>{name}</p>)}</article>}{data.sponsors.map((item,i)=><article key={i}><h3>{item.role}</h3><p>{item.names}</p></article>)}</div></section>}
     {venues.length>0 && <section className={styles.venues} data-albor-section="venues"><img className={styles.ornament} src={M.ornamentTop.localPath} width={240} height={60} alt="" aria-hidden="true" loading="lazy"/><h2>El lugar de nuestro encuentro</h2><div>{venues.map(venue=><Venue key={venue.role} config={c} {...venue}/>)}</div></section>}
-    {data.itinerary.length>0 && <section className={styles.itinerary} data-albor-section="itinerary"><h2>Así celebraremos</h2><ol>{data.itinerary.map((item,i)=><li key={i} data-albor-itinerary-item><Icon role={itineraryRoles[i] ?? 'party'} sectionKey={`itinerary-${i}`} src={item.icon} colors={item.iconColors} speed={item.iconSpeed} config={c} size={100}/>{item.time && <time>{paradiseReferenceClock(item.time)}</time>}<h3>{item.label}</h3>{item.place && <p>{item.place}</p>}{item.note && <p className={styles.itemNote}>{item.note}</p>}{item.duration && <p>{item.duration}</p>}</li>)}</ol></section>}
+    <AlborItinerary items={data.itinerary} config={c} preview={preview}/>
     {!!lodging?.length && <section className={styles.lodging} data-albor-section="lodging"><h2>{c.lodgingTitle ?? 'Para quienes vienen de lejos'}</h2><div>{lodging.map((item,i)=><article key={i}>{safeHref(item.image) && <img src={safeHref(item.image)} alt={item.name} loading="lazy" decoding="async"/>}<h3>{item.name}</h3>{item.desc && <p>{item.desc}</p>}{safeHref(item.url) && <a className={styles.button} href={safeHref(item.url)} target="_blank" rel="noopener noreferrer">Ver hospedaje</a>}</article>)}</div></section>}
     <Gifts data={data}/>
     {(c.storyTitle || c.storyMessage) && <section className={styles.story} data-albor-section="story">{c.storyTitle && <h2>{c.storyTitle}</h2>}{c.storyMessage && <p>{c.storyMessage}</p>}</section>}
