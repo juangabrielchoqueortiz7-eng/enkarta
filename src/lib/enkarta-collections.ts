@@ -196,6 +196,7 @@ export function collectionFor(template?: string | null): EnkartaCollection {
 }
 
 export function publicTemplateName(template?: string | null, presetKey?: string): string {
+  if (presetKey === 'albor') return 'Albor';
   if (presetKey === 'opera') return 'Ópera';
   if (presetKey === 'vespera') return 'Véspera';
   if (presetKey === 'serenata') return 'Serenata';

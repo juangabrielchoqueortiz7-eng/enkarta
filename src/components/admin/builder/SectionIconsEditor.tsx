@@ -3,6 +3,7 @@ import { CAPITULO_ORIGINALS as capituloIcons } from '@/lib/capitulo-assets';
 import { SERENATA_ORIGINALS as serenataIcons } from '@/lib/serenata-assets';
 import { VESPERA_ORIGINALS as vesperaIcons } from '@/lib/vespera-assets';
 import { OPERA_ORIGINALS as operaIcons } from '@/lib/opera-assets';
+import { ALBOR_ORIGINALS as alborIcons } from '@/lib/albor-assets';
 import {isCleanDesign} from '@/lib/clean-designs';
 import { MA_ICONS } from '@/lib/maria-mario';
 import { NF_ICONS } from '@/lib/nicole-francisco';
@@ -82,7 +83,16 @@ const SECTIONS: Record<string, SectionDef[]> = {
 export default function SectionIconsEditor({ data, onChange, draft }: Props) {
   const editorDraft = useLegacyDraft(data, onChange, draft);
   const isAnnie = data.config.designKey === 'annie-y-micky';
-  const sections = data.config.designKey === 'opera' ? [
+  const sections = data.config.designKey === 'albor' ? [
+    { key: 'ceremony', label: 'Ceremonia', def: alborIcons.ceremony.localPath },
+    { key: 'reception', label: 'Recepción', def: alborIcons.reception.localPath },
+    { key: 'dressCode', label: 'Vestimenta · vestido', def: alborIcons.dress.localPath },
+    { key: 'jacket', label: 'Vestimenta · traje', def: alborIcons.jacket.localPath },
+    { key: 'noKids', label: 'Solo adultos', def: alborIcons.adults.localPath },
+    { key: 'gift', label: 'Regalos', def: alborIcons.gift.localPath },
+    { key: 'gallery', label: 'Galería', def: alborIcons.camera.localPath },
+    { key: 'rsvp', label: 'Confirmación de asistencia', def: alborIcons.reception.localPath },
+  ] : data.config.designKey === 'opera' ? [
     { key: 'ceremony', label: 'Ceremonia', def: operaIcons.ceremony.localPath },
     { key: 'reception', label: 'Recepción', def: operaIcons.reception.localPath },
     { key: 'dressCode', label: 'Vestimenta · vestido', def: operaIcons.dress.localPath },

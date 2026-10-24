@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "variant": "albor",
+  "synthetic": true,
+  "assets": [
+    {
+      "id": "hero",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: brand-new original hero photograph for an independent wedding invitation called Albor. Generate a landscape1536x1024 photograph. Entirely fictional Latino adults Elena,29, and Tomás,33. Elena has a long dark braid gathered over one shoulder, softly swept-back hair with no loose waves, warm medium skin and a modest opaque ivory wedding dress with delicate long sleeves. Tomás has straight short neatly side-parted dark hair, a clean-shaven face, long refined facial structure and an elegant light beige linen suit with an ivory shirt, no black suit and no beard. They stand close together under a leafy tree in an imaginary sunlit garden on a golden morning, natural affectionate smiles while glancing toward each other, both faces clearly visible. Their heads do NOT touch, do not pose forehead-to-forehead. Quietly romantic editorial wedding photography, fresh airy daylight, soft dappled light, creamy ivory flowers and warm green foliage, real skin and linen textures, anatomically believable hands. Three-quarter bodies central in frame with both heads in upper-middle and within central40 percent; generous natural garden space on both sides so the photo crops well to a mobile portrait. A completely new couple and scene, clearly distinct from a curly-haired dark-suit wedding couple or a nighttime stone courtyard. No recognizable real venue or landmark. No fireworks, no lake, no night lights, no text, no monogram, no logo, no watermark, no border, no interface. New original composition, no existing-photo references.",
+      "alt": "Pareja adulta ficticia bajo un árbol en un jardín soleado, novia con trenza y vestido marfil y novio con traje de lino beige, imagen creada con IA",
+      "generatedMaster": {
+        "file": "assets/generated/albor/2026-10/hero.png",
+        "sha256": "37dc8ed32b181bb91e3bc9f62d7342ac75a21121e9c8989fc91c3ed27682f9e3",
+        "bytes": 2636593,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/albor/hero.webp",
+        "sha256": "e194c07edcd720baaedd7c6d6c72a050f833c96e23ff09ea854adf7d78f06d4c",
+        "bytes": 280958,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "detail",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: brand-new original complementary photograph for independent wedding invitation Albor. Generate landscape1536x1024. Entirely fictional Latino adult couple Elena,29, with long dark braid over one shoulder and a softly swept-back hairstyle, warm medium skin and modest opaque ivory wedding dress with long delicate sleeves; Tomás,33, straight short neatly side-parted dark hair, clean-shaven elongated face and light beige linen suit with ivory shirt. They walk slowly hand in hand along a sunlit garden path, a candid joyful moment looking toward each other with both faces clearly visible, their heads do not touch. Generous three-quarter-body framing, bright airy morning light filtered through trees, gentle cream flowers and fresh green leaves, subtle background blur, authentic natural skin and fabric textures. Sophisticated photorealistic wedding editorial with natural adult anatomy and believable hands, new original garden scene with no actual recognizable venue. Compose subjects together near center with their faces in the upper-middle and garden breathing room on both sides. Distinct clean-shaven straight-hairedman and braidedwoman, no dark curly-haired man, no black suit, no night, no fireworks, no lake or ornate stonecourtyard. No text, no monograms, no logo, no watermark, no border, no interface. No reference photos and no recreation of an existing photograph.",
+      "alt": "Pareja adulta ficticia caminando de la mano por un jardín luminoso entre flores claras, imagen creada con IA",
+      "generatedMaster": {
+        "file": "assets/generated/albor/2026-10/detail.png",
+        "sha256": "a9a7bd0dfd1aec69aac0b1edaf1791c88bc025a266974ef43fb1c3a1e4c2dfb1",
+        "bytes": 2708159,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/albor/detail.webp",
+        "sha256": "d0b8e122bdb04d1a5265ca406860886dc206ae4527ce285d5fde166cb25b1e51",
+        "bytes": 289352,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    },
+    {
+      "id": "celebration",
+      "source": "OpenAI image_gen built-in",
+      "generatedAt": "2026-10-23",
+      "prompt": "Use case: photorealistic-natural. Asset type: brand-new original wedding celebration photograph for independent invitation Albor. Generate landscape1536x1024. An entirely imaginary sunlit garden prepared for an intimate elegant daytime wedding reception, no people. A long ivory linen table with fresh eucalyptus greenery, small delicate cream and ivory flowers, understated bronze cutlery and place settings, clear fine glassware and blank cream paper place cards. Natural artisan chairs and leafy trees, soft golden morning sunlight filtered through foliage, bright airy garden depth, refined romantic mood, true-to-life linen, bronze, flower and glass textures. Photorealistic high-end wedding editorial with natural exposure and a restrained warm ivory, eucalyptus green and soft bronze palette. Landscape perspective leading gently along the table into an open bright garden, tasteful organic arrangements and breathing room. Completely new original scene, no actual recognizable hotel, city or landmark. No people, no black linen, no nighttime, no lit candles, no fireworks, no lake, no ornate stonecourtyard. No text or writing anywhere, no monogram, no signs, no logos, no watermark, no frame, no interface. No reference photos or copying of an existing composition.",
+      "alt": "Mesa de boda en un jardín de día con lino marfil, eucalipto, pequeñas flores crema y cubiertos de bronce, imagen creada con IA",
+      "generatedMaster": {
+        "file": "assets/generated/albor/2026-10/celebration.png",
+        "sha256": "c91b8885de81c300b082253622e85bced107f18eea7ad8dd1a2743ccd0741d30",
+        "bytes": 2858002,
+        "width": 1536,
+        "height": 1024
+      },
+      "distribution": {
+        "path": "/invitations/albor/celebration.webp",
+        "sha256": "fdbcc8f4d2e30bd4afaee99cb1a38086dec5961045c94e1555952e2beaf93037",
+        "bytes": 335400,
+        "width": 1536,
+        "height": 1024
+      },
+      "processing": "WebP encoding only; no crop, recolor, retouch or semantic alteration. Original PNG retained unchanged.",
+      "referenceImageUsed": false
+    }
+  ],
+  "totalDistributedBytes": 905710,
+  "model": "Not reported by built-in tool"
+}

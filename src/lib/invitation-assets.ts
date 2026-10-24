@@ -10,6 +10,7 @@ export function originalInvitationAsset(source:string){return ORIGINAL_INVITATIO
 // These exact originals load in the browser. Keep their full source URL until
 // an original file is imported; then add its local path to the map above.
 export const REMOTE_ORIGINAL_ICONS = [
+ ['intro-euforia-abril','Entrada · Euforia · abril 2024','2024/04/Animation-1714111678127.json'],
  ['brindis-obsidiana','Brindis · Obsidiana','2025/05/31-Brindis.json'],
  ['vestido-sin-cola','Vestido sin cola · Obsidiana','2025/06/vestido-sin-cola.json'],
  ['abrazo-grazia','Abrazo · Grazia','2025/05/abrazo.json'],

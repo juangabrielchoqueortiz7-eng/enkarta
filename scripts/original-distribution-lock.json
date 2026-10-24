@@ -955,6 +955,41 @@
       "path": "/audio/invitali-originales/2025-03-Sleeping-At-Last.mp3",
       "sha256": "31c989c97fcd7278f007353522751962339838869da3b6e0992a4c1e2dcbeb38",
       "bytes": 6123448
+    },
+    {
+      "path": "/lottie/invitali-originales/2024-04-Animation-1714111678127.json",
+      "sha256": "bb8208c7a536d79b5e1ba5c768de20351c4ae1ec0245f46b7c8a4ae8b7cce6dc",
+      "bytes": 19001
+    },
+    {
+      "path": "/invitations/albor-reference/2025-06-aro-circulo-Adorno-Euforia-copia.webp",
+      "sha256": "deafdeef6547a958cdf51347cb3300c2f01f15e889e9bf048894bbe87c686ad9",
+      "bytes": 65864
+    },
+    {
+      "path": "/invitations/albor-reference/2024-04-euforiaRecurso-13adorno-sup.svg",
+      "sha256": "56d557547b3080fb155c13432ed0f8ac651126293af44dba116ebdcd2d168175",
+      "bytes": 2814
+    },
+    {
+      "path": "/invitations/albor-reference/2024-04-euforiaRecurso-12adorno-inf.svg",
+      "sha256": "0b6f55961b89b7b684589d9fa78f779dee1f8fdb47f5afef9f431409ff4b4dc8",
+      "bytes": 2816
+    },
+    {
+      "path": "/invitations/albor-reference/2024-04-euforiaRecurso-15adorno-inf.svg",
+      "sha256": "2f20bf0d606ff9f8f6754f164e980c5deb59b13a4e3733390cce951153463ce5",
+      "bytes": 463193
+    },
+    {
+      "path": "/invitations/albor-reference/2026-10-cormorantgaramond-latin-normal.woff2",
+      "sha256": "6c583d4a90f0e33e139f70ddc73a5e8350aea8b9467b26b8498e7d42bab04735",
+      "bytes": 37636
+    },
+    {
+      "path": "/audio/invitali-originales/2025-01-Lucero-y-Mijares-el-privilegio-de-amar-acustico_.mp3",
+      "sha256": "881eda3d5175dd321838f9575f08300b6a882b5ce2f74eff565410fbccb2e1c8",
+      "bytes": 2611879
     }
   ]
 }

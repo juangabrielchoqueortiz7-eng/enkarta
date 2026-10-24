@@ -39,6 +39,7 @@ const Capitulo = dynamic(() => import('@/components/invitations/Capitulo'));
 const Serenata = dynamic(() => import('@/components/invitations/Serenata'));
 const Vespera = dynamic(() => import('@/components/invitations/Vespera'));
 const Opera = dynamic(() => import('@/components/invitations/Opera'));
+const Albor = dynamic(() => import('@/components/invitations/Albor'));
 const Obsidiana = dynamic(() => import('@/components/invitations/Obsidiana'));
 const DolceVita = dynamic(() => import('@/components/invitations/DolceVita'));
 const Grazia = dynamic(() => import('@/components/invitations/Grazia'));
@@ -83,6 +84,7 @@ export const PREMIUM_KEYS = Object.keys(PREMIUM_REGISTRY);
 
 const LAURA_ANDRES_ENTRY: PremiumEntry = { Comp: LauraAndres, map: inv => inv };
 export function premiumFor(inv: InvitationParsed): PremiumEntry | undefined {
+  if (inv.config.designKey === 'albor') return { Comp: Albor, map: (inv: InvitationParsed) => inv };
   if (inv.config.designKey === 'opera') return { Comp: Opera, map: (inv: InvitationParsed) => inv };
   if (inv.config.designKey === 'vespera') return { Comp: Vespera, map: (inv: InvitationParsed) => inv };
   if (inv.config.designKey === 'serenata') return { Comp: Serenata, map: (inv: InvitationParsed) => inv };
