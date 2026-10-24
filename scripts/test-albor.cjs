@@ -92,12 +92,13 @@ test('the native entry keeps an editable action and authentic original paper and
   }
 });
 
-test('only the interior keeps its floral ring and families use a continuous paper band with softly masked original foliage', () => {
+test('floral artwork stays on the interior and page edges while the envelope stays clean and families keep their softly masked band', () => {
   const postcss = require('postcss'), css = postcss.parse(read('src/components/invitations/Albor.module.css'));
-  const declarations = selector => {
+  const canonicalSelector = selector => selector.replace(/\s+/g, '').replace(/::?before/g, '::before').replace(/::?after/g, '::after');
+  const declarations = (selector, accepts = () => true) => {
     const values = {};
     css.walkRules(rule => {
-      if (rule.selectors?.some(value => value.replace(/\s+/g, '') === selector)) rule.walkDecls(declaration => {
+      if (accepts(rule) && rule.selectors?.some(value => canonicalSelector(value) === selector)) rule.walkDecls(declaration => {
         values[declaration.prop] = declaration.value;
         // A later background shorthand also resets an earlier background-image.
         if (declaration.prop === 'background') values['background-image'] = /url\(|gradient\(|var\(--ab-(?:ring|leaves)/i.test(declaration.value) ? declaration.value : 'none';
@@ -127,6 +128,42 @@ test('only the interior keeps its floral ring and families use a continuous pape
   assert.equal(foliage.position, 'absolute');
   assert.equal(foliage['pointer-events'], 'none', 'Decorative foliage cannot intercept the page controls');
   assert.match(foliage['mask-image'] || foliage['-webkit-mask-image'] || foliage.mask || foliage['-webkit-mask'] || '', /(?:linear|radial)-gradient\(/, 'A soft alpha mask blends the original background edges into the full band');
+
+  const page = declarations('.page');
+  assert.equal(page.position, 'relative', 'The document anchors the botanical sides independently of the family section');
+  assert.ok(!page['background-image'] || page['background-image'] === 'none', 'The original raster is blended through decorative layers, rather than painted as an opaque rectangular page tile');
+  const sideLeaf = page['--ab-side-leaves']?.match(/^url\(["']?(\/[^"')]+)["']?\)$/)?.[1];
+  const sideLeafProvenance = JSON.parse(read('docs/assets/serenata-originals.json')).media.bodyLeaves;
+  assert.equal(sideLeafProvenance.url, 'https://invitali.com/wp-content/uploads/2024/09/jairo-y-GabrielaRecurso-48cuerpo-copia.webp');
+  assert.equal(sideLeaf, sideLeafProvenance.localPath, 'The page sides reuse the exact archived color foliage');
+  const sideLeafLock = JSON.parse(read('scripts/original-distribution-lock.json')).resources.find(resource => resource.path === sideLeaf);
+  assert.ok(sideLeafLock, 'The botanical page source remains byte-protected in the original library');
+  assert.equal(sideLeafLock.sha256, sideLeafProvenance.sha256);
+  const sideLeafBytes = fs.readFileSync(path.join(root, 'public', sideLeaf));
+  assert.equal(sha(sideLeafBytes), sideLeafLock.sha256); assert.equal(sideLeafBytes.length, sideLeafLock.bytes);
+  const baseLayers = new Map(['.page::before', '.page::after'].map(selector => [selector, declarations(selector, rule => rule.parent.type === 'root')]));
+  for (const [selector, layer] of baseLayers) {
+    assert.match(layer.content || '', /^(?:""|'')$/, selector + ' is decorative and has no generated text');
+    assert.equal(layer.position, 'absolute'); assert.equal(layer['pointer-events'], 'none');
+    assert.match(layer['background-image'] || layer.background || '', /var\(--ab-side-leaves\)/, selector + ' reuses the archived botanical source');
+    assert.ok(layer['background-repeat'] === 'repeat-y' || /\brepeat-y\b/.test(layer.background || ''), 'The side artwork continues through the welcome, date and remaining document');
+    assert.equal(layer['mix-blend-mode'], 'multiply', 'The original pale raster blends into the invitation paper');
+    assert.match(layer['mask-image'] || layer['-webkit-mask-image'] || layer.mask || '', /(?:linear|radial)-gradient\(.*transparent/, 'An alpha fade leaves the central reading column clear');
+  }
+  for (const atRuleName of ['media', 'container']) {
+    const attenuated = new Set();
+    css.walkAtRules(atRuleName, atRule => atRule.walkRules(rule => {
+      const matching = (rule.selectors || []).map(canonicalSelector).filter(selector => baseLayers.has(selector));
+      if (!matching.length) return;
+      rule.walkDecls('opacity', declaration => {
+        for (const selector of matching) {
+          const value = Number(declaration.value), normal = Number(baseLayers.get(selector).opacity);
+          if (Number.isFinite(value) && Number.isFinite(normal) && value >= 0 && value < normal) attenuated.add(selector);
+        }
+      });
+    }));
+    assert.deepEqual([...attenuated].sort(), [...baseLayers.keys()].sort(), 'Both botanical sides become quieter in narrow @' + atRuleName + ' layouts');
+  }
 });
 
 test('only the server-supplied RSVP is rendered and an unverified visitor cannot receive a fabricated form', () => {
