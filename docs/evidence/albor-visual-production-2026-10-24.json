@@ -1,0 +1,362 @@
+{
+  "checkedAt": "2026-10-24T11:26:30.237Z",
+  "sourceSha": "217fc332dbe47b6ffd7ccba7e914390e6eb891a6",
+  "deploymentId": "dpl_AfucczRmCkepSaxpoRn3gkxKGBUU",
+  "url": "https://enkarta.vercel.app/muestra/albor",
+  "reference": "https://invitali.com/euforia/",
+  "scope": "Follow-up rendered verification of Albor background and scroll, previously blocked by browser availability.",
+  "browserAvailable": true,
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "method": "Authorized in-app browser; normal entry or public full=1 demo, wheel scroll in both directions, read-only DOM measurements and viewport screenshots. No DOM or style mutation.",
+  "geometrySource": "Representative values transcribed from browser tool outputs; not a complete exported trace.",
+  "geometry": [
+    {
+      "view": "desktop-top",
+      "width": 1440,
+      "height": 900,
+      "frameHeight": 900,
+      "layerHeight": 1340.99267578125,
+      "size": "cover",
+      "progress": 9.8,
+      "offset": -43.218,
+      "expectedOffset": -43.218,
+      "overflow": false
+    },
+    {
+      "view": "desktop-families",
+      "width": 1440,
+      "height": 900,
+      "frameHeight": 900,
+      "layerHeight": 1340.99267578125,
+      "size": "cover",
+      "progress": 33.38,
+      "offset": -147.206,
+      "expectedOffset": -147.2058,
+      "overflow": false
+    },
+    {
+      "view": "desktop-half",
+      "width": 1440,
+      "height": 900,
+      "frameHeight": 900,
+      "layerHeight": 1340.99267578125,
+      "size": "cover",
+      "progress": 50.06,
+      "offset": -220.765,
+      "expectedOffset": -220.7646,
+      "overflow": false
+    },
+    {
+      "view": "desktop-end",
+      "width": 1440,
+      "height": 900,
+      "frameHeight": 900,
+      "layerHeight": 1340.99267578125,
+      "size": "cover",
+      "progress": 90.18,
+      "offset": -397.694,
+      "expectedOffset": -397.6938,
+      "overflow": false
+    },
+    {
+      "view": "mobile-top",
+      "width": 390,
+      "height": 844,
+      "frameHeight": 844.1176147460938,
+      "layerHeight": 1257.7320556640625,
+      "size": "contain",
+      "progress": 8.03,
+      "offset": -33.2089,
+      "expectedOffset": -33.208868,
+      "overflow": false
+    },
+    {
+      "view": "mobile-half",
+      "width": 390,
+      "height": 844,
+      "frameHeight": 844.1176147460938,
+      "layerHeight": 1257.7320556640625,
+      "size": "contain",
+      "progress": 50,
+      "offset": -206.78,
+      "expectedOffset": -206.78,
+      "overflow": false
+    },
+    {
+      "view": "mobile-end",
+      "width": 390,
+      "height": 844,
+      "frameHeight": 844.1176147460938,
+      "layerHeight": 1257.7320556640625,
+      "size": "contain",
+      "progress": 91.96,
+      "offset": -380.31,
+      "expectedOffset": -380.309776,
+      "overflow": false
+    },
+    {
+      "view": "mobile-return",
+      "width": 390,
+      "height": 844,
+      "frameHeight": 844.1176147460938,
+      "layerHeight": 1257.7320556640625,
+      "size": "contain",
+      "progress": 75.96,
+      "offset": -314.14,
+      "expectedOffset": -314.140176,
+      "overflow": false
+    },
+    {
+      "view": "resize-to-desktop",
+      "width": 1440,
+      "height": 900,
+      "frameHeight": 900,
+      "layerHeight": 1340.99267578125,
+      "size": "cover",
+      "progress": 73.64,
+      "offset": -324.752,
+      "expectedOffset": -324.7524,
+      "overflow": false
+    }
+  ],
+  "nearHalfComparison": {
+    "desktop": {
+      "alborOffset": -220.765,
+      "referenceOffset": -220.495,
+      "alborProgress": 50.06,
+      "referenceProgress": 50,
+      "absoluteDifferencePx": 0.27
+    },
+    "mobile": {
+      "alborOffset": -206.78,
+      "referenceOffset": -206.847,
+      "alborProgress": 50,
+      "referenceProgress": 49.64,
+      "absoluteDifferencePx": 0.067
+    },
+    "note": "Different content heights and lazy-loaded geometry make scrollY and instantaneous progress differ. These snapshots verify background behavior near equal progress; they are not pixel-identity scores."
+  },
+  "checks": {
+    "originalPoster47Used": true,
+    "oneBackgroundLayer": true,
+    "noInventedGreenSideLayers": true,
+    "desktopCoverMobileContain": true,
+    "activeLayer149Percent": true,
+    "scrollDirectionReversible": true,
+    "bottomCoverageObserved": true,
+    "responsiveRecalculationObserved": true,
+    "horizontalOverflowObserved": false,
+    "previewStatic": true,
+    "previewWithoutAudioOrEntry": true,
+    "silentEntryAudioPausedAtZero": true,
+    "allSevenItinerarySvgReadyAfterVisiting": true,
+    "allThreeNewPhotosLoaded": true,
+    "bodyFontMobile": "21px",
+    "documentFontsStatus": "loaded",
+    "alborConsoleErrors": {
+      "desktop": [],
+      "mobile": [],
+      "preview": []
+    }
+  },
+  "screenshotNote": "PNG viewport images exclude the browser scrollbar; actual raster dimensions are recorded below.",
+  "screenshots": [
+    {
+      "file": "tmp/albor-visual-20261024/desktop-albor-end.png",
+      "bytes": 52393,
+      "sha256": "d6f0f80469f18523abffa11b4a38e9b105ba9d944ffe809c6fc95d1951b35ee4",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/desktop-albor-families.png",
+      "bytes": 50216,
+      "sha256": "02b104b8f31d23b69794007d28688e23ba9c489f0d565b22e38e4121e4807e2d",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/desktop-albor-half.png",
+      "bytes": 48733,
+      "sha256": "8b8762e92f3727c0fe542878a64e4e67c6311f83e09c4ee6e0c812ef3684121d",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/desktop-albor-lower.png",
+      "bytes": 143810,
+      "sha256": "76f39301ee131f85983aee001df0cf547e17f060179cf84af505577a14b4a0b2",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/desktop-albor-middle.png",
+      "bytes": 95245,
+      "sha256": "425900cbb793e6d7ee411ad86de2f83ac7a923e3c393a24d3b87ad939dc1edbe",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/desktop-albor-top.png",
+      "bytes": 152120,
+      "sha256": "9b461b44cd813b20c2e1d1b15da55af7ec2d9c97435e84ee17c55b560baf2ece",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/desktop-euforia-end.png",
+      "bytes": 65810,
+      "sha256": "52c67838362b75e4ac2000c790de69a8c3708afb691b51158fd5b446e3658c34",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/desktop-euforia-half.png",
+      "bytes": 87112,
+      "sha256": "d7732dcf8277a366c0888e712638d5b4368b3e75187c63200c2d8d922bbad7b3",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/desktop-euforia-middle.png",
+      "bytes": 46616,
+      "sha256": "f8ba79c1a0f4bc51eac69e4ad0187de6c9fadcfafc2b425a1a571b792880dab7",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/desktop-euforia-top.png",
+      "bytes": 133955,
+      "sha256": "a759dc012c060b5478a3e3e211693c8b3ac25d7c762a295f0e1b7528c6ddadbd",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-albor-end.png",
+      "bytes": 37011,
+      "sha256": "eac151790e210a06ee729f54db5ce3459b19cbeafbbe9a054936f8f559f39d80",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-albor-envelope.png",
+      "bytes": 13899,
+      "sha256": "f5d288018ab4cdaa29be0cfad07e24f39a7cfd8025291d13e14cb1315addb429",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-albor-half.png",
+      "bytes": 30648,
+      "sha256": "b210ce28491262a4228674f2fa3ba6321bb4509914a90d1f0d0df3c23c430f8c",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-albor-itinerary.png",
+      "bytes": 30981,
+      "sha256": "16aace3ab3557a33df6f91f945e56b0614118780c464d71ff374e0760541ec8b",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-albor-middle.png",
+      "bytes": 27516,
+      "sha256": "d6a95861b0403619a2aa947f91ab7998e9b23b98d54531c5bc0dd1cc4199e133",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-albor-preview.png",
+      "bytes": 60558,
+      "sha256": "5a348d0c1b3743b83a349aa8a82550bd296f01e17d759268b6a1bdd2119e5801",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-albor-return.png",
+      "bytes": 35683,
+      "sha256": "84db42d89e78df943f2529bc14505ecaa0691be45b0fe2e8de18e6ac2794261c",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-albor-top.png",
+      "bytes": 59753,
+      "sha256": "d5de1164da6f06634e27e8b816136744e930dcda786f1e433503f2289f20e8b5",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-euforia-end.png",
+      "bytes": 32582,
+      "sha256": "5ddf428f839bdb33a61003f98b6ff453f1c349f84e84859c8c7afaf7eb18a772",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-euforia-half.png",
+      "bytes": 22501,
+      "sha256": "d486146fa61b9e893d3bb3ee6ed715d2a0c6b1fdd627c6d2490c19e47748ebf1",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-euforia-middle.png",
+      "bytes": 22249,
+      "sha256": "8d89e6d53617fc800b00d8a7d4449d55c7848562ae240b6abdfe4bfb17c699b6",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/mobile-euforia-top.png",
+      "bytes": 55059,
+      "sha256": "9a357e29eae2001acfb608246b578839e598128d1459440243352c31a93efe14",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "file": "tmp/albor-visual-20261024/resize-albor-desktop.png",
+      "bytes": 90924,
+      "sha256": "26f17e5b960e48e5e0a503007b443d1c21edb87236b452fa57bb57ba72b6ad0d",
+      "width": 65536,
+      "height": 4292542531
+    }
+  ],
+  "limitations": [
+    "Responsive browser viewports, not acceptance on a physical phone.",
+    "No frame-rate benchmark or temporal pixel-identity certification.",
+    "The invitation retains different content, new photographs, hero crop and section/itinerary composition. This check closes background fidelity only."
+  ],
+  "verification": {
+    "priorFocusedRegressionsPassed": 29,
+    "priorEvidence": "docs/evidence/albor-motion-production-2026-10-24.json",
+    "regressionsRerun": false,
+    "reason": "No application code changed during this visual follow-up."
+  },
+  "preservation": {
+    "applicationCodeChanged": false,
+    "originalAssetsChanged": false,
+    "generatedPhotosChanged": false,
+    "bcpDisabled": true,
+    "userSqlSha256": "e02d9eb658bd7d1b1941d7502da6817893aadd7df461fef1db405b1735d71aeb"
+  },
+  "cleanup": {
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "createdProductionFixtures": 0,
+    "required": false,
+    "temporaryBrowserTabsClosed": true,
+    "temporaryViewportReset": true
+  }
+}
