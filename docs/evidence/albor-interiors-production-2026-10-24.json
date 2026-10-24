@@ -1,0 +1,847 @@
+{
+  "checkedAt": "2026-10-24T12:01:12.802Z",
+  "sourceSha": "71a43125cb4871fe1b5d3d0cd6783e5aec22106d",
+  "deploymentId": "dpl_Bg7Y4Qc2JHjfha4VBjTtb5Tkn4WL",
+  "url": "https://enkarta.vercel.app/muestra/albor",
+  "ready": true,
+  "scope": "Albor hero wave, editable semantic date and responsive itinerary; no other invitation or original asset changed.",
+  "tests": {
+    "passed": 25,
+    "failed": 0,
+    "profile": 15,
+    "entry": 10,
+    "logs": [
+      {
+        "file": "profile-tests.log",
+        "passed": 15,
+        "sha256": "f5b120210299953e6e6599c290e3de74c74f6bcf3e76a42951131365ac6edbb5"
+      },
+      {
+        "file": "entry-tests.log",
+        "passed": 10,
+        "sha256": "ab0ac4d7890f7cbad61a620fc6360cb00125d6656ba58929de2a13d372f6853c"
+      }
+    ],
+    "fullRepositorySuiteRun": false
+  },
+  "build": {
+    "localTypecheckPassed": true,
+    "vercelCompilePassed": true,
+    "vercelTypesAndLintPassed": true
+  },
+  "reference": {
+    "url": "https://invitali.com/euforia/",
+    "method": "Live in-app browser at 1440x900 and 390x844, read-only computed styles and viewport screenshots.",
+    "observations": [
+      "Three-layer native hero wave, 900px hero on desktop and approximately half viewport height on mobile.",
+      "Weekday / prominent day / clock hierarchy, followed by city and month/year.",
+      "Seven horizontal itinerary columns; vertical alternating icon/text rows and curved side borders on mobile."
+    ],
+    "preservedDifferences": [
+      "New synthetic photographs and independently editable invitation copy.",
+      "Itinerary uses up to 300px on mobile for longer titles, rather than approximately245px in the reference.",
+      "Small itinerary titles and mobile date use the existing darker bronze for legibility.",
+      "Other sections, secure RSVP, clean envelope and previously verified watercolor background remain unchanged."
+    ]
+  },
+  "localVisual": {
+    "completed": true,
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "noHorizontalOverflowInReviewedRegions": true,
+    "allSevenItinerarySvgRendered": true,
+    "screenshots": [
+      {
+        "file": "tmp/albor-interiors-20261024/local-date-desktop.png",
+        "bytes": 60841,
+        "sha256": "213725bd341543958770be0ba380a6df8ee948a59f02eafeae3294d3c6a6df1a",
+        "width": 65536,
+        "height": 4292542531
+      },
+      {
+        "file": "tmp/albor-interiors-20261024/local-date-mobile.png",
+        "bytes": 36664,
+        "sha256": "6ab62ea30f7c05bd362b2399a419f99e135a3a20676d1144dcf21dfa9ea022d3",
+        "width": 65536,
+        "height": 4292542531
+      },
+      {
+        "file": "tmp/albor-interiors-20261024/local-hero-desktop.png",
+        "bytes": 151682,
+        "sha256": "b147a78d742aee4ed182e51091f2dff2093cc61750177ff5700605893cd18485",
+        "width": 65536,
+        "height": 4292542531
+      },
+      {
+        "file": "tmp/albor-interiors-20261024/local-hero-mobile.png",
+        "bytes": 63852,
+        "sha256": "b5c8d488e9ec1c45dd518362f03cf082a74c3e88e133760c620dc5e8b45a6aab",
+        "width": 65536,
+        "height": 4292542531
+      },
+      {
+        "file": "tmp/albor-interiors-20261024/local-itinerary-desktop.png",
+        "bytes": 59712,
+        "sha256": "73d8fac8940bbdb5634edd6639b290a0a08c1eb69b6c9ed1156e43fb765be24a",
+        "width": 65536,
+        "height": 4292542531
+      },
+      {
+        "file": "tmp/albor-interiors-20261024/local-itinerary-mobile.png",
+        "bytes": 27318,
+        "sha256": "d02161809139fc20cf48fdc788ee341dd5979d456893d96adf4ad546acef224b",
+        "width": 65536,
+        "height": 4292542531
+      },
+      {
+        "file": "tmp/albor-interiors-20261024/reference-hero-desktop.png",
+        "bytes": 133951,
+        "sha256": "d3c2d15b0e9cc3fbbadc06f447e8a57b78c52f427d4e78b9547db992bb23d970",
+        "width": 65536,
+        "height": 4292542531
+      },
+      {
+        "file": "tmp/albor-interiors-20261024/reference-itinerary-desktop.png",
+        "bytes": 59355,
+        "sha256": "c1e9a9e88d55f73bb2a097a15313b32af2b711b2ca7aa095d4af4fdb427c9dbe",
+        "width": 65536,
+        "height": 4292542531
+      },
+      {
+        "file": "tmp/albor-interiors-20261024/reference-itinerary-mobile.png",
+        "bytes": 21809,
+        "sha256": "9e57ed00153a5286f6e97093076268a42b80cd2ea2085bc1093cbbb64ad21a22",
+        "width": 65536,
+        "height": 4292542531
+      }
+    ],
+    "observations": [
+      {
+        "file": "tmp/albor-interiors-20261024/local-itinerary-mobile.json",
+        "sha256": "b8cce55430aa940de4a1e38b315ea2664f4b2dcb6eb4efe7eee346988eb7c71f",
+        "value": {
+          "audio": [
+            {
+              "paused": true,
+              "time": 0
+            }
+          ],
+          "bodyFont": "21px",
+          "date": {
+            "clock": "16:00 h",
+            "day": {
+              "h": 76.98758697509766,
+              "w": 89.99310302734375,
+              "x": 147.27711486816406,
+              "y": -2073.426025390625
+            },
+            "iso": "2028-04-22",
+            "rect": {
+              "h": 76.98758697509766,
+              "w": 334.5588073730469,
+              "x": 25,
+              "y": -2073.426025390625
+            },
+            "text": "SÁBADO, 22 de abril de 2028 · 16:00 h",
+            "weekday": "SÁBADO"
+          },
+          "fonts": "loaded",
+          "items": [
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 199.06939697265625
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 199.06939697265625
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 199.06939697265625
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "16:00 h\nNuestra ceremonia"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 346.05926513671875
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 346.05926513671875
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 346.05926513671875
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "18:30 h\nNuestro primer baile"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 493.0491638183594
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 493.0491638183594
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 493.0491638183594
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "19:00 h\nUn brindis por nosotros"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 640.0390625
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 640.0390625
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 640.0390625
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "19:30 h\nCompartimos la cena"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 787.0289306640625
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 787.0289306640625
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 787.0289306640625
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "20:30 h\nA celebrar"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 934.018798828125
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 934.018798828125
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 934.018798828125
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "21:30 h\nUn momento dulce"
+            },
+            {
+              "details": {
+                "h": 124.36810302734376,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 1081.0086669921875
+              },
+              "icon": {
+                "h": 124.36810302734376,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 1081.0086669921875
+              },
+              "rect": {
+                "h": 124.36810302734376,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 1081.0086669921875
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "23:00 h\nHasta nuestro próximo encuentro"
+            }
+          ],
+          "overflow": false,
+          "url": "http://127.0.0.1:3011/muestra/albor?full=1",
+          "viewport": {
+            "h": 844,
+            "w": 390
+          },
+          "wave": {
+            "paths": 3,
+            "rect": {
+              "h": 37.99402618408203,
+              "w": 385.558349609375,
+              "x": 0,
+              "y": -3647.28857421875
+            }
+          }
+        }
+      },
+      {
+        "file": "tmp/albor-interiors-20261024/local-date-mobile.json",
+        "sha256": "a3f67a3e3f2a40f88d328832ee904a9f74b15a855002a7b64fabec59b892e192",
+        "value": {
+          "audio": [
+            {
+              "paused": true,
+              "time": 0
+            }
+          ],
+          "bodyFont": "21px",
+          "date": {
+            "clock": "16:00 h",
+            "day": {
+              "h": 76.98758697509766,
+              "w": 89.99310302734375,
+              "x": 147.27711486816406,
+              "y": 180.25045776367188
+            },
+            "iso": "2028-04-22",
+            "rect": {
+              "h": 76.98758697509766,
+              "w": 334.5588073730469,
+              "x": 25,
+              "y": 180.25045776367188
+            },
+            "text": "SÁBADO, 22 de abril de 2028 · 16:00 h",
+            "weekday": "SÁBADO"
+          },
+          "fonts": "loaded",
+          "items": [
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 2452.745849609375
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 2452.745849609375
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 2452.745849609375
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "16:00 h\nNuestra ceremonia"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 2599.735595703125
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 2599.735595703125
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 2599.735595703125
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "18:30 h\nNuestro primer baile"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 2746.7255859375
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 2746.7255859375
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 2746.7255859375
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "19:00 h\nUn brindis por nosotros"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 2893.715576171875
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 2893.715576171875
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 2893.715576171875
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "19:30 h\nCompartimos la cena"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 3040.705322265625
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 3040.705322265625
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 3040.705322265625
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "20:30 h\nA celebrar"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 3187.6953125
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 3187.6953125
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 3187.6953125
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "21:30 h\nUn momento dulce"
+            },
+            {
+              "details": {
+                "h": 124.36810302734376,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 3334.68505859375
+              },
+              "icon": {
+                "h": 124.36810302734376,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 3334.68505859375
+              },
+              "rect": {
+                "h": 124.36810302734376,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 3334.68505859375
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "23:00 h\nHasta nuestro próximo encuentro"
+            }
+          ],
+          "overflow": false,
+          "url": "http://127.0.0.1:3011/muestra/albor?full=1",
+          "viewport": {
+            "h": 844,
+            "w": 390
+          },
+          "wave": {
+            "paths": 3,
+            "rect": {
+              "h": 37.99402618408203,
+              "w": 385.558349609375,
+              "x": 0,
+              "y": -1393.612060546875
+            }
+          }
+        }
+      },
+      {
+        "file": "tmp/albor-interiors-20261024/local-hero-mobile.json",
+        "sha256": "561859201e82f903ae0baf4126089ae6a87d022f20a0a497f6e0dadd3b06ad24",
+        "value": {
+          "audio": [
+            {
+              "paused": true,
+              "time": 0
+            }
+          ],
+          "bodyFont": "21px",
+          "date": {
+            "clock": "16:00 h",
+            "day": {
+              "h": 76.98758697509766,
+              "w": 89.99310302734375,
+              "x": 147.27711486816406,
+              "y": 1958.9268798828125
+            },
+            "iso": "2028-04-22",
+            "rect": {
+              "h": 76.98758697509766,
+              "w": 334.5588073730469,
+              "x": 25,
+              "y": 1958.9268798828125
+            },
+            "text": "SÁBADO, 22 de abril de 2028 · 16:00 h",
+            "weekday": "SÁBADO"
+          },
+          "fonts": "loaded",
+          "items": [
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 4231.42236328125
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 4231.42236328125
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 4231.42236328125
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "16:00 h\nNuestra ceremonia"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 4378.412109375
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 4378.412109375
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 4378.412109375
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "18:30 h\nNuestro primer baile"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 4525.40185546875
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 4525.40185546875
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 4525.40185546875
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "19:00 h\nUn brindis por nosotros"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 4672.39208984375
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 4672.39208984375
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 4672.39208984375
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "19:30 h\nCompartimos la cena"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 4819.3818359375
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 4819.3818359375
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 4819.3818359375
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "20:30 h\nA celebrar"
+            },
+            {
+              "details": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 4966.37158203125
+              },
+              "icon": {
+                "h": 119.99080657958984,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 4966.37158203125
+              },
+              "rect": {
+                "h": 119.99080657958984,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 4966.37158203125
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "21:30 h\nUn momento dulce"
+            },
+            {
+              "details": {
+                "h": 124.36810302734376,
+                "w": 140.0045928955078,
+                "x": 192.27940368652344,
+                "y": 5113.36181640625
+              },
+              "icon": {
+                "h": 124.36810302734376,
+                "w": 140.0045928955078,
+                "x": 52.27481460571289,
+                "y": 5113.36181640625
+              },
+              "rect": {
+                "h": 124.36810302734376,
+                "w": 280.0091857910156,
+                "x": 52.27481460571289,
+                "y": 5113.36181640625
+              },
+              "state": "ready",
+              "svg": true,
+              "text": "23:00 h\nHasta nuestro próximo encuentro"
+            }
+          ],
+          "overflow": false,
+          "url": "http://127.0.0.1:3011/muestra/albor?full=1",
+          "viewport": {
+            "h": 844,
+            "w": 390
+          },
+          "wave": {
+            "paths": 3,
+            "rect": {
+              "h": 37.99402618408203,
+              "w": 385.558349609375,
+              "x": 0,
+              "y": 385.0643310546875
+            }
+          }
+        }
+      }
+    ],
+    "physicalDeviceAcceptance": false
+  },
+  "productionHttp": {
+    "method": "Three read-only public GETs and server-rendered markup; no browser execution",
+    "passed": true,
+    "responses": [
+      {
+        "route": "/muestra/albor",
+        "status": 200,
+        "backgrounds": 1,
+        "layers": 1,
+        "eventDate": "2028-04-22",
+        "weekday": "SÁBADO",
+        "day": "22",
+        "monthYear": "ABRIL DE 2028",
+        "itineraryHeading": "Itinerario",
+        "itineraryItems": 7,
+        "heroWavePaths": 3,
+        "newPhotosPreserved": true,
+        "silentEntryButtonPresent": true,
+        "preview": false,
+        "passed": true
+      },
+      {
+        "route": "/muestra/albor?full=1",
+        "status": 200,
+        "backgrounds": 1,
+        "layers": 1,
+        "eventDate": "2028-04-22",
+        "weekday": "SÁBADO",
+        "day": "22",
+        "monthYear": "ABRIL DE 2028",
+        "itineraryHeading": "Itinerario",
+        "itineraryItems": 7,
+        "heroWavePaths": 3,
+        "newPhotosPreserved": true,
+        "silentEntryButtonPresent": false,
+        "preview": false,
+        "passed": true
+      },
+      {
+        "route": "/muestra/albor?preview=1",
+        "status": 200,
+        "backgrounds": 1,
+        "layers": 1,
+        "eventDate": "2028-04-22",
+        "weekday": "SÁBADO",
+        "day": "22",
+        "monthYear": "ABRIL DE 2028",
+        "itineraryHeading": "Itinerario",
+        "itineraryItems": 7,
+        "heroWavePaths": 3,
+        "newPhotosPreserved": true,
+        "silentEntryButtonPresent": false,
+        "preview": true,
+        "passed": true
+      }
+    ]
+  },
+  "productionBrowser": {
+    "completed": false,
+    "entryOpenedSilently": true,
+    "accessibleNewDateObserved": "SÁBADO, 22 de abril de 2028 · 16:00 h",
+    "newItineraryHeadingObserved": "Itinerario",
+    "itineraryItemsObserved": 7,
+    "screenshotFinalReviewPending": true,
+    "reason": "The browser successfully opened the new production entry and returned the updated accessibility tree. On the following turn its next call returned Local browser use is disabled in Work settings; final production viewport screenshots were not obtained.",
+    "pixelIdentityCertified": false
+  },
+  "preservation": {
+    "originalsUnchanged": 198,
+    "photographsUnchanged": 18,
+    "otherInvitationAndLibrarySourcesUnchanged": 281,
+    "criticalUploadedSources": 17,
+    "backgroundScrollHookUnchanged": true,
+    "bcpDisabled": true,
+    "privateSourcesPhysicallyExcluded": true,
+    "userSqlSha256": "e02d9eb658bd7d1b1941d7502da6817893aadd7df461fef1db405b1735d71aeb",
+    "method": "Expanded uploaded-file SHA-1 UIDs matched exact prepared bytes; batched Git baseline comparison"
+  },
+  "cleanup": {
+    "productionWrites": 0,
+    "createdFixtures": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "required": false,
+    "browserCleanupPending": true,
+    "browserCleanupReason": "Browser control became unavailable before temporary tab and viewport cleanup."
+  }
+}
