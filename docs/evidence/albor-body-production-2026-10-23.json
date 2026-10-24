@@ -1,0 +1,107 @@
+{
+  "checkedAt": "2026-10-24T02:25:55.716Z",
+  "sourceSha": "fa8cb3fdb6ba2e6c2ac918603d7012115c2fe297",
+  "deploymentId": "dpl_e1jRLdeawc8riL5Jky8dist6i5U5",
+  "ready": true,
+  "url": "https://enkarta.vercel.app/muestra/albor",
+  "scope": "Only Albor CSS changed at runtime: use the archived botanical image on both interior sides, keep the opaque hero independent and preserve the envelope without a decorative ring.",
+  "tests": {
+    "profile": 12,
+    "entryLifecycle": 10,
+    "passed": 22,
+    "failed": 0,
+    "fullRepositorySuiteRun": false,
+    "logs": [
+      {
+        "file": "profile-tests.log",
+        "passed": 12,
+        "failed": 0,
+        "sha256": "0e3c2c7a05d2c52382d5cfa04102caa0aac2926a6d4e3970c4ab9783d756d35f"
+      },
+      {
+        "file": "entry-tests.log",
+        "passed": 10,
+        "failed": 0,
+        "sha256": "b8105e293b48294dd658909d1e38cbbe261760acb988098bb85c9c6894786abc"
+      }
+    ]
+  },
+  "build": {
+    "compiled": true,
+    "lintPassed": true,
+    "typesPassed": true,
+    "logSha256": "426a6fbbc3073e106b87ae1a0e441c5b6b3f6018b9607e65f2c94d5edd2e8103"
+  },
+  "preservation": {
+    "method": "Expanded uploaded-file SHA-1 UIDs matched exact prepared bytes; batched Git baseline comparison",
+    "criticalSources": 14,
+    "unchangedInvitationAndLibrarySources": 281,
+    "originalsUnchanged": 198,
+    "generatedPhotosUnchanged": 18,
+    "newDownloads": 0,
+    "bcpDisabled": true,
+    "privateSourcesExcluded": true,
+    "userSqlSha256": "e02d9eb658bd7d1b1941d7502da6817893aadd7df461fef1db405b1735d71aeb"
+  },
+  "reusedAsset": {
+    "source": "https://invitali.com/wp-content/uploads/2024/09/jairo-y-GabrielaRecurso-48cuerpo-copia.webp",
+    "path": "/invitations/serenata-reference/2024-09-jairo-y-GabrielaRecurso-48cuerpo-copia.webp",
+    "sha256": "caa754030d0c1a62eca0c8a0a41229a86e5f25cfbc8f078784429aabfb07c010",
+    "bytes": 83514,
+    "uploadedSha1": "2406811c1959653237e53cf7bf869e6b38a9c538",
+    "originalBytesPreserved": true,
+    "newDownload": false,
+    "styling": "Per-instance CSS opacity and intersecting masks; original raster unchanged"
+  },
+  "browser": {
+    "sourceSha": "fa8cb3fdb6ba2e6c2ac918603d7012115c2fe297",
+    "deploymentId": "dpl_e1jRLdeawc8riL5Jky8dist6i5U5",
+    "url": "https://enkarta.vercel.app/muestra/albor",
+    "entry": {
+      "identityBackground": "none",
+      "overflow": false
+    },
+    "desktop": {
+      "width": 2560,
+      "height": 1200,
+      "overflow": false,
+      "opacity": "0.68",
+      "maskComposite": "intersect, intersect",
+      "background": "url(\"https://enkarta.vercel.app/invitations/serenata-reference/2024-09-jairo-y-GabrielaRecurso-48cuerpo-copia.webp\")"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "overflow": false,
+      "opacity": "0.18",
+      "maskComposite": "intersect, intersect",
+      "background": "url(\"https://enkarta.vercel.app/invitations/serenata-reference/2024-09-jairo-y-GabrielaRecurso-48cuerpo-copia.webp\")"
+    },
+    "consoleErrors": [],
+    "productionWrites": 0,
+    "cleanupRequired": false
+  },
+  "captures": {
+    "productionWideAvailable": false,
+    "localWideAvailable": true,
+    "localMobileAvailable": true,
+    "notes": "Production screenshot API did not return a usable wide image. Production rendered DOM and exact uploaded CSS/source hashes were verified; the wide composition was visually reviewed locally. No production screenshot identity or physical-device acceptance is certified.",
+    "screenshots": [
+      {
+        "file": "tmp/albor-body-20261023/visual/local-body-wide-final.png",
+        "sha256": "5a9d4cb63f0a7aba851c7e5a88ed685ac3224d9662e18e8054460e2381eb7cd8"
+      },
+      {
+        "file": "tmp/albor-body-20261023/visual/local-body-mobile-final.png",
+        "sha256": "7d666dc72ee1373202f1609e605440de8eae09429181996f93c6bf28cb6069f4"
+      }
+    ]
+  },
+  "cleanup": {
+    "productionWrites": 0,
+    "required": false,
+    "reason": "Read-only public sample, visual inspection and source verification; no database fixtures created."
+  },
+  "physicalDeviceAcceptance": false,
+  "pixelIdentityCertified": false
+}
