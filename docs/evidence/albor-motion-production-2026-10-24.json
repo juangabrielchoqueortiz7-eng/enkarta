@@ -1,0 +1,146 @@
+{
+  "checkedAt": "2026-10-24T04:22:40.375Z",
+  "sourceSha": "217fc332dbe47b6ffd7ccba7e914390e6eb891a6",
+  "deploymentId": "dpl_AfucczRmCkepSaxpoRn3gkxKGBUU",
+  "ready": true,
+  "url": "https://enkarta.vercel.app/muestra/albor",
+  "scope": "Albor background layer and scroll lifecycle only; existing photographs, original resources, clean envelope and all other invitation variants preserved.",
+  "tests": {
+    "passed": 29,
+    "failed": 0,
+    "profile": 12,
+    "entry": 10,
+    "background": 7,
+    "logs": [
+      {
+        "file": "profile-tests.log",
+        "passed": 12,
+        "sha256": "61f64308207a064e7b154610fe4bf6f13df440e2494192575672b8933300083c"
+      },
+      {
+        "file": "entry-tests.log",
+        "passed": 10,
+        "sha256": "f6236b89488a706d1bfcb9adcea03803f642e1c4a87b5ac72a2488f090d71c98"
+      },
+      {
+        "file": "background-tests.log",
+        "passed": 7,
+        "sha256": "7557781b2b53313a4b5993156406e57f757f64e928e285e7cd745b38a19ca970"
+      }
+    ],
+    "fullRepositorySuiteRun": false
+  },
+  "build": {
+    "typecheckLocalPassed": true,
+    "vercelCompilePassed": true,
+    "vercelTypesAndLintPassed": true
+  },
+  "reference": {
+    "url": "https://invitali.com/euforia/",
+    "method": "Read-only public JS source inspection; no browser execution or reconstruction claimed",
+    "sources": [
+      {
+        "url": "https://invitali.com/wp-content/plugins/elementor-pro/assets/js/frontend.min.js?ver=4.3.0",
+        "sha256": "afae2c2ce9aeff27675236f128c7e2008ba76e1c456b6107e61235f08350ea51",
+        "bytes": 80170
+      },
+      {
+        "url": "https://invitali.com/wp-content/plugins/elementor-pro/assets/js/elements-handlers.min.js?ver=4.3.0",
+        "sha256": "eaa8df312cfc2eeba8b360c9170f79931697e81280d8c42945f064c68b09f393",
+        "bytes": 291601
+      },
+      {
+        "url": "https://invitali.com/wp-content/plugins/elementor/assets/js/frontend.min.js?ver=4.3.5",
+        "sha256": "bbfe6403b4ddba29284c72d20f000154d04588d60850fc39a6fd65861c6d83e6",
+        "bytes": 60022
+      },
+      {
+        "url": "https://invitali.com/wp-content/plugins/elementor/assets/js/frontend-modules.min.js?ver=4.3.5",
+        "sha256": "2636846470306c226883fb4ede46a96d71a54454d6c8b1bd9e26e6baf72db965",
+        "bytes": 53086
+      }
+    ],
+    "formula": "progress = Number((100 * clamp((viewportHeight - rootTop) / (rootHeight + viewportHeight), 0, 1)).toFixed(2)); layerHeight = 1.49 * viewportHeight; translateY = -(layerHeight - viewportHeight) * progress / 100",
+    "direction": "up",
+    "transitionMs": 100,
+    "sharedOriginal": "https://invitali.com/wp-content/uploads/2024/09/jairo-y-GabrielaRecurso-47cuerpo-1-copia.webp"
+  },
+  "behavior": {
+    "scrollUpdatesReactState": false,
+    "passiveScroll": true,
+    "oneAnimationFrameForBurst": true,
+    "rootResizeObserved": true,
+    "openingGated": true,
+    "staticModes": [
+      "preview",
+      "disabled",
+      "pending",
+      "reduced",
+      "save-data",
+      "hidden"
+    ],
+    "cleanupCancelsLateCallbacks": true
+  },
+  "preservation": {
+    "originalsUnchanged": 198,
+    "generatedPhotographsUnchanged": 18,
+    "otherInvitationAndLibrarySourcesUnchanged": 280,
+    "criticalSources": 16,
+    "bcpDisabled": true,
+    "privateSourcesExcluded": true,
+    "userSqlSha256": "e02d9eb658bd7d1b1941d7502da6817893aadd7df461fef1db405b1735d71aeb",
+    "method": "Expanded uploaded-file SHA-1 UIDs matched exact prepared bytes; batched Git baseline comparison"
+  },
+  "productionHttp": {
+    "method": "Three read-only public GETs and server-rendered markup; no browser execution",
+    "responses": [
+      {
+        "route": "/muestra/albor",
+        "status": 200,
+        "backgrounds": 1,
+        "layers": 1,
+        "itineraryItems": 7,
+        "newPhotosPreserved": true,
+        "preview": false,
+        "passed": true
+      },
+      {
+        "route": "/muestra/albor?full=1",
+        "status": 200,
+        "backgrounds": 1,
+        "layers": 1,
+        "itineraryItems": 7,
+        "newPhotosPreserved": true,
+        "preview": false,
+        "passed": true
+      },
+      {
+        "route": "/muestra/albor?preview=1",
+        "status": 200,
+        "backgrounds": 1,
+        "layers": 1,
+        "itineraryItems": 7,
+        "newPhotosPreserved": true,
+        "preview": true,
+        "passed": true
+      }
+    ],
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0,
+    "cleanupRequired": false
+  },
+  "visualAcceptance": {
+    "completed": false,
+    "reason": "The computer-use tool returned: Local browser use is disabled in Work settings. No alternative browser was used to bypass that setting.",
+    "liveScrollAndDesktopMobileReviewPending": true,
+    "pixelIdentityCertified": false,
+    "physicalDeviceAcceptance": false
+  },
+  "cleanup": {
+    "required": false,
+    "productionWrites": 0,
+    "bankCalls": 0,
+    "messagesSent": 0
+  }
+}
