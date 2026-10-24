@@ -7,6 +7,7 @@ import type { BuilderConfig, InvitationParsed } from '@/lib/types';
 import { ALBOR_ASSETS as A, alborDate, alborNames } from '@/lib/albor';
 import { ALBOR_ENTRY_ASSETS, ALBOR_MEDIA as M, ALBOR_ORIGINALS as originals } from '@/lib/albor-assets';
 import { useAlborReveals } from '@/lib/use-albor-reveals';
+import { useAlborBackground } from '@/lib/use-albor-background';
 import { useMediaPreferences } from '@/lib/use-media-preferences';
 import { resolveFeatures } from '@/lib/packages';
 import { paradiseReferenceClock, paradiseReferenceMaps } from '@/lib/paradise-reference';
@@ -140,8 +141,9 @@ function Gifts({ data }: { data: InvitationParsed }) {
 }
 
 export default function Albor({ data,preview=false,skipEntry=false,demo=false }: { data: InvitationParsed;preview?:boolean;skipEntry?:boolean;demo?:boolean;deadlinePassed?:boolean }) {
-  const c=data.config, features=resolveFeatures(c), root=useRef<HTMLDivElement>(null);
+  const c=data.config, features=resolveFeatures(c), root=useRef<HTMLDivElement>(null), background=useRef<HTMLDivElement>(null);
   const motionMode=useAlborReveals(root,preview,c.motion?.preset==='none');
+  useAlborBackground(root,background,motionMode);
   const names=alborNames(data.names), date=alborDate(data.event_date), hero=safeHref(data.cover_image_url ?? A.hero);
   const detail=safeHref(c.sectionImages?.alborDetail ?? A.detail), celebration=safeHref(c.sectionImages?.alborCelebration ?? A.celebration);
   const intro=c.introMessage ?? data.message, welcome=c.welcomeTitle ?? 'Guardamos este día para ti';
@@ -176,5 +178,5 @@ export default function Albor({ data,preview=false,skipEntry=false,demo=false }:
     <footer className={styles.footer} data-albor-section="footer"><Icon role="bird" config={c} size={160} className={styles.bird}/><p>El día más bonito empieza contigo.</p><Link href="/" aria-label="Enkarta, invitaciones digitales">ENKARTA</Link>{demo && <p className={styles.demoNotice}>Muestra de diseño · pareja e imágenes creadas con IA y lugares ficticios.</p>}</footer>
     {music && <ParadiseReferenceMusic src={music} preview={preview} color="#ffffff" iconSize={34} className={styles.musicButton} statusClassName={styles.musicStatus}/>}
   </>;
-  return <PreviewMode.Provider value={preview}><div ref={root} className={styles.page} style={alborTheme(c)} data-albor data-albor-motion={motionMode} data-preview={preview ? '' : undefined}>{preview || skipEntry || c.entry?.enabled===false ? page : <AlborEntry data={data}>{page}</AlborEntry>}</div></PreviewMode.Provider>;
+  return <PreviewMode.Provider value={preview}><div className={styles.shell} style={alborTheme(c)} data-albor-shell data-preview={preview ? '' : undefined}><div className={styles.background} data-albor-background aria-hidden="true"><div ref={background} className={styles.backgroundLayer} data-albor-background-layer /></div><div ref={root} className={styles.page} style={alborTheme(c)} data-albor data-albor-motion={motionMode} data-preview={preview ? '' : undefined}>{preview || skipEntry || c.entry?.enabled===false ? page : <AlborEntry data={data}>{page}</AlborEntry>}</div></div></PreviewMode.Provider>;
 }

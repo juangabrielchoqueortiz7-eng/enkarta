@@ -92,7 +92,7 @@ test('the native entry keeps an editable action and authentic original paper and
   }
 });
 
-test('the clean envelope and original hero ring accompany the exact Euforia poster without invented side leaves or family overlays', () => {
+test('the clean envelope and original ring accompany a separate Euforia background layer without invented side leaves or family overlays', () => {
   const postcss = require('postcss'), css = postcss.parse(read('src/components/invitations/Albor.module.css'));
   const canonical = selector => selector.replace(/\s+/g, '');
   const declarations = (selector, accepts = () => true) => {
@@ -127,33 +127,36 @@ test('the clean envelope and original hero ring accompany the exact Euforia post
   assert.ok(lock); assert.equal(lock.sha256, poster.sha256);
   const bytes = fs.readFileSync(path.join(root, 'public', poster.localPath));
   assert.equal(sha(bytes), poster.sha256); assert.equal(bytes.length, lock.bytes);
-  const page = declarations('.page', rule => rule.parent.type === 'root');
-  assert.equal(page['background-image'], 'var(--ab-leaves)');
-  assert.equal(page['background-size'], 'cover');
-  assert.match(page['background-position'], /^0(?:px|%)?\s+0(?:px|%)?$/);
-  assert.equal(page['background-repeat'], 'repeat-y', 'The complete tall watercolor repeats, rather than a substituted foliage motif');
-  assert.equal(page['background-attachment'], 'fixed');
+  const frame = declarations('.background', rule => rule.parent.type === 'root'), layer = declarations('.backgroundLayer', rule => rule.parent.type === 'root');
+  assert.equal(frame.position, 'fixed'); assert.equal(frame['pointer-events'], 'none');
+  assert.equal(layer['background-image'], 'var(--ab-leaves)');
+  assert.equal(layer['background-size'], 'cover');
+  assert.match(layer['background-position'], /^0(?:px|%)?\s+0(?:px|%)?$/);
+  assert.equal(layer['background-repeat'], 'repeat-y', 'The complete tall watercolor repeats, rather than a substituted foliage motif');
+  assert.equal(layer['pointer-events'], 'none'); assert.equal(layer.height, '100%', 'Static preferences retain a viewport-sized poster');
+  assert.equal(declarations('.backgroundLayer[data-albor-background-motion=active]', rule => rule.parent.type === 'root').height, '149%', 'The active source scroll effect owns its additional coverage');
+  assert.match(html, /data-albor-background\b[^>]*aria-hidden="true"/);
+  assert.match(html, /data-albor-background-layer/);
   let mobileContainsPoster = false;
   css.walkAtRules('media', atRule => {
     if (!/max-width/.test(atRule.params)) return;
     atRule.walkRules(rule => {
-      if (!rule.selectors?.some(selector => canonical(selector) === '.page')) return;
+      if (!rule.selectors?.some(selector => canonical(selector) === '.backgroundLayer')) return;
       rule.walkDecls('background-size', declaration => { if (declaration.value === 'contain') mobileContainsPoster = true; });
     });
   });
   assert.equal(mobileContainsPoster, true, 'Narrow public viewports preserve the original contain treatment');
-  const preview = declarations('.page[data-preview]');
-  assert.equal(preview['background-attachment'], 'scroll', 'The editor paints within its own canvas');
-  assert.equal(preview['background-size'], '100% auto');
+  assert.equal(declarations('.shell[data-preview].background').position, 'absolute', 'The editor paints within its own canvas');
+  assert.equal(declarations('.shell[data-preview].backgroundLayer')['background-size'], '100% auto');
   assert.doesNotMatch(css.toString(), /--ab-side-|48cuerpo/i, 'The invented side pattern must not return');
   css.walkRules(rule => {
     for (const selector of rule.selectors || []) assert.doesNotMatch(canonical(selector), /^\.(?:page|parents)::?(?:before|after)$/, 'No mirrored botanical or sage overlay layers remain');
   });
-  for (const selector of ['.page', '.parents', '.hero']) {
+  for (const selector of ['.page', '.parents', '.hero', '.background', '.backgroundLayer']) {
     const values = declarations(selector);
     for (const property of ['filter', 'mix-blend-mode', 'mask-image', '-webkit-mask-image', 'mask', '-webkit-mask']) assert.ok(!values[property] || values[property] === 'none' || values[property] === 'normal', selector + ' preserves the poster without color or alpha effects');
     assert.ok(!values.opacity || Number(values.opacity) === 1);
-    if (selector !== '.page') {
+    if (!['.backgroundLayer'].includes(selector)) {
       assert.ok(!values['background-image'] || values['background-image'] === 'none');
       assert.ok(!values['background-color'] || values['background-color'] === 'transparent', selector + ' lets the original poster show without a new tinted band');
     }

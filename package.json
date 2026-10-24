@@ -94,7 +94,7 @@
     "test:serenata": "node scripts/test-serenata.cjs && node scripts/test-serenata-motion.cjs && node scripts/test-serenata-entry.cjs && node scripts/test-serenata-reveals.cjs",
     "test:vespera": "node scripts/test-vespera.cjs && node scripts/test-vespera-motion.cjs && node scripts/test-vespera-entry.cjs && node scripts/test-vespera-reveals.cjs",
     "test:opera": "node scripts/test-opera.cjs && node scripts/test-opera-motion.cjs && node scripts/test-opera-entry.cjs && node scripts/test-opera-reveals.cjs",
-    "test:albor": "node scripts/test-albor.cjs && node scripts/test-albor-motion.cjs && node scripts/test-albor-entry.cjs && node scripts/test-albor-reveals.cjs"
+    "test:albor": "node scripts/test-albor.cjs && node scripts/test-albor-motion.cjs && node scripts/test-albor-entry.cjs && node scripts/test-albor-reveals.cjs && node scripts/test-albor-background.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
