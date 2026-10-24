@@ -8,7 +8,7 @@ Modo de la superficie: experiencia. La referencia abierta se observó en escrito
 
 La paleta propia conserva el papel `#f9f6ef`, acento decorativo `#8e6f55`, bronce oscuro `#67513e` y tinta `#493c30`. La frase pequeña usa el bronce oscuro: 6,89:1 sobre el papel; el acento decorativo queda para los nombres grandes y adornos. Romantic Lovely, Cormorant Infant, Great Vibes, Apple Chancery, Raleway y Cormorant Garamond son fuentes originales archivadas y configuradas localmente. El cuerpo mide 22 px en escritorio y 21 px en móvil; los controles tienen objetivos de al menos 44 px.
 
-El sobre solicitado reutiliza hojas reales con aro botánico y lacre floral verde. Las fotografías nuevas muestran una pareja adulta ficticia en un jardín de día; la frase es propia y editable, sin atribución bíblica inventada. La fecha es el 22 de abril de 2028 y todos los lugares son de muestra. No se copian invitados, fotografías personales, cuentas bancarias ni QR de pago de la referencia.
+El sobre solicitado reutiliza hojas reales y lacre floral verde. Los nombres y la fecha aparecen sin aro decorativo en el sobre; el aro original se conserva únicamente en la cabecera interior. Familias ocupa una banda salvia de todo el ancho, con el follaje original integrado en dos bordes mediante mezcla y máscara, sin rectángulo visible detrás de los nombres. Los colores y efectos se aplican en CSS, conservando los bytes del recurso. Las fotografías nuevas muestran una pareja adulta ficticia en un jardín de día; la frase es propia y editable, sin atribución bíblica inventada. La fecha es el 22 de abril de 2028 y todos los lugares son de muestra. No se copian invitados, fotografías personales, cuentas bancarias ni QR de pago de la referencia.
 
 ## Fotografías y originales
 

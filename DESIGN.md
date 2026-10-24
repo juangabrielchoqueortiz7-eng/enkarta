@@ -78,6 +78,8 @@ Extraer componentes comunes cuando compartan comportamiento real. La composició
 
 ## Do's and Don'ts
 
+- Ajuste de Albor solicitado por el usuario: sobre con nombres y fecha sin aro decorativo; el aro original permanece en la cabecera interior. Familias usa una banda salvia (mezcla del papel con `#889875`, respaldo `#e8eadf`) y follaje original en bordes desvanecidos. Los archivos originales permanecen intactos; no propagar este tratamiento a otras variantes.
+
 - Conservar bytes, procedencia y disponibilidad en la biblioteca de cada recurso original; verificar los manifiestos antes de descargar.
 - Aplicar color, tamaño o velocidad mediante configuración de instancia, sin reescribir el JSON original.
 - Respetar movimiento reducido y los controles de reproducción. Optimizar la carga conservando el original; un derivado requiere ruta propia y procedencia explícita.

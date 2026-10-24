@@ -92,6 +92,43 @@ test('the native entry keeps an editable action and authentic original paper and
   }
 });
 
+test('only the interior keeps its floral ring and families use a continuous paper band with softly masked original foliage', () => {
+  const postcss = require('postcss'), css = postcss.parse(read('src/components/invitations/Albor.module.css'));
+  const declarations = selector => {
+    const values = {};
+    css.walkRules(rule => {
+      if (rule.selectors?.some(value => value.replace(/\s+/g, '') === selector)) rule.walkDecls(declaration => {
+        values[declaration.prop] = declaration.value;
+        // A later background shorthand also resets an earlier background-image.
+        if (declaration.prop === 'background') values['background-image'] = /url\(|gradient\(|var\(--ab-(?:ring|leaves)/i.test(declaration.value) ? declaration.value : 'none';
+      });
+    });
+    return values;
+  };
+  const entry = renderToStaticMarkup(React.createElement(Entry, { data: alborDemo() }, React.createElement('h1', null, 'QA interior')));
+  const identity = entry.match(/<div\b[^>]*class="entryIdentity"[^>]*>([\s\S]*?)<\/div>/)?.[1];
+  assert.ok(identity, 'The envelope keeps an identity group for its names and date');
+  assert.ok(identity.includes('Elena') && identity.includes('Tomás') && identity.includes(alborDate(alborDemo().event_date).entryLine));
+  assert.doesNotMatch(identity, /<img\b|class="heroWreath"/, 'The envelope identity consists of names and date, without the interior floral frame');
+  const identityStyle = declarations('.entryIdentity');
+  for (const property of ['background', 'background-image']) assert.doesNotMatch(identityStyle[property] || '', /url\(|gradient\(|var\(--ab-ring/i, 'The envelope names keep a clean background after the local style overrides');
+  assert.match(markup(), /class="heroWreath"/, 'The floral frame remains in the interior header');
+  assert.match(declarations('.heroWreath')['background-image'] || '', /var\(--ab-ring\)/, 'The interior still uses its archived floral ring');
+
+  const parents = declarations('.parents');
+  assert.equal(parents.position, 'relative', 'The band anchors its decorative layers');
+  assert.ok(!parents['max-width'] || /^(none|initial|unset|100%)$/.test(parents['max-width']), 'The family background cannot be confined to a small centered rectangle');
+  const surface = parents['background-color'] || parents.background || '';
+  assert.ok(surface && !/^(?:none|transparent)$/.test(surface) && !/url\(/.test(surface), 'The family band has a continuous paper-colored surface');
+  assert.ok(!parents['background-image'] || parents['background-image'] === 'none', 'The original foliage belongs on a masked decorative layer');
+  const layers = [declarations('.parents::before'), declarations('.parents:before'), declarations('.parents::after'), declarations('.parents:after')];
+  const foliage = layers.find(layer => /var\(--ab-leaves\)/.test(layer['background-image'] || layer.background || ''));
+  assert.ok(foliage, 'The family band reuses the original foliage, rather than a replacement illustration');
+  assert.equal(foliage.position, 'absolute');
+  assert.equal(foliage['pointer-events'], 'none', 'Decorative foliage cannot intercept the page controls');
+  assert.match(foliage['mask-image'] || foliage['-webkit-mask-image'] || foliage.mask || foliage['-webkit-mask'] || '', /(?:linear|radial)-gradient\(/, 'A soft alpha mask blends the original background edges into the full band');
+});
+
 test('only the server-supplied RSVP is rendered and an unverified visitor cannot receive a fabricated form', () => {
   const html = renderToStaticMarkup(React.createElement(RsvpProvider, { form: React.createElement('form', { 'data-qa-authorized-rsvp': 'true' }, 'QA formulario autorizado') }, React.createElement(Invitation, { data: alborDemo(), demo: false, skipEntry: true })));
   assert.equal((html.match(/data-qa-authorized-rsvp="true"/g) ?? []).length, 1); assert.equal((html.match(/<form\b/g) ?? []).length, 1);
